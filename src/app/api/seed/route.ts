@@ -1,16 +1,17 @@
-import { NextResponse } from 'next/server'
-import { getSupabaseAdmin, DEMO_USER_ID } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 import { computeBillHash } from '@/lib/hash'
 
-// POST /api/seed — populate the database with mock data
-// Run once after deployment to get started
-export async function POST() {
+// POST /api/seed — populate the database with mock data for the current user
+export async function POST(req: NextRequest) {
   const DEADLINE = Date.now() + 8000
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT') }
 
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
-    const userId = DEMO_USER_ID
 
     guard()
 

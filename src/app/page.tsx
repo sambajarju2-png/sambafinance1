@@ -7,21 +7,42 @@ import StatistiekenView from '@/components/views/StatistiekenView'
 import CashflowView from '@/components/views/CashflowView'
 import InstellingenView from '@/components/views/InstellingenView'
 import BetalingenView from '@/components/betalingen/BetalingenView'
+import LoginPage from '@/app/login/page'
+import { useAuth } from '@/lib/auth-context'
 import { useBills } from '@/lib/hooks/use-bills'
 import { dbBillToDisplay } from '@/lib/bill-utils'
 import { Database, Loader2 } from 'lucide-react'
 
 export default function Home() {
+  const { user, session, loading: authLoading, signOut } = useAuth()
+  const accessToken = session?.access_token ?? null
+  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Gebruiker'
+  const userEmail = user?.email || ''
+
   const {
     bills, paidBills, loading, error, seeded,
-    markPaid, bulkMarkPaid, updateBill, seed, refetch,
-  } = useBills()
+    markPaid, bulkMarkPaid, updateBill, seed,
+  } = useBills(accessToken)
 
   const displayBills = useMemo(() => bills.map(dbBillToDisplay), [bills])
   const displayPaid = useMemo(() => paidBills.map(dbBillToDisplay), [paidBills])
 
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="min-h-dvh bg-bg flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
+      </div>
+    )
+  }
+
+  // Not logged in — show login page
+  if (!user) {
+    return <LoginPage />
+  }
+
   return (
-    <AppShell billCount={bills.length}>
+    <AppShell billCount={bills.length} userName={userName} userEmail={userEmail} onSignOut={signOut}>
       {({ activeView, household, searchQuery }) => {
         // Loading state
         if (loading) {

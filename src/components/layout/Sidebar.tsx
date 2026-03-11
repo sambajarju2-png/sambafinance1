@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Settings,
   CreditCard,
+  LogOut,
 } from 'lucide-react'
 
 export type ViewId = 'dashboard' | 'betalingen' | 'statistieken' | 'cashflow' | 'instellingen'
@@ -15,6 +16,9 @@ interface SidebarProps {
   activeView: ViewId
   onNavigate: (view: ViewId) => void
   billCount: number
+  userName?: string
+  userEmail?: string
+  onSignOut?: () => void
 }
 
 const NAV_SECTIONS = [
@@ -40,7 +44,7 @@ const NAV_SECTIONS = [
   },
 ]
 
-export default function Sidebar({ activeView, onNavigate, billCount }: SidebarProps) {
+export default function Sidebar({ activeView, onNavigate, billCount, userName, userEmail, onSignOut }: SidebarProps) {
   return (
     <aside className="hidden md:flex w-[232px] bg-navy flex-col flex-shrink-0 overflow-hidden">
       {/* Logo */}
@@ -92,14 +96,23 @@ export default function Sidebar({ activeView, onNavigate, billCount }: SidebarPr
 
       {/* User footer */}
       <div className="px-3.5 py-3.5 border-t border-white/[.08]">
-        <div className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[7px] hover:bg-white/[.06] transition-colors cursor-pointer">
+        <div className="flex items-center gap-2.5 px-2.5 py-[7px] rounded-[7px]">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-blue-hover to-blue-700 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
-            SJ
+            {(userName || 'U').slice(0, 2).toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <div className="text-[12px] font-semibold text-white truncate">Samba Jarju</div>
-            <div className="text-[10.5px] text-white/[.38] truncate">sambajarju2@gmail.com</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12px] font-semibold text-white truncate">{userName || 'Gebruiker'}</div>
+            <div className="text-[10.5px] text-white/[.38] truncate">{userEmail || ''}</div>
           </div>
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              className="text-white/30 hover:text-white/70 transition-colors"
+              title="Uitloggen"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </aside>

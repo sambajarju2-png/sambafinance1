@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin, DEMO_USER_ID } from '@/lib/supabase-server'
+import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 import { computeBillHash, validateIBAN } from '@/lib/hash'
 import type { DbBill } from '@/lib/types'
 
@@ -9,8 +9,10 @@ export async function GET(req: NextRequest) {
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT') }
 
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
-    const userId = DEMO_USER_ID // TODO: replace with auth.uid() from NextAuth session
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')   // 'outstanding' | 'settled' | 'all'
@@ -59,8 +61,10 @@ export async function POST(req: NextRequest) {
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT') }
 
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
-    const userId = DEMO_USER_ID
 
     guard()
     const body = await req.json()

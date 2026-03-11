@@ -1,17 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
-
-// Server-side Supabase client using service role key
-// This bypasses RLS — ONLY use in API routes, NEVER in client components
-// Will be replaced with per-user auth context when NextAuth is added
+import { NextRequest } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !serviceRoleKey) {
-  // In build/static generation, env vars may not be available — that's OK
-  // They'll be available at runtime on Vercel
-  console.warn('Supabase env vars not set — API routes will fail at runtime')
-}
 
 export function getSupabaseAdmin() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -22,6 +13,19 @@ export function getSupabaseAdmin() {
   })
 }
 
-// Demo user ID — will be replaced by real auth
-// This is the user we created in Supabase Auth for development
-export const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001'
+// Extract and verify user ID from the request Authorization header
+export async function getAuthUserId(req: NextRequest): Promise<string | null> {
+  try {
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) return null
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = getSupabaseAdmin()
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+
+    if (error || !user) return null
+    return user.id
+  } catch {
+    return null
+  }
+}

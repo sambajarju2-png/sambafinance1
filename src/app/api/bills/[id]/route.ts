@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin, DEMO_USER_ID } from '@/lib/supabase-server'
+import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 
 // PATCH /api/bills/[id] — update a bill (mark paid, add notes, change status)
 export async function PATCH(
@@ -10,8 +10,10 @@ export async function PATCH(
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT') }
 
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
-    const userId = DEMO_USER_ID
     const billId = params.id
 
     guard()
@@ -92,8 +94,10 @@ export async function DELETE(
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT') }
 
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
-    const userId = DEMO_USER_ID
 
     guard()
 

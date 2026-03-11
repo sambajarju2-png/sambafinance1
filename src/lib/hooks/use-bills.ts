@@ -16,20 +16,28 @@ interface UseBillsReturn {
   seed: () => Promise<void>
 }
 
-export function useBills(): UseBillsReturn {
+export function useBills(accessToken: string | null): UseBillsReturn {
   const [bills, setBills] = useState<DbBill[]>([])
   const [paidBills, setPaidBills] = useState<DbBill[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
 
+  const authHeaders = useCallback(() => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
+    return h
+  }, [accessToken])
+
   const fetchBills = useCallback(async () => {
+    if (!accessToken) { setLoading(false); return }
     try {
       setError(null)
 
+      const headers = authHeaders()
       const [openRes, paidRes] = await Promise.all([
-        fetch('/api/bills?status=outstanding'),
-        fetch('/api/bills?status=settled'),
+        fetch('/api/bills?status=outstanding', { headers }),
+        fetch('/api/bills?status=settled', { headers }),
       ])
 
       if (!openRes.ok || !paidRes.ok) {
@@ -55,7 +63,7 @@ export function useBills(): UseBillsReturn {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [accessToken, authHeaders])
 
   useEffect(() => {
     fetchBills()
@@ -65,7 +73,7 @@ export function useBills(): UseBillsReturn {
     try {
       const res = await fetch(`/api/bills/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ status: 'settled' }),
       })
 
@@ -83,7 +91,7 @@ export function useBills(): UseBillsReturn {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
     }
-  }, [])
+  }, [authHeaders])
 
   const bulkMarkPaid = useCallback(async (ids: string[]) => {
     try {
@@ -91,7 +99,7 @@ export function useBills(): UseBillsReturn {
         ids.map((id) =>
           fetch(`/api/bills/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify({ status: 'settled' }),
           })
         )
@@ -102,13 +110,13 @@ export function useBills(): UseBillsReturn {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
     }
-  }, [fetchBills])
+  }, [fetchBills, authHeaders])
 
   const updateBill = useCallback(async (id: string, updates: Partial<DbBill>) => {
     try {
       const res = await fetch(`/api/bills/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(updates),
       })
 
@@ -138,12 +146,12 @@ export function useBills(): UseBillsReturn {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
     }
-  }, [])
+  }, [authHeaders])
 
   const seed = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/seed', { method: 'POST' })
+      const res = await fetch('/api/seed', { method: 'POST', headers: authHeaders() })
       if (!res.ok) {
         const errBody = await res.json()
         throw new Error(errBody.error || 'Seed failed')
@@ -156,7 +164,7 @@ export function useBills(): UseBillsReturn {
     } finally {
       setLoading(false)
     }
-  }, [fetchBills])
+  }, [fetchBills, authHeaders])
 
   return {
     bills, paidBills, loading, error, seeded,

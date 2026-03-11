@@ -14,9 +14,12 @@ interface AppShellProps {
     onNavigate: (view: ViewId) => void
   }) => ReactNode
   billCount: number
+  userName?: string
+  userEmail?: string
+  onSignOut?: () => void
 }
 
-export default function AppShell({ children, billCount }: AppShellProps) {
+export default function AppShell({ children, billCount, userName, userEmail, onSignOut }: AppShellProps) {
   const [activeView, setActiveView] = useState<ViewId>('dashboard')
   const [household, setHousehold] = useState<Household>('joint')
   const [searchQuery, setSearchQuery] = useState('')
@@ -27,6 +30,9 @@ export default function AppShell({ children, billCount }: AppShellProps) {
         activeView={activeView}
         onNavigate={setActiveView}
         billCount={billCount}
+        userName={userName}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

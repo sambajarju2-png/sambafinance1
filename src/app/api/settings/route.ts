@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin, DEMO_USER_ID } from '@/lib/supabase-server'
+import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 
 // GET /api/settings
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
-      .eq('user_id', DEMO_USER_ID)
+      .eq('user_id', userId)
       .single()
 
     if (error) {
@@ -24,6 +27,9 @@ export async function GET() {
 // PATCH /api/settings
 export async function PATCH(req: NextRequest) {
   try {
+    const userId = await getAuthUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getSupabaseAdmin()
     const body = await req.json()
 
@@ -40,7 +46,7 @@ export async function PATCH(req: NextRequest) {
     const { data, error } = await supabase
       .from('user_settings')
       .update(update)
-      .eq('user_id', DEMO_USER_ID)
+      .eq('user_id', userId)
       .select()
       .single()
 
