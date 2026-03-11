@@ -14,6 +14,7 @@ interface BetalingenViewProps {
   household: string
   searchQuery: string
   onMarkPaid: (id: string) => Promise<void>
+  onUndoPaid: (id: string) => Promise<void>
   onBulkMarkPaid: (ids: string[]) => Promise<void>
   onUpdateBill: (id: string, updates: Partial<DbBill>) => Promise<void>
 }
@@ -24,6 +25,7 @@ export default function BetalingenView({
   household,
   searchQuery,
   onMarkPaid,
+  onUndoPaid,
   onBulkMarkPaid,
   onUpdateBill,
 }: BetalingenViewProps) {
@@ -154,6 +156,7 @@ export default function BetalingenView({
         bill={drawerBill}
         onClose={() => setDrawerBill(null)}
         onMarkPaid={handleMarkPaid}
+        onUndoPaid={async (id) => { await onUndoPaid(id); setDrawerBill(null) }}
         onUpdateBill={onUpdateBill}
       />
     </div>

@@ -18,6 +18,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
+  resetPassword: async () => ({ error: null }),
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -96,8 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await getSupabaseBrowser().auth.signOut()
   }, [])
 
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await getSupabaseBrowser().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    })
+    if (error) {
+      return { error: error.message }
+    }
+    return { error: null }
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   )

@@ -3,6 +3,8 @@ import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 import { computeBillHash, validateIBAN } from '@/lib/hash'
 import type { DbBill } from '@/lib/types'
 
+const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' }
+
 // GET /api/bills — list bills for the current user
 export async function GET(req: NextRequest) {
   const DEADLINE = Date.now() + 8000

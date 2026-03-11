@@ -21,7 +21,7 @@ export default function Home() {
 
   const {
     bills, paidBills, loading, error, seeded,
-    markPaid, bulkMarkPaid, updateBill, seed,
+    markPaid, undoPaid, bulkMarkPaid, updateBill, seed,
   } = useBills(accessToken)
 
   const displayBills = useMemo(() => bills.map(dbBillToDisplay), [bills])
@@ -111,6 +111,7 @@ export default function Home() {
                 household={household}
                 searchQuery={searchQuery}
                 onMarkPaid={markPaid}
+                onUndoPaid={undoPaid}
                 onBulkMarkPaid={bulkMarkPaid}
                 onUpdateBill={updateBill}
               />

@@ -10,9 +10,9 @@ export interface DbBill {
   currency: string
   iban: string | null
   reference: string | null
-  due_date: string        // YYYY-MM-DD
-  received_date: string   // YYYY-MM-DD
-  paid_at: string | null  // ISO datetime
+  due_date: string
+  received_date: string
+  paid_at: string | null
   category: string
   status: 'outstanding' | 'action' | 'settled' | 'failed' | 'review'
   source: 'manual' | 'gmail_scan'
@@ -21,6 +21,12 @@ export interface DbBill {
   requires_review: boolean
   notes: string | null
   proof_of_payment: string | null
+  payment_url: string | null
+  vendor_contact: { email?: string; phone?: string; website?: string } | null
+  checklist: { text: string; done: boolean; urgent: boolean }[] | null
+  email_drafts: { full?: string; plan?: string } | null
+  original_email_subject: string | null
+  original_email_from: string | null
   created_at: string
   updated_at: string
 }
@@ -33,11 +39,11 @@ export interface DbUserSettings {
   notifications_enabled: boolean
   notify_days_before: number
   budgets: Record<string, number>
+  anthropic_api_key: string | null
   created_at: string
   updated_at: string
 }
 
-// API response types
 export interface BillsResponse {
   data: DbBill[]
   count: number

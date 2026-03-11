@@ -5,8 +5,8 @@ import { useAuth } from '@/lib/auth-context'
 import { CreditCard, Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
-  const { signIn, signUp } = useAuth()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const { signIn, signUp, resetPassword } = useAuth()
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -19,6 +19,14 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
+    if (mode === 'forgot') {
+      const { error } = await resetPassword(email)
+      if (error) setError(error)
+      else setSuccess(true)
+      setLoading(false)
+      return
+    }
 
     if (mode === 'login') {
       const { error } = await signIn(email, password)
@@ -79,9 +87,13 @@ export default function LoginPage() {
               <div className="w-12 h-12 rounded-full bg-status-green-pale flex items-center justify-center mx-auto mb-3">
                 <span className="text-[20px]">✓</span>
               </div>
-              <h3 className="text-[15px] font-bold text-navy mb-1.5">Account aangemaakt</h3>
+              <h3 className="text-[15px] font-bold text-navy mb-1.5">
+                {mode === 'forgot' ? 'E-mail verzonden' : 'Account aangemaakt'}
+              </h3>
               <p className="text-[13px] text-muted mb-4">
-                Je kunt nu inloggen met je e-mailadres en wachtwoord.
+                {mode === 'forgot'
+                  ? 'Controleer je inbox voor de wachtwoord-reset link.'
+                  : 'Je kunt nu inloggen met je e-mailadres en wachtwoord.'}
               </p>
               <button
                 onClick={() => { setMode('login'); setSuccess(false) }}
@@ -93,12 +105,14 @@ export default function LoginPage() {
           ) : (
             <>
               <h2 className="text-[16px] font-bold text-navy mb-1">
-                {mode === 'login' ? 'Welkom terug' : 'Maak een account'}
+                {mode === 'login' ? 'Welkom terug' : mode === 'register' ? 'Maak een account' : 'Wachtwoord vergeten'}
               </h2>
               <p className="text-[13px] text-muted mb-5">
                 {mode === 'login'
                   ? 'Log in om je betalingen te beheren'
-                  : 'Begin met het bijhouden van je huishoudelijke financiën'
+                  : mode === 'register'
+                    ? 'Begin met het bijhouden van je huishoudelijke financiën'
+                    : 'Vul je e-mailadres in om een reset-link te ontvangen'
                 }
               </p>
 
@@ -134,6 +148,7 @@ export default function LoginPage() {
                   />
                 </div>
 
+                {mode !== 'forgot' && (
                 <div>
                   <label className="block text-[12px] font-bold text-navy uppercase tracking-[.05em] mb-1.5">
                     Wachtwoord
@@ -157,7 +172,17 @@ export default function LoginPage() {
                       {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setError(null); setSuccess(false) }}
+                      className="mt-1.5 text-[12px] text-brand-blue font-semibold hover:text-brand-blue-hover transition-colors"
+                    >
+                      Wachtwoord vergeten?
+                    </button>
+                  )}
                 </div>
+                )}
 
                 {error && (
                   <div className="px-3.5 py-2.5 bg-status-red-pale border border-status-red-mid rounded-lg text-[12.5px] text-status-red font-medium">
@@ -174,10 +199,22 @@ export default function LoginPage() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : mode === 'login' ? (
                     'Inloggen'
+                  ) : mode === 'forgot' ? (
+                    'Stuur reset-link'
                   ) : (
                     'Account aanmaken'
                   )}
                 </button>
+
+                {mode === 'forgot' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('login'); setError(null) }}
+                    className="w-full text-center text-[12.5px] text-brand-blue font-semibold hover:text-brand-blue-hover transition-colors mt-1"
+                  >
+                    ← Terug naar inloggen
+                  </button>
+                )}
               </form>
             </>
           )}

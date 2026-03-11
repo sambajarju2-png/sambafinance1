@@ -1,7 +1,6 @@
 import type { DbBill } from '@/lib/types'
 import type { Urgency } from '@/lib/mock-data'
 
-// Avatar color pairs based on category
 const CATEGORY_COLORS: Record<string, [string, string]> = {
   'Incasso':          ['#FEE2E2', '#DC2626'],
   'Zorgverzekering':  ['#EDE9FE', '#7C3AED'],
@@ -39,7 +38,13 @@ export interface DisplayBill {
   notes: string | null
   requiresReview: boolean
   source: string
-  // Keep original for API calls
+  paymentUrl: string | null
+  vendorContact: { email?: string; phone?: string; website?: string } | null
+  checklist: { text: string; done: boolean; urgent: boolean }[] | null
+  emailDrafts: { full?: string; plan?: string } | null
+  originalEmailSubject: string | null
+  originalEmailFrom: string | null
+  receivedDate: string
   _db: DbBill
 }
 
@@ -54,26 +59,20 @@ function getInitials(vendor: string): string {
 
 function computeUrgency(bill: DbBill): Urgency {
   if (bill.status === 'settled') return 'info'
-
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
   if (bill.due_date) {
     const due = new Date(bill.due_date)
     due.setHours(0, 0, 0, 0)
     const daysUntil = Math.round((due.getTime() - today.getTime()) / 86400000)
-
     if (daysUntil <= 4) return 'critical'
     if (daysUntil <= 14) return 'warn'
   }
-
-  // No due date or far away
   return 'info'
 }
 
 export function dbBillToDisplay(bill: DbBill): DisplayBill {
   const [bg, fg] = CATEGORY_COLORS[bill.category] ?? DEFAULT_COLORS
-
   return {
     id: bill.id,
     vendor: bill.vendor,
@@ -94,6 +93,13 @@ export function dbBillToDisplay(bill: DbBill): DisplayBill {
     notes: bill.notes,
     requiresReview: bill.requires_review,
     source: bill.source,
+    paymentUrl: bill.payment_url,
+    vendorContact: bill.vendor_contact,
+    checklist: bill.checklist,
+    emailDrafts: bill.email_drafts,
+    originalEmailSubject: bill.original_email_subject,
+    originalEmailFrom: bill.original_email_from,
+    receivedDate: bill.received_date,
     _db: bill,
   }
 }

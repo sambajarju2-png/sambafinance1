@@ -11,6 +11,7 @@ interface UseBillsReturn {
   seeded: boolean
   refetch: () => Promise<void>
   markPaid: (id: string) => Promise<void>
+  undoPaid: (id: string) => Promise<void>
   bulkMarkPaid: (ids: string[]) => Promise<void>
   updateBill: (id: string, updates: Partial<DbBill>) => Promise<void>
   seed: () => Promise<void>
@@ -23,7 +24,7 @@ export function useBills(accessToken: string | null): UseBillsReturn {
   const [error, setError] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
 
-  const authHeaders = useCallback(() => {
+  const authHeaders = useCallback((): Record<string, string> => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' }
     if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
     return h
@@ -33,11 +34,12 @@ export function useBills(accessToken: string | null): UseBillsReturn {
     if (!accessToken) { setLoading(false); return }
     try {
       setError(null)
-
       const headers = authHeaders()
+      // Cache-bust with timestamp
+      const t = Date.now()
       const [openRes, paidRes] = await Promise.all([
-        fetch('/api/bills?status=outstanding', { headers }),
-        fetch('/api/bills?status=settled', { headers }),
+        fetch(`/api/bills?status=outstanding&_t=${t}`, { headers, cache: 'no-store' }),
+        fetch(`/api/bills?status=settled&_t=${t}`, { headers, cache: 'no-store' }),
       ])
 
       if (!openRes.ok || !paidRes.ok) {
@@ -50,13 +52,7 @@ export function useBills(accessToken: string | null): UseBillsReturn {
 
       setBills(openData.data)
       setPaidBills(paidData.data)
-
-      // If no bills at all, might need seeding
-      if (openData.data.length === 0 && paidData.data.length === 0) {
-        setSeeded(false)
-      } else {
-        setSeeded(true)
-      }
+      setSeeded(openData.data.length > 0 || paidData.data.length > 0)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
@@ -76,22 +72,33 @@ export function useBills(accessToken: string | null): UseBillsReturn {
         headers: authHeaders(),
         body: JSON.stringify({ status: 'settled' }),
       })
-
       if (!res.ok) {
         const errBody = await res.json()
-        throw new Error(errBody.error || 'Failed to mark as paid')
+        throw new Error(errBody.error || 'Failed')
       }
-
-      const { data: updated } = await res.json()
-
-      // Move from open to paid list
-      setBills((prev) => prev.filter((b) => b.id !== id))
-      setPaidBills((prev) => [updated, ...prev])
+      // Refetch for clean state
+      await fetchBills()
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
     }
-  }, [authHeaders])
+  }, [authHeaders, fetchBills])
+
+  const undoPaid = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/bills/${id}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: 'outstanding' }),
+      })
+      if (!res.ok) {
+        const errBody = await res.json()
+        throw new Error(errBody.error || 'Failed')
+      }
+      await fetchBills()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    }
+  }, [authHeaders, fetchBills])
 
   const bulkMarkPaid = useCallback(async (ids: string[]) => {
     try {
@@ -104,11 +111,9 @@ export function useBills(accessToken: string | null): UseBillsReturn {
           })
         )
       )
-      // Refetch to get clean state
       await fetchBills()
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
     }
   }, [fetchBills, authHeaders])
 
@@ -119,34 +124,15 @@ export function useBills(accessToken: string | null): UseBillsReturn {
         headers: authHeaders(),
         body: JSON.stringify(updates),
       })
-
       if (!res.ok) {
         const errBody = await res.json()
-        throw new Error(errBody.error || 'Failed to update bill')
+        throw new Error(errBody.error || 'Failed')
       }
-
-      const { data: updated } = await res.json()
-
-      // Update in the appropriate list
-      if (updated.status === 'settled') {
-        setBills((prev) => prev.filter((b) => b.id !== id))
-        setPaidBills((prev) => {
-          const existing = prev.findIndex((b) => b.id === id)
-          if (existing >= 0) {
-            const next = [...prev]
-            next[existing] = updated
-            return next
-          }
-          return [updated, ...prev]
-        })
-      } else {
-        setBills((prev) => prev.map((b) => (b.id === id ? updated : b)))
-      }
+      await fetchBills()
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
     }
-  }, [authHeaders])
+  }, [authHeaders, fetchBills])
 
   const seed = useCallback(async () => {
     try {
@@ -159,8 +145,7 @@ export function useBills(accessToken: string | null): UseBillsReturn {
       setSeeded(true)
       await fetchBills()
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -168,6 +153,6 @@ export function useBills(accessToken: string | null): UseBillsReturn {
 
   return {
     bills, paidBills, loading, error, seeded,
-    refetch: fetchBills, markPaid, bulkMarkPaid, updateBill, seed,
+    refetch: fetchBills, markPaid, undoPaid, bulkMarkPaid, updateBill, seed,
   }
 }
