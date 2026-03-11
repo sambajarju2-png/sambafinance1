@@ -19,6 +19,20 @@ export async function POST(req: NextRequest) {
 
     guard()
 
+    // Get user's Anthropic API key (personal key, or fall back to env var)
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('anthropic_api_key')
+      .eq('user_id', userId)
+      .single()
+
+    const apiKey = settings?.anthropic_api_key || process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Geen API key ingesteld. Voeg je Anthropic API key toe via Instellingen → Sync & AI.' }, { status: 400 })
+    }
+
+    guard()
+
     // Get Gmail account for this user
     const { data: account, error: accErr } = await supabase
       .from('gmail_accounts')
@@ -131,7 +145,7 @@ export async function POST(req: NextRequest) {
         guard()
 
         // Send to Claude Haiku for extraction
-        const extraction = await extractInvoiceWithHaiku(pdfBase64)
+        const extraction = await extractInvoiceWithHaiku(pdfBase64, apiKey)
 
         if (extraction && extraction.vendor && extraction.amount_cents) {
           // Validate IBAN
@@ -245,7 +259,7 @@ async function refreshGmailToken(refreshToken: string): Promise<{ access_token: 
   }
 }
 
-async function extractInvoiceWithHaiku(pdfBase64: string): Promise<{
+async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): Promise<{
   vendor: string
   amount_cents: number
   currency: string
@@ -257,8 +271,7 @@ async function extractInvoiceWithHaiku(pdfBase64: string): Promise<{
   confidence: { vendor: number; amount: number; due_date: number; iban: number }
 } | null> {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) return null
+    if (!userApiKey) return null
 
     // Convert Gmail's URL-safe base64 to standard base64
     const standardBase64 = pdfBase64.replace(/-/g, '+').replace(/_/g, '/')
@@ -267,7 +280,7 @@ async function extractInvoiceWithHaiku(pdfBase64: string): Promise<{
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': userApiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({

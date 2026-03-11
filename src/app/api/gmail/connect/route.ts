@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/gmail/connect — starts the Google OAuth flow
 // Called as a browser redirect from the frontend
 export async function GET(req: NextRequest) {

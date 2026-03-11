@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { Mail, Wallet, Bell, RefreshCw, Plus, Unlink, LogOut, User, ExternalLink, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Mail, Wallet, Bell, RefreshCw, Plus, Unlink, LogOut, User, ExternalLink, Loader2, CheckCircle2, Key, Scan } from 'lucide-react'
 import { CATEGORY_DATA } from '@/lib/mock-data'
 import { formatAmount } from '@/lib/bill-utils'
 
 type SettingsTab = 'accounts' | 'budget' | 'notif' | 'sync' | 'profile'
+
+interface GmailAccount {
+  email: string
+  connected: boolean
+  expired: boolean
+  lastScanned: string | null
+}
 
 interface InstellingenViewProps {
   onSignOut?: () => void
@@ -27,11 +34,86 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
   const [budgets, setBudgets] = useState<Record<string, number>>(
     Object.fromEntries(CATEGORY_DATA.map((c) => [c.name, c.budget]))
   )
+  const [gmailAccounts, setGmailAccounts] = useState<GmailAccount[]>([])
+  const [gmailLoading, setGmailLoading] = useState(true)
+  const [scanning, setScanning] = useState(false)
+  const [scanResult, setScanResult] = useState<string | null>(null)
+  const [apiKey, setApiKey] = useState('')
+  const [apiKeySaved, setApiKeySaved] = useState(false)
+  const [apiKeySaving, setApiKeySaving] = useState(false)
   const [connectingGmail, setConnectingGmail] = useState(false)
+
+  const headers = useCallback(() => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
+    return h
+  }, [accessToken])
+
+  // Fetch Gmail status on mount
+  useEffect(() => {
+    if (!accessToken) return
+    fetch('/api/gmail/status', { headers: headers() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.accounts) setGmailAccounts(d.accounts)
+      })
+      .catch(() => {})
+      .finally(() => setGmailLoading(false))
+  }, [accessToken, headers])
+
+  // Fetch current settings (API key)
+  useEffect(() => {
+    if (!accessToken) return
+    fetch('/api/settings', { headers: headers() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data?.anthropic_api_key) {
+          setApiKey(d.data.anthropic_api_key)
+          setApiKeySaved(true)
+        }
+      })
+      .catch(() => {})
+  }, [accessToken, headers])
+
+  async function handleScan() {
+    setScanning(true)
+    setScanResult(null)
+    try {
+      const res = await fetch('/api/gmail/scan', { method: 'POST', headers: headers() })
+      const data = await res.json()
+      if (res.ok) {
+        setScanResult(`✓ ${data.scanned} e-mails gescand, ${data.created} nieuwe facturen gevonden${data.duplicates ? `, ${data.duplicates} duplicaten overgeslagen` : ''}`)
+      } else {
+        setScanResult(`✗ ${data.error}`)
+      }
+    } catch {
+      setScanResult('✗ Scan mislukt — controleer je verbinding')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  async function handleSaveApiKey() {
+    setApiKeySaving(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ anthropic_api_key: apiKey.trim() }),
+      })
+      if (res.ok) {
+        setApiKeySaved(true)
+        setTimeout(() => setApiKeySaved(false), 3000)
+      }
+    } catch {}
+    finally { setApiKeySaving(false) }
+  }
+
+  const hasGmail = gmailAccounts.length > 0
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-5">
-      {/* Settings nav — horizontal on mobile, vertical on desktop */}
+      {/* Settings nav */}
       <div className="flex md:flex-col gap-[2px] overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
@@ -40,14 +122,8 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`
-                flex items-center gap-2 px-3 py-2.5 rounded-lg text-[13px] font-medium
-                transition-all whitespace-nowrap flex-shrink-0
-                ${isActive
-                  ? 'bg-brand-blue-pale text-brand-blue font-bold'
-                  : 'text-muted hover:bg-surface-2 hover:text-navy'
-                }
-              `}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap flex-shrink-0
+                ${isActive ? 'bg-brand-blue-pale text-brand-blue font-bold' : 'text-muted hover:bg-surface-2 hover:text-navy'}`}
             >
               <Icon className="w-[15px] h-[15px]" />
               {item.label}
@@ -56,7 +132,6 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
         })}
       </div>
 
-      {/* Content */}
       <div>
         {/* ── Profile ── */}
         {activeTab === 'profile' && (
@@ -85,47 +160,71 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
         {/* ── Accounts ── */}
         {activeTab === 'accounts' && (
           <>
-            <Card title="Gekoppelde email accounts" sub="Koppel je Gmail of Outlook om facturen automatisch te scannen">
-              <div className="space-y-0">
-                <AccountRow
-                  icon="📧"
-                  name={userName || 'Mijn account'}
-                  email={userEmail ? `${userEmail} · Gmail` : 'Nog niet gekoppeld'}
-                  status="pending"
-                />
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-border">
-                <button
-                  onClick={async () => {
-                    setConnectingGmail(true)
-                    window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}`
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors"
-                >
-                  {connectingGmail ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                  Gmail account koppelen
-                </button>
-                <p className="text-[11.5px] text-muted-light mt-2">
-                  Vereist een Google Cloud project met OAuth2 credentials.
-                  <a
-                    href="https://console.cloud.google.com/apis/credentials"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 text-brand-blue font-semibold ml-1 hover:text-brand-blue-hover"
+            <Card title="Gekoppelde email accounts" sub="Koppel je Gmail om facturen automatisch te scannen">
+              {gmailLoading ? (
+                <div className="flex items-center gap-2 py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted" />
+                  <span className="text-[13px] text-muted">Status laden...</span>
+                </div>
+              ) : hasGmail ? (
+                <>
+                  {gmailAccounts.map((acc) => (
+                    <div key={acc.email} className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
+                      <div className="w-9 h-9 rounded-[9px] bg-surface-2 border border-border flex items-center justify-center text-[16px] flex-shrink-0">📧</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-bold text-navy">{acc.email}</div>
+                        <div className="text-[12px] text-muted">
+                          {acc.lastScanned
+                            ? `Laatste scan: ${new Date(acc.lastScanned).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                            : 'Nog niet gescand'}
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border bg-status-green-pale text-status-green border-status-green-mid">
+                        ✓ Verbonden
+                      </span>
+                    </div>
+                  ))}
+                  {/* Scan button */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <button
+                      onClick={handleScan}
+                      disabled={scanning}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-[13px] font-bold hover:bg-brand-blue-hover disabled:opacity-60 transition-colors"
+                    >
+                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
+                      {scanning ? 'Scannen...' : 'Scan nu voor facturen'}
+                    </button>
+                    {scanResult && (
+                      <div className={`mt-3 px-3.5 py-2.5 rounded-lg text-[12.5px] font-medium border ${
+                        scanResult.startsWith('✓')
+                          ? 'bg-status-green-pale border-status-green-mid text-status-green'
+                          : 'bg-status-red-pale border-status-red-mid text-status-red'
+                      }`}>
+                        {scanResult}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="mt-2">
+                  <button
+                    onClick={() => {
+                      setConnectingGmail(true)
+                      window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}`
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors"
                   >
-                    Google Console <ExternalLink className="w-3 h-3" />
-                  </a>
-                </p>
-              </div>
+                    {connectingGmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Gmail account koppelen
+                  </button>
+                  <p className="text-[11.5px] text-muted-light mt-2">
+                    Vereist een Google Cloud project met OAuth2 credentials.
+                  </p>
+                </div>
+              )}
             </Card>
 
             <Card title="Sync instellingen">
-              <Toggle label="Dagelijkse automatische sync" sub="Elke ochtend 07:00 nieuwe mails ophalen" defaultOn />
               <Toggle label="PDF-bijlagen scannen" sub="Facturen als PDF-bijlage extracten via AI" defaultOn />
               <Toggle label="Deduplicatie" sub="Herken duplicaten (herinnering = zelfde factuur)" defaultOn />
             </Card>
@@ -157,12 +256,9 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
             </div>
             <div className="flex items-center justify-between mt-5 pt-4 border-t border-border">
               <span className="text-[12.5px] text-muted">
-                Totaal maandbudget: <strong className="text-navy">{formatAmount(Object.values(budgets).reduce((s, v) => s + v, 0))}</strong>
+                Totaal: <strong className="text-navy">{formatAmount(Object.values(budgets).reduce((s, v) => s + v, 0))}</strong>
               </span>
-              <button
-                onClick={() => alert('Budgets opgeslagen ✓')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-[12.5px] font-bold hover:bg-brand-blue-hover transition-colors"
-              >
+              <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-[12.5px] font-bold hover:bg-brand-blue-hover transition-colors">
                 Opslaan
               </button>
             </div>
@@ -183,17 +279,58 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
 
         {/* ── Sync & AI ── */}
         {activeTab === 'sync' && (
-          <Card title="AI & Extractie">
-            <Toggle label="Claude Haiku (goedkoopst)" sub="~€0,20/maand · aanbevolen voor extraction" defaultOn />
-            <Toggle label="Automatische deduplicatie via AI" sub="Herken of herinnering over dezelfde factuur gaat" defaultOn />
-            <Toggle label="Pre-filter (voor AI)" sub="Eerst regex check, dan pas API aanroepen (bespaart kosten)" defaultOn />
-            <div className="mt-4 p-3.5 bg-brand-blue-pale border border-brand-blue-mid rounded-lg">
-              <div className="text-[12.5px] font-bold text-brand-blue mb-1">💡 Kosten schatting</div>
-              <div className="text-[12px] text-blue-700">
-                ~20 nieuwe mails/dag × 30 dagen × Haiku = <strong>€0,18/maand</strong>
+          <>
+            <Card title="Anthropic API Key" sub="Vereist voor AI-extractie van facturen uit PDF's">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-light" />
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => { setApiKey(e.target.value); setApiKeySaved(false) }}
+                    placeholder="sk-ant-api03-..."
+                    className="w-full pl-9 pr-3 py-2.5 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans font-mono placeholder:font-sans placeholder:text-muted-light"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveApiKey}
+                  disabled={apiKeySaving || !apiKey.trim()}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[12.5px] font-bold transition-colors whitespace-nowrap ${
+                    apiKeySaved
+                      ? 'bg-status-green text-white'
+                      : 'bg-navy text-white hover:bg-navy-light disabled:opacity-50'
+                  }`}
+                >
+                  {apiKeySaving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : apiKeySaved ? (
+                    <><CheckCircle2 className="w-3.5 h-3.5" /> Opgeslagen</>
+                  ) : (
+                    'Opslaan'
+                  )}
+                </button>
               </div>
-            </div>
-          </Card>
+              <p className="text-[11.5px] text-muted-light mt-2">
+                Maak een key aan op{' '}
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-brand-blue font-semibold hover:text-brand-blue-hover inline-flex items-center gap-0.5">
+                  console.anthropic.com <ExternalLink className="w-3 h-3" />
+                </a>
+                . Je key wordt versleuteld opgeslagen en alleen gebruikt voor het scannen van jouw facturen.
+              </p>
+            </Card>
+
+            <Card title="AI Extractie instellingen">
+              <Toggle label="Claude Haiku (goedkoopst)" sub="~€0,20/maand · aanbevolen voor extraction" defaultOn />
+              <Toggle label="Automatische deduplicatie via AI" sub="Herken of herinnering over dezelfde factuur gaat" defaultOn />
+              <Toggle label="Pre-filter (voor AI)" sub="Eerst regex check, dan pas API aanroepen (bespaart kosten)" defaultOn />
+              <div className="mt-4 p-3.5 bg-brand-blue-pale border border-brand-blue-mid rounded-lg">
+                <div className="text-[12.5px] font-bold text-brand-blue mb-1">💡 Kosten schatting</div>
+                <div className="text-[12px] text-blue-700">
+                  ~20 nieuwe mails/dag × 30 dagen × Haiku = <strong>€0,18/maand</strong>
+                </div>
+              </div>
+            </Card>
+          </>
         )}
       </div>
     </div>
@@ -224,46 +361,10 @@ function Toggle({ label, sub, defaultOn = false }: { label: string; sub: string;
       </div>
       <button
         onClick={() => setOn(!on)}
-        className={`
-          relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ml-4
-          ${on ? 'bg-brand-blue' : 'bg-border-strong'}
-        `}
+        className={`relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ml-4 ${on ? 'bg-brand-blue' : 'bg-border-strong'}`}
       >
-        <span
-          className={`
-            absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform
-            ${on ? 'left-[18px]' : 'left-[2px]'}
-          `}
-        />
+        <span className={`absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${on ? 'left-[18px]' : 'left-[2px]'}`} />
       </button>
-    </div>
-  )
-}
-
-function AccountRow({ icon, name, email, status }: { icon: string; name: string; email: string; status: 'connected' | 'pending' }) {
-  return (
-    <div className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
-      <div className="w-9 h-9 rounded-[9px] bg-surface-2 border border-border flex items-center justify-center text-[16px] flex-shrink-0">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-bold text-navy">{name}</div>
-        <div className="text-[12px] text-muted">{email}</div>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <span className={`
-          text-[11px] font-bold px-2.5 py-[3px] rounded-full border
-          ${status === 'connected'
-            ? 'bg-status-green-pale text-status-green border-status-green-mid'
-            : 'bg-status-amber-pale text-status-amber border-status-amber-mid'
-          }
-        `}>
-          {status === 'connected' ? '✓ Verbonden' : '⏳ Wacht op sync'}
-        </span>
-        <button className="text-[11px] text-muted font-semibold px-2 py-[3px] rounded border border-border bg-surface hover:border-status-red hover:text-status-red hover:bg-status-red-pale transition-all">
-          <Unlink className="w-3 h-3" />
-        </button>
-      </div>
     </div>
   )
 }

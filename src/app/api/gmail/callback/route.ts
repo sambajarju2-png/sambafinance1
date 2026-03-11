@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { encrypt } from '@/lib/crypto'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/gmail/callback — Google OAuth callback
 export async function GET(req: NextRequest) {
   const DEADLINE = Date.now() + 8000

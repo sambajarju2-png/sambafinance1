@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest) {
 
     const allowedFields = [
       'partner_name', 'current_balance', 'notifications_enabled',
-      'notify_days_before', 'budgets',
+      'notify_days_before', 'budgets', 'anthropic_api_key',
     ]
 
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
