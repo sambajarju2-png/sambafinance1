@@ -120,7 +120,7 @@ export default function Home() {
           case 'cashflow':
             return <CashflowView bills={displayBills} />
           case 'instellingen':
-            return <InstellingenView />
+            return <InstellingenView onSignOut={signOut} userName={userName} userEmail={userEmail} accessToken={accessToken || ''} />
           default:
             return <DashboardView bills={displayBills} paidBills={displayPaid} />
         }

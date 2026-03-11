@@ -1,23 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Wallet, Bell, RefreshCw, Plus, Unlink } from 'lucide-react'
-import { CATEGORY_DATA, formatAmount } from '@/lib/mock-data'
+import { Mail, Wallet, Bell, RefreshCw, Plus, Unlink, LogOut, User, ExternalLink, Loader2 } from 'lucide-react'
+import { CATEGORY_DATA } from '@/lib/mock-data'
+import { formatAmount } from '@/lib/bill-utils'
 
-type SettingsTab = 'accounts' | 'budget' | 'notif' | 'sync'
+type SettingsTab = 'accounts' | 'budget' | 'notif' | 'sync' | 'profile'
+
+interface InstellingenViewProps {
+  onSignOut?: () => void
+  userName?: string
+  userEmail?: string
+  accessToken?: string
+}
 
 const NAV_ITEMS: { id: SettingsTab; label: string; icon: typeof Mail }[] = [
+  { id: 'profile', label: 'Profiel', icon: User },
   { id: 'accounts', label: 'Email accounts', icon: Mail },
   { id: 'budget', label: 'Budget', icon: Wallet },
   { id: 'notif', label: 'Notificaties', icon: Bell },
   { id: 'sync', label: 'Sync & AI', icon: RefreshCw },
 ]
 
-export default function InstellingenView() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('accounts')
+export default function InstellingenView({ onSignOut, userName, userEmail, accessToken }: InstellingenViewProps) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [budgets, setBudgets] = useState<Record<string, number>>(
     Object.fromEntries(CATEGORY_DATA.map((c) => [c.name, c.budget]))
   )
+  const [connectingGmail, setConnectingGmail] = useState(false)
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-5">
@@ -48,26 +58,70 @@ export default function InstellingenView() {
 
       {/* Content */}
       <div>
+        {/* ── Profile ── */}
+        {activeTab === 'profile' && (
+          <Card title="Mijn profiel">
+            <div className="flex items-center gap-4 pb-4 border-b border-border">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-brand-blue-hover to-blue-700 flex items-center justify-center text-[20px] font-bold text-white flex-shrink-0">
+                {(userName || 'U').slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div className="text-[15px] font-bold text-navy">{userName || 'Gebruiker'}</div>
+                <div className="text-[13px] text-muted">{userEmail || '—'}</div>
+              </div>
+            </div>
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-lg border border-status-red-mid bg-status-red-pale text-status-red text-[13px] font-bold hover:bg-status-red-mid transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Uitloggen
+              </button>
+            )}
+          </Card>
+        )}
+
         {/* ── Accounts ── */}
         {activeTab === 'accounts' && (
           <>
-            <Card title="Gekoppelde email accounts">
-              <AccountRow
-                icon="📧"
-                name="Samba Jarju"
-                email="sambajarju2@gmail.com · Gmail"
-                status="connected"
-              />
-              <AccountRow
-                icon="🔵"
-                name="Vrouw"
-                email="vrouw@hotmail.com · Outlook"
-                status="pending"
-              />
-              <button className="flex items-center gap-2 mt-3 text-brand-blue text-[13px] font-bold hover:text-brand-blue-hover transition-colors">
-                <Plus className="w-4 h-4" />
-                Nieuw account koppelen (Gmail / Outlook)
-              </button>
+            <Card title="Gekoppelde email accounts" sub="Koppel je Gmail of Outlook om facturen automatisch te scannen">
+              <div className="space-y-0">
+                <AccountRow
+                  icon="📧"
+                  name={userName || 'Mijn account'}
+                  email={userEmail ? `${userEmail} · Gmail` : 'Nog niet gekoppeld'}
+                  status="pending"
+                />
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-border">
+                <button
+                  onClick={async () => {
+                    setConnectingGmail(true)
+                    window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}`
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors"
+                >
+                  {connectingGmail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Gmail account koppelen
+                </button>
+                <p className="text-[11.5px] text-muted-light mt-2">
+                  Vereist een Google Cloud project met OAuth2 credentials.
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 text-brand-blue font-semibold ml-1 hover:text-brand-blue-hover"
+                  >
+                    Google Console <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
+              </div>
             </Card>
 
             <Card title="Sync instellingen">
