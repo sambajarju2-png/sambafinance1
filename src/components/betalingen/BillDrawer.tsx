@@ -3,14 +3,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { X, Copy, Check, Save, Mail, Phone, Building2, MessageCircle } from 'lucide-react'
 import StatusBadge from '@/components/ui/StatusBadge'
-import { type MockBill, formatAmount, formatDate, daysUntil } from '@/lib/mock-data'
+import type { DisplayBill } from '@/lib/bill-utils'
+import { formatAmount, formatDate, daysUntilDate as daysUntil } from '@/lib/bill-utils'
+import type { DbBill } from '@/lib/types'
 
 type DrawerTab = 'details' | 'reactie' | 'notitie'
 
 interface BillDrawerProps {
-  bill: MockBill | null
+  bill: DisplayBill | null
   onClose: () => void
   onMarkPaid: (id: string) => void
+  onUpdateBill?: (id: string, updates: Partial<DbBill>) => Promise<void>
 }
 
 // Extended data for drawer — in production this comes from Supabase
@@ -80,7 +83,7 @@ const BILL_EXTRAS: Record<string, {
   },
 }
 
-export default function BillDrawer({ bill, onClose, onMarkPaid }: BillDrawerProps) {
+export default function BillDrawer({ bill, onClose, onMarkPaid, onUpdateBill }: BillDrawerProps) {
   const [activeTab, setActiveTab] = useState<DrawerTab>('details')
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({})
   const [emailTab, setEmailTab] = useState<'full' | 'plan'>('full')
@@ -98,10 +101,22 @@ export default function BillDrawer({ bill, onClose, onMarkPaid }: BillDrawerProp
       setEmailTab('full')
       setCopied(false)
       setNoteText('')
+
+      // Parse notes from DB field or fall back to extras
       const extras = BILL_EXTRAS[bill.id]
-      setSavedNotes(extras?.notes ? [...extras.notes] : [])
+      if (bill.notes) {
+        const parsed = bill.notes.split('\n').filter(Boolean).map((line) => {
+          const match = line.match(/^\[(.+?)\]\s*(.+)$/)
+          return match
+            ? { date: match[1], text: match[2] }
+            : { date: '—', text: line }
+        })
+        setSavedNotes(parsed)
+      } else {
+        setSavedNotes(extras?.notes ? [...extras.notes] : [])
+      }
     }
-  }, [bill?.id])
+  }, [bill?.id, bill?.notes])
 
   // ESC to close
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -139,14 +154,21 @@ export default function BillDrawer({ bill, onClose, onMarkPaid }: BillDrawerProp
     })
   }
 
-  function handleSaveNote() {
-    if (!noteText.trim()) return
+  async function handleSaveNote() {
+    if (!noteText.trim() || !bill) return
     const newNote = {
       text: noteText.trim(),
       date: new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }),
     }
-    setSavedNotes([newNote, ...savedNotes])
+    const updatedNotes = [newNote, ...savedNotes]
+    setSavedNotes(updatedNotes)
     setNoteText('')
+
+    // Persist to Supabase via API
+    if (onUpdateBill) {
+      const notesStr = updatedNotes.map((n) => `[${n.date}] ${n.text}`).join('\n')
+      await onUpdateBill(bill.id, { notes: notesStr })
+    }
   }
 
   // Progress bar for deadline

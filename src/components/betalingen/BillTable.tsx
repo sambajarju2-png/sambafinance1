@@ -2,15 +2,16 @@
 
 import { Check, ChevronRight } from 'lucide-react'
 import StatusBadge from '@/components/ui/StatusBadge'
-import { type MockBill, formatAmount, formatDate, daysUntil } from '@/lib/mock-data'
+import type { DisplayBill } from '@/lib/bill-utils'
+import { formatAmount, formatDate, daysUntilDate as daysUntil } from '@/lib/bill-utils'
 
 interface BillTableProps {
-  bills: MockBill[]
+  bills: DisplayBill[]
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onToggleSelectAll: () => void
   onMarkPaid: (id: string) => void
-  onOpenDrawer: (bill: MockBill) => void
+  onOpenDrawer: (bill: DisplayBill) => void
   allSelected: boolean
 }
 

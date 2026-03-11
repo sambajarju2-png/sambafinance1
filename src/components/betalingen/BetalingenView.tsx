@@ -5,46 +5,43 @@ import FilterBar, { type StatusTab, type UrgencyTab, type SortOption } from './F
 import BulkBar from './BulkBar'
 import BillTable from './BillTable'
 import BillDrawer from './BillDrawer'
-import { type MockBill, type Household } from '@/lib/mock-data'
+import type { DisplayBill } from '@/lib/bill-utils'
+import type { DbBill } from '@/lib/types'
 
 interface BetalingenViewProps {
-  bills: MockBill[]
-  paidBills: MockBill[]
-  household: Household
+  bills: DisplayBill[]
+  paidBills: DisplayBill[]
+  household: string
   searchQuery: string
-  onBillsChange: (bills: MockBill[], paid: MockBill[]) => void
+  onMarkPaid: (id: string) => Promise<void>
+  onBulkMarkPaid: (ids: string[]) => Promise<void>
+  onUpdateBill: (id: string, updates: Partial<DbBill>) => Promise<void>
 }
-
-// Re-export Household from mock-data for page.tsx
-export type { Household } from '@/lib/mock-data'
 
 export default function BetalingenView({
   bills,
   paidBills,
   household,
   searchQuery,
-  onBillsChange,
+  onMarkPaid,
+  onBulkMarkPaid,
+  onUpdateBill,
 }: BetalingenViewProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('open')
   const [urgencyTab, setUrgencyTab] = useState<UrgencyTab>('all')
   const [sortOption, setSortOption] = useState<SortOption>('urgency')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [drawerBill, setDrawerBill] = useState<MockBill | null>(null)
-
-  // Filter logic
-  const openBills = useMemo(() => {
-    return bills.filter((b) => b.status !== 'settled')
-  }, [bills])
+  const [drawerBill, setDrawerBill] = useState<DisplayBill | null>(null)
 
   const filteredBills = useMemo(() => {
-    let data: MockBill[]
+    let data: DisplayBill[]
 
     if (statusTab === 'paid') {
       data = [...paidBills]
     } else if (statusTab === 'archive') {
       data = []
     } else {
-      data = [...openBills]
+      data = [...bills]
 
       // Household filter
       if (household !== 'joint') {
@@ -84,24 +81,22 @@ export default function BetalingenView({
       case 'sender':
         data.sort((a, b) => a.vendor.localeCompare(b.vendor))
         break
-      default: // urgency
+      default:
         const urgOrder = { critical: 0, warn: 1, info: 2 }
         data.sort((a, b) => (urgOrder[a.urgency] ?? 3) - (urgOrder[b.urgency] ?? 3))
     }
 
     return data
-  }, [openBills, paidBills, statusTab, urgencyTab, sortOption, household, searchQuery])
+  }, [bills, paidBills, statusTab, urgencyTab, sortOption, household, searchQuery])
 
-  // Counts for filter badges
   const counts = useMemo(() => ({
-    open: openBills.length,
+    open: bills.length,
     paid: paidBills.length,
-    critical: openBills.filter((b) => b.urgency === 'critical').length,
-    warn: openBills.filter((b) => b.urgency === 'warn').length,
-    info: openBills.filter((b) => b.urgency === 'info').length,
-  }), [openBills, paidBills])
+    critical: bills.filter((b) => b.urgency === 'critical').length,
+    warn: bills.filter((b) => b.urgency === 'warn').length,
+    info: bills.filter((b) => b.urgency === 'info').length,
+  }), [bills, paidBills])
 
-  // Selection handlers
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -119,61 +114,19 @@ export default function BetalingenView({
     }
   }, [filteredBills, selectedIds.size])
 
-  // Mark as paid
-  const handleMarkPaid = useCallback((id: string) => {
-    const bill = bills.find((b) => b.id === id)
-    if (!bill) return
+  const handleMarkPaid = useCallback(async (id: string) => {
+    await onMarkPaid(id)
+    setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n })
+    if (drawerBill?.id === id) setDrawerBill(null)
+  }, [onMarkPaid, drawerBill])
 
-    const paidBill: MockBill = {
-      ...bill,
-      status: 'settled',
-      paidAt: new Date().toISOString(),
-    }
-
-    const newBills = bills.filter((b) => b.id !== id)
-    const newPaid = [paidBill, ...paidBills]
-    onBillsChange(newBills, newPaid)
-
-    // Remove from selection
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-
-    // Close drawer if this bill was open
-    if (drawerBill?.id === id) {
-      setDrawerBill(null)
-    }
-  }, [bills, paidBills, onBillsChange, drawerBill])
-
-  const handleBulkMarkPaid = useCallback(() => {
-    let newBills = [...bills]
-    let newPaid = [...paidBills]
-
-    selectedIds.forEach((id) => {
-      const bill = newBills.find((b) => b.id === id)
-      if (bill) {
-        newPaid.unshift({
-          ...bill,
-          status: 'settled',
-          paidAt: new Date().toISOString(),
-        })
-        newBills = newBills.filter((b) => b.id !== id)
-      }
-    })
-
-    onBillsChange(newBills, newPaid)
+  const handleBulkMarkPaid = useCallback(async () => {
+    await onBulkMarkPaid(Array.from(selectedIds))
     setSelectedIds(new Set())
-  }, [bills, paidBills, selectedIds, onBillsChange])
-
-  const handleDeselect = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
+  }, [selectedIds, onBulkMarkPaid])
 
   return (
     <div className="bg-surface border border-border rounded-card shadow-card overflow-hidden">
-      {/* Filter bar */}
       <FilterBar
         statusTab={statusTab}
         urgencyTab={urgencyTab}
@@ -183,15 +136,11 @@ export default function BetalingenView({
         onUrgencyChange={setUrgencyTab}
         onSortChange={setSortOption}
       />
-
-      {/* Bulk action bar */}
       <BulkBar
         count={selectedIds.size}
         onMarkPaid={handleBulkMarkPaid}
-        onDeselect={handleDeselect}
+        onDeselect={() => setSelectedIds(new Set())}
       />
-
-      {/* Bill table */}
       <BillTable
         bills={filteredBills}
         selectedIds={selectedIds}
@@ -201,12 +150,11 @@ export default function BetalingenView({
         onOpenDrawer={setDrawerBill}
         allSelected={selectedIds.size === filteredBills.length && filteredBills.length > 0}
       />
-
-      {/* Detail drawer */}
       <BillDrawer
         bill={drawerBill}
         onClose={() => setDrawerBill(null)}
         onMarkPaid={handleMarkPaid}
+        onUpdateBill={onUpdateBill}
       />
     </div>
   )

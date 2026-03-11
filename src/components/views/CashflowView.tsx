@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Calendar, CalendarDays, RefreshCw } from 'lucide-react'
 import StatCard from '@/components/ui/StatCard'
-import { CASHFLOW_DATA, formatAmount } from '@/lib/mock-data'
+import { CASHFLOW_DATA } from '@/lib/mock-data'
+import type { DisplayBill } from '@/lib/bill-utils'
+import { formatAmount } from '@/lib/bill-utils'
 
 const RECURRING = [
   { vendor: 'Odido', initials: 'OD', bg: '#F0FDF4', fg: '#059669', desc: 'Mobiel abonnement', cat: 'Telecom', freq: 'Maandelijks', next: '1 april 2026', amount: 5650 },
@@ -13,7 +15,11 @@ const RECURRING = [
   { vendor: 'WorkWings', initials: 'WW', bg: '#DBEAFE', fg: '#1D4ED8', desc: 'Marketing factuur', cat: 'Zakelijk', freq: 'Maandelijks', next: '10 april 2026', amount: 242000 },
 ]
 
-export default function CashflowView() {
+interface CashflowViewProps {
+  bills: DisplayBill[]
+}
+
+export default function CashflowView({ bills }: CashflowViewProps) {
   const [animate, setAnimate] = useState(false)
 
   useEffect(() => {
@@ -23,15 +29,17 @@ export default function CashflowView() {
 
   const maxAmount = Math.max(...CASHFLOW_DATA.map((d) => d.amount))
 
+  const totalThisMonth = useMemo(() => bills.reduce((s, b) => s + (b.amount ?? 0), 0), [bills])
+
   return (
     <>
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
         <StatCard
           label="Deze maand"
-          value={332052}
+          value={totalThisMonth}
           prefix="€ "
-          subtitle="10 openstaande betalingen"
+          subtitle={`${bills.length} openstaande betalingen`}
           accent="red"
           icon={<Calendar className="w-[15px] h-[15px] text-status-red" />}
           delay={0}

@@ -1,12 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { TrendingDown, Clock, FileText } from 'lucide-react'
 import CategoryDonut from '@/components/ui/CategoryDonut'
 import BudgetBars from '@/components/ui/BudgetBars'
-import { CATEGORY_DATA, formatAmount } from '@/lib/mock-data'
+import { CATEGORY_DATA } from '@/lib/mock-data'
+import type { DisplayBill } from '@/lib/bill-utils'
+import { formatAmount } from '@/lib/bill-utils'
 
-export default function StatistiekenView() {
+interface StatistiekenViewProps {
+  bills: DisplayBill[]
+}
+
+export default function StatistiekenView({ bills }: StatistiekenViewProps) {
   const [animate, setAnimate] = useState(false)
 
   useEffect(() => {
@@ -14,12 +20,16 @@ export default function StatistiekenView() {
     return () => clearTimeout(timer)
   }, [])
 
+  const totalOutstanding = useMemo(() => {
+    return bills.reduce((s, b) => s + (b.amount ?? 0), 0)
+  }, [bills])
+
   return (
     <>
       {/* Metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
         <MetricCard
-          value="€ 3.323,53"
+          value={formatAmount(totalOutstanding)}
           label="Totaal openstaand"
           sub="Alle accounts gecombineerd"
           icon={<TrendingDown className="w-4 h-4 text-status-red" />}

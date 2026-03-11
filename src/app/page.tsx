@@ -1,49 +1,107 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import DashboardView from '@/components/views/DashboardView'
 import StatistiekenView from '@/components/views/StatistiekenView'
 import CashflowView from '@/components/views/CashflowView'
 import InstellingenView from '@/components/views/InstellingenView'
 import BetalingenView from '@/components/betalingen/BetalingenView'
-import { MOCK_BILLS, MOCK_PAID, type MockBill } from '@/lib/mock-data'
+import { useBills } from '@/lib/hooks/use-bills'
+import { dbBillToDisplay } from '@/lib/bill-utils'
+import { Database, Loader2 } from 'lucide-react'
 
 export default function Home() {
-  const [bills, setBills] = useState<MockBill[]>([...MOCK_BILLS])
-  const [paidBills, setPaidBills] = useState<MockBill[]>([...MOCK_PAID])
+  const {
+    bills, paidBills, loading, error, seeded,
+    markPaid, bulkMarkPaid, updateBill, seed, refetch,
+  } = useBills()
 
-  const openBillCount = bills.filter((b) => b.status !== 'settled').length
-
-  const handleBillsChange = useCallback((newBills: MockBill[], newPaid: MockBill[]) => {
-    setBills(newBills)
-    setPaidBills(newPaid)
-  }, [])
+  const displayBills = useMemo(() => bills.map(dbBillToDisplay), [bills])
+  const displayPaid = useMemo(() => paidBills.map(dbBillToDisplay), [paidBills])
 
   return (
-    <AppShell billCount={openBillCount}>
+    <AppShell billCount={bills.length}>
       {({ activeView, household, searchQuery }) => {
+        // Loading state
+        if (loading) {
+          return (
+            <div className="flex flex-col items-center justify-center py-24">
+              <Loader2 className="w-8 h-8 text-brand-blue animate-spin mb-3" />
+              <span className="text-[13px] text-muted">Laden...</span>
+            </div>
+          )
+        }
+
+        // Error state (env vars not configured)
+        if (error && !seeded) {
+          return (
+            <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+              <div className="w-14 h-14 rounded-xl bg-status-amber-pale flex items-center justify-center mb-4">
+                <Database className="w-7 h-7 text-status-amber" />
+              </div>
+              <h2 className="text-[16px] font-bold text-navy mb-2">Database niet verbonden</h2>
+              <p className="text-[13px] text-muted max-w-[360px] mb-4">
+                Voeg de Supabase omgevingsvariabelen toe aan je Vercel project om de app te verbinden met je database.
+              </p>
+              <div className="bg-bg border border-border rounded-lg p-4 text-left text-[12px] text-muted font-mono max-w-[400px] mb-4">
+                NEXT_PUBLIC_SUPABASE_URL=...<br />
+                NEXT_PUBLIC_SUPABASE_ANON_KEY=...<br />
+                SUPABASE_SERVICE_ROLE_KEY=...
+              </div>
+              <p className="text-[12px] text-muted-light">
+                Fout: {error}
+              </p>
+            </div>
+          )
+        }
+
+        // Seed state (connected but no data)
+        if (!seeded && !loading) {
+          return (
+            <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+              <div className="w-14 h-14 rounded-xl bg-brand-blue-pale flex items-center justify-center mb-4">
+                <Database className="w-7 h-7 text-brand-blue" />
+              </div>
+              <h2 className="text-[16px] font-bold text-navy mb-2">Database is leeg</h2>
+              <p className="text-[13px] text-muted max-w-[360px] mb-5">
+                Je database is verbonden maar bevat nog geen data. Klik hieronder om de demo-gegevens te laden.
+              </p>
+              <button
+                onClick={seed}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors"
+              >
+                <Database className="w-4 h-4" />
+                Seed demo data
+              </button>
+            </div>
+          )
+        }
+
+        // Normal views
         switch (activeView) {
           case 'dashboard':
-            return <DashboardView />
+            return <DashboardView bills={displayBills} paidBills={displayPaid} />
           case 'betalingen':
             return (
               <BetalingenView
-                bills={bills}
-                paidBills={paidBills}
+                bills={displayBills}
+                paidBills={displayPaid}
                 household={household}
                 searchQuery={searchQuery}
-                onBillsChange={handleBillsChange}
+                onMarkPaid={markPaid}
+                onBulkMarkPaid={bulkMarkPaid}
+                onUpdateBill={updateBill}
               />
             )
           case 'statistieken':
-            return <StatistiekenView />
+            return <StatistiekenView bills={displayBills} />
           case 'cashflow':
-            return <CashflowView />
+            return <CashflowView bills={displayBills} />
           case 'instellingen':
             return <InstellingenView />
           default:
-            return <DashboardView />
+            return <DashboardView bills={displayBills} paidBills={displayPaid} />
         }
       }}
     </AppShell>
