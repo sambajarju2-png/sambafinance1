@@ -1,0 +1,215 @@
+'use client'
+
+import { useState } from 'react'
+import { Mail, Wallet, Bell, RefreshCw, Plus, Unlink } from 'lucide-react'
+import { CATEGORY_DATA, formatAmount } from '@/lib/mock-data'
+
+type SettingsTab = 'accounts' | 'budget' | 'notif' | 'sync'
+
+const NAV_ITEMS: { id: SettingsTab; label: string; icon: typeof Mail }[] = [
+  { id: 'accounts', label: 'Email accounts', icon: Mail },
+  { id: 'budget', label: 'Budget', icon: Wallet },
+  { id: 'notif', label: 'Notificaties', icon: Bell },
+  { id: 'sync', label: 'Sync & AI', icon: RefreshCw },
+]
+
+export default function InstellingenView() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('accounts')
+  const [budgets, setBudgets] = useState<Record<string, number>>(
+    Object.fromEntries(CATEGORY_DATA.map((c) => [c.name, c.budget]))
+  )
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-5">
+      {/* Settings nav — horizontal on mobile, vertical on desktop */}
+      <div className="flex md:flex-col gap-[2px] overflow-x-auto md:overflow-x-visible pb-1 md:pb-0">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon
+          const isActive = activeTab === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`
+                flex items-center gap-2 px-3 py-2.5 rounded-lg text-[13px] font-medium
+                transition-all whitespace-nowrap flex-shrink-0
+                ${isActive
+                  ? 'bg-brand-blue-pale text-brand-blue font-bold'
+                  : 'text-muted hover:bg-surface-2 hover:text-navy'
+                }
+              `}
+            >
+              <Icon className="w-[15px] h-[15px]" />
+              {item.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Content */}
+      <div>
+        {/* ── Accounts ── */}
+        {activeTab === 'accounts' && (
+          <>
+            <Card title="Gekoppelde email accounts">
+              <AccountRow
+                icon="📧"
+                name="Samba Jarju"
+                email="sambajarju2@gmail.com · Gmail"
+                status="connected"
+              />
+              <AccountRow
+                icon="🔵"
+                name="Vrouw"
+                email="vrouw@hotmail.com · Outlook"
+                status="pending"
+              />
+              <button className="flex items-center gap-2 mt-3 text-brand-blue text-[13px] font-bold hover:text-brand-blue-hover transition-colors">
+                <Plus className="w-4 h-4" />
+                Nieuw account koppelen (Gmail / Outlook)
+              </button>
+            </Card>
+
+            <Card title="Sync instellingen">
+              <Toggle label="Dagelijkse automatische sync" sub="Elke ochtend 07:00 nieuwe mails ophalen" defaultOn />
+              <Toggle label="PDF-bijlagen scannen" sub="Facturen als PDF-bijlage extracten via AI" defaultOn />
+              <Toggle label="Deduplicatie" sub="Herken duplicaten (herinnering = zelfde factuur)" defaultOn />
+            </Card>
+          </>
+        )}
+
+        {/* ── Budget ── */}
+        {activeTab === 'budget' && (
+          <Card title="Maandbudget per categorie" sub="Stel je maximale maandbudget in per categorie">
+            <div className="space-y-3">
+              {CATEGORY_DATA.map((cat) => (
+                <div key={cat.name} className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 w-[140px] flex-shrink-0">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
+                    <span className="text-[13px] font-semibold text-navy">{cat.name}</span>
+                  </div>
+                  <div className="relative flex-1 max-w-[140px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">€</span>
+                    <input
+                      type="number"
+                      value={budgets[cat.name] / 100}
+                      onChange={(e) => setBudgets({ ...budgets, [cat.name]: Math.round(parseFloat(e.target.value || '0') * 100) })}
+                      className="w-full pl-7 pr-3 py-2 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans"
+                    />
+                  </div>
+                  <span className="text-[12px] text-muted">/maand</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-5 pt-4 border-t border-border">
+              <span className="text-[12.5px] text-muted">
+                Totaal maandbudget: <strong className="text-navy">{formatAmount(Object.values(budgets).reduce((s, v) => s + v, 0))}</strong>
+              </span>
+              <button
+                onClick={() => alert('Budgets opgeslagen ✓')}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-[12.5px] font-bold hover:bg-brand-blue-hover transition-colors"
+              >
+                Opslaan
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {/* ── Notifications ── */}
+        {activeTab === 'notif' && (
+          <Card title="Meldingsinstellingen">
+            <Toggle label="Melding bij nieuwe betaling" sub="Direct als een nieuwe factuur gedetecteerd wordt" defaultOn />
+            <Toggle label="Deadline herinnering (7 dagen)" sub="7 dagen vóór deadline een melding sturen" defaultOn />
+            <Toggle label="Deadline herinnering (3 dagen)" sub="3 dagen vóór deadline een melding sturen" defaultOn />
+            <Toggle label="Deadline herinnering (1 dag)" sub="1 dag vóór deadline — kritieke alert" defaultOn />
+            <Toggle label="Mislukte betaling alert" sub="Direct bij een stornering of mislukte incasso" defaultOn />
+            <Toggle label="Wekelijkse digest" sub="Elke maandag 08:00 een samenvatting" defaultOn={false} />
+          </Card>
+        )}
+
+        {/* ── Sync & AI ── */}
+        {activeTab === 'sync' && (
+          <Card title="AI & Extractie">
+            <Toggle label="Claude Haiku (goedkoopst)" sub="~€0,20/maand · aanbevolen voor extraction" defaultOn />
+            <Toggle label="Automatische deduplicatie via AI" sub="Herken of herinnering over dezelfde factuur gaat" defaultOn />
+            <Toggle label="Pre-filter (voor AI)" sub="Eerst regex check, dan pas API aanroepen (bespaart kosten)" defaultOn />
+            <div className="mt-4 p-3.5 bg-brand-blue-pale border border-brand-blue-mid rounded-lg">
+              <div className="text-[12.5px] font-bold text-brand-blue mb-1">💡 Kosten schatting</div>
+              <div className="text-[12px] text-blue-700">
+                ~20 nieuwe mails/dag × 30 dagen × Haiku = <strong>€0,18/maand</strong>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Sub-components ──
+
+function Card({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-surface border border-border rounded-card shadow-card overflow-hidden mb-4">
+      <div className="px-5 py-[18px] border-b border-border">
+        <div className="text-[13.5px] font-bold text-navy">{title}</div>
+        {sub && <div className="text-[12px] text-muted mt-[2px]">{sub}</div>}
+      </div>
+      <div className="px-5 py-5">{children}</div>
+    </div>
+  )
+}
+
+function Toggle({ label, sub, defaultOn = false }: { label: string; sub: string; defaultOn?: boolean }) {
+  const [on, setOn] = useState(defaultOn)
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+      <div>
+        <div className="text-[13px] font-semibold text-navy">{label}</div>
+        <div className="text-[12px] text-muted mt-[1px]">{sub}</div>
+      </div>
+      <button
+        onClick={() => setOn(!on)}
+        className={`
+          relative w-9 h-5 rounded-full flex-shrink-0 transition-colors ml-4
+          ${on ? 'bg-brand-blue' : 'bg-border-strong'}
+        `}
+      >
+        <span
+          className={`
+            absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform
+            ${on ? 'left-[18px]' : 'left-[2px]'}
+          `}
+        />
+      </button>
+    </div>
+  )
+}
+
+function AccountRow({ icon, name, email, status }: { icon: string; name: string; email: string; status: 'connected' | 'pending' }) {
+  return (
+    <div className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
+      <div className="w-9 h-9 rounded-[9px] bg-surface-2 border border-border flex items-center justify-center text-[16px] flex-shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-bold text-navy">{name}</div>
+        <div className="text-[12px] text-muted">{email}</div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className={`
+          text-[11px] font-bold px-2.5 py-[3px] rounded-full border
+          ${status === 'connected'
+            ? 'bg-status-green-pale text-status-green border-status-green-mid'
+            : 'bg-status-amber-pale text-status-amber border-status-amber-mid'
+          }
+        `}>
+          {status === 'connected' ? '✓ Verbonden' : '⏳ Wacht op sync'}
+        </span>
+        <button className="text-[11px] text-muted font-semibold px-2 py-[3px] rounded border border-border bg-surface hover:border-status-red hover:text-status-red hover:bg-status-red-pale transition-all">
+          <Unlink className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  )
+}

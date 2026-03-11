@@ -3,8 +3,10 @@
 import { useState, useCallback } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import DashboardView from '@/components/views/DashboardView'
+import StatistiekenView from '@/components/views/StatistiekenView'
+import CashflowView from '@/components/views/CashflowView'
+import InstellingenView from '@/components/views/InstellingenView'
 import BetalingenView from '@/components/betalingen/BetalingenView'
-import PlaceholderView from '@/components/views/PlaceholderView'
 import { MOCK_BILLS, MOCK_PAID, type MockBill } from '@/lib/mock-data'
 
 export default function Home() {
@@ -35,26 +37,11 @@ export default function Home() {
               />
             )
           case 'statistieken':
-            return (
-              <PlaceholderView
-                title="Statistieken"
-                description="Analyse van je betalingsgedrag, categorieën en gemiddelde betaaltermijnen."
-              />
-            )
+            return <StatistiekenView />
           case 'cashflow':
-            return (
-              <PlaceholderView
-                title="Cashflow"
-                description="6-maands cashflow voorspelling met terugkerende vaste lasten."
-              />
-            )
+            return <CashflowView />
           case 'instellingen':
-            return (
-              <PlaceholderView
-                title="Instellingen"
-                description="Email accounts, budgetbeheer, notificaties en sync-instellingen."
-              />
-            )
+            return <InstellingenView />
           default:
             return <DashboardView />
         }
