@@ -18,6 +18,7 @@ export type BillCategory =
 export type BillStatus = 'outstanding' | 'action' | 'settled' | 'failed' | 'review'
 export type Urgency = 'critical' | 'warn' | 'info'
 export type AssignedTo = 'mine' | 'partner' | 'joint'
+export type Household = 'joint' | 'mine' | 'partner'
 
 export interface MockBill {
   id: string
