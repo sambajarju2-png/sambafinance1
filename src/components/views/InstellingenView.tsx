@@ -96,29 +96,22 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
   const [apiKeyError, setApiKeyError] = useState<string | null>(null)
 
   async function handleSaveApiKey() {
-    console.log('[v0] handleSaveApiKey called, apiKey length:', apiKey.trim().length)
-    console.log('[v0] accessToken present:', !!accessToken)
     setApiKeySaving(true)
     setApiKeyError(null)
     try {
-      const reqHeaders = headers()
-      console.log('[v0] Request headers:', reqHeaders)
       const res = await fetch('/api/settings', {
         method: 'PATCH',
-        headers: reqHeaders,
+        headers: headers(),
         body: JSON.stringify({ anthropic_api_key: apiKey.trim() }),
       })
-      console.log('[v0] Response status:', res.status)
       const data = await res.json()
-      console.log('[v0] Response data:', data)
       if (res.ok) {
         setApiKeySaved(true)
         setTimeout(() => setApiKeySaved(false), 3000)
       } else {
         setApiKeyError(data.error || 'Opslaan mislukt')
       }
-    } catch (err) {
-      console.log('[v0] Fetch error:', err)
+    } catch {
       setApiKeyError('Netwerk fout — controleer je verbinding')
     }
     finally { setApiKeySaving(false) }

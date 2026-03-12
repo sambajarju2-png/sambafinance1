@@ -12,12 +12,13 @@ export async function GET(req: NextRequest) {
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle() // Use maybeSingle instead of single to handle no rows gracefully
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    return NextResponse.json({ data })
+    // Return empty object if no settings exist yet
+    return NextResponse.json({ data: data || {} })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })
@@ -54,13 +55,11 @@ export async function PATCH(req: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[v0] Settings upsert error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     return NextResponse.json({ data })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[v0] Settings PATCH error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
