@@ -15,6 +15,7 @@ interface TopbarProps {
   searchQuery: string
   bills?: DisplayBill[]
   onNavigate?: (view: ViewId) => void
+  onSyncClick?: () => void
 }
 
 const VIEW_TITLES: Record<ViewId, string> = {
@@ -22,7 +23,7 @@ const VIEW_TITLES: Record<ViewId, string> = {
   cashflow: 'Cashflow', instellingen: 'Instellingen',
 }
 
-export default function Topbar({ activeView, household, onHouseholdChange, onSearch, searchQuery, bills = [], onNavigate }: TopbarProps) {
+export default function Topbar({ activeView, household, onHouseholdChange, onSearch, searchQuery, bills = [], onNavigate, onSyncClick }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifRead, setNotifRead] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -115,7 +116,7 @@ export default function Topbar({ activeView, household, onHouseholdChange, onSea
         )}
       </div>
 
-      <button onClick={() => onNavigate?.('instellingen')} className="hidden md:flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg bg-navy text-white text-[12.5px] font-semibold hover:bg-navy-light transition-colors">
+      <button onClick={() => onSyncClick?.()} className="hidden md:flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg bg-navy text-white text-[12.5px] font-semibold hover:bg-navy-light transition-colors">
         <Plus className="w-3.5 h-3.5" /> Sync
       </button>
     </div>

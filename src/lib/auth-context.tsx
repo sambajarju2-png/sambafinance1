@@ -23,11 +23,12 @@ export function AuthProvider({children}:{children:ReactNode}) {
     return ()=>subscription.unsubscribe()
   },[])
   const signIn=useCallback(async(email:string,password:string)=>{
-    const {error}=await getSupabaseBrowser().auth.signInWithPassword({email,password})
+    const {error,data}=await getSupabaseBrowser().auth.signInWithPassword({email,password})
     if(error){
       const msg=error.message==='Invalid login credentials'?'Onjuist e-mailadres of wachtwoord':error.message==='Email not confirmed'?'Bevestig eerst je e-mailadres':error.message
       return {error:msg}
     }
+    if(data.user) await createDefaultSettings(data.user.id,data.user.user_metadata?.name||'')
     return {error:null}
   },[])
   const signUp=useCallback(async(email:string,password:string,name:string)=>{

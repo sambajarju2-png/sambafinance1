@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const userId = await getAuthUserId(req); if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE })
     const supabase = getSupabaseAdmin(); const body = await req.json()
-    const allowedFields = ['partner_name','current_balance','notifications_enabled','notify_days_before','budgets','anthropic_api_key']
+    const allowedFields = ['partner_name','current_balance','notifications_enabled','notify_days_before','budgets','anthropic_api_key','first_name','last_name']
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const field of allowedFields) { if (body[field] !== undefined) update[field] = body[field] }
     const { data, error } = await supabase.from('user_settings').update(update).eq('user_id', userId).select().single()

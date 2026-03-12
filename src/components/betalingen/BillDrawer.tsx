@@ -163,20 +163,7 @@ export default function BillDrawer({ bill, onClose, onMarkPaid, onUndoPaid, onUp
                 </button>
               )}
 
-              {/* Contact info */}
-              {(bill.vendorContact || bill.iban) && (
-                <div className="mt-5">
-                  <SectionTitle>Contact</SectionTitle>
-                  <div className="flex flex-wrap gap-x-4 gap-y-2">
-                    {bill.vendorContact?.email && <ContactItem icon={<Mail className="w-3.5 h-3.5" />} value={bill.vendorContact.email} />}
-                    {bill.vendorContact?.phone && <ContactItem icon={<Phone className="w-3.5 h-3.5" />} value={bill.vendorContact.phone} />}
-                    {bill.vendorContact?.website && <ContactItem icon={<Globe className="w-3.5 h-3.5" />} value={bill.vendorContact.website} />}
-                    {bill.iban && <ContactItem icon={<Building2 className="w-3.5 h-3.5" />} value={bill.iban} />}
-                  </div>
-                </div>
-              )}
-
-              {/* Checklist */}
+              {/* Checklist — above contact */}
               {checklist.length > 0 && (
                 <div className="mt-5">
                   <SectionTitle>Actielijst</SectionTitle>
@@ -192,6 +179,19 @@ export default function BillDrawer({ bill, onClose, onMarkPaid, onUndoPaid, onUp
                         </span>
                       </button>
                     )})}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact info */}
+              {(bill.vendorContact || bill.iban) && (
+                <div className="mt-5">
+                  <SectionTitle>Contact</SectionTitle>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {bill.vendorContact?.email && <ContactItem icon={<Mail className="w-3.5 h-3.5" />} value={bill.vendorContact.email} />}
+                    {bill.vendorContact?.phone && <ContactItem icon={<Phone className="w-3.5 h-3.5" />} value={bill.vendorContact.phone} />}
+                    {bill.vendorContact?.website && <ContactItem icon={<Globe className="w-3.5 h-3.5" />} value={bill.vendorContact.website} />}
+                    {bill.iban && <ContactItem icon={<Building2 className="w-3.5 h-3.5" />} value={bill.iban} />}
                   </div>
                 </div>
               )}
