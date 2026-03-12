@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Mail, Wallet, Bell, RefreshCw, Plus, LogOut, User, ExternalLink, Loader2, CheckCircle2, Key, Scan, Inbox } from 'lucide-react'
+import { Mail, Wallet, Bell, RefreshCw, Plus, LogOut, User, ExternalLink, Loader2, CheckCircle2, Key, Scan, Inbox, Save, AlertCircle } from 'lucide-react'
 import { CATEGORY_DATA } from '@/lib/mock-data'
 import { formatAmount } from '@/lib/bill-utils'
+import { getSupabaseBrowser } from '@/lib/supabase-browser'
 
 type SettingsTab = 'accounts' | 'budget' | 'notif' | 'sync' | 'profile'
 
@@ -21,6 +22,8 @@ const NAV_ITEMS: { id: SettingsTab; label: string; icon: typeof Mail }[] = [
 export default function InstellingenView({ onSignOut, userName, userEmail, accessToken, onRefetch }: InstellingenViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [budgets, setBudgets] = useState<Record<string, number>>(Object.fromEntries(CATEGORY_DATA.map(c => [c.name, c.budget])))
+  const [budgetSaving, setBudgetSaving] = useState(false)
+  const [budgetSaved, setBudgetSaved] = useState(false)
   const [gmailAccounts, setGmailAccounts] = useState<GmailAccount[]>([])
   const [gmailLoading, setGmailLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
@@ -30,6 +33,13 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
   const [apiKey, setApiKey] = useState('')
   const [apiKeySaved, setApiKeySaved] = useState(false)
   const [apiKeySaving, setApiKeySaving] = useState(false)
+
+  // Profile name editing
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [nameSaving, setNameSaving] = useState(false)
+  const [nameSaved, setNameSaved] = useState(false)
+
   const abortRef = useRef(false)
 
   const headers = useCallback(() => {
@@ -38,15 +48,87 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
     return h
   }, [accessToken])
 
+  // Load Gmail accounts
   useEffect(() => {
-    if (!accessToken) return
-    fetch('/api/gmail/status', { headers: headers() }).then(r => r.json()).then(d => { if (d.accounts) setGmailAccounts(d.accounts) }).catch(() => {}).finally(() => setGmailLoading(false))
+    if (!accessToken) { setGmailLoading(false); return }
+    setGmailLoading(true)
+    fetch('/api/gmail/status', { headers: headers() })
+      .then(r => r.json())
+      .then(d => { if (d.accounts) setGmailAccounts(d.accounts) })
+      .catch(() => {})
+      .finally(() => setGmailLoading(false))
   }, [accessToken, headers])
 
+  // Load settings (API key + budgets)
   useEffect(() => {
     if (!accessToken) return
-    fetch('/api/settings', { headers: headers() }).then(r => r.json()).then(d => { if (d.data?.anthropic_api_key) { setApiKey(d.data.anthropic_api_key); setApiKeySaved(true) } }).catch(() => {})
+    fetch('/api/settings', { headers: headers() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.data?.anthropic_api_key) { setApiKey(d.data.anthropic_api_key); setApiKeySaved(true) }
+        if (d.data?.budgets && typeof d.data.budgets === 'object') {
+          const serverBudgets = d.data.budgets as Record<string, number>
+          if (Object.keys(serverBudgets).length > 0) {
+            setBudgets(prev => ({ ...prev, ...serverBudgets }))
+          }
+        }
+      })
+      .catch(() => {})
   }, [accessToken, headers])
+
+  // Load user name from auth metadata
+  useEffect(() => {
+    const supabase = getSupabaseBrowser()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.user_metadata) {
+        const meta = user.user_metadata
+        if (meta.first_name) {
+          setFirstName(meta.first_name)
+          setLastName(meta.last_name || '')
+        } else if (meta.name) {
+          const parts = meta.name.split(' ')
+          setFirstName(parts[0] || '')
+          setLastName(parts.slice(1).join(' ') || '')
+        }
+      }
+    })
+  }, [])
+
+  // Save profile name
+  async function handleSaveName() {
+    if (!firstName.trim()) return
+    setNameSaving(true)
+    try {
+      const supabase = getSupabaseBrowser()
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+      const { error } = await supabase.auth.updateUser({
+        data: { first_name: firstName.trim(), last_name: lastName.trim(), name: fullName }
+      })
+      if (!error) {
+        setNameSaved(true)
+        setTimeout(() => setNameSaved(false), 3000)
+      }
+    } catch {}
+    finally { setNameSaving(false) }
+  }
+
+  // Save budgets
+  async function handleSaveBudgets() {
+    setBudgetSaving(true)
+    setBudgetSaved(false)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ budgets }),
+      })
+      if (res.ok) {
+        setBudgetSaved(true)
+        setTimeout(() => setBudgetSaved(false), 3000)
+      }
+    } catch {}
+    finally { setBudgetSaving(false) }
+  }
 
   // Progressive batch scanner
   async function handleScan(mode: 'initial' | 'daily') {
@@ -55,7 +137,7 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
 
     let pageToken: string | undefined = undefined
     let totalScanned = 0, totalCreated = 0, totalDuplicates = 0, batchCount = 0
-    const maxEmails = mode === 'initial' ? 3000 : 100
+    const maxEmails = mode === 'initial' ? 300 : 100
 
     try {
       while (!abortRef.current && totalScanned < maxEmails) {
@@ -103,17 +185,59 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
       </div>
 
       <div>
+        {/* ── Profile Tab ── */}
         {activeTab === 'profile' && (
           <Card title="Mijn profiel">
-            <div className="flex items-center gap-4 pb-4 border-b border-border">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-brand-blue-hover to-blue-700 flex items-center justify-center text-[20px] font-bold text-white flex-shrink-0">{(userName || 'U').slice(0, 2).toUpperCase()}</div>
-              <div><div className="text-[15px] font-bold text-navy">{userName || 'Gebruiker'}</div><div className="text-[13px] text-muted">{userEmail || '—'}</div></div>
+            <div className="flex items-center gap-4 pb-5 border-b border-border">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-brand-blue-hover to-blue-700 flex items-center justify-center text-[20px] font-bold text-white flex-shrink-0">
+                {(firstName || userName || 'U').slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div className="text-[15px] font-bold text-navy">{firstName ? `${firstName} ${lastName}`.trim() : userName || 'Gebruiker'}</div>
+                <div className="text-[13px] text-muted">{userEmail || '—'}</div>
+              </div>
             </div>
-            <p className="text-[12px] text-muted mt-3">Je partner heeft een apart account. Zij kan zelf registreren en haar eigen Gmail-inboxen koppelen. Gedeelde rekeningen beheer je via de &quot;Gezamenlijk&quot; toewijzing.</p>
+
+            {/* Name editing */}
+            <div className="mt-5 space-y-3.5">
+              <div className="text-[11px] font-bold uppercase tracking-[.1em] text-muted-light mb-2">Naam bewerken</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-bold text-navy uppercase tracking-[.05em] mb-1.5">Voornaam</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={e => { setFirstName(e.target.value); setNameSaved(false) }}
+                    placeholder="Bijv. Samba"
+                    className="w-full px-3.5 py-2.5 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans placeholder:text-muted-light"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-navy uppercase tracking-[.05em] mb-1.5">Achternaam</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={e => { setLastName(e.target.value); setNameSaved(false) }}
+                    placeholder="Bijv. Jarju"
+                    className="w-full px-3.5 py-2.5 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans placeholder:text-muted-light"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleSaveName}
+                disabled={nameSaving || !firstName.trim()}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[12.5px] font-bold transition-colors ${nameSaved ? 'bg-status-green text-white' : 'bg-navy text-white hover:bg-navy-light disabled:opacity-50'}`}
+              >
+                {nameSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nameSaved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Opgeslagen</> : <><Save className="w-3.5 h-3.5" /> Naam opslaan</>}
+              </button>
+            </div>
+
+            <p className="text-[12px] text-muted mt-5 pt-4 border-t border-border">Je kunt meerdere Gmail-inboxen koppelen via het &quot;Email accounts&quot; tabblad. Gedeelde rekeningen beheer je via de toewijzing per factuur.</p>
             {onSignOut && <button onClick={onSignOut} className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-lg border border-status-red-mid bg-status-red-pale text-status-red text-[13px] font-bold hover:bg-status-red-mid transition-colors"><LogOut className="w-4 h-4" /> Uitloggen</button>}
           </Card>
         )}
 
+        {/* ── Accounts Tab ── */}
         {activeTab === 'accounts' && (
           <>
             <Card title="Gekoppelde Gmail accounts" sub="Je kunt meerdere Gmail-inboxen koppelen">
@@ -121,25 +245,43 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
                 <div className="flex items-center gap-2 py-4"><Loader2 className="w-4 h-4 animate-spin text-muted" /><span className="text-[13px] text-muted">Status laden...</span></div>
               ) : (
                 <>
-                  {gmailAccounts.map(acc => (
-                    <div key={acc.email} className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
-                      <div className="w-9 h-9 rounded-[9px] bg-surface-2 border border-border flex items-center justify-center text-[16px] flex-shrink-0">📧</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-bold text-navy">{acc.email}</div>
-                        <div className="text-[12px] text-muted">{acc.lastScanned ? `Laatste scan: ${new Date(acc.lastScanned).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Nog niet gescand'}</div>
+                  {gmailAccounts.length > 0 ? (
+                    <>
+                      {gmailAccounts.map(acc => (
+                        <div key={acc.email} className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
+                          <div className="w-9 h-9 rounded-[9px] bg-surface-2 border border-border flex items-center justify-center text-[16px] flex-shrink-0">📧</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-bold text-navy">{acc.email}</div>
+                            <div className="text-[12px] text-muted">
+                              {acc.lastScanned
+                                ? `Laatste scan: ${new Date(acc.lastScanned).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                                : 'Nog niet gescand'}
+                              {acc.fullScanComplete && ' · Volledige scan afgerond'}
+                            </div>
+                          </div>
+                          {acc.expired ? (
+                            <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border bg-status-amber-pale text-status-amber border-status-amber-mid">⚠ Verlopen</span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border bg-status-green-pale text-status-green border-status-green-mid">✓ Verbonden</span>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="py-4 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-brand-blue-pale flex items-center justify-center mx-auto mb-3">
+                        <Mail className="w-6 h-6 text-brand-blue" />
                       </div>
-                      <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border bg-status-green-pale text-status-green border-status-green-mid">✓ Verbonden</span>
+                      <p className="text-[13px] text-muted mb-3">Nog geen Gmail account gekoppeld</p>
                     </div>
-                  ))}
-                  <button onClick={() => { window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}` }} className="flex items-center gap-2 mt-3 text-[13px] font-bold text-brand-blue hover:text-brand-blue-hover transition-colors">
-                    <Plus className="w-4 h-4" /> Extra Gmail-inbox koppelen
+                  )}
+                  <button
+                    onClick={() => { window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}` }}
+                    className="flex items-center gap-2 mt-3 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> {hasGmail ? 'Extra Gmail-inbox koppelen' : 'Gmail account koppelen'}
                   </button>
                 </>
-              )}
-              {!gmailLoading && !hasGmail && (
-                <button onClick={() => { window.location.href = `/api/gmail/connect?token=${encodeURIComponent(accessToken || '')}` }} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light transition-colors mt-2">
-                  <Plus className="w-4 h-4" /> Gmail account koppelen
-                </button>
               )}
             </Card>
 
@@ -149,15 +291,16 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
                   {!fullScanDone && (
                     <button onClick={() => handleScan('initial')} disabled={scanning} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light disabled:opacity-60 transition-colors">
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Inbox className="w-4 h-4" />}
-                      {scanning ? 'Bezig...' : 'Volledige inbox scan (eerste keer)'}
+                      {scanning ? 'Bezig...' : 'Volledige inbox scan (300 e-mails)'}
                     </button>
                   )}
                   <button onClick={() => handleScan('daily')} disabled={scanning} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-[13px] font-bold hover:bg-brand-blue-hover disabled:opacity-60 transition-colors">
                     {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
-                    {scanning ? 'Scannen...' : 'Scan recente e-mails'}
+                    {scanning ? 'Scannen...' : 'Scan recente e-mails (100)'}
                   </button>
                   {scanning && <button onClick={() => { abortRef.current = true }} className="px-3 py-2.5 rounded-lg border border-border text-[12.5px] font-semibold text-muted hover:text-navy transition-colors">Stop</button>}
                 </div>
+                <p className="text-[11.5px] text-muted-light mt-2">Eerste scan: laatste 300 e-mails met PDF-bijlagen. Dagelijkse scan: laatste 100 e-mails.</p>
                 {scanProgress && (
                   <div className="mt-3 px-3.5 py-3 bg-bg border border-border rounded-lg">
                     <div className="flex items-center gap-4 text-[12.5px]">
@@ -181,24 +324,32 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
           </>
         )}
 
+        {/* ── Budget Tab ── */}
         {activeTab === 'budget' && (
           <Card title="Maandbudget per categorie" sub="Stel je maximale maandbudget in per categorie">
             <div className="space-y-3">
               {CATEGORY_DATA.map(cat => (
                 <div key={cat.name} className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 w-[140px] flex-shrink-0"><span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} /><span className="text-[13px] font-semibold text-navy">{cat.name}</span></div>
-                  <div className="relative flex-1 max-w-[140px]"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">€</span><input type="number" value={budgets[cat.name] / 100} onChange={e => setBudgets({ ...budgets, [cat.name]: Math.round(parseFloat(e.target.value || '0') * 100) })} className="w-full pl-7 pr-3 py-2 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans" /></div>
+                  <div className="relative flex-1 max-w-[140px]"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">€</span><input type="number" value={budgets[cat.name] / 100} onChange={e => { setBudgets({ ...budgets, [cat.name]: Math.round(parseFloat(e.target.value || '0') * 100) }); setBudgetSaved(false) }} className="w-full pl-7 pr-3 py-2 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans" /></div>
                   <span className="text-[12px] text-muted">/maand</span>
                 </div>
               ))}
             </div>
             <div className="flex items-center justify-between mt-5 pt-4 border-t border-border">
               <span className="text-[12.5px] text-muted">Totaal: <strong className="text-navy">{formatAmount(Object.values(budgets).reduce((s, v) => s + v, 0))}</strong></span>
-              <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-blue text-white text-[12.5px] font-bold hover:bg-brand-blue-hover transition-colors">Opslaan</button>
+              <button
+                onClick={handleSaveBudgets}
+                disabled={budgetSaving}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12.5px] font-bold transition-colors ${budgetSaved ? 'bg-status-green text-white' : 'bg-brand-blue text-white hover:bg-brand-blue-hover disabled:opacity-50'}`}
+              >
+                {budgetSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : budgetSaved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Opgeslagen</> : 'Opslaan'}
+              </button>
             </div>
           </Card>
         )}
 
+        {/* ── Notifications Tab ── */}
         {activeTab === 'notif' && (
           <Card title="Meldingsinstellingen">
             <Toggle label="Melding bij nieuwe betaling" sub="Direct als een nieuwe factuur gedetecteerd wordt" defaultOn />
@@ -210,6 +361,7 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
           </Card>
         )}
 
+        {/* ── Sync & AI Tab ── */}
         {activeTab === 'sync' && (
           <>
             <Card title="Anthropic API Key" sub="Vereist voor AI-extractie van facturen uit PDF's">
