@@ -8,21 +8,30 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const code = url.searchParams.get('code')
-    const state = url.searchParams.get('state')
+    const state = url.searchParams.get('state') // This is now the userId (UUID)
     const error = url.searchParams.get('error')
     const baseUrl = url.origin
 
     if (error) return NextResponse.redirect(new URL(`/?error=gmail_${error}`, baseUrl))
     if (!code || !state) return NextResponse.redirect(new URL(`/?error=gmail_missing_params`, baseUrl))
 
+    // Validate that state looks like a UUID (user_id)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(state)) {
+      console.error('Gmail callback: state is not a valid UUID:', state.substring(0, 20))
+      return NextResponse.redirect(new URL(`/?error=gmail_invalid_state`, baseUrl))
+    }
+
+    const userId = state
     guard()
+
     const supabase = getSupabaseAdmin()
 
-    // Validate the user from the JWT token passed as state
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(state)
+    // Verify user exists
+    const { data: { user }, error: authErr } = await supabase.auth.admin.getUserById(userId)
     if (authErr || !user) {
-      console.error('Gmail callback: auth failed', authErr?.message || 'no user')
-      return NextResponse.redirect(new URL(`/?error=gmail_auth_failed&detail=${encodeURIComponent(authErr?.message || 'no_user')}`, baseUrl))
+      console.error('Gmail callback: user not found', userId, authErr?.message)
+      return NextResponse.redirect(new URL(`/?error=gmail_user_not_found`, baseUrl))
     }
 
     guard()
@@ -50,11 +59,11 @@ export async function GET(req: NextRequest) {
     const tokens = await tokenRes.json()
 
     if (!tokens.access_token) {
-      console.error('Gmail callback: no access_token in response', JSON.stringify(tokens))
-      return NextResponse.redirect(new URL(`/?error=gmail_no_token`, baseUrl))
+      console.error('Gmail callback: no access_token in Google response')
+      return NextResponse.redirect(new URL(`/?error=gmail_no_access_token`, baseUrl))
     }
 
-    // Get Gmail profile
+    // Get Gmail email address
     const profileRes = await fetch('https://www.googleapis.com/gmail/v1/users/me/profile', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
@@ -62,16 +71,19 @@ export async function GET(req: NextRequest) {
     if (profileRes.ok) {
       const profile = await profileRes.json()
       email = profile.emailAddress || email
+    } else {
+      console.error('Gmail callback: profile fetch failed', profileRes.status)
     }
 
     guard()
 
-    // Encrypt and store
+    // Encrypt tokens
     const encryptedAccess = await encrypt(tokens.access_token)
     const encryptedRefresh = await encrypt(tokens.refresh_token || '')
 
+    // Store in DB
     const { error: dbError } = await supabase.from('gmail_accounts').upsert({
-      user_id: user.id,
+      user_id: userId,
       email,
       access_token: encryptedAccess,
       refresh_token: encryptedRefresh,
@@ -79,14 +91,15 @@ export async function GET(req: NextRequest) {
     }, { onConflict: 'user_id,email' })
 
     if (dbError) {
-      console.error('Gmail callback: DB store failed', dbError.message)
-      return NextResponse.redirect(new URL(`/?error=gmail_store_failed&detail=${encodeURIComponent(dbError.message)}`, baseUrl))
+      console.error('Gmail callback: DB upsert failed', dbError.message)
+      return NextResponse.redirect(new URL(`/?error=gmail_db_error&detail=${encodeURIComponent(dbError.message)}`, baseUrl))
     }
 
+    console.log('Gmail callback: SUCCESS for user', userId, 'email', email)
     return NextResponse.redirect(new URL(`/?gmail=connected`, baseUrl))
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('Gmail callback error:', message)
-    return NextResponse.redirect(new URL(`/?error=gmail_callback_error&detail=${encodeURIComponent(message)}`, new URL(req.url).origin))
+    console.error('Gmail callback exception:', message)
+    return NextResponse.redirect(new URL(`/?error=gmail_exception&detail=${encodeURIComponent(message)}`, new URL(req.url).origin))
   }
 }

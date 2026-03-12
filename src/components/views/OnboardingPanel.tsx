@@ -11,6 +11,7 @@ interface OnboardingPanelProps {
 export default function OnboardingPanel({ accessToken, onComplete }: OnboardingPanelProps) {
   const [gmailConnected, setGmailConnected] = useState(false)
   const [gmailEmail, setGmailEmail] = useState<string | null>(null)
+  const [gmailError, setGmailError] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [apiKeySaving, setApiKeySaving] = useState(false)
   const [apiKeySaved, setApiKeySaved] = useState(false)
@@ -50,6 +51,24 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
     }
     check()
   }, [accessToken, headers])
+
+  // Check URL params for Gmail callback result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    const gmail = params.get('gmail')
+    if (error) {
+      const detail = params.get('detail') || ''
+      setGmailError(`Gmail fout: ${error}${detail ? ` (${detail})` : ''}`)
+      // Clean URL
+      window.history.replaceState({}, '', '/')
+    }
+    if (gmail === 'connected') {
+      // Gmail just connected — force re-check
+      checkedGmail.current = false
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
 
   // Check if API key already saved
   useEffect(() => {
@@ -182,6 +201,11 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
             </button>
           )}
         </div>
+        {gmailError && (
+          <div className="mx-5 mb-4 px-3.5 py-2.5 rounded-lg text-[12px] font-medium border bg-status-red-pale border-status-red-mid text-status-red">
+            {gmailError}
+          </div>
+        )}
       </div>
 
       {/* Step 2: API Key */}
