@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CreditCard, Mail, Key, Scan, Loader2, CheckCircle2, ExternalLink, ArrowRight, Inbox } from 'lucide-react'
+import { CreditCard, Mail, Key, Scan, Loader2, CheckCircle2, ExternalLink, ArrowRight, Inbox, Zap } from 'lucide-react'
 
 interface OnboardingPanelProps {
   accessToken: string
@@ -9,17 +9,19 @@ interface OnboardingPanelProps {
 }
 
 export default function OnboardingPanel({ accessToken, onComplete }: OnboardingPanelProps) {
-  const [step, setStep] = useState<'start' | 'apikey' | 'scanning' | 'done'>('start')
   const [gmailConnected, setGmailConnected] = useState(false)
   const [gmailEmail, setGmailEmail] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [apiKeySaving, setApiKeySaving] = useState(false)
   const [apiKeySaved, setApiKeySaved] = useState(false)
+  const [apiKeyTesting, setApiKeyTesting] = useState(false)
+  const [apiKeyTestResult, setApiKeyTestResult] = useState<'ok' | 'fail' | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState({ scanned: 0, created: 0, batches: 0 })
   const [scanDone, setScanDone] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const abortRef = useRef(false)
+  const checkedGmail = useRef(false)
 
   const headers = useCallback((): Record<string, string> => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -27,35 +29,34 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
     return h
   }, [accessToken])
 
-  // Check Gmail status on mount (with retry for post-OAuth redirect)
+  // Check Gmail status — retry up to 5 times (session may be hydrating after OAuth redirect)
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || checkedGmail.current) return
+    checkedGmail.current = true
     let retries = 0
-    const checkGmail = () => {
-      fetch('/api/gmail/status', { headers: headers(), cache: 'no-store' })
+    const check = (): void => {
+      fetch(`/api/gmail/status?_t=${Date.now()}`, { headers: headers(), cache: 'no-store' })
         .then(r => r.json())
-        .then(d => {
+        .then((d: { accounts?: Array<{ email: string }> }) => {
           if (d.accounts && d.accounts.length > 0) {
             setGmailConnected(true)
             setGmailEmail(d.accounts[0].email)
-          } else if (retries < 3) {
+          } else if (retries < 5) {
             retries++
-            setTimeout(checkGmail, 1000)
+            setTimeout(check, 1500)
           }
         })
-        .catch(() => {
-          if (retries < 3) { retries++; setTimeout(checkGmail, 1000) }
-        })
+        .catch(() => { if (retries < 5) { retries++; setTimeout(check, 1500) } })
     }
-    checkGmail()
+    check()
   }, [accessToken, headers])
 
   // Check if API key already saved
   useEffect(() => {
     if (!accessToken) return
-    fetch('/api/settings', { headers: headers() })
+    fetch(`/api/settings?_t=${Date.now()}`, { headers: headers(), cache: 'no-store' })
       .then(r => r.json())
-      .then(d => {
+      .then((d: { data?: { anthropic_api_key?: string } }) => {
         if (d.data?.anthropic_api_key) {
           setApiKey(d.data.anthropic_api_key)
           setApiKeySaved(true)
@@ -64,13 +65,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
       .catch(() => {})
   }, [accessToken, headers])
 
-  // Auto-advance step based on state
-  useEffect(() => {
-    if (gmailConnected && apiKeySaved && step === 'start') setStep('apikey')
-    if (gmailConnected && !apiKeySaved && step === 'start') setStep('apikey')
-  }, [gmailConnected, apiKeySaved, step])
-
-  async function handleSaveApiKey() {
+  async function handleSaveApiKey(): Promise<void> {
     if (!apiKey.trim()) return
     setApiKeySaving(true)
     try {
@@ -82,8 +77,31 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
     } catch {} finally { setApiKeySaving(false) }
   }
 
-  async function handleStartScan() {
-    setStep('scanning')
+  async function handleTestApiKey(): Promise<void> {
+    setApiKeyTesting(true)
+    setApiKeyTestResult(null)
+    try {
+      const r: Response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey.trim(),
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'Say OK' }],
+        }),
+      })
+      setApiKeyTestResult(r.ok ? 'ok' : 'fail')
+    } catch {
+      setApiKeyTestResult('fail')
+    } finally { setApiKeyTesting(false) }
+  }
+
+  async function handleStartScan(): Promise<void> {
     setScanning(true)
     setScanDone(false)
     setScanError(null)
@@ -118,13 +136,18 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
     finally { setScanning(false) }
   }
 
-  async function handleFinish() {
-    setStep('done')
+  async function handleStopScan(): Promise<void> {
+    abortRef.current = true
+  }
+
+  async function handleFinish(): Promise<void> {
     await onComplete()
   }
 
+  const canScan = gmailConnected && apiKeySaved
+
   return (
-    <div className="max-w-[520px] mx-auto py-10">
+    <div className="max-w-[520px] mx-auto py-10 px-4">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-2.5 mb-4">
@@ -142,10 +165,10 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${gmailConnected ? 'bg-status-green-pale' : 'bg-brand-blue-pale'}`}>
             {gmailConnected ? <CheckCircle2 className="w-4 h-4 text-status-green" /> : <Mail className="w-4 h-4 text-brand-blue" />}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="text-[14px] font-bold text-navy">1. Gmail koppelen</div>
             {gmailConnected ? (
-              <div className="text-[12.5px] text-status-green font-semibold mt-0.5">✓ Verbonden met {gmailEmail}</div>
+              <div className="text-[12.5px] text-status-green font-semibold mt-0.5 truncate">✓ Verbonden met {gmailEmail}</div>
             ) : (
               <div className="text-[12.5px] text-muted mt-0.5">Koppel je inbox om facturen automatisch te detecteren</div>
             )}
@@ -175,7 +198,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
               </div>
             </div>
           </div>
-          {!apiKeySaved && (
+          {!apiKeySaved ? (
             <>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
@@ -184,7 +207,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
                     type="password" value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
                     placeholder="sk-ant-api03-..."
-                    className="w-full pl-9 pr-3 py-2.5 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-sans font-mono placeholder:font-sans placeholder:text-muted-light"
+                    className="w-full pl-9 pr-3 py-2.5 border border-border rounded-lg text-[13px] text-navy bg-surface outline-none focus:border-brand-blue-hover transition-colors font-mono placeholder:font-sans placeholder:text-muted-light"
                   />
                 </div>
                 <button onClick={handleSaveApiKey} disabled={apiKeySaving || !apiKey.trim()}
@@ -199,6 +222,20 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
                 </a>
               </p>
             </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={handleTestApiKey} disabled={apiKeyTesting}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-border text-[12px] font-semibold text-muted hover:text-navy hover:border-border-strong transition-colors">
+                {apiKeyTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                Test API key
+              </button>
+              {apiKeyTestResult === 'ok' && <span className="text-[12px] text-status-green font-semibold">✓ Werkt!</span>}
+              {apiKeyTestResult === 'fail' && <span className="text-[12px] text-status-red font-semibold">✗ Key werkt niet — controleer je key</span>}
+              <button onClick={() => { setApiKeySaved(false); setApiKeyTestResult(null) }}
+                className="ml-auto text-[11px] text-muted hover:text-navy font-semibold transition-colors">
+                Wijzigen
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -218,10 +255,10 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
             </div>
           </div>
 
-          {step !== 'scanning' && !scanDone && (
+          {!scanning && !scanDone && (
             <button
               onClick={handleStartScan}
-              disabled={!gmailConnected || !apiKeySaved}
+              disabled={!canScan}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-brand-blue text-white text-[13px] font-bold hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <Inbox className="w-4 h-4" /> Start scan (300 e-mails)
@@ -237,9 +274,14 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
                 <span className="text-muted-light text-[11px]">batch {scanProgress.batches}</span>
               </div>
               {scanning && (
-                <div className="mt-2 h-1.5 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${Math.min((scanProgress.scanned / 300) * 100, 100)}%` }} />
-                </div>
+                <>
+                  <div className="mt-2 h-1.5 bg-border rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${Math.min((scanProgress.scanned / 300) * 100, 100)}%` }} />
+                  </div>
+                  <button onClick={handleStopScan} className="mt-2 text-[11px] text-muted hover:text-status-red font-semibold transition-colors">
+                    Stoppen
+                  </button>
+                </>
               )}
               {scanDone && <div className="mt-1.5 text-[12px] font-semibold text-status-green">✓ Eerste scan compleet</div>}
             </div>
@@ -266,11 +308,11 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
         </button>
       )}
 
-      {/* Skip option */}
+      {/* Skip option — always clickable */}
       {!scanDone && (
         <button
-          onClick={onComplete}
-          className="w-full text-center text-[12.5px] text-muted hover:text-navy font-semibold transition-colors mt-3"
+          onClick={handleFinish}
+          className="w-full text-center text-[12.5px] text-muted hover:text-navy font-semibold transition-colors mt-4 py-2"
         >
           Overslaan — ik voeg later handmatig facturen toe
         </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import DashboardView from '@/components/views/DashboardView'
 import StatistiekenView from '@/components/views/StatistiekenView'
@@ -19,6 +19,7 @@ export default function Home() {
   const accessToken = session?.access_token ?? null
   const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Gebruiker'
   const userEmail = user?.email || ''
+  const [onboardingDone, setOnboardingDone] = useState(false)
 
   const {
     bills, paidBills, loading, error, seeded,
@@ -53,9 +54,9 @@ export default function Home() {
           )
         }
 
-        if (!seeded && !loading) {
+        if (!seeded && !loading && !onboardingDone) {
           return (
-            <OnboardingPanel accessToken={accessToken || ''} onComplete={refetch} />
+            <OnboardingPanel accessToken={accessToken || ''} onComplete={async () => { setOnboardingDone(true); await refetch() }} />
           )
         }
 
