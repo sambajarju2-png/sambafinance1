@@ -1,31 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 @layer base {
-  html, body {
-    @apply h-full bg-bg text-txt antialiased;
-  }
-
-  /* Scrollbar styling — subtle, Stripe-like */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
-  }
+  html, body { @apply h-full bg-bg text-txt antialiased; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 }
-
 @layer components {
-  /* Status accent stripe on top of stat cards */
   .accent-red { @apply before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:rounded-t-card before:bg-gradient-to-r before:from-status-red before:to-red-400; }
   .accent-amber { @apply before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:rounded-t-card before:bg-gradient-to-r before:from-status-amber before:to-amber-400; }
   .accent-blue { @apply before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:rounded-t-card before:bg-gradient-to-r before:from-brand-blue before:to-brand-blue-hover; }
