@@ -44,8 +44,8 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
         headers: getHeaders(),
         cache: 'no-store',
       })
-      const data: { accounts?: Array<{ email: string; connected: boolean; expired: boolean }>; error?: string } = await res.json()
-      setDebugInfo(`Status: ${res.status}, Accounts: ${data.accounts?.length || 0}`)
+      const data: { accounts?: Array<{ email: string; connected: boolean; expired: boolean }>; error?: string; _debug?: { userId: string; rowCount: number; dataLen: number } } = await res.json()
+      setDebugInfo(`Status: ${res.status}, Accounts: ${data.accounts?.length || 0}, userId: ${data._debug?.userId || 'unknown'}, rows: ${data._debug?.rowCount ?? '?'}`)
 
       if (!res.ok) {
         setGmailError(`Status check mislukt (${res.status}): ${data.error || 'Unknown'}`)
