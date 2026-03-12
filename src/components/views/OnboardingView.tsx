@@ -134,12 +134,12 @@ export default function OnboardingView({ accessToken, onComplete, userEmail }: O
 
     try {
       while (!abortRef.current && totalScanned < maxEmails) {
-        const res = await fetch('/api/gmail/scan', {
+        const res: Response = await fetch('/api/gmail/scan', {
           method: 'POST',
           headers: headers(),
           body: JSON.stringify({ mode: 'initial', pageToken }),
         })
-        const data = await res.json()
+        const data: { scanned?: number; created?: number; duplicates?: number; done?: boolean; nextPageToken?: string; error?: string } = await res.json()
 
         if (!res.ok) { setScanError(data.error || 'Scan mislukt'); break }
 
