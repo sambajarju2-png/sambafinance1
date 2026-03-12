@@ -38,24 +38,29 @@ export async function PATCH(req: NextRequest) {
       'notify_days_before', 'budgets', 'anthropic_api_key',
     ]
 
-    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    const update: Record<string, unknown> = { 
+      user_id: userId,
+      updated_at: new Date().toISOString() 
+    }
     for (const field of allowedFields) {
       if (body[field] !== undefined) update[field] = body[field]
     }
 
+    // Use upsert to create the row if it doesn't exist
     const { data, error } = await supabase
       .from('user_settings')
-      .update(update)
-      .eq('user_id', userId)
+      .upsert(update, { onConflict: 'user_id' })
       .select()
       .single()
 
     if (error) {
+      console.error('[v0] Settings upsert error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     return NextResponse.json({ data })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[v0] Settings PATCH error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

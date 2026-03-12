@@ -3,7 +3,8 @@ import { getSupabaseAdmin, getAuthUserId } from '@/lib/supabase-server'
 import { decrypt, encrypt } from '@/lib/crypto'
 import { computeBillHash, validateIBAN } from '@/lib/hash'
 
-const MAX_EMAILS = 5  // Vercel free tier: keep under 8s
+const MAX_EMAILS_INITIAL = 300  // First scan: comprehensive inbox scan
+const MAX_EMAILS_DAILY = 100    // Daily scans: recent emails only
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001'
 
 // POST /api/gmail/scan — scan Gmail for invoices
@@ -79,11 +80,20 @@ export async function POST(req: NextRequest) {
 
     const processedIds = new Set((processed || []).map((p: { gmail_message_id: string }) => p.gmail_message_id))
 
+    // Determine if this is the first scan (no processed emails yet)
+    const isFirstScan = processedIds.size === 0
+    const maxEmails = isFirstScan ? MAX_EMAILS_INITIAL : MAX_EMAILS_DAILY
+    
+    // For first scan: search older emails. For daily: only recent
+    const searchQuery = isFirstScan 
+      ? 'has:attachment filename:pdf newer_than:90d'  // First scan: last 90 days
+      : 'has:attachment filename:pdf newer_than:7d'    // Daily: last 7 days
+
     guard()
 
     // Search for emails with PDF attachments
     const searchRes = await fetch(
-      `https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=${MAX_EMAILS}&q=has:attachment filename:pdf newer_than:30d`,
+      `https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxEmails}&q=${encodeURIComponent(searchQuery)}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     )
 
@@ -95,7 +105,7 @@ export async function POST(req: NextRequest) {
     const messages = (searchData.messages || []) as { id: string }[]
 
     // Filter out already processed
-    const toProcess = messages.filter((m) => !processedIds.has(m.id)).slice(0, MAX_EMAILS)
+    const toProcess = messages.filter((m) => !processedIds.has(m.id)).slice(0, maxEmails)
 
     if (toProcess.length === 0) {
       return NextResponse.json({ message: 'No new invoices found', created: 0, scanned: 0 })
@@ -172,7 +182,7 @@ export async function POST(req: NextRequest) {
             .single()
 
           if (!existing) {
-            // Create the bill
+            // Create the bill with all extracted data
             const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12)
             await supabase.from('bills').insert({
               id,
@@ -192,6 +202,13 @@ export async function POST(req: NextRequest) {
               hash,
               requires_review: requiresReview || (extraction.confidence?.amount || 0) < 0.7,
               notes: null,
+              // New extracted fields
+              payment_url: extraction.payment_url || null,
+              vendor_contact: extraction.vendor_contact || null,
+              checklist: extraction.checklist?.length ? extraction.checklist : null,
+              email_drafts: (extraction.email_draft_full || extraction.email_draft_plan) 
+                ? { full: extraction.email_draft_full, plan: extraction.email_draft_plan } 
+                : null,
             })
 
             results.push({ vendor: extraction.vendor, amount: extraction.amount_cents, status: 'created' })
@@ -259,7 +276,7 @@ async function refreshGmailToken(refreshToken: string): Promise<{ access_token: 
   }
 }
 
-async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): Promise<{
+interface ExtractedInvoice {
   vendor: string
   amount_cents: number
   currency: string
@@ -268,8 +285,15 @@ async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): P
   due_date: string | null
   category_hint: string
   is_reminder: boolean
+  payment_url: string | null
+  vendor_contact: { email?: string; phone?: string; website?: string } | null
+  checklist: { text: string; done: boolean; urgent: boolean }[]
+  email_draft_full: string | null
+  email_draft_plan: string | null
   confidence: { vendor: number; amount: number; due_date: number; iban: number }
-} | null> {
+}
+
+async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): Promise<ExtractedInvoice | null> {
   try {
     if (!userApiKey) return null
 
@@ -285,7 +309,7 @@ async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): P
       },
       body: JSON.stringify({
         model: HAIKU_MODEL,
-        max_tokens: 512,
+        max_tokens: 1024,
         messages: [{
           role: 'user',
           content: [
@@ -295,15 +319,21 @@ async function extractInvoiceWithHaiku(pdfBase64: string, userApiKey: string): P
             },
             {
               type: 'text',
-              text: `Extract invoice data from this PDF. Return the vendor name, amount in euro cents (integer), IBAN, reference number, due date, and category.
+              text: `Extract ALL invoice data from this PDF. Be thorough and extract every detail.
 
 Categories: Energie, Telecom, Verzekering, Lease, Abonnement, Huur, Belasting, Overig
 
-If this is a payment reminder for an existing invoice (not a new charge), set is_reminder to true.
+Extract:
+1. Vendor name, amount (in euro cents as integer), IBAN, reference/invoice number, due date
+2. Payment URL/link if present (look for "betaal via", "pay at", URLs with payment in them)
+3. Contact info: email, phone, website
+4. Generate a checklist of 2-4 action items for this bill (e.g. "Check IBAN", "Verify amount", "Pay before deadline")
+5. Generate two email drafts in Dutch: one for full payment, one requesting a payment plan
 
-Respond ONLY with valid JSON. No markdown. No explanation. Start with { and end with }.
+If this is a payment reminder (not a new charge), set is_reminder to true.
 
-Schema:
+Respond ONLY with valid JSON. No markdown. No explanation.
+
 {
   "vendor": "string",
   "amount_cents": integer,
@@ -311,8 +341,13 @@ Schema:
   "iban": "string or null",
   "reference": "string or null",
   "due_date": "YYYY-MM-DD or null",
-  "category_hint": "one of the categories above",
+  "category_hint": "one of: Energie, Telecom, Verzekering, Lease, Abonnement, Huur, Belasting, Overig",
   "is_reminder": boolean,
+  "payment_url": "URL string or null",
+  "vendor_contact": { "email": "string or undefined", "phone": "string or undefined", "website": "string or undefined" },
+  "checklist": [{ "text": "string", "done": false, "urgent": boolean }],
+  "email_draft_full": "Dutch email for confirming full payment (or null)",
+  "email_draft_plan": "Dutch email requesting payment arrangement (or null)",
   "confidence": { "vendor": 0-1, "amount": 0-1, "due_date": 0-1, "iban": 0-1 }
 }`,
             },
@@ -330,8 +365,6 @@ Schema:
     const clean = text.replace(/```json\s*|```\s*/g, '').trim()
     return JSON.parse(clean)
   } catch {
-    // Retry once with simplified prompt would go here
-    // For now, return null on parse failure
     return null
   }
 }

@@ -6,6 +6,14 @@ import Topbar from './Topbar'
 import BottomNav from './BottomNav'
 import type { Household } from './HouseholdSwitcher'
 
+interface Notification {
+  id: string
+  type: 'critical' | 'warn' | 'info'
+  title: string
+  message: string
+  time: string
+}
+
 interface AppShellProps {
   children: (context: {
     activeView: ViewId
@@ -17,9 +25,11 @@ interface AppShellProps {
   userName?: string
   userEmail?: string
   onSignOut?: () => void
+  notifications?: Notification[]
+  onClearNotifications?: () => void
 }
 
-export default function AppShell({ children, billCount, userName, userEmail, onSignOut }: AppShellProps) {
+export default function AppShell({ children, billCount, userName, userEmail, onSignOut, notifications = [], onClearNotifications }: AppShellProps) {
   const [activeView, setActiveView] = useState<ViewId>('dashboard')
   const [household, setHousehold] = useState<Household>('joint')
   const [searchQuery, setSearchQuery] = useState('')
@@ -42,6 +52,8 @@ export default function AppShell({ children, billCount, userName, userEmail, onS
           onHouseholdChange={setHousehold}
           onSearch={setSearchQuery}
           searchQuery={searchQuery}
+          notifications={notifications}
+          onClearNotifications={onClearNotifications}
         />
 
         <main className="flex-1 overflow-y-auto pb-[76px] md:pb-10">

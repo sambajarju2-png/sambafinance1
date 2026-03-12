@@ -189,18 +189,52 @@ export default function BillDrawer({ bill, onClose, onMarkPaid, onUndoPaid, onUp
               <div className="grid grid-cols-2 gap-2.5 mt-4">
                 <InfoBlock label="Deadline" value={isPaid ? formatDate(bill.paidAt) : formatDate(bill.dueDate)} />
                 <InfoBlock label="Categorie" value={bill.category} />
-                <InfoBlock label="Kenmerk" value={bill.reference} small />
+                <InfoBlock label="Kenmerk" value={bill.reference} small copyable />
                 <InfoBlock label="Account" value={bill.assignedTo === 'joint' ? 'Gezamenlijk' : bill.assignedTo === 'mine' ? 'Mijn' : 'Partner'} />
-                {bill.iban && <InfoBlock label="IBAN" value={bill.iban} small />}
                 {bill.source === 'gmail_scan' && <InfoBlock label="Bron" value="Gmail scan" />}
               </div>
 
-              {/* Payment URL */}
-              {bill.paymentUrl && (
-                <a href={bill.paymentUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 mt-3 px-3.5 py-2.5 bg-brand-blue-pale border border-brand-blue-mid rounded-lg text-[12.5px] font-semibold text-brand-blue hover:bg-brand-blue-mid transition-colors">
-                  <Link2 className="w-4 h-4" /> Betaallink openen <ExternalLink className="w-3 h-3 ml-auto" />
-                </a>
+              {/* Payment Details Section */}
+              {(bill.iban || bill.paymentUrl) && (
+                <div className="mt-5">
+                  <SectionTitle>Betalingsgegevens</SectionTitle>
+                  <div className="bg-bg border border-border rounded-lg overflow-hidden">
+                    {bill.iban && (
+                      <div className="px-3.5 py-3 border-b border-border last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-[10.5px] font-bold uppercase tracking-[.07em] text-muted-light mb-1">IBAN</div>
+                            <div className="text-[13px] font-bold text-navy font-mono">{bill.iban}</div>
+                          </div>
+                          <CopyButton value={bill.iban} />
+                        </div>
+                      </div>
+                    )}
+                    {bill.reference && bill.reference !== '—' && (
+                      <div className="px-3.5 py-3 border-b border-border last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-[10.5px] font-bold uppercase tracking-[.07em] text-muted-light mb-1">Betalingskenmerk</div>
+                            <div className="text-[13px] font-bold text-navy font-mono">{bill.reference}</div>
+                          </div>
+                          <CopyButton value={bill.reference} />
+                        </div>
+                      </div>
+                    )}
+                    {bill.paymentUrl && (
+                      <a 
+                        href={bill.paymentUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3.5 py-3 bg-brand-blue-pale hover:bg-brand-blue-mid transition-colors"
+                      >
+                        <Link2 className="w-4 h-4 text-brand-blue" />
+                        <span className="text-[12.5px] font-semibold text-brand-blue flex-1">Direct betalen via link</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-brand-blue" />
+                      </a>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* Contact info */}
@@ -333,10 +367,26 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] font-bold uppercase tracking-[.1em] text-muted-light mb-2.5">{children}</div>
 }
 
-function InfoBlock({ label, value, small = false }: { label: string; value: string; small?: boolean }) {
+function InfoBlock({ label, value, small = false, copyable = false }: { label: string; value: string; small?: boolean; copyable?: boolean }) {
+  const [copied, setCopied] = useState(false)
+  
+  const handleCopy = () => {
+    if (!copyable) return
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  
   return (
-    <div className="bg-bg border border-border rounded-lg px-3.5 py-3">
-      <div className="text-[10.5px] font-bold uppercase tracking-[.07em] text-muted-light mb-1">{label}</div>
+    <div 
+      className={`bg-bg border border-border rounded-lg px-3.5 py-3 ${copyable ? 'cursor-pointer hover:border-border-strong transition-colors' : ''}`}
+      onClick={handleCopy}
+    >
+      <div className="flex items-center justify-between">
+        <div className="text-[10.5px] font-bold uppercase tracking-[.07em] text-muted-light mb-1">{label}</div>
+        {copyable && copied && <span className="text-[10px] text-status-green font-bold">Gekopieerd!</span>}
+      </div>
       <div className={`${small ? 'text-[11.5px]' : 'text-[13px]'} font-bold text-navy break-all`}>{value}</div>
     </div>
   )
@@ -347,5 +397,30 @@ function ContactItem({ icon, value }: { icon: React.ReactNode; value: string }) 
     <span className="flex items-center gap-1.5 text-[12.5px] text-muted">
       {icon} <strong className="text-navy font-bold">{value}</strong>
     </span>
+  )
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  
+  return (
+    <button
+      onClick={handleCopy}
+      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+        copied 
+          ? 'bg-status-green text-white' 
+          : 'bg-surface border border-border text-muted hover:border-border-strong hover:text-navy'
+      }`}
+    >
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Gekopieerd' : 'Kopieer'}
+    </button>
   )
 }

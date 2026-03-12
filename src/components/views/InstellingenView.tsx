@@ -93,19 +93,27 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
     }
   }
 
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null)
+
   async function handleSaveApiKey() {
     setApiKeySaving(true)
+    setApiKeyError(null)
     try {
       const res = await fetch('/api/settings', {
         method: 'PATCH',
         headers: headers(),
         body: JSON.stringify({ anthropic_api_key: apiKey.trim() }),
       })
+      const data = await res.json()
       if (res.ok) {
         setApiKeySaved(true)
         setTimeout(() => setApiKeySaved(false), 3000)
+      } else {
+        setApiKeyError(data.error || 'Opslaan mislukt')
       }
-    } catch {}
+    } catch (err) {
+      setApiKeyError('Netwerk fout — controleer je verbinding')
+    }
     finally { setApiKeySaving(false) }
   }
 
@@ -310,6 +318,11 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
                   )}
                 </button>
               </div>
+              {apiKeyError && (
+                <div className="mt-2 px-3 py-2 rounded-lg bg-status-red-pale border border-status-red-mid text-[12px] text-status-red font-medium">
+                  {apiKeyError}
+                </div>
+              )}
               <p className="text-[11.5px] text-muted-light mt-2">
                 Maak een key aan op{' '}
                 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-brand-blue font-semibold hover:text-brand-blue-hover inline-flex items-center gap-0.5">
