@@ -72,7 +72,7 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
 
     let pageToken: string | undefined = undefined
     let totalScanned = 0, totalCreated = 0, totalDuplicates = 0, batchCount = 0
-    const maxEmails = mode === 'initial' ? 300 : 100
+    const maxEmails = mode === 'initial' ? 100 : 100
 
     try {
       while (!abortRef.current && totalScanned < maxEmails) {
@@ -197,7 +197,7 @@ export default function InstellingenView({ onSignOut, userName, userEmail, acces
                   {!fullScanDone && (
                     <button onClick={() => handleScan('initial')} disabled={scanning} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-navy text-white text-[13px] font-bold hover:bg-navy-light disabled:opacity-60 transition-colors">
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Inbox className="w-4 h-4" />}
-                      {scanning ? 'Bezig...' : 'Eerste scan (300 e-mails)'}
+                      {scanning ? 'Bezig...' : 'Scan inbox (laatste 14 dagen)'}
                     </button>
                   )}
                   <button onClick={() => handleScan('daily')} disabled={scanning} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-blue text-white text-[13px] font-bold hover:bg-brand-blue-hover disabled:opacity-60 transition-colors">

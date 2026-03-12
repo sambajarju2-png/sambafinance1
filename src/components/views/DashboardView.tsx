@@ -13,6 +13,7 @@ interface DashboardViewProps {
   bills: DisplayBill[]
   paidBills: DisplayBill[]
   accessToken?: string
+  onNavigate?: (view: 'dashboard'|'betalingen'|'statistieken'|'cashflow'|'instellingen') => void
 }
 
 const INSIGHT_ICONS: Record<string, typeof Target> = { priority: Target, saving: Lightbulb, risk: ShieldAlert, tip: Sparkles }
@@ -24,7 +25,7 @@ const INSIGHT_COLORS: Record<string, { bg: string; text: string }> = {
   success: { bg: 'bg-status-green-pale', text: 'text-status-green' },
 }
 
-export default function DashboardView({ bills, paidBills, accessToken }: DashboardViewProps) {
+export default function DashboardView({ bills, paidBills, accessToken, onNavigate }: DashboardViewProps) {
   const [insights, setInsights] = useState<{ type: string; title: string; text: string }[] | null>(null)
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsError, setInsightsError] = useState<string | null>(null)
@@ -125,7 +126,7 @@ export default function DashboardView({ bills, paidBills, accessToken }: Dashboa
       <div className="bg-surface border border-border rounded-card shadow-card overflow-hidden animate-fade-up" style={{ animationDelay: '360ms' }}>
         <div className="px-5 py-[18px] border-b border-border flex items-center justify-between">
           <div><div className="text-[13.5px] font-bold text-navy">Budget per categorie</div><div className="text-[12px] text-muted mt-[2px]">Maandbudget vs. werkelijke uitgaven</div></div>
-          <button className="flex items-center gap-1.5 px-3 py-[7px] rounded-lg border border-border bg-surface text-muted text-[12.5px] font-semibold hover:border-border-strong hover:bg-surface-2 hover:text-navy transition-all"><Pencil className="w-3 h-3" /> Beheer budgets</button>
+          <button onClick={() => onNavigate?.('instellingen')} className="flex items-center gap-1.5 px-3 py-[7px] rounded-lg border border-border bg-surface text-muted text-[12.5px] font-semibold hover:border-border-strong hover:bg-surface-2 hover:text-navy transition-all"><Pencil className="w-3 h-3" /> Beheer budgets</button>
         </div>
         <div className="px-5 py-5"><BudgetBars data={categoryData} /></div>
       </div>

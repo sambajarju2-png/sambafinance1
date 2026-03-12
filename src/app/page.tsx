@@ -37,7 +37,7 @@ export default function Home() {
 
   return (
     <AppShell billCount={bills.length} bills={displayBills} userName={userName} userEmail={userEmail} onSignOut={signOut}>
-      {({ activeView, household, searchQuery, settingsTab }) => {
+      {({ activeView, household, searchQuery, settingsTab, onNavigate }) => {
         if (loading) {
           return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="w-8 h-8 text-brand-blue animate-spin mb-3" /><span className="text-[13px] text-muted">Laden...</span></div>
         }
@@ -62,7 +62,7 @@ export default function Home() {
 
         switch (activeView) {
           case 'dashboard':
-            return <DashboardView bills={displayBills} paidBills={displayPaid} accessToken={accessToken || undefined} />
+            return <DashboardView bills={displayBills} paidBills={displayPaid} accessToken={accessToken || undefined} onNavigate={onNavigate} />
           case 'betalingen':
             return <BetalingenView bills={displayBills} paidBills={displayPaid} household={household} searchQuery={searchQuery} onMarkPaid={markPaid} onUndoPaid={undoPaid} onBulkMarkPaid={bulkMarkPaid} onUpdateBill={updateBill} accessToken={accessToken || undefined} />
           case 'statistieken':
@@ -72,7 +72,7 @@ export default function Home() {
           case 'instellingen':
             return <InstellingenView onSignOut={signOut} userName={userName} userEmail={userEmail} accessToken={accessToken || ''} onRefetch={refetch} initialTab={settingsTab || undefined} />
           default:
-            return <DashboardView bills={displayBills} paidBills={displayPaid} accessToken={accessToken || undefined} />
+            return <DashboardView bills={displayBills} paidBills={displayPaid} accessToken={accessToken || undefined} onNavigate={onNavigate} />
         }
       }}
     </AppShell>

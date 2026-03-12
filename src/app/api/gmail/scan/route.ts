@@ -84,10 +84,10 @@ export async function POST(req: NextRequest) {
 
     // Build Gmail search query based on mode
     const searchQuery = mode === 'initial'
-      ? 'has:attachment filename:pdf'                    // All emails with PDFs
-      : 'has:attachment filename:pdf newer_than:2d'      // Last 2 days for daily
+      ? 'has:attachment filename:pdf newer_than:14d'       // Last 14 days with PDFs
+      : 'has:attachment filename:pdf newer_than:2d'        // Last 2 days for daily
 
-    const maxResults = mode === 'initial' ? 20 : 10     // Listing batch size
+    const maxResults = mode === 'initial' ? 20 : 10       // Listing batch size
 
     let searchUrl = `https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(searchQuery)}`
     if (pageToken) searchUrl += `&pageToken=${pageToken}`

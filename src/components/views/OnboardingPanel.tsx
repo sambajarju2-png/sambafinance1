@@ -171,7 +171,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
     let batchCount = 0
 
     try {
-      while (!abortRef.current && totalScanned < 300) {
+      while (!abortRef.current && totalScanned < 100) {
         const r: Response = await fetch('/api/gmail/scan', {
           method: 'POST', headers: getHeaders(),
           body: JSON.stringify({ mode: 'initial', pageToken }),
@@ -321,7 +321,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
             <div className="flex-1">
               <div className="text-[14px] font-bold text-navy">3. Inbox scannen</div>
               <div className="text-[12.5px] text-muted mt-0.5">
-                {scanDone ? `✓ ${scanProgress.created} facturen gevonden` : 'Scan je laatste 300 e-mails voor facturen'}
+                {scanDone ? `✓ ${scanProgress.created} facturen gevonden` : 'Scan je inbox (laatste 14 dagen)'}
               </div>
             </div>
           </div>
@@ -329,7 +329,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
           {!scanning && !scanDone && (
             <button onClick={handleStartScan} disabled={!canScan}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-brand-blue text-white text-[13px] font-bold hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              <Inbox className="w-4 h-4" /> Start scan (300 e-mails)
+              <Inbox className="w-4 h-4" /> Start scan
             </button>
           )}
 
@@ -343,7 +343,7 @@ export default function OnboardingPanel({ accessToken, onComplete }: OnboardingP
               {scanning && (
                 <>
                   <div className="mt-2 h-1.5 bg-border rounded-full overflow-hidden">
-                    <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${Math.min((scanProgress.scanned / 300) * 100, 100)}%` }} />
+                    <div className="h-full bg-brand-blue rounded-full transition-all duration-500" style={{ width: `${Math.min((scanProgress.scanned / 100) * 100, 100)}%` }} />
                   </div>
                   <button onClick={() => { abortRef.current = true }} className="mt-2 text-[11px] text-muted hover:text-status-red font-semibold transition-colors">Stoppen</button>
                 </>
