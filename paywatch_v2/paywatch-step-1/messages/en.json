@@ -1,0 +1,113 @@
+{
+  "common": {
+    "appName": "PayWatch",
+    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late.",
+    "scaffoldReady": "v2 scaffold active",
+    "statKritiek": "Critical",
+    "statBinnenkort": "Due soon",
+    "statOpenstaand": "Outstanding",
+    "statBetaald": "Paid",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "search": "Search",
+    "noResults": "No results"
+  },
+  "nav": {
+    "overzicht": "Overview",
+    "betalingen": "Payments",
+    "stats": "Stats",
+    "cashflow": "Cashflow",
+    "meer": "More"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "email": "Email address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "loginWithGoogle": "Log in with Google",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "createAccount": "Create account"
+  },
+  "onboarding": {
+    "welcome": "Welcome to PayWatch",
+    "welcomeSubtitle": "Never be surprised by unexpected bills or collection costs again.",
+    "chooseLanguage": "Choose your language",
+    "scanPreference": "How do you receive your bills?",
+    "viaEmail": "Via email (Gmail)",
+    "viaPost": "Via mail (scan letters)",
+    "viaBoth": "Both",
+    "connectGmail": "Connect your Gmail account",
+    "scanFirst": "Scan your first bill",
+    "tourPrompt": "Would you like a tour?",
+    "tourYes": "Yes, please!",
+    "tourSkip": "Skip"
+  },
+  "dashboard": {
+    "greeting": "Hi, {name}",
+    "mijnSchulden": "My debts",
+    "totalOutstanding": "Total outstanding",
+    "savedAmount": "{amount} saved",
+    "savedZero": "Pay on time to avoid collection costs",
+    "recentBills": "Recent bills",
+    "noBills": "No bills yet",
+    "noBillsDescription": "Scan your first bill to get started",
+    "scanFirst": "Scan your first bill"
+  },
+  "bills": {
+    "tabs": {
+      "openstaand": "Outstanding",
+      "binnenkort": "Due soon",
+      "achterstallig": "Overdue",
+      "betaald": "Paid"
+    },
+    "markPaid": "Paid",
+    "dueDate": "Due date",
+    "amount": "Amount",
+    "vendor": "Vendor",
+    "category": "Category",
+    "reference": "Reference",
+    "iban": "IBAN",
+    "source": "Source",
+    "status": {
+      "outstanding": "Outstanding",
+      "action": "Action required",
+      "settled": "Paid",
+      "failed": "Failed",
+      "review": "Review"
+    },
+    "escalation": {
+      "factuur": "Invoice",
+      "herinnering": "Reminder",
+      "aanmaning": "Formal notice",
+      "incasso": "Collection agency",
+      "deurwaarder": "Bailiff"
+    },
+    "drawer": {
+      "details": "Details",
+      "acties": "Actions",
+      "reactie": "Response",
+      "notitie": "Notes"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profiel": "Profile",
+      "gmail": "Gmail accounts",
+      "meldingen": "Notifications",
+      "budget": "Budget",
+      "hulp": "Debt help"
+    }
+  }
+}

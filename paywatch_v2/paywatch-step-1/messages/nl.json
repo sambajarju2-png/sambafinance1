@@ -1,0 +1,113 @@
+{
+  "common": {
+    "appName": "PayWatch",
+    "tagline": "Nooit meer verrast door een incassobureau. PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is.",
+    "scaffoldReady": "v2 scaffold actief",
+    "statKritiek": "Kritiek",
+    "statBinnenkort": "Binnenkort",
+    "statOpenstaand": "Openstaand",
+    "statBetaald": "Betaald",
+    "loading": "Laden...",
+    "error": "Er ging iets mis",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "close": "Sluiten",
+    "back": "Terug",
+    "next": "Volgende",
+    "done": "Klaar",
+    "search": "Zoeken",
+    "noResults": "Geen resultaten"
+  },
+  "nav": {
+    "overzicht": "Overzicht",
+    "betalingen": "Betalingen",
+    "stats": "Stats",
+    "cashflow": "Cashflow",
+    "meer": "Meer"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "register": "Registreren",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "loginWithGoogle": "Inloggen met Google",
+    "noAccount": "Nog geen account?",
+    "hasAccount": "Al een account?",
+    "createAccount": "Account aanmaken"
+  },
+  "onboarding": {
+    "welcome": "Welkom bij PayWatch",
+    "welcomeSubtitle": "Nooit meer verrast door onverwachte rekeningen of incassokosten.",
+    "chooseLanguage": "Kies je taal",
+    "scanPreference": "Hoe ontvang je je rekeningen?",
+    "viaEmail": "Via e-mail (Gmail)",
+    "viaPost": "Via de post (brieven scannen)",
+    "viaBoth": "Beide",
+    "connectGmail": "Koppel je Gmail-account",
+    "scanFirst": "Scan je eerste rekening",
+    "tourPrompt": "Wil je een rondleiding?",
+    "tourYes": "Ja, graag!",
+    "tourSkip": "Overslaan"
+  },
+  "dashboard": {
+    "greeting": "Hoi, {name}",
+    "mijnSchulden": "Mijn schulden",
+    "totalOutstanding": "Totaal openstaand",
+    "savedAmount": "{amount} bespaard",
+    "savedZero": "Betaal op tijd om incassokosten te besparen",
+    "recentBills": "Recente rekeningen",
+    "noBills": "Nog geen rekeningen",
+    "noBillsDescription": "Scan je eerste rekening om te beginnen",
+    "scanFirst": "Scan je eerste rekening"
+  },
+  "bills": {
+    "tabs": {
+      "openstaand": "Openstaand",
+      "binnenkort": "Binnenkort",
+      "achterstallig": "Achterstallig",
+      "betaald": "Betaald"
+    },
+    "markPaid": "Betaald",
+    "dueDate": "Vervaldatum",
+    "amount": "Bedrag",
+    "vendor": "Afzender",
+    "category": "Categorie",
+    "reference": "Kenmerk",
+    "iban": "IBAN",
+    "source": "Bron",
+    "status": {
+      "outstanding": "Openstaand",
+      "action": "Actie vereist",
+      "settled": "Betaald",
+      "failed": "Mislukt",
+      "review": "Controleren"
+    },
+    "escalation": {
+      "factuur": "Factuur",
+      "herinnering": "Herinnering",
+      "aanmaning": "Aanmaning",
+      "incasso": "Incasso",
+      "deurwaarder": "Deurwaarder"
+    },
+    "drawer": {
+      "details": "Details",
+      "acties": "Acties",
+      "reactie": "Reactie",
+      "notitie": "Notitie"
+    }
+  },
+  "settings": {
+    "title": "Instellingen",
+    "tabs": {
+      "profiel": "Profiel",
+      "gmail": "Gmail accounts",
+      "meldingen": "Meldingen",
+      "budget": "Budget",
+      "hulp": "Hulp bij schulden"
+    }
+  }
+}
