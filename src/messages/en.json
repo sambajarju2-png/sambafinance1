@@ -1,9 +1,6 @@
 {
   "home": {
-    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late.",
-    "status": "Scaffold ready",
-    "authenticated": "Logged in — Auth works!",
-    "nextStep": "Dashboard and onboarding will be built in the next step."
+    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late."
   },
   "common": {
     "loading": "Loading...",
@@ -79,8 +76,10 @@
     "overdue": "Overdue",
     "upcoming": "Upcoming",
     "paid": "Paid",
-    "scanBill": "Scan bill",
+    "addBill": "Add bill",
+    "scanBill": "Scan",
     "scanEmail": "Scan email",
+    "overdueSection": "Overdue",
     "noBillsTitle": "No bills yet",
     "noBillsDescription": "Scan your first bill via camera or connect Gmail to automatically find invoices."
   },
@@ -91,14 +90,43 @@
     "overdue": "Overdue",
     "paid": "Paid",
     "markAsPaid": "Paid",
-    "addBill": "Add bill",
+    "addBill": "Add",
     "noBills": "No bills",
-    "noBillsHint": "Add your first bill via scan or manual entry.",
+    "noBillsHint": "Add your first bill using the button above.",
     "dueDate": "Due date",
     "amount": "Amount",
     "vendor": "Vendor",
     "category": "Category",
     "status": "Status"
+  },
+  "addBill": {
+    "title": "Add bill",
+    "vendor": "Vendor",
+    "vendorPlaceholder": "E.g. Vattenfall, KPN, Municipality...",
+    "amount": "Amount (€)",
+    "dueDate": "Due date",
+    "category": "Category",
+    "reference": "Reference / invoice number",
+    "referencePlaceholder": "E.g. F2024-001234",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes about this bill...",
+    "save": "Save bill",
+    "errorVendor": "Please enter a vendor.",
+    "errorAmount": "Please enter a valid amount.",
+    "errorDueDate": "Please select a due date.",
+    "errorGeneral": "Something went wrong. Please try again.",
+    "categories": {
+      "energie": "Energy",
+      "water": "Water",
+      "internet": "Internet",
+      "telefoon": "Phone",
+      "verzekering": "Insurance",
+      "huur": "Rent",
+      "belasting": "Tax",
+      "zorg": "Healthcare",
+      "abonnement": "Subscription",
+      "overig": "Other"
+    }
   },
   "stats": {
     "title": "Statistics",

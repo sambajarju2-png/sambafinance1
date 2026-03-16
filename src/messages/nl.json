@@ -1,9 +1,6 @@
 {
   "home": {
-    "tagline": "Nooit meer verrast door een incassobureau. PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is.",
-    "status": "Scaffold gereed",
-    "authenticated": "Ingelogd — Auth werkt!",
-    "nextStep": "Dashboard en onboarding worden gebouwd in de volgende stap."
+    "tagline": "Nooit meer verrast door een incassobureau. PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is."
   },
   "common": {
     "loading": "Laden...",
@@ -79,8 +76,10 @@
     "overdue": "Achterstallig",
     "upcoming": "Binnenkort",
     "paid": "Betaald",
-    "scanBill": "Scan rekening",
+    "addBill": "Voeg toe",
+    "scanBill": "Scan",
     "scanEmail": "Scan e-mail",
+    "overdueSection": "Achterstallig",
     "noBillsTitle": "Geen rekeningen",
     "noBillsDescription": "Scan je eerste rekening via de camera of koppel je Gmail om automatisch rekeningen te vinden."
   },
@@ -91,14 +90,43 @@
     "overdue": "Achterstallig",
     "paid": "Betaald",
     "markAsPaid": "Betaald",
-    "addBill": "Rekening toevoegen",
+    "addBill": "Toevoegen",
     "noBills": "Geen rekeningen",
-    "noBillsHint": "Voeg je eerste rekening toe via scan of handmatige invoer.",
+    "noBillsHint": "Voeg je eerste rekening toe via de knop hierboven.",
     "dueDate": "Vervaldatum",
     "amount": "Bedrag",
     "vendor": "Afzender",
     "category": "Categorie",
     "status": "Status"
+  },
+  "addBill": {
+    "title": "Rekening toevoegen",
+    "vendor": "Afzender",
+    "vendorPlaceholder": "Bijv. Vattenfall, KPN, Gemeente...",
+    "amount": "Bedrag (€)",
+    "dueDate": "Vervaldatum",
+    "category": "Categorie",
+    "reference": "Kenmerk / factuurnummer",
+    "referencePlaceholder": "Bijv. F2024-001234",
+    "notes": "Notities",
+    "notesPlaceholder": "Optionele notities over deze rekening...",
+    "save": "Rekening opslaan",
+    "errorVendor": "Vul een afzender in.",
+    "errorAmount": "Vul een geldig bedrag in.",
+    "errorDueDate": "Kies een vervaldatum.",
+    "errorGeneral": "Er is iets misgegaan. Probeer het opnieuw.",
+    "categories": {
+      "energie": "Energie",
+      "water": "Water",
+      "internet": "Internet",
+      "telefoon": "Telefoon",
+      "verzekering": "Verzekering",
+      "huur": "Huur",
+      "belasting": "Belasting",
+      "zorg": "Zorg",
+      "abonnement": "Abonnement",
+      "overig": "Overig"
+    }
   },
   "stats": {
     "title": "Statistieken",
