@@ -26,7 +26,8 @@
     "payments": "Payments",
     "stats": "Stats",
     "cashflow": "Cashflow",
-    "settings": "Settings"
+    "settings": "More",
+    "notifications": "Notifications"
   },
   "auth": {
     "signIn": "Sign in",
@@ -48,19 +49,57 @@
     "errorInvalidCredentials": "Invalid email or password.",
     "errorAlreadyRegistered": "This email is already registered. Try signing in."
   },
+  "dashboard": {
+    "title": "Overview",
+    "outstanding": "Outstanding",
+    "overdue": "Overdue",
+    "upcoming": "Upcoming",
+    "paid": "Paid",
+    "scanBill": "Scan bill",
+    "scanEmail": "Scan email",
+    "noBillsTitle": "No bills yet",
+    "noBillsDescription": "Scan your first bill via camera or connect Gmail to automatically find invoices."
+  },
   "bills": {
+    "pageTitle": "Payments",
     "outstanding": "Outstanding",
     "upcoming": "Upcoming",
     "overdue": "Overdue",
     "paid": "Paid",
     "markAsPaid": "Paid",
     "addBill": "Add bill",
-    "noBills": "No bills found",
+    "noBills": "No bills",
+    "noBillsHint": "Add your first bill via scan or manual entry.",
     "dueDate": "Due date",
     "amount": "Amount",
     "vendor": "Vendor",
     "category": "Category",
     "status": "Status"
+  },
+  "stats": {
+    "title": "Statistics",
+    "charts": "Charts",
+    "aiInsight": "AI Insight",
+    "noData": "No data yet",
+    "noDataHint": "Once you have bills, your spending patterns and trends will appear here."
+  },
+  "cashflow": {
+    "title": "Cashflow",
+    "noData": "No data yet",
+    "noDataHint": "Add bills to see your cashflow overview with predictions."
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "profileDesc": "Name, language, PIN and dark mode",
+    "gmailAccounts": "Gmail accounts",
+    "gmailAccountsDesc": "Connect or disconnect Gmail for scanning",
+    "notifications": "Notifications",
+    "notificationsDesc": "Push, email and reminders",
+    "budget": "Budget",
+    "budgetDesc": "Set budget limits per category",
+    "debtHelp": "Debt help",
+    "debtHelpDesc": "Legal aid, Nibud, Schuldhulpverlening"
   },
   "escalation": {
     "factuur": "Invoice",

@@ -26,7 +26,8 @@
     "payments": "Betalingen",
     "stats": "Stats",
     "cashflow": "Cashflow",
-    "settings": "Instellingen"
+    "settings": "Meer",
+    "notifications": "Meldingen"
   },
   "auth": {
     "signIn": "Inloggen",
@@ -48,19 +49,57 @@
     "errorInvalidCredentials": "Ongeldig e-mailadres of wachtwoord.",
     "errorAlreadyRegistered": "Dit e-mailadres is al geregistreerd. Probeer in te loggen."
   },
+  "dashboard": {
+    "title": "Overzicht",
+    "outstanding": "Openstaand",
+    "overdue": "Achterstallig",
+    "upcoming": "Binnenkort",
+    "paid": "Betaald",
+    "scanBill": "Scan rekening",
+    "scanEmail": "Scan e-mail",
+    "noBillsTitle": "Geen rekeningen",
+    "noBillsDescription": "Scan je eerste rekening via de camera of koppel je Gmail om automatisch rekeningen te vinden."
+  },
   "bills": {
+    "pageTitle": "Betalingen",
     "outstanding": "Openstaand",
     "upcoming": "Binnenkort",
     "overdue": "Achterstallig",
     "paid": "Betaald",
     "markAsPaid": "Betaald",
     "addBill": "Rekening toevoegen",
-    "noBills": "Geen rekeningen gevonden",
+    "noBills": "Geen rekeningen",
+    "noBillsHint": "Voeg je eerste rekening toe via scan of handmatige invoer.",
     "dueDate": "Vervaldatum",
     "amount": "Bedrag",
     "vendor": "Afzender",
     "category": "Categorie",
     "status": "Status"
+  },
+  "stats": {
+    "title": "Statistieken",
+    "charts": "Grafieken",
+    "aiInsight": "AI Inzicht",
+    "noData": "Nog geen data",
+    "noDataHint": "Zodra je rekeningen hebt, verschijnen hier je uitgavenpatronen en trends."
+  },
+  "cashflow": {
+    "title": "Cashflow",
+    "noData": "Nog geen data",
+    "noDataHint": "Voeg rekeningen toe om je cashflow-overzicht te zien met voorspellingen."
+  },
+  "settings": {
+    "title": "Instellingen",
+    "profile": "Profiel",
+    "profileDesc": "Naam, taal, PIN en donkere modus",
+    "gmailAccounts": "Gmail accounts",
+    "gmailAccountsDesc": "Koppel of ontkoppel Gmail voor scannen",
+    "notifications": "Meldingen",
+    "notificationsDesc": "Push, e-mail en herinneringen",
+    "budget": "Budget",
+    "budgetDesc": "Stel budgetlimieten per categorie in",
+    "debtHelp": "Hulp bij schulden",
+    "debtHelpDesc": "Juridisch Loket, Nibud, Schuldhulpverlening"
   },
   "escalation": {
     "factuur": "Factuur",
