@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import ServiceWorkerRegistration from '@/components/pwa/sw-register';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -16,10 +17,17 @@ export const metadata: Metadata = {
   description:
     'PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'PayWatch',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 };
 
@@ -27,6 +35,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
   themeColor: '#2563EB',
 };
 
@@ -43,6 +52,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}
+          <ServiceWorkerRegistration />
         </NextIntlClientProvider>
       </body>
     </html>

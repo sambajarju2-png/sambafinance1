@@ -157,6 +157,12 @@
     "saveNotes": "Save notes",
     "notesSaved": "Saved"
   },
+  "pwa": {
+    "installTitle": "Install PayWatch",
+    "installDesc": "Add PayWatch to your home screen for quick access.",
+    "installIOS": "Tap 'Share' then 'Add to Home Screen' to install PayWatch.",
+    "install": "Install"
+  },
   "stats": {
     "title": "Statistics",
     "charts": "Charts",

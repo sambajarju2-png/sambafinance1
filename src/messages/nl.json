@@ -157,6 +157,12 @@
     "saveNotes": "Notities opslaan",
     "notesSaved": "Opgeslagen"
   },
+  "pwa": {
+    "installTitle": "Installeer PayWatch",
+    "installDesc": "Voeg PayWatch toe aan je startscherm voor snelle toegang.",
+    "installIOS": "Tik op 'Deel' en dan 'Zet op beginscherm' om PayWatch te installeren.",
+    "install": "Installeer"
+  },
   "stats": {
     "title": "Statistieken",
     "charts": "Grafieken",
