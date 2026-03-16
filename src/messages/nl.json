@@ -1,7 +1,9 @@
 {
   "home": {
     "tagline": "Nooit meer verrast door een incassobureau. PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is.",
-    "status": "Scaffold gereed"
+    "status": "Scaffold gereed",
+    "authenticated": "Ingelogd — Auth werkt!",
+    "nextStep": "Dashboard en onboarding worden gebouwd in de volgende stap."
   },
   "common": {
     "loading": "Laden...",
@@ -30,11 +32,21 @@
     "signIn": "Inloggen",
     "signUp": "Registreren",
     "signOut": "Uitloggen",
+    "signInSubtitle": "Welkom terug bij PayWatch",
+    "signUpSubtitle": "Maak een gratis account aan",
     "email": "E-mailadres",
     "password": "Wachtwoord",
+    "passwordMinLength": "Minimaal 8 tekens",
     "forgotPassword": "Wachtwoord vergeten?",
     "continueWithGoogle": "Doorgaan met Google",
-    "or": "of"
+    "or": "of",
+    "noAccount": "Nog geen account?",
+    "hasAccount": "Al een account?",
+    "checkEmail": "Controleer je e-mail voor een bevestigingslink.",
+    "resetEmailSent": "Er is een e-mail verstuurd om je wachtwoord te resetten.",
+    "enterEmailFirst": "Vul eerst je e-mailadres in.",
+    "errorInvalidCredentials": "Ongeldig e-mailadres of wachtwoord.",
+    "errorAlreadyRegistered": "Dit e-mailadres is al geregistreerd. Probeer in te loggen."
   },
   "bills": {
     "outstanding": "Openstaand",

@@ -1,7 +1,9 @@
 {
   "home": {
     "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late.",
-    "status": "Scaffold ready"
+    "status": "Scaffold ready",
+    "authenticated": "Logged in — Auth works!",
+    "nextStep": "Dashboard and onboarding will be built in the next step."
   },
   "common": {
     "loading": "Loading...",
@@ -30,11 +32,21 @@
     "signIn": "Sign in",
     "signUp": "Sign up",
     "signOut": "Sign out",
+    "signInSubtitle": "Welcome back to PayWatch",
+    "signUpSubtitle": "Create a free account",
     "email": "Email address",
     "password": "Password",
+    "passwordMinLength": "At least 8 characters",
     "forgotPassword": "Forgot password?",
     "continueWithGoogle": "Continue with Google",
-    "or": "or"
+    "or": "or",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "checkEmail": "Check your email for a confirmation link.",
+    "resetEmailSent": "A password reset email has been sent.",
+    "enterEmailFirst": "Enter your email address first.",
+    "errorInvalidCredentials": "Invalid email or password.",
+    "errorAlreadyRegistered": "This email is already registered. Try signing in."
   },
   "bills": {
     "outstanding": "Outstanding",
