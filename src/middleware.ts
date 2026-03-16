@@ -1,8 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Routes that don't require authentication
+// Routes that don't require authentication at all
 const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback'];
+
+// Routes that require auth but NOT onboarding completion
+const AUTH_ONLY_ROUTES = ['/onboarding'];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -32,22 +35,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do NOT add logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake here can make it very
-  // hard to debug auth issues.
   const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
   const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthOnlyRoute = AUTH_ONLY_ROUTES.some((route) => pathname.startsWith(route));
 
-  // If user is NOT logged in and tries to access a protected route → redirect to login
+  // Not logged in + protected route → login
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
     return NextResponse.redirect(url);
   }
 
-  // If user IS logged in and tries to access auth pages → redirect to home
+  // Logged in + public auth pages → home
   if (user && isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
@@ -59,14 +60,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public assets (images, manifest, etc.)
-     * - api routes (they handle their own auth)
-     */
     '/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/).*)',
   ],
 };

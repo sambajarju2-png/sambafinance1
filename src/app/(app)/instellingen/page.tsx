@@ -86,7 +86,7 @@ function SettingsLink({
   label,
   description,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<Record<string, unknown>>;
   label: string;
   description: string;
 }) {
