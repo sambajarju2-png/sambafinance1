@@ -1,0 +1,60 @@
+{
+  "home": {
+    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late.",
+    "status": "Scaffold ready"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "search": "Search",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "overview": "Overview",
+    "payments": "Payments",
+    "stats": "Stats",
+    "cashflow": "Cashflow",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "email": "Email address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or"
+  },
+  "bills": {
+    "outstanding": "Outstanding",
+    "upcoming": "Upcoming",
+    "overdue": "Overdue",
+    "paid": "Paid",
+    "markAsPaid": "Paid",
+    "addBill": "Add bill",
+    "noBills": "No bills found",
+    "dueDate": "Due date",
+    "amount": "Amount",
+    "vendor": "Vendor",
+    "category": "Category",
+    "status": "Status"
+  },
+  "escalation": {
+    "factuur": "Invoice",
+    "herinnering": "Reminder",
+    "aanmaning": "Final notice",
+    "incasso": "Collection",
+    "deurwaarder": "Bailiff"
+  }
+}

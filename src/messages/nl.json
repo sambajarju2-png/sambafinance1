@@ -1,0 +1,60 @@
+{
+  "home": {
+    "tagline": "Nooit meer verrast door een incassobureau. PayWatch scant je e-mail, volgt je rekeningen, en waarschuwt je voordat het te laat is.",
+    "status": "Scaffold gereed"
+  },
+  "common": {
+    "loading": "Laden...",
+    "error": "Er is iets misgegaan",
+    "retry": "Opnieuw proberen",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "confirm": "Bevestigen",
+    "back": "Terug",
+    "next": "Volgende",
+    "done": "Klaar",
+    "search": "Zoeken",
+    "close": "Sluiten",
+    "yes": "Ja",
+    "no": "Nee"
+  },
+  "nav": {
+    "overview": "Overzicht",
+    "payments": "Betalingen",
+    "stats": "Stats",
+    "cashflow": "Cashflow",
+    "settings": "Instellingen"
+  },
+  "auth": {
+    "signIn": "Inloggen",
+    "signUp": "Registreren",
+    "signOut": "Uitloggen",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "continueWithGoogle": "Doorgaan met Google",
+    "or": "of"
+  },
+  "bills": {
+    "outstanding": "Openstaand",
+    "upcoming": "Binnenkort",
+    "overdue": "Achterstallig",
+    "paid": "Betaald",
+    "markAsPaid": "Betaald",
+    "addBill": "Rekening toevoegen",
+    "noBills": "Geen rekeningen gevonden",
+    "dueDate": "Vervaldatum",
+    "amount": "Bedrag",
+    "vendor": "Afzender",
+    "category": "Categorie",
+    "status": "Status"
+  },
+  "escalation": {
+    "factuur": "Factuur",
+    "herinnering": "Herinnering",
+    "aanmaning": "Aanmaning",
+    "incasso": "Incasso",
+    "deurwaarder": "Deurwaarder"
+  }
+}
