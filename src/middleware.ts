@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback', '/plasmic-host'];
 
 // Routes where auth check happens in the page itself
 const HYBRID_ROUTES = ['/'];
@@ -42,22 +42,32 @@ export async function middleware(request: NextRequest) {
   const isHybridRoute = HYBRID_ROUTES.includes(pathname);
   const isAuthOnlyRoute = pathname.startsWith('/onboarding');
 
-  // Hybrid routes handle their own auth (landing page shows for anon, redirects for auth)
+  // App routes that require auth (starts with known prefixes)
+  const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
+  const isAppRoute = APP_PREFIXES.some((p) => pathname.startsWith(p));
+
+  // Hybrid routes handle their own auth
   if (isHybridRoute) {
     return supabaseResponse;
   }
 
-  // Not logged in + protected route → login
-  if (!user && !isPublicRoute) {
+  // Public Plasmic CMS pages — any route not matched by app routes is a potential CMS page
+  // Let it through without auth
+  if (!isAppRoute && !isPublicRoute) {
+    return supabaseResponse;
+  }
+
+  // Not logged in + app route → login
+  if (!user && isAppRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
     return NextResponse.redirect(url);
   }
 
-  // Logged in + public auth pages → dashboard
-  if (user && isPublicRoute) {
+  // Logged in + auth pages (login/signup) → dashboard
+  if (user && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))) {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/overzicht';
     return NextResponse.redirect(url);
   }
 
