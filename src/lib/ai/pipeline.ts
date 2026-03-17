@@ -216,44 +216,38 @@ export async function extractBillFromPhoto(
   mimeType: string,
   userId: string
 ): Promise<CameraExtractionResult> {
-  // Try up to 2 times for vision extraction (Gemini can be flaky with JSON)
-  let lastError: Error | null = null;
+  // callGeminiVision now uses lenient parsing — it returns partial results
+  // instead of throwing when JSON is incomplete. So we always get something.
+  const result = await callGeminiVision(
+    imageBase64,
+    mimeType,
+    CAMERA_PROMPT,
+    userId,
+    'camera_extraction'
+  );
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const result = await callGeminiVision(
-        imageBase64,
-        mimeType,
-        CAMERA_PROMPT,
-        userId,
-        'camera_extraction'
-      );
+  // If _parse_error is set, we got a partial extraction from raw text.
+  // That's fine — fill in what we have, leave the rest for the user.
+  const wasPartial = Boolean(result._parse_error);
 
-      return {
-        vendor: String(result.vendor || 'Onbekend'),
-        amount_cents: Number(result.amount_cents) || 0,
-        currency: String(result.currency || 'EUR'),
-        iban: result.iban ? String(result.iban) : null,
-        reference: result.reference ? String(result.reference) : null,
-        due_date: result.due_date ? String(result.due_date) : null,
-        category_hint: String(result.category_hint || 'overig'),
-        escalation_stage: result.escalation_stage ? String(result.escalation_stage) : null,
-        payment_url: result.payment_url ? String(result.payment_url) : null,
-        confidence: {
+  return {
+    vendor: String(result.vendor || ''),
+    amount_cents: Number(result.amount_cents) || 0,
+    currency: String(result.currency || 'EUR'),
+    iban: result.iban ? String(result.iban) : null,
+    reference: result.reference ? String(result.reference) : null,
+    due_date: result.due_date ? String(result.due_date) : null,
+    category_hint: String(result.category_hint || 'overig'),
+    escalation_stage: result.escalation_stage ? String(result.escalation_stage) : null,
+    payment_url: result.payment_url ? String(result.payment_url) : null,
+    confidence: wasPartial
+      ? { vendor: 0.3, amount: 0.3, due_date: 0.1 }
+      : {
           vendor: Number((result.confidence as Record<string, unknown>)?.vendor) || 0,
           amount: Number((result.confidence as Record<string, unknown>)?.amount) || 0,
           due_date: Number((result.confidence as Record<string, unknown>)?.due_date) || 0,
         },
-      };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error('Unknown error');
-      console.error(`Camera extraction attempt ${attempt + 1} failed:`, lastError.message);
-      // Wait 1s before retry
-      if (attempt < 1) await new Promise((r) => setTimeout(r, 1000));
-    }
-  }
-
-  throw lastError || new Error('Camera extraction failed after retries');
+  };
 }
 
 // ============================================================

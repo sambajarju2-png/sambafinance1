@@ -11,6 +11,9 @@ import { checkRateLimit } from '@/lib/rate-limit';
  * Returns extracted fields for user confirmation.
  * Image bytes are NEVER stored.
  *
+ * Always returns a result — even partial. Missing fields are empty
+ * so the user can fill them in the confirm form.
+ *
  * Body: { image: string (base64), mime_type: string }
  */
 export async function POST(req: NextRequest) {
@@ -24,18 +27,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY is not configured.' }, { status: 500, headers: NO_CACHE });
-  }
-
-  // Rate limit: 30 per hour
-  const allowed = await checkRateLimit(userId, 'camera-scan', 30, 60);
-  if (!allowed) {
-    return NextResponse.json({ error: 'Too many scans. Try again later.' }, { status: 429, headers: NO_CACHE });
-  }
-
   try {
+    // Rate limit: 30 scans per hour
     guard();
+    const allowed = await checkRateLimit(userId, 'camera-scan', 30, 3600000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Te veel scans. Probeer het later opnieuw.' },
+        { status: 429, headers: NO_CACHE }
+      );
+    }
+
     const body = await req.json();
     const { image, mime_type } = body;
 
@@ -54,39 +56,51 @@ export async function POST(req: NextRequest) {
     }
 
     // Check image size (base64 is ~33% larger than binary)
-    // 2MB binary = ~2.67MB base64
     const estimatedBytes = (image.length * 3) / 4;
     if (estimatedBytes > 3 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'Image too large. Maximum 2MB.' },
+        { error: 'Foto is te groot. Maximaal 2MB.' },
         { status: 400, headers: NO_CACHE }
       );
     }
 
     // Extract bill data with Gemini Vision
+    // This now ALWAYS returns a result (possibly partial with empty fields)
     guard();
     const extraction = await extractBillFromPhoto(image, mime_type, userId);
 
-    // Check if extraction got a valid vendor (minimal validation)
-    if (!extraction.vendor || extraction.vendor === 'Onbekend') {
+    // Image bytes are discarded here — never stored
+
+    // Check if we got meaningful data
+    const hasVendor = extraction.vendor && extraction.vendor !== '';
+    const hasAmount = extraction.amount_cents > 0;
+    const isPartial = !hasVendor || !hasAmount;
+
+    return NextResponse.json({
+      extraction,
+      partial: isPartial,
+      message: isPartial
+        ? 'Niet alle velden konden worden gelezen. Controleer en vul de ontbrekende gegevens in.'
+        : null,
+    }, { headers: NO_CACHE });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
+      return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
+    }
+
+    const errorMessage = err instanceof Error ? err.message : 'Scannen mislukt';
+    console.error('Camera scan error:', errorMessage);
+
+    // Even on error, return a helpful message instead of a 500
+    if (errorMessage.includes('foto') || errorMessage.includes('geblokkeerd')) {
       return NextResponse.json(
-        { error: 'Could not read the bill. Try a clearer, well-lit photo.', extraction },
-        { status: 200, headers: NO_CACHE }
+        { error: errorMessage },
+        { status: 422, headers: NO_CACHE }
       );
     }
 
-    // Image bytes are discarded here — never stored anywhere
-
-    return NextResponse.json({ extraction }, { headers: NO_CACHE });
-  } catch (err) {
-    if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
-      return NextResponse.json({ error: 'Request timeout — try a smaller image' }, { status: 504, headers: NO_CACHE });
-    }
-    console.error('Camera scan error:', err);
-    // Surface the specific error from Gemini
-    const message = err instanceof Error ? err.message : 'Failed to extract bill data';
     return NextResponse.json(
-      { error: message },
+      { error: 'Scannen mislukt. Probeer een duidelijkere foto of voer de gegevens handmatig in.' },
       { status: 500, headers: NO_CACHE }
     );
   }
