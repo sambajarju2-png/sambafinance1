@@ -13,10 +13,12 @@ import {
   LogOut,
   ChevronRight,
   Loader2,
+  MapPin,
 } from 'lucide-react';
 import GmailSettings from './gmail-settings';
+import GemeenteSelector from '@/components/gemeente-selector';
 
-type SettingsTab = 'menu' | 'gmail';
+type SettingsTab = 'menu' | 'gmail' | 'profile';
 
 export default function InstellingenPage() {
   const t = useTranslations('settings');
@@ -33,6 +35,7 @@ export default function InstellingenPage() {
     router.refresh();
   }
 
+  // Gmail sub-page
   if (activeTab === 'gmail') {
     return (
       <div className="space-y-4">
@@ -41,7 +44,7 @@ export default function InstellingenPage() {
           className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue"
         >
           <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} />
-          {t('backToSettings')}
+          Terug
         </button>
         <Suspense fallback={<div className="skeleton h-[200px] rounded-card" />}>
           <GmailSettings />
@@ -50,6 +53,33 @@ export default function InstellingenPage() {
     );
   }
 
+  // Profile sub-page (with gemeente selector)
+  if (activeTab === 'profile') {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setActiveTab('menu')}
+          className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue"
+        >
+          <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} />
+          Terug
+        </button>
+        <h2 className="text-heading text-pw-navy">{t('profile')}</h2>
+
+        {/* Gemeente selector */}
+        <GemeenteSelector />
+
+        {/* Other profile settings can go here later (name, language, PIN, dark mode) */}
+        <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+          <p className="text-[12px] text-pw-muted">
+            Meer profielinstellingen (naam, taal, PIN, donkere modus) komen in een volgende update.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Main settings menu
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
@@ -60,7 +90,7 @@ export default function InstellingenPage() {
           icon={User}
           label={t('profile')}
           description={t('profileDesc')}
-          onClick={() => {}}
+          onClick={() => setActiveTab('profile')}
         />
         <SettingsLink
           icon={Mail}
@@ -113,7 +143,7 @@ function SettingsLink({
   description,
   onClick,
 }: {
-  icon: React.ComponentType<Record<string, unknown>>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
   description: string;
   onClick: () => void;
@@ -121,16 +151,16 @@ function SettingsLink({
   return (
     <button
       onClick={onClick}
-      className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3 text-left transition-colors hover:bg-gray-50"
+      className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3.5 text-left transition-colors hover:bg-pw-bg"
     >
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-input bg-pw-bg">
-        <Icon className="h-[18px] w-[18px] text-pw-muted" strokeWidth={1.5} />
+      <div className="flex h-9 w-9 items-center justify-center rounded-input bg-pw-bg">
+        <Icon className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="flex-1">
         <p className="text-[14px] font-semibold text-pw-text">{label}</p>
         <p className="text-[11px] text-pw-muted">{description}</p>
       </div>
-      <ChevronRight className="h-4 w-4 flex-shrink-0 text-pw-muted/50" strokeWidth={1.5} />
+      <ChevronRight className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
     </button>
   );
 }
