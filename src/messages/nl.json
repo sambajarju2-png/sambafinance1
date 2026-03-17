@@ -155,7 +155,9 @@
     "deleteConfirm": "Weet je zeker dat je deze rekening wilt verwijderen?",
     "notesPlaceholder": "Schrijf je notities hier...",
     "saveNotes": "Notities opslaan",
-    "notesSaved": "Opgeslagen"
+    "notesSaved": "Opgeslagen",
+    "draftLetter": "Schrijf concept",
+    "draftLetterDesc": "Laat AI een conceptbrief schrijven voor deze rekening"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -264,5 +266,41 @@
     "errorRequired": "Vul afzender, bedrag en vervaldatum in.",
     "errorSave": "Fout bij het opslaan.",
     "tryAgain": "Probeer opnieuw"
+  },
+  "draftLetter": {
+    "title": "Conceptbrief",
+    "intentQuestion": "Wat wil je bereiken?",
+    "intentPaymentPlan": "Betalingsregeling aanvragen",
+    "intentPaymentPlanDesc": "Vraag om het bedrag in termijnen te betalen",
+    "intentPostpone": "Uitstel van betaling",
+    "intentPostponeDesc": "Vraag om meer tijd om te betalen",
+    "intentDispute": "Bezwaar maken",
+    "intentDisputeDesc": "Maak bezwaar tegen de rekening",
+    "intentConfirmPaid": "Bevestig betaling",
+    "intentConfirmPaidDesc": "Bevestig dat je al betaald hebt",
+    "detailsQuestion_betalingsregeling": "In hoeveel termijnen wil je betalen?",
+    "detailsQuestion_uitstel": "Hoeveel dagen uitstel wil je vragen?",
+    "detailsQuestion_bezwaar": "Wat is de reden van je bezwaar?",
+    "detailsQuestion_bevestiging": "Wanneer heb je betaald?",
+    "months": "maanden",
+    "days": "dagen",
+    "disputeAmountWrong": "Bedrag klopt niet",
+    "disputeNotReceived": "Dienst niet ontvangen",
+    "disputeAlreadyPaid": "Al betaald",
+    "disputeExpired": "Verjaard",
+    "paidDate": "Betaaldatum",
+    "back": "Terug",
+    "generate": "Genereer concept",
+    "generating": "Brief wordt geschreven...",
+    "subject": "Onderwerp",
+    "letterBody": "Brief",
+    "disclaimer": "Let op: dit is een AI-gegenereerd concept. Controleer de inhoud voor verzending. Dit is geen juridisch advies.",
+    "copy": "Kopieer",
+    "copied": "Gekopieerd",
+    "openEmail": "Open in e-mail",
+    "newLetter": "Nieuwe brief schrijven",
+    "errorTitle": "Brief genereren mislukt",
+    "errorGeneral": "Er is iets misgegaan. Probeer het opnieuw.",
+    "tryAgain": "Opnieuw proberen"
   }
 }

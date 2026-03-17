@@ -155,7 +155,9 @@
     "deleteConfirm": "Are you sure you want to delete this bill?",
     "notesPlaceholder": "Write your notes here...",
     "saveNotes": "Save notes",
-    "notesSaved": "Saved"
+    "notesSaved": "Saved",
+    "draftLetter": "Draft letter",
+    "draftLetterDesc": "Let AI write a draft letter for this bill"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -263,6 +265,42 @@
     "errorExtraction": "Error recognizing details.",
     "errorRequired": "Please fill in vendor, amount and due date.",
     "errorSave": "Error saving the bill.",
+    "tryAgain": "Try again"
+  },
+  "draftLetter": {
+    "title": "Draft Letter",
+    "intentQuestion": "What do you want to achieve?",
+    "intentPaymentPlan": "Request payment plan",
+    "intentPaymentPlanDesc": "Ask to pay the amount in installments",
+    "intentPostpone": "Request postponement",
+    "intentPostponeDesc": "Ask for more time to pay",
+    "intentDispute": "File a dispute",
+    "intentDisputeDesc": "Dispute the bill",
+    "intentConfirmPaid": "Confirm payment",
+    "intentConfirmPaidDesc": "Confirm that you have already paid",
+    "detailsQuestion_betalingsregeling": "How many installments do you want?",
+    "detailsQuestion_uitstel": "How many days of postponement do you need?",
+    "detailsQuestion_bezwaar": "What is the reason for your dispute?",
+    "detailsQuestion_bevestiging": "When did you pay?",
+    "months": "months",
+    "days": "days",
+    "disputeAmountWrong": "Amount is incorrect",
+    "disputeNotReceived": "Service not received",
+    "disputeAlreadyPaid": "Already paid",
+    "disputeExpired": "Statute of limitations expired",
+    "paidDate": "Payment date",
+    "back": "Back",
+    "generate": "Generate draft",
+    "generating": "Writing letter...",
+    "subject": "Subject",
+    "letterBody": "Letter",
+    "disclaimer": "Note: this is an AI-generated draft. Review the content before sending. This is not legal advice.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "openEmail": "Open in email",
+    "newLetter": "Write new letter",
+    "errorTitle": "Letter generation failed",
+    "errorGeneral": "Something went wrong. Please try again.",
     "tryAgain": "Try again"
   }
 }

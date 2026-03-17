@@ -219,6 +219,13 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
           )}
         </div>
       </div>
+
+      {/* Draft Letter Drawer */}
+      <DraftLetterDrawer
+        bill={bill}
+        open={draftLetterOpen}
+        onClose={() => setDraftLetterOpen(false)}
+      />
     </>
   );
 }
@@ -332,6 +339,7 @@ function ActionsTab({
   onMarkPaid,
   onToggleFavorite,
   onDelete,
+  onDraftLetter,
 }: {
   bill: Bill;
   t: ReturnType<typeof useTranslations>;
@@ -340,6 +348,7 @@ function ActionsTab({
   onMarkPaid: () => void;
   onToggleFavorite: () => void;
   onDelete: () => void;
+  onDraftLetter: () => void;
 }) {
   return (
     <div className="space-y-3">
@@ -358,6 +367,20 @@ function ActionsTab({
           <div>
             <p className="text-[14px] font-semibold text-pw-green">{t('markAsPaid')}</p>
             <p className="text-[11px] text-pw-muted">{t('markAsPaidDesc')}</p>
+          </div>
+        </button>
+      )}
+
+      {/* Draft letter */}
+      {!isPaid && (
+        <button
+          onClick={onDraftLetter}
+          className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-purple/30 bg-purple-50/30 px-4 py-3.5 text-left transition-colors hover:bg-purple-50/50"
+        >
+          <FileText className="h-5 w-5 text-pw-purple" strokeWidth={1.5} />
+          <div>
+            <p className="text-[14px] font-semibold text-pw-purple">{t('draftLetter')}</p>
+            <p className="text-[11px] text-pw-muted">{t('draftLetterDesc')}</p>
           </div>
         </button>
       )}
