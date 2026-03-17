@@ -30,6 +30,9 @@ export default function OverzichtPage() {
       }
     }
     fetchBills();
+
+    // Recalculate streak in background
+    fetch('/api/streak').catch(() => {});
   }, []);
 
   const today = new Date().toISOString().split('T')[0];
