@@ -228,5 +228,29 @@
     "errorNetwork": "Netwerkfout. Controleer je internetverbinding.",
     "needsReauth": "Gmail toegang verlopen. Koppel opnieuw.",
     "close": "Sluiten"
+  },
+  "cameraScan": {
+    "title": "Scan rekening",
+    "captureTitle": "Maak een foto",
+    "captureDescription": "Maak een duidelijke foto van je rekening, factuur of brief. AI herkent automatisch de gegevens.",
+    "takePhoto": "Maak foto",
+    "chooseFromGallery": "Kies uit galerij",
+    "extracting": "Gegevens herkennen...",
+    "extractingHint": "AI analyseert je foto. Dit duurt een paar seconden.",
+    "confirmTitle": "Controleer de gegevens",
+    "confirmDescription": "AI heeft deze gegevens herkend. Controleer en pas aan waar nodig.",
+    "vendor": "Afzender",
+    "amount": "Bedrag (€)",
+    "dueDate": "Vervaldatum",
+    "category": "Categorie",
+    "reference": "Kenmerk",
+    "save": "Opslaan",
+    "retake": "Opnieuw",
+    "errorTitle": "Herkenning mislukt",
+    "errorGeneral": "We konden de gegevens niet herkennen. Probeer een duidelijkere foto.",
+    "errorExtraction": "Fout bij het herkennen van gegevens.",
+    "errorRequired": "Vul afzender, bedrag en vervaldatum in.",
+    "errorSave": "Fout bij het opslaan.",
+    "tryAgain": "Probeer opnieuw"
   }
 }

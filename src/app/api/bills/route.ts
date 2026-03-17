@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         received_date,
         category,
         status: isOverdue ? 'action' : 'outstanding',
-        source: 'manual',
+        source: ['manual', 'camera_scan', 'gmail_scan'].includes(body.source) ? body.source : 'manual',
         hash,
         notes,
         payment_url,

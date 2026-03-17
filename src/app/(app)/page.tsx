@@ -89,7 +89,10 @@ export default function OverzichtPage() {
           <Plus className="h-4 w-4" strokeWidth={1.5} />
           {t('addBill')}
         </button>
-        <button className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text">
+        <button
+          onClick={() => router.push('/scan')}
+          className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text"
+        >
           <Camera className="h-4 w-4" strokeWidth={1.5} />
           {t('scanBill')}
         </button>

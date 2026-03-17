@@ -228,5 +228,29 @@
     "errorNetwork": "Network error. Check your internet connection.",
     "needsReauth": "Gmail access expired. Please reconnect.",
     "close": "Close"
+  },
+  "cameraScan": {
+    "title": "Scan bill",
+    "captureTitle": "Take a photo",
+    "captureDescription": "Take a clear photo of your bill, invoice or letter. AI will automatically recognize the details.",
+    "takePhoto": "Take photo",
+    "chooseFromGallery": "Choose from gallery",
+    "extracting": "Recognizing details...",
+    "extractingHint": "AI is analyzing your photo. This takes a few seconds.",
+    "confirmTitle": "Check the details",
+    "confirmDescription": "AI recognized these details. Review and adjust where needed.",
+    "vendor": "Vendor",
+    "amount": "Amount (€)",
+    "dueDate": "Due date",
+    "category": "Category",
+    "reference": "Reference",
+    "save": "Save",
+    "retake": "Retake",
+    "errorTitle": "Recognition failed",
+    "errorGeneral": "We could not recognize the details. Try a clearer photo.",
+    "errorExtraction": "Error recognizing details.",
+    "errorRequired": "Please fill in vendor, amount and due date.",
+    "errorSave": "Error saving the bill.",
+    "tryAgain": "Try again"
   }
 }
