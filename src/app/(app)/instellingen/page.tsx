@@ -143,7 +143,7 @@ function SettingsLink({
   description,
   onClick,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ElementType;
   label: string;
   description: string;
   onClick: () => void;
