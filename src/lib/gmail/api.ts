@@ -24,21 +24,32 @@ export interface GmailMessageDetail {
  * List message IDs from Gmail inbox.
  * Returns a batch of message IDs + nextPageToken for pagination.
  *
+ * @param accessToken - Valid Gmail access token
+ * @param maxResults - Max messages to fetch (default 15 per batch, up to 100 for initial scan)
+ * @param pageToken - Pagination token from previous call
+ * @param query - Optional Gmail search query (e.g. 'newer_than:30d')
+ *
  * SERVER-ONLY.
  */
 export async function listMessages(
   accessToken: string,
   maxResults: number = 15,
-  pageToken?: string | null
+  pageToken?: string | null,
+  query?: string | null
 ): Promise<GmailListResponse> {
   const params = new URLSearchParams({
     maxResults: maxResults.toString(),
-    // Query recent inbox emails only (newest first is Gmail default)
-    q: 'in:inbox newer_than:30d',
+    labelIds: 'INBOX',
   });
 
   if (pageToken) {
     params.set('pageToken', pageToken);
+  }
+
+  // Only add query if explicitly provided — no default date filter
+  // This ensures we get the most recent emails regardless of date
+  if (query) {
+    params.set('q', query);
   }
 
   const response = await fetch(
