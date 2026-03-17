@@ -227,7 +227,20 @@
   "cashflow": {
     "title": "Cashflow",
     "noData": "Nog geen data",
-    "noDataHint": "Voeg rekeningen toe om je cashflow-overzicht te zien met voorspellingen."
+    "noDataHint": "Voeg rekeningen toe om je cashflow-overzicht te zien met voorspellingen.",
+    "thisMonth": "Deze maand",
+    "paid": "Betaald",
+    "remaining": "Resterend",
+    "upcoming": "Verwachte uitgaven",
+    "noUpcoming": "Geen openstaande rekeningen in deze periode.",
+    "dueNext": "Vervalt binnen {days} dagen",
+    "more": "meer",
+    "monthlyHistory": "Maandelijks overzicht",
+    "paidLegend": "Betaald",
+    "openLegend": "Openstaand",
+    "topVendors": "Grootste afzenders",
+    "bill": "rekening",
+    "bills": "rekeningen"
   },
   "settings": {
     "title": "Instellingen",

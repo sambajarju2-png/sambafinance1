@@ -227,7 +227,20 @@
   "cashflow": {
     "title": "Cashflow",
     "noData": "No data yet",
-    "noDataHint": "Add bills to see your cashflow overview with predictions."
+    "noDataHint": "Add bills to see your cashflow overview with predictions.",
+    "thisMonth": "This month",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "upcoming": "Expected expenses",
+    "noUpcoming": "No outstanding bills in this period.",
+    "dueNext": "Due within {days} days",
+    "more": "more",
+    "monthlyHistory": "Monthly overview",
+    "paidLegend": "Paid",
+    "openLegend": "Outstanding",
+    "topVendors": "Top vendors",
+    "bill": "bill",
+    "bills": "bills"
   },
   "settings": {
     "title": "Settings",
