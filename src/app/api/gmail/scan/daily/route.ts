@@ -200,10 +200,11 @@ export async function POST(req: NextRequest) {
                 account.user_id
               );
 
-              const hash = await computeBillHash(
+              const hash = computeBillHash(
                 extracted.vendor,
                 extracted.amount_cents,
-                extracted.reference || ''
+                extracted.reference || '',
+                extracted.due_date || new Date().toISOString().split('T')[0]
               );
 
               // Check bill dedup
