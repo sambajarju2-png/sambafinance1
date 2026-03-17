@@ -1,9 +1,9 @@
 'use client';
 
+import { useState, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import {
   User,
   Mail,
@@ -14,11 +14,15 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react';
+import GmailSettings from './gmail-settings';
+
+type SettingsTab = 'menu' | 'gmail';
 
 export default function InstellingenPage() {
   const t = useTranslations('settings');
   const tAuth = useTranslations('auth');
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('menu');
   const [signingOut, setSigningOut] = useState(false);
 
   async function handleSignOut() {
@@ -27,6 +31,23 @@ export default function InstellingenPage() {
     await supabase.auth.signOut();
     router.push('/auth/login');
     router.refresh();
+  }
+
+  if (activeTab === 'gmail') {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setActiveTab('menu')}
+          className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue"
+        >
+          <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} />
+          {t('backToSettings')}
+        </button>
+        <Suspense fallback={<div className="skeleton h-[200px] rounded-card" />}>
+          <GmailSettings />
+        </Suspense>
+      </div>
+    );
   }
 
   return (
@@ -39,26 +60,31 @@ export default function InstellingenPage() {
           icon={User}
           label={t('profile')}
           description={t('profileDesc')}
+          onClick={() => {}}
         />
         <SettingsLink
           icon={Mail}
           label={t('gmailAccounts')}
           description={t('gmailAccountsDesc')}
+          onClick={() => setActiveTab('gmail')}
         />
         <SettingsLink
           icon={BellRing}
           label={t('notifications')}
           description={t('notificationsDesc')}
+          onClick={() => {}}
         />
         <SettingsLink
           icon={Wallet}
           label={t('budget')}
           description={t('budgetDesc')}
+          onClick={() => {}}
         />
         <SettingsLink
           icon={HelpCircle}
           label={t('debtHelp')}
           description={t('debtHelpDesc')}
+          onClick={() => {}}
         />
       </div>
 
@@ -85,17 +111,22 @@ function SettingsLink({
   icon: Icon,
   label,
   description,
+  onClick,
 }: {
   icon: React.ComponentType<Record<string, unknown>>;
   label: string;
   description: string;
+  onClick: () => void;
 }) {
   return (
-    <button className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3 text-left transition-colors hover:bg-gray-50">
+    <button
+      onClick={onClick}
+      className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3 text-left transition-colors hover:bg-gray-50"
+    >
       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-input bg-pw-bg">
         <Icon className="h-[18px] w-[18px] text-pw-muted" strokeWidth={1.5} />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[14px] font-semibold text-pw-text">{label}</p>
         <p className="text-[11px] text-pw-muted">{description}</p>
       </div>

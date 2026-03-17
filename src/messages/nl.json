@@ -157,6 +157,22 @@
     "saveNotes": "Notities opslaan",
     "notesSaved": "Opgeslagen"
   },
+  "gmail": {
+    "title": "Gmail Accounts",
+    "description": "Koppel je Gmail-account om automatisch rekeningen te vinden in je inbox. PayWatch leest alleen e-mails — we kunnen niets wijzigen of verwijderen.",
+    "connectGmail": "Gmail koppelen",
+    "connected": "Gmail account succesvol gekoppeld!",
+    "disconnected": "Gmail account ontkoppeld.",
+    "denied": "Je hebt de toegang geweigerd. Probeer het opnieuw.",
+    "errorGeneral": "Er is iets misgegaan. Probeer het opnieuw.",
+    "disconnectConfirm": "Weet je zeker dat je dit Gmail account wilt ontkoppelen? Bestaande rekeningen worden niet verwijderd.",
+    "noAccounts": "Geen Gmail gekoppeld",
+    "noAccountsHint": "Koppel je Gmail om automatisch rekeningen te vinden in je inbox.",
+    "lastScanned": "Laatst gescand",
+    "neverScanned": "Nog niet gescand",
+    "needsReauth": "Opnieuw inloggen vereist",
+    "reauth": "Vernieuwen"
+  },
   "pwa": {
     "installTitle": "Installeer PayWatch",
     "installDesc": "Voeg PayWatch toe aan je startscherm voor snelle toegang.",
@@ -177,6 +193,7 @@
   },
   "settings": {
     "title": "Instellingen",
+    "backToSettings": "Terug",
     "profile": "Profiel",
     "profileDesc": "Naam, taal, PIN en donkere modus",
     "gmailAccounts": "Gmail accounts",
