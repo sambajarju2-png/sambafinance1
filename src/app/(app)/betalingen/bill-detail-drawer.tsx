@@ -199,6 +199,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
               stage={bill.escalation_stage}
               amountCents={bill.amount}
               language="nl"
+              dueDate={bill.due_date}
             />
           )}
           {activeTab === 'acties' && (

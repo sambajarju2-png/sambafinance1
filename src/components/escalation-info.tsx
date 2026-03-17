@@ -19,13 +19,24 @@ interface EscalationInfoProps {
   stage: EscalationStage;
   amountCents: number;
   language: string;
+  dueDate?: string;
 }
 
-export default function EscalationInfo({ stage, amountCents, language }: EscalationInfoProps) {
+export default function EscalationInfo({ stage, amountCents, language, dueDate }: EscalationInfoProps) {
   const t = useTranslations('incasso');
   const tEsc = useTranslations('escalation');
 
-  const stageInfo = getStageDescription(stage, language);
+  // Check if bill is overdue (factuur that passed its due date should show warning)
+  const today = new Date().toISOString().split('T')[0];
+  const isOverdue = dueDate ? dueDate < today : false;
+  const daysOverdue = dueDate
+    ? Math.max(0, Math.floor((new Date(today + 'T00:00:00').getTime() - new Date(dueDate + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  // If stage is factuur but bill is overdue, show adjusted info
+  const effectiveStage = stage === 'factuur' && daysOverdue > 14 ? 'herinnering' : stage;
+
+  const stageInfo = getStageDescription(effectiveStage, language);
   const wikCosts = calculateWIKCosts(amountCents);
   const colors = STAGE_COLORS[stage] || STAGE_COLORS.factuur;
   const currentIndex = STAGE_ORDER.indexOf(stage);

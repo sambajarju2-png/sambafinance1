@@ -174,6 +174,8 @@ function BillRow({
   const today = new Date().toISOString().split('T')[0];
   const isOverdue = bill.status !== 'settled' && bill.due_date < today;
   const isPaid = bill.status === 'settled';
+  const fourDaysFromNow = new Date(Date.now() + 4 * 86400000).toISOString().split('T')[0];
+  const isUpcoming = !isPaid && !isOverdue && bill.due_date <= fourDaysFromNow;
   const escColor = ESCALATION_COLORS[bill.escalation_stage] || ESCALATION_COLORS.factuur;
 
   const dueDisplay = new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', {
@@ -184,7 +186,9 @@ function BillRow({
   return (
     <button
       onClick={onTap}
-      className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50"
+      className={`btn-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50 ${
+        isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'
+      }`}
     >
       {/* Favorite indicator */}
       <div className="flex-shrink-0">
@@ -221,6 +225,8 @@ function BillRow({
           </span>
         ) : isOverdue ? (
           <span className="text-[11px] font-medium text-pw-red">{dueDisplay}</span>
+        ) : isUpcoming ? (
+          <span className="text-[11px] font-medium text-pw-amber">{dueDisplay}</span>
         ) : (
           <span className="text-[11px] text-pw-muted">{dueDisplay}</span>
         )}
