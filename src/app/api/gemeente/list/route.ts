@@ -21,7 +21,7 @@ export async function GET() {
     .order('gemeente');
 
   // Deduplicate
-  const gemeentes = [...new Set((data || []).map((r) => r.gemeente))].sort();
+  const gemeentes = Array.from(new Set((data || []).map((r: { gemeente: string }) => r.gemeente))).sort();
 
   return NextResponse.json({ gemeentes }, { headers: NO_CACHE });
 }
