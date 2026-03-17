@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Star, Check, CreditCard } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import AddBillDrawer from './add-bill-drawer';
@@ -20,6 +21,21 @@ const ESCALATION_COLORS: Record<EscalationStage, string> = {
 export default function BillList() {
   const t = useTranslations('bills');
   const tEsc = useTranslations('escalation');
+  const searchParams = useSearchParams();
+
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabFilter>('outstanding');
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+
+  // Auto-open add drawer when navigated with ?add=true
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setAddDrawerOpen(true);
+      window.history.replaceState(null, '', '/betalingen');
+    }
+  }, [searchParams]);
 
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);

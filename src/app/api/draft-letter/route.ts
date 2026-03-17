@@ -90,7 +90,8 @@ export async function POST(req: NextRequest) {
       userId
     );
 
-    return NextResponse.json(result, { headers: NO_CACHE });
+    // result = { subject, body } from generateDraftLetter
+    return NextResponse.json({ letter: result }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
       return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });

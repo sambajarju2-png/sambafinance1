@@ -79,30 +79,31 @@ export async function callHaiku(
  */
 function parseJsonResponse(text: string): Record<string, unknown> {
   let cleaned = text.trim();
-  if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+  else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
 
   if (start === -1 || end === -1 || end <= start) {
-    console.error('No valid JSON found in Haiku response:', text.slice(0, 200));
-    throw new Error('Haiku response did not contain valid JSON');
+    console.error('No valid JSON found in Haiku response:', text.slice(0, 300));
+    // For draft letters, try to return the raw text as the body
+    return { subject: '', body: text.trim(), error: 'No JSON wrapper' };
   }
 
   const jsonStr = cleaned.slice(start, end + 1);
 
   try {
     return JSON.parse(jsonStr);
-  } catch (err) {
-    console.error('Failed to parse Haiku JSON:', jsonStr.slice(0, 200));
-    throw new Error('Haiku response contained invalid JSON');
+  } catch {
+    console.error('Failed to parse Haiku JSON:', jsonStr.slice(0, 300));
+    try {
+      const fixed = jsonStr.replace(/'/g, '"').replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      return JSON.parse(fixed);
+    } catch {
+      return { subject: '', body: text.trim(), error: 'Invalid JSON' };
+    }
   }
 }

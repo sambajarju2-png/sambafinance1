@@ -63,8 +63,15 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
       }
 
       const data = await res.json();
-      setSubject(data.letter.subject || '');
-      setBody(data.letter.body || '');
+
+      // Null-safe access — API returns { letter: { subject, body } }
+      const letter = data?.letter;
+      if (!letter || (!letter.subject && !letter.body)) {
+        throw new Error('No letter content received');
+      }
+
+      setSubject(letter.subject || '');
+      setBody(letter.body || '');
       setStep('result');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errorGeneral'));

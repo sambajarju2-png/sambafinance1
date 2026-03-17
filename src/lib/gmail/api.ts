@@ -33,7 +33,8 @@ export async function listMessages(
 ): Promise<GmailListResponse> {
   const params = new URLSearchParams({
     maxResults: maxResults.toString(),
-    labelIds: 'INBOX',
+    // Query recent inbox emails only (newest first is Gmail default)
+    q: 'in:inbox newer_than:30d',
   });
 
   if (pageToken) {

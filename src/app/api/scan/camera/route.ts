@@ -67,16 +67,26 @@ export async function POST(req: NextRequest) {
     guard();
     const extraction = await extractBillFromPhoto(image, mime_type, userId);
 
+    // Check if extraction got a valid vendor (minimal validation)
+    if (!extraction.vendor || extraction.vendor === 'Onbekend') {
+      return NextResponse.json(
+        { error: 'Could not read the bill. Try a clearer, well-lit photo.', extraction },
+        { status: 200, headers: NO_CACHE }
+      );
+    }
+
     // Image bytes are discarded here — never stored anywhere
 
     return NextResponse.json({ extraction }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
-      return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
+      return NextResponse.json({ error: 'Request timeout — try a smaller image' }, { status: 504, headers: NO_CACHE });
     }
     console.error('Camera scan error:', err);
+    // Surface the specific error from Gemini
+    const message = err instanceof Error ? err.message : 'Failed to extract bill data';
     return NextResponse.json(
-      { error: 'Failed to extract bill data from image' },
+      { error: message },
       { status: 500, headers: NO_CACHE }
     );
   }

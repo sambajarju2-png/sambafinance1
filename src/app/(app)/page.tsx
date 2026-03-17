@@ -96,7 +96,7 @@ export default function OverzichtPage() {
       {/* Quick actions */}
       <div className="flex gap-2">
         <button
-          onClick={() => router.push('/betalingen')}
+          onClick={() => router.push('/betalingen?add=true')}
           className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[13px] font-semibold text-white"
         >
           <Plus className="h-4 w-4" strokeWidth={1.5} />
