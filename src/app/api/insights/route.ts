@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { generateInsight } from '@/lib/ai';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   const DEADLINE = Date.now() + 55000;
@@ -12,6 +13,12 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+  }
+
+  // Rate limit: 20 per hour
+  const allowed = await checkRateLimit(userId, 'insights', 20, 60);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429, headers: NO_CACHE });
   }
 
   // Check API key before doing anything

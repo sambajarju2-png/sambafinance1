@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { generateDraftLetter } from '@/lib/ai';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/draft-letter
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured.' }, { status: 500, headers: NO_CACHE });
+  }
+
+  // Rate limit: 20 per hour
+  const allowed = await checkRateLimit(userId, 'draft-letter', 20, 60);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429, headers: NO_CACHE });
   }
 
   try {

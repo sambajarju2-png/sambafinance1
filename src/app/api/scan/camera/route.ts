@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { extractBillFromPhoto } from '@/lib/ai';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/scan/camera
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json({ error: 'GEMINI_API_KEY is not configured.' }, { status: 500, headers: NO_CACHE });
+  }
+
+  // Rate limit: 30 per hour
+  const allowed = await checkRateLimit(userId, 'camera-scan', 30, 60);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many scans. Try again later.' }, { status: 429, headers: NO_CACHE });
   }
 
   try {

@@ -3,6 +3,7 @@ import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { computeBillHash, generateBillId } from '@/lib/bills-server';
 import { BILL_CATEGORIES } from '@/lib/bills';
+import { sanitizeText, sanitizeIban, isValidDate } from '@/lib/sanitize';
 
 // ============================================================
 // GET /api/bills — List all bills for the authenticated user
@@ -68,35 +69,37 @@ export async function POST(req: NextRequest) {
     guard();
     const body = await req.json();
 
-    // Validate required fields
-    const { vendor, amount_cents, due_date, category } = body;
+    // Validate and sanitize required fields
+    const { amount_cents, due_date, category } = body;
+    const vendor = sanitizeText(body.vendor, 200);
 
-    if (!vendor || typeof vendor !== 'string' || vendor.trim().length === 0) {
+    if (!vendor || vendor.length === 0) {
       return NextResponse.json({ error: 'Vendor is required' }, { status: 400, headers: NO_CACHE });
     }
 
-    if (!amount_cents || typeof amount_cents !== 'number' || amount_cents <= 0) {
-      return NextResponse.json({ error: 'Amount must be a positive number (in cents)' }, { status: 400, headers: NO_CACHE });
+    if (!amount_cents || typeof amount_cents !== 'number' || amount_cents <= 0 || amount_cents > 100000000) {
+      return NextResponse.json({ error: 'Amount must be between 1 cent and €1,000,000' }, { status: 400, headers: NO_CACHE });
     }
 
-    if (!due_date || typeof due_date !== 'string') {
+    if (!due_date || !isValidDate(due_date)) {
       return NextResponse.json({ error: 'Due date is required (YYYY-MM-DD)' }, { status: 400, headers: NO_CACHE });
     }
 
-    if (!category || typeof category !== 'string') {
+    const safeCategory = sanitizeText(category, 50);
+    if (!safeCategory) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400, headers: NO_CACHE });
     }
 
-    // Optional fields
-    const iban = body.iban?.trim() || null;
-    const reference = body.reference?.trim() || null;
-    const notes = body.notes?.trim() || null;
-    const payment_url = body.payment_url?.trim() || null;
-    const received_date = body.received_date || new Date().toISOString().split('T')[0];
+    // Sanitize optional fields
+    const iban = sanitizeIban(body.iban);
+    const reference = sanitizeText(body.reference, 100) || null;
+    const notes = sanitizeText(body.notes, 1000) || null;
+    const payment_url = sanitizeText(body.payment_url, 500) || null;
+    const received_date = isValidDate(body.received_date) ? body.received_date : new Date().toISOString().split('T')[0];
 
     // Dedup hash
     guard();
-    const hash = computeBillHash(vendor.trim(), amount_cents, reference, due_date);
+    const hash = computeBillHash(vendor, amount_cents, reference, due_date);
 
     const supabase = await createServerSupabaseClient();
 
@@ -126,14 +129,14 @@ export async function POST(req: NextRequest) {
       .insert({
         id: billId,
         user_id: userId,
-        vendor: vendor.trim(),
+        vendor: vendor,
         amount: amount_cents,
         currency: body.currency || 'EUR',
         iban,
         reference,
         due_date,
         received_date,
-        category,
+        category: safeCategory,
         status: isOverdue ? 'action' : 'outstanding',
         source: ['manual', 'camera_scan', 'gmail_scan'].includes(body.source) ? body.source : 'manual',
         hash,

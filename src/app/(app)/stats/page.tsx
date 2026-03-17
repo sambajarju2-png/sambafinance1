@@ -28,12 +28,42 @@ interface Insight {
   urgency: 'low' | 'medium' | 'high' | 'critical';
 }
 
+interface CachedInsights {
+  insights: Insight[];
+  summary: string;
+  timestamp: number;
+}
+
 const URGENCY_STYLES: Record<string, { border: string; bg: string; icon: string }> = {
   critical: { border: 'border-pw-red/30', bg: 'bg-red-50/50', icon: 'text-pw-red' },
   high: { border: 'border-pw-orange/30', bg: 'bg-orange-50/50', icon: 'text-pw-orange' },
   medium: { border: 'border-pw-amber/30', bg: 'bg-amber-50/50', icon: 'text-pw-amber' },
   low: { border: 'border-pw-blue/30', bg: 'bg-blue-50/50', icon: 'text-pw-blue' },
 };
+
+// Cache key for sessionStorage
+const INSIGHTS_CACHE_KEY = 'pw-insights-cache';
+
+function getCachedInsights(): CachedInsights | null {
+  try {
+    const raw = sessionStorage.getItem(INSIGHTS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedInsights;
+    // Cache valid for 30 minutes
+    if (Date.now() - parsed.timestamp > 30 * 60 * 1000) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedInsights(data: CachedInsights): void {
+  try {
+    sessionStorage.setItem(INSIGHTS_CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // sessionStorage full or unavailable — ignore
+  }
+}
 
 export default function StatsPage() {
   const t = useTranslations('stats');
@@ -101,7 +131,7 @@ export default function StatsPage() {
 }
 
 /* ============================================================
-   PERFORMANCE TAB
+   PERFORMANCE TAB (unchanged from step 15)
    ============================================================ */
 function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTranslations> }) {
   if (bills.length === 0) {
@@ -120,11 +150,9 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
   const overdue = outstanding.filter((b) => b.due_date < today);
   const escalated = outstanding.filter((b) => b.escalation_stage !== 'factuur');
 
-  // On-time payment rate
   const onTimePaid = settled.filter((b) => b.paid_date && b.due_date && b.paid_date <= b.due_date);
   const onTimeRate = settled.length > 0 ? Math.round((onTimePaid.length / settled.length) * 100) : 0;
 
-  // Payment streak (consecutive on-time payments, most recent first)
   const sortedSettled = [...settled]
     .filter((b) => b.paid_date)
     .sort((a, b) => (b.paid_date || '').localeCompare(a.paid_date || ''));
@@ -137,13 +165,11 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
     }
   }
 
-  // Savings from on-time payment
   const savedCents = onTimePaid.reduce((sum, b) => sum + calculateWIKCosts(b.amount), 0);
 
-  // Health score (0-100)
   let healthScore = 50;
   if (bills.length > 0) {
-    const onTimeBonus = onTimeRate * 0.4; // 40% weight
+    const onTimeBonus = onTimeRate * 0.4;
     const noOverdueBonus = overdue.length === 0 ? 30 : Math.max(0, 30 - overdue.length * 10);
     const noEscalationBonus = escalated.length === 0 ? 30 : Math.max(0, 30 - escalated.length * 15);
     healthScore = Math.min(100, Math.round(onTimeBonus + noOverdueBonus + noEscalationBonus));
@@ -153,7 +179,6 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
   const healthBg = healthScore >= 70 ? 'from-green-50' : healthScore >= 40 ? 'from-amber-50' : 'from-red-50';
   const healthLabel = healthScore >= 70 ? t('healthGood') : healthScore >= 40 ? t('healthOk') : t('healthBad');
 
-  // Category breakdown
   const categoryTotals: Record<string, { total: number; count: number }> = {};
   for (const bill of outstanding) {
     const cat = bill.category || 'overig';
@@ -168,35 +193,23 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
 
   return (
     <div className="space-y-4">
-      {/* Health Score Card */}
+      {/* Health Score */}
       <div className={`rounded-card-lg border border-pw-border bg-gradient-to-br ${healthBg} to-white p-5`}>
         <div className="flex items-center gap-5">
-          {/* Score circle */}
           <div className="relative flex h-24 w-24 flex-shrink-0 items-center justify-center">
             <svg className="h-24 w-24 -rotate-90" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" fill="none" stroke="#E2E8F0" strokeWidth="8" />
               <circle
-                cx="48" cy="48" r="40"
-                fill="none"
-                stroke="#E2E8F0"
-                strokeWidth="8"
-              />
-              <circle
-                cx="48" cy="48" r="40"
-                fill="none"
+                cx="48" cy="48" r="40" fill="none"
                 stroke={healthScore >= 70 ? '#059669' : healthScore >= 40 ? '#D97706' : '#DC2626'}
-                strokeWidth="8"
-                strokeLinecap="round"
+                strokeWidth="8" strokeLinecap="round"
                 strokeDasharray={`${(healthScore / 100) * 251.2} 251.2`}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-[28px] font-extrabold ${healthColor}`}>
-                {healthScore}
-              </span>
+              <span className={`text-[28px] font-extrabold ${healthColor}`}>{healthScore}</span>
             </div>
           </div>
-
-          {/* Score info */}
           <div className="flex-1">
             <p className="text-[11px] font-medium text-pw-muted">{t('healthScore')}</p>
             <p className={`text-[18px] font-bold ${healthColor}`}>{healthLabel}</p>
@@ -205,21 +218,16 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
         </div>
       </div>
 
-      {/* Metric cards (2x2) */}
+      {/* Metrics */}
       <div className="grid grid-cols-2 gap-2">
-        {/* On-time rate */}
         <div className="stat-card before:bg-pw-green bg-gradient-to-br from-green-50 to-white px-3.5 py-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
             <p className="text-[11px] font-medium text-pw-muted">{t('onTimeRate')}</p>
           </div>
           <p className="mt-1 text-[24px] font-extrabold text-pw-green">{onTimeRate}%</p>
-          <p className="text-[10px] text-pw-muted">
-            {onTimePaid.length}/{settled.length} {t('onTimeOf')}
-          </p>
+          <p className="text-[10px] text-pw-muted">{onTimePaid.length}/{settled.length} {t('onTimeOf')}</p>
         </div>
-
-        {/* Payment streak */}
         <div className="stat-card before:bg-pw-blue bg-gradient-to-br from-blue-50 to-white px-3.5 py-3">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
@@ -228,8 +236,6 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
           <p className="mt-1 text-[24px] font-extrabold text-pw-blue">{streak}</p>
           <p className="text-[10px] text-pw-muted">{t('streakConsecutive')}</p>
         </div>
-
-        {/* Savings */}
         <div className="stat-card before:bg-pw-green bg-gradient-to-br from-green-50 to-white px-3.5 py-3">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
@@ -238,27 +244,17 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
           <p className="mt-1 text-[20px] font-extrabold text-pw-green">{formatCents(savedCents)}</p>
           <p className="text-[10px] text-pw-muted">{t('savedDesc')}</p>
         </div>
-
-        {/* Overdue */}
         <div className={`stat-card ${overdue.length > 0 ? 'before:bg-pw-red' : 'before:bg-pw-border'} bg-gradient-to-br ${overdue.length > 0 ? 'from-red-50' : 'from-gray-50'} to-white px-3.5 py-3`}>
           <div className="flex items-center gap-2">
-            {overdue.length > 0 ? (
-              <XCircle className="h-4 w-4 text-pw-red" strokeWidth={1.5} />
-            ) : (
-              <Clock className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
-            )}
+            {overdue.length > 0 ? <XCircle className="h-4 w-4 text-pw-red" strokeWidth={1.5} /> : <Clock className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />}
             <p className="text-[11px] font-medium text-pw-muted">{t('overdue')}</p>
           </div>
-          <p className={`mt-1 text-[24px] font-extrabold ${overdue.length > 0 ? 'text-pw-red' : 'text-pw-muted'}`}>
-            {overdue.length}
-          </p>
-          <p className="text-[10px] text-pw-muted">
-            {overdue.length === 0 ? t('overdueNone') : t('overdueAction')}
-          </p>
+          <p className={`mt-1 text-[24px] font-extrabold ${overdue.length > 0 ? 'text-pw-red' : 'text-pw-muted'}`}>{overdue.length}</p>
+          <p className="text-[10px] text-pw-muted">{overdue.length === 0 ? t('overdueNone') : t('overdueAction')}</p>
         </div>
       </div>
 
-      {/* Category breakdown */}
+      {/* Categories */}
       {categories.length > 0 && (
         <div className="rounded-card border border-pw-border bg-pw-surface p-4">
           <h3 className="mb-3 text-[14px] font-bold text-pw-navy">{t('byCategory')}</h3>
@@ -270,21 +266,16 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
                   <span className="text-[12px] font-bold text-pw-navy">{formatCents(cat.total)}</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-gray-100">
-                  <div
-                    className="h-2 rounded-full bg-pw-blue transition-all duration-500"
-                    style={{ width: `${(cat.total / maxCategoryTotal) * 100}%` }}
-                  />
+                  <div className="h-2 rounded-full bg-pw-blue transition-all duration-500" style={{ width: `${(cat.total / maxCategoryTotal) * 100}%` }} />
                 </div>
-                <p className="mt-0.5 text-[10px] text-pw-muted">
-                  {cat.count} {cat.count === 1 ? t('bill') : t('bills')}
-                </p>
+                <p className="mt-0.5 text-[10px] text-pw-muted">{cat.count} {cat.count === 1 ? t('bill') : t('bills')}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Escalation warning */}
+      {/* Escalation */}
       {escalated.length > 0 && (
         <div className="rounded-card border border-pw-red/20 bg-red-50/30 p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -302,7 +293,7 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
         </div>
       )}
 
-      {/* Quick summary */}
+      {/* Summary */}
       <div className="rounded-card border border-pw-border bg-pw-surface p-4">
         <h3 className="mb-2 text-[14px] font-bold text-pw-navy">{t('summary')}</h3>
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -325,7 +316,7 @@ function PerformanceTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useT
 }
 
 /* ============================================================
-   AI INSIGHTS TAB
+   AI INSIGHTS TAB — with sessionStorage persistence + bold text
    ============================================================ */
 function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTranslations> }) {
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -333,6 +324,16 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
+  // Load cached insights on mount
+  useEffect(() => {
+    const cached = getCachedInsights();
+    if (cached) {
+      setInsights(cached.insights);
+      setSummary(cached.summary);
+      setHasAnalyzed(true);
+    }
+  }, []);
 
   async function handleAnalyze() {
     setLoading(true);
@@ -346,9 +347,19 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
         throw new Error(data.error || 'Failed');
       }
 
-      setInsights(data.insights || []);
-      setSummary(data.summary || '');
+      const newInsights = data.insights || [];
+      const newSummary = data.summary || '';
+
+      setInsights(newInsights);
+      setSummary(newSummary);
       setHasAnalyzed(true);
+
+      // Cache in sessionStorage so it persists when switching tabs
+      setCachedInsights({
+        insights: newInsights,
+        summary: newSummary,
+        timestamp: Date.now(),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errorGeneral'));
     } finally {
@@ -368,6 +379,7 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
 
   return (
     <div className="space-y-4">
+      {/* Show analyze prompt only if no cached data and not loading */}
       {!hasAnalyzed && !loading && (
         <div className="flex flex-col items-center rounded-card border border-dashed border-pw-purple/30 bg-purple-50/30 py-8 text-center">
           <Zap className="mb-3 h-10 w-10 text-pw-purple" strokeWidth={1.5} />
@@ -417,8 +429,10 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
                       <Zap className={`mt-0.5 h-4 w-4 flex-shrink-0 ${style.icon}`} strokeWidth={1.5} />
                     )}
                     <div className="flex-1">
-                      <p className="text-[13px] font-semibold text-pw-text">{insight.title}</p>
-                      <p className="mt-0.5 text-[12px] text-pw-muted">{insight.description}</p>
+                      <p className="text-[13px] font-bold text-pw-text">{insight.title}</p>
+                      <p className="mt-0.5 text-[12px] text-pw-muted">
+                        <BoldHighlight text={insight.description} />
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -437,5 +451,24 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Component that bolds amounts (€...) and known patterns in AI text.
+ */
+function BoldHighlight({ text }: { text: string }) {
+  // Bold: €amounts, percentages, day counts, and text in quotes
+  const parts = text.split(/(€[\d.,]+(?:\s*(?:per\s+maand|extra))?|\d+%|\d+\s+dagen?|"[^"]+"|'[^']+')/g);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^€|^\d+%|^\d+\s+dag|^["']/.test(part)) {
+          return <strong key={i} className="font-bold text-pw-text">{part}</strong>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
   );
 }
