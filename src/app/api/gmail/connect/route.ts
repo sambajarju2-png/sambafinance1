@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/gmail/connect
- * Generates a CSRF state parameter, stores it in gmail_oauth_states,
- * and returns the Google OAuth URL for the user to authorize.
+ * Uses SERVICE ROLE client because gmail_oauth_states has RLS with no policies.
  */
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
@@ -18,18 +17,18 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId) {
       return NextResponse.json(
-        { error: 'Google OAuth is not configured' },
+        { error: 'Google OAuth is not configured. Set GOOGLE_CLIENT_ID in Vercel.' },
         { status: 500, headers: NO_CACHE }
       );
     }
 
-    // Generate cryptographic state for CSRF protection
     const state = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    const supabase = await createServerSupabaseClient();
+    // Use service role — gmail_oauth_states has RLS with no anon policies
+    const supabase = createServiceRoleClient();
 
-    // Clean up expired states first
+    // Clean up expired states
     await supabase
       .from('gmail_oauth_states')
       .delete()
@@ -38,11 +37,7 @@ export async function POST(req: NextRequest) {
     // Store the state
     const { error: stateError } = await supabase
       .from('gmail_oauth_states')
-      .insert({
-        state,
-        user_id: userId,
-        expires_at: expiresAt.toISOString(),
-      });
+      .insert({ state, user_id: userId, expires_at: expiresAt });
 
     if (stateError) {
       console.error('Failed to store OAuth state:', stateError);
@@ -52,7 +47,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Build Google OAuth URL
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
     const redirectUri = `${appUrl}/api/gmail/callback`;
 
@@ -71,9 +65,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: authUrl }, { headers: NO_CACHE });
   } catch (err) {
     console.error('Gmail connect error:', err);
-    return NextResponse.json(
-      { error: 'Internal error' },
-      { status: 500, headers: NO_CACHE }
-    );
+    return NextResponse.json({ error: 'Internal error' }, { status: 500, headers: NO_CACHE });
   }
 }

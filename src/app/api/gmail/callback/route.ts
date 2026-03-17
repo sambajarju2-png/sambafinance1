@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { encrypt } from '@/lib/encryption';
 
 /**
  * GET /api/gmail/callback
- * Google redirects here after the user authorizes.
- * Validates state, exchanges code for tokens, encrypts and stores them.
+ * Uses SERVICE ROLE client for all DB operations.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,20 +13,18 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get('error');
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
 
-  // User denied access
   if (error) {
     return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=denied`);
   }
 
-  // Missing params
   if (!code || !state) {
     return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=missing_params`);
   }
 
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
 
-    // Validate state against gmail_oauth_states (CSRF check)
+    // Validate state
     const { data: stateRow, error: stateError } = await supabase
       .from('gmail_oauth_states')
       .select('user_id, expires_at')
@@ -38,19 +35,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=invalid_state`);
     }
 
-    // Check if state expired
     if (new Date(stateRow.expires_at) < new Date()) {
-      // Clean up expired state
       await supabase.from('gmail_oauth_states').delete().eq('state', state);
       return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=expired`);
     }
 
     const userId = stateRow.user_id;
-
-    // Delete the used state (one-time use)
     await supabase.from('gmail_oauth_states').delete().eq('state', state);
 
-    // Exchange authorization code for tokens
+    // Exchange code for tokens
     const redirectUri = `${appUrl}/api/gmail/callback`;
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -74,11 +67,10 @@ export async function GET(req: NextRequest) {
     const { access_token, refresh_token, expires_in } = tokens;
 
     if (!access_token || !refresh_token) {
-      console.error('Missing tokens in response:', tokens);
       return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=missing_tokens`);
     }
 
-    // Get the user's Gmail email address
+    // Get Gmail email
     const profileResponse = await fetch(
       'https://www.googleapis.com/oauth2/v2/userinfo',
       { headers: { Authorization: `Bearer ${access_token}` } }
@@ -90,12 +82,11 @@ export async function GET(req: NextRequest) {
       gmailEmail = profile.email || gmailEmail;
     }
 
-    // Encrypt tokens before storing
+    // Encrypt and store tokens
     const encryptedAccessToken = encrypt(access_token);
     const encryptedRefreshToken = encrypt(refresh_token);
     const tokenExpiresAt = Math.floor(Date.now() / 1000) + (expires_in || 3600);
 
-    // Upsert into gmail_accounts (update if same email already connected)
     const { error: upsertError } = await supabase
       .from('gmail_accounts')
       .upsert(
@@ -107,9 +98,7 @@ export async function GET(req: NextRequest) {
           token_expires_at: tokenExpiresAt,
           needs_reauth: false,
         },
-        {
-          onConflict: 'user_id,email',
-        }
+        { onConflict: 'user_id,email' }
       );
 
     if (upsertError) {
@@ -117,7 +106,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`);
     }
 
-    // Success — redirect to settings with success status
     return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=connected`);
   } catch (err) {
     console.error('Gmail callback error:', err);

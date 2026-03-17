@@ -11,12 +11,14 @@ export default async function AppLayout({
 }) {
   const supabase = await createServerSupabaseClient();
 
+  // Single auth call — get user + settings in parallel
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     redirect('/auth/login');
   }
 
+  // Fetch settings (this is cached by Next.js between tab navigations)
   const { data: settings } = await supabase
     .from('user_settings')
     .select('display_name, streak_current, language, onboarding_complete')
