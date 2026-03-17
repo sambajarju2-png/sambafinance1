@@ -116,6 +116,12 @@ export async function classifyEmail(
 
   const result = await callGeminiText(prompt, userId, 'email_classification');
 
+  // If parsing failed completely, default to not-a-bill (safe default)
+  if (result._parse_error && result.is_bill === undefined) {
+    console.warn('Classification parse error, defaulting to not-a-bill for:', subject.slice(0, 60));
+    return { is_bill: false, confidence: 0, reason: 'Parse error — skipped' };
+  }
+
   return {
     is_bill: Boolean(result.is_bill),
     confidence: Number(result.confidence) || 0,

@@ -5,6 +5,7 @@ const GEMINI_MODEL = 'gemini-2.5-flash';
 
 /**
  * Call Gemini 2.5 Flash with a text prompt.
+ * Uses lenient parsing — truncated JSON defaults to safe values.
  * SERVER-ONLY.
  */
 export async function callGeminiText(
@@ -47,7 +48,8 @@ export async function callGeminiText(
     costCents: (tokensIn + tokensOut) * 0.00001, durationMs,
   });
 
-  return parseJsonResponse(text);
+  // Use lenient parsing — handles truncated JSON from Gemini
+  return parseJsonResponseLenient(text);
 }
 
 /**
@@ -96,7 +98,6 @@ export async function callGeminiVision(
   }
 
   const data = await response.json();
-
   const candidate = data.candidates?.[0];
   if (!candidate || candidate.finishReason === 'SAFETY') {
     throw new Error('De foto werd geblokkeerd. Probeer een andere foto.');
@@ -115,82 +116,101 @@ export async function callGeminiVision(
     costCents: (tokensIn + tokensOut) * 0.00003, durationMs,
   });
 
-  // Use lenient parsing for vision — extract what we can
   return parseJsonResponseLenient(text);
 }
 
 /**
- * Strict JSON parse — throws on failure. Used for text classification.
- */
-function parseJsonResponse(text: string): Record<string, unknown> {
-  const jsonStr = extractJsonString(text);
-  if (!jsonStr) {
-    console.error('No valid JSON found in AI response:', text.slice(0, 300));
-    throw new Error('AI response did not contain valid JSON');
-  }
-  try {
-    return JSON.parse(jsonStr);
-  } catch {
-    console.error('Failed to parse AI JSON:', jsonStr.slice(0, 300));
-    throw new Error('AI response contained invalid JSON');
-  }
-}
-
-/**
- * Lenient JSON parse — tries hard to extract data, returns partial results
- * with _parse_error flag instead of throwing.
+ * Lenient JSON parse — handles truncated responses, broken JSON, markdown fences.
+ * For classification: truncated `{"is_bill": false, "confidence": 0.9,` → extracts what it can.
+ * For vision: extracts fields from raw text if JSON fails completely.
  */
 function parseJsonResponseLenient(text: string): Record<string, unknown> {
-  // First try normal parsing
-  const jsonStr = extractJsonString(text);
-  if (jsonStr) {
-    try {
-      return JSON.parse(jsonStr);
-    } catch {
-      // Try fixing common JSON issues
-      const fixed = fixBrokenJson(jsonStr);
-      if (fixed) {
-        try {
-          return JSON.parse(fixed);
-        } catch {
-          // Fall through to text extraction
-        }
-      }
-    }
-  }
-
-  // JSON parsing failed — try to extract fields from raw text
-  console.warn('JSON parse failed, extracting fields from text:', text.slice(0, 300));
-  return extractFieldsFromText(text);
-}
-
-/**
- * Extract the JSON substring from AI response text.
- */
-function extractJsonString(text: string): string | null {
+  // Step 1: Clean markdown fences
   let cleaned = text.trim();
-
-  // Remove markdown code fences
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
+  // Step 2: Find JSON boundaries
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
 
-  if (start === -1 || end === -1 || end <= start) return null;
-  return cleaned.slice(start, end + 1);
+  if (start !== -1 && end !== -1 && end > start) {
+    const jsonStr = cleaned.slice(start, end + 1);
+    try {
+      return JSON.parse(jsonStr);
+    } catch {
+      // Try fixing common issues
+      const fixed = fixBrokenJson(jsonStr);
+      if (fixed) {
+        try { return JSON.parse(fixed); } catch { /* fall through */ }
+      }
+    }
+  }
+
+  // Step 3: JSON has no closing brace — try to close it
+  if (start !== -1 && (end === -1 || end <= start)) {
+    const partial = cleaned.slice(start);
+    const repaired = repairTruncatedJson(partial);
+    if (repaired) {
+      try { return JSON.parse(repaired); } catch { /* fall through */ }
+    }
+  }
+
+  // Step 4: Last resort — extract fields from raw text
+  console.warn('JSON parse failed, extracting fields from text:', text.slice(0, 300));
+  return extractFieldsFromText(text);
 }
 
 /**
- * Try to fix common JSON issues (trailing commas, missing quotes).
+ * Try to repair truncated JSON by closing open strings, arrays, objects.
+ */
+function repairTruncatedJson(partial: string): string | null {
+  try {
+    let fixed = partial;
+
+    // Count open braces/brackets
+    let braces = 0;
+    let brackets = 0;
+    let inString = false;
+    let lastChar = '';
+
+    for (let i = 0; i < fixed.length; i++) {
+      const ch = fixed[i];
+      if (ch === '"' && lastChar !== '\\') inString = !inString;
+      if (!inString) {
+        if (ch === '{') braces++;
+        if (ch === '}') braces--;
+        if (ch === '[') brackets++;
+        if (ch === ']') brackets--;
+      }
+      lastChar = ch;
+    }
+
+    // Close open string
+    if (inString) fixed += '"';
+
+    // Remove trailing comma
+    fixed = fixed.replace(/,\s*$/, '');
+
+    // Close open brackets and braces
+    for (let i = 0; i < brackets; i++) fixed += ']';
+    for (let i = 0; i < braces; i++) fixed += '}';
+
+    return fixed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fix common JSON issues (trailing commas, single quotes).
  */
 function fixBrokenJson(jsonStr: string): string | null {
   try {
-    // Remove trailing commas before } or ]
-    let fixed = jsonStr.replace(/,\s*([}\]])/g, '$1');
-    // Replace single quotes with double quotes
+    let fixed = jsonStr;
+    fixed = fixed.replace(/,\s*([}\]])/g, '$1');
     fixed = fixed.replace(/'/g, '"');
     return fixed;
   } catch {
@@ -200,55 +220,41 @@ function fixBrokenJson(jsonStr: string): string | null {
 
 /**
  * Last resort: extract known field values from raw AI text.
- * Returns a partial result object.
  */
 function extractFieldsFromText(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = { _parse_error: true };
 
-  // Try to find vendor name
-  const vendorMatch = text.match(/vendor["\s:]+([^",\n]+)/i) ||
-                      text.match(/afzender["\s:]+([^",\n]+)/i) ||
-                      text.match(/van["\s:]+([^",\n]+)/i);
-  if (vendorMatch) result.vendor = vendorMatch[1].trim().replace(/["\s]+$/, '');
+  // Classification fields
+  const isBillMatch = text.match(/"is_bill"\s*:\s*(true|false)/i);
+  if (isBillMatch) result.is_bill = isBillMatch[1] === 'true';
 
-  // Try to find amount
-  const amountMatch = text.match(/amount_cents["\s:]+(\d+)/i) ||
-                      text.match(/€\s*(\d+[.,]\d{2})/);
-  if (amountMatch) {
-    if (amountMatch[0].includes('€')) {
-      result.amount_cents = Math.round(parseFloat(amountMatch[1].replace(',', '.')) * 100);
-    } else {
-      result.amount_cents = parseInt(amountMatch[1]);
-    }
-  }
+  const confMatch = text.match(/"confidence"\s*:\s*([\d.]+)/);
+  if (confMatch) result.confidence = parseFloat(confMatch[1]);
 
-  // Try to find IBAN
+  const reasonMatch = text.match(/"reason"\s*:\s*"([^"]*)/);
+  if (reasonMatch) result.reason = reasonMatch[1];
+
+  // Extraction fields
+  const vendorMatch = text.match(/"vendor"\s*:\s*"([^"]*)/i);
+  if (vendorMatch) result.vendor = vendorMatch[1];
+
+  const amountMatch = text.match(/"amount_cents"\s*:\s*(\d+)/i);
+  if (amountMatch) result.amount_cents = parseInt(amountMatch[1]);
+
   const ibanMatch = text.match(/[A-Z]{2}\d{2}[A-Z]{4}\d{10}/);
   if (ibanMatch) result.iban = ibanMatch[0];
 
-  // Try to find due date
   const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
   if (dateMatch) result.due_date = dateMatch[1];
 
-  // Try to find reference
-  const refMatch = text.match(/reference["\s:]+([^",\n]+)/i) ||
-                   text.match(/kenmerk["\s:]+([^",\n]+)/i);
-  if (refMatch) result.reference = refMatch[1].trim().replace(/["\s]+$/, '');
+  const refMatch = text.match(/"reference"\s*:\s*"([^"]*)/i);
+  if (refMatch) result.reference = refMatch[1];
 
-  // Try to find escalation stage
-  const stageKeywords: Record<string, string> = {
-    deurwaarder: 'deurwaarder', gerechtsdeurwaarder: 'deurwaarder',
-    incasso: 'incasso', incassobureau: 'incasso',
-    aanmaning: 'aanmaning', sommatie: 'aanmaning',
-    herinnering: 'herinnering',
-  };
-  const lowerText = text.toLowerCase();
-  for (const [keyword, stage] of Object.entries(stageKeywords)) {
-    if (lowerText.includes(keyword)) {
-      result.escalation_stage = stage;
-      break;
-    }
-  }
+  const stageMatch = text.match(/"escalation_stage"\s*:\s*"([^"]*)/i);
+  if (stageMatch) result.escalation_stage = stageMatch[1];
+
+  const categoryMatch = text.match(/"category_hint"\s*:\s*"([^"]*)/i);
+  if (categoryMatch) result.category_hint = categoryMatch[1];
 
   return result;
 }
