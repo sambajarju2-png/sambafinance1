@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { recalculateStreak } from '@/lib/streak';
+import { checkAndUnlockAchievements } from '@/lib/achievements';
 
-// ============================================================
-// PATCH /api/bills/[id] — Update a bill (mark paid, favorite, etc.)
-// ============================================================
+/**
+ * PATCH /api/bills/[id] — Update a bill (mark paid, favorite, notes, escalation)
+ * DELETE /api/bills/[id] — Delete a bill
+ */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const DEADLINE = Date.now() + 55000;
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT'); };
@@ -19,11 +22,10 @@ export async function PATCH(
 
   try {
     guard();
-    const billId = params.id;
+    const billId = context.params.id;
     const body = await req.json();
     const supabase = await createServerSupabaseClient();
 
-    // Fetch current bill to validate ownership and current status
     const { data: current, error: fetchError } = await supabase
       .from('bills')
       .select('id, status, user_id')
@@ -35,18 +37,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Bill not found' }, { status: 404, headers: NO_CACHE });
     }
 
-    // Never overwrite settled status (system prompt rule)
+    // Never overwrite settled status
     if (current.status === 'settled' && body.status && body.status !== 'settled') {
-      return NextResponse.json(
-        { error: 'Cannot change status of a settled bill' },
-        { status: 409, headers: NO_CACHE }
-      );
+      return NextResponse.json({ error: 'Cannot change status of a settled bill' }, { status: 409, headers: NO_CACHE });
     }
 
-    // Build update object — only allow specific fields
     const updates: Record<string, unknown> = {};
 
-    // Mark as paid
     if (body.status === 'settled') {
       updates.status = 'settled';
       updates.paid_at = new Date().toISOString();
@@ -55,20 +52,9 @@ export async function PATCH(
       updates.status = body.status;
     }
 
-    // Toggle favorite
-    if (typeof body.is_favorite === 'boolean') {
-      updates.is_favorite = body.is_favorite;
-    }
-
-    // Update notes
-    if (typeof body.notes === 'string') {
-      updates.notes = body.notes;
-    }
-
-    // Update escalation stage
-    if (body.escalation_stage) {
-      updates.escalation_stage = body.escalation_stage;
-    }
+    if (typeof body.is_favorite === 'boolean') updates.is_favorite = body.is_favorite;
+    if (typeof body.notes === 'string') updates.notes = body.notes;
+    if (body.escalation_stage) updates.escalation_stage = body.escalation_stage;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400, headers: NO_CACHE });
@@ -88,21 +74,30 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update bill' }, { status: 500, headers: NO_CACHE });
     }
 
+    // If bill was marked as paid, recalculate streak + check achievements
+    if (body.status === 'settled') {
+      try {
+        await recalculateStreak(userId);
+        await checkAndUnlockAchievements(userId);
+      } catch (err) {
+        console.error('Post-payment processing error:', err);
+        // Don't fail the response — bill is already updated
+      }
+    }
+
     return NextResponse.json({ bill: updated }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
       return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
     }
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400, headers: NO_CACHE });
+    console.error('Bill PATCH error:', err);
+    return NextResponse.json({ error: 'Update failed' }, { status: 500, headers: NO_CACHE });
   }
 }
 
-// ============================================================
-// DELETE /api/bills/[id] — Delete a bill
-// ============================================================
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const userId = await getAuthUserId();
   if (!userId) {
@@ -110,21 +105,21 @@ export async function DELETE(
   }
 
   try {
+    const billId = context.params.id;
     const supabase = await createServerSupabaseClient();
 
     const { error } = await supabase
       .from('bills')
       .delete()
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Bill delete error:', error);
-      return NextResponse.json({ error: 'Failed to delete bill' }, { status: 500, headers: NO_CACHE });
+      return NextResponse.json({ error: 'Failed to delete' }, { status: 500, headers: NO_CACHE });
     }
 
-    return NextResponse.json({ success: true }, { headers: NO_CACHE });
+    return NextResponse.json({ ok: true }, { headers: NO_CACHE });
   } catch {
-    return NextResponse.json({ error: 'Internal error' }, { status: 500, headers: NO_CACHE });
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500, headers: NO_CACHE });
   }
 }

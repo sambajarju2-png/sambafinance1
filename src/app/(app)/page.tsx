@@ -7,6 +7,7 @@ import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
 import MoodTracker from '@/components/mood-tracker';
+import AchievementsDisplay from '@/components/achievements';
 
 export default function OverzichtPage() {
   const t = useTranslations('dashboard');
@@ -149,6 +150,9 @@ export default function OverzichtPage() {
           </div>
         </div>
       )}
+
+      {/* Achievements */}
+      <AchievementsDisplay />
 
       {/* Mood tracker — shows once per day */}
       <MoodTracker />
