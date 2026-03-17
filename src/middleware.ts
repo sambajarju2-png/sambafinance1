@@ -1,11 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Routes that don't require authentication at all
+// Routes that don't require authentication
 const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback'];
 
-// Routes that require auth but NOT onboarding completion
-const AUTH_ONLY_ROUTES = ['/onboarding'];
+// Routes where auth check happens in the page itself
+const HYBRID_ROUTES = ['/'];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -39,7 +39,13 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-  const isAuthOnlyRoute = AUTH_ONLY_ROUTES.some((route) => pathname.startsWith(route));
+  const isHybridRoute = HYBRID_ROUTES.includes(pathname);
+  const isAuthOnlyRoute = pathname.startsWith('/onboarding');
+
+  // Hybrid routes handle their own auth (landing page shows for anon, redirects for auth)
+  if (isHybridRoute) {
+    return supabaseResponse;
+  }
 
   // Not logged in + protected route → login
   if (!user && !isPublicRoute) {
@@ -48,7 +54,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Logged in + public auth pages → home
+  // Logged in + public auth pages → dashboard
   if (user && isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
@@ -60,6 +66,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|sw\\.js|api/).*)',
   ],
 };

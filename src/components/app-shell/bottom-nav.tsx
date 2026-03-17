@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/', icon: LayoutDashboard, labelKey: 'overview' as const },
+  { href: '/overzicht', icon: LayoutDashboard, labelKey: 'overview' as const },
   { href: '/betalingen', icon: CreditCard, labelKey: 'payments' as const },
   { href: '/stats', icon: TrendingUp, labelKey: 'stats' as const },
   { href: '/cashflow', icon: ArrowDownUp, labelKey: 'cashflow' as const },
@@ -24,8 +24,8 @@ export default function BottomNav() {
   const t = useTranslations('nav');
 
   function isActive(href: string): boolean {
-    if (href === '/') {
-      return pathname === '/';
+    if (href === '/overzicht') {
+      return pathname === '/overzicht';
     }
     return pathname.startsWith(href);
   }
@@ -56,8 +56,7 @@ export default function BottomNav() {
             >
               {t(item.labelKey)}
             </span>
-            {/* Active indicator dot */}
-            {active && <span className="nav-active-dot" />}
+            {active && <div className="nav-active-dot" />}
           </Link>
         );
       })}
