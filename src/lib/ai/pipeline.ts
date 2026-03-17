@@ -6,12 +6,6 @@ import { callHaiku } from './haiku';
  *
  * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
  *
- * Pipeline:
- *   Email flow:  Gemini classifies → Haiku extracts (if bill)
- *   Camera flow: Gemini Vision extracts
- *   Insights:    Haiku analyzes
- *   Letters:     Haiku drafts
- *
  * SERVER-ONLY — never import in client components.
  */
 
@@ -83,6 +77,9 @@ export interface InsightResult {
   summary: string;
 }
 
+// Category list for AI prompts
+const CATEGORY_HINT_LIST = 'wonen|nutsvoorzieningen|zorg|verzekeringen|telecom|overheid|vervoer|leningen|winkels|abonnementen|gezin|zakelijk|incasso_kosten|overig';
+
 // ============================================================
 // 1. EMAIL CLASSIFICATION (Gemini)
 // ============================================================
@@ -150,7 +147,7 @@ Output format:
   "reference": "string | null",
   "due_date": "YYYY-MM-DD | null",
   "received_date": "YYYY-MM-DD",
-  "category_hint": "string (energie|water|internet|telefoon|verzekering|huur|belasting|zorg|abonnement|overig)",
+  "category_hint": "string (${CATEGORY_HINT_LIST})",
   "is_reminder": boolean,
   "escalation_stage": "factuur|herinnering|aanmaning|incasso|deurwaarder|null",
   "payment_url": "string | null",
@@ -205,43 +202,58 @@ Output format:
   "iban": "string | null",
   "reference": "string | null",
   "due_date": "YYYY-MM-DD | null",
-  "category_hint": "string (energie|water|internet|telefoon|verzekering|huur|belasting|zorg|abonnement|overig)",
+  "category_hint": "string (${CATEGORY_HINT_LIST})",
   "escalation_stage": "factuur|herinnering|aanmaning|incasso|deurwaarder|null",
   "payment_url": "string | null",
   "confidence": {"vendor": 0.0-1.0, "amount": 0.0-1.0, "due_date": 0.0-1.0}
 }
 
-Respond ONLY with valid JSON. No markdown. Start with { and end with }.`;
+IMPORTANT: Respond ONLY with valid JSON. No markdown. No code fences. No explanation.
+Start with { and end with }.`;
 
 export async function extractBillFromPhoto(
   imageBase64: string,
   mimeType: string,
   userId: string
 ): Promise<CameraExtractionResult> {
-  const result = await callGeminiVision(
-    imageBase64,
-    mimeType,
-    CAMERA_PROMPT,
-    userId,
-    'camera_extraction'
-  );
+  // Try up to 2 times for vision extraction (Gemini can be flaky with JSON)
+  let lastError: Error | null = null;
 
-  return {
-    vendor: String(result.vendor || 'Onbekend'),
-    amount_cents: Number(result.amount_cents) || 0,
-    currency: String(result.currency || 'EUR'),
-    iban: result.iban ? String(result.iban) : null,
-    reference: result.reference ? String(result.reference) : null,
-    due_date: result.due_date ? String(result.due_date) : null,
-    category_hint: String(result.category_hint || 'overig'),
-    escalation_stage: result.escalation_stage ? String(result.escalation_stage) : null,
-    payment_url: result.payment_url ? String(result.payment_url) : null,
-    confidence: {
-      vendor: Number((result.confidence as Record<string, unknown>)?.vendor) || 0,
-      amount: Number((result.confidence as Record<string, unknown>)?.amount) || 0,
-      due_date: Number((result.confidence as Record<string, unknown>)?.due_date) || 0,
-    },
-  };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await callGeminiVision(
+        imageBase64,
+        mimeType,
+        CAMERA_PROMPT,
+        userId,
+        'camera_extraction'
+      );
+
+      return {
+        vendor: String(result.vendor || 'Onbekend'),
+        amount_cents: Number(result.amount_cents) || 0,
+        currency: String(result.currency || 'EUR'),
+        iban: result.iban ? String(result.iban) : null,
+        reference: result.reference ? String(result.reference) : null,
+        due_date: result.due_date ? String(result.due_date) : null,
+        category_hint: String(result.category_hint || 'overig'),
+        escalation_stage: result.escalation_stage ? String(result.escalation_stage) : null,
+        payment_url: result.payment_url ? String(result.payment_url) : null,
+        confidence: {
+          vendor: Number((result.confidence as Record<string, unknown>)?.vendor) || 0,
+          amount: Number((result.confidence as Record<string, unknown>)?.amount) || 0,
+          due_date: Number((result.confidence as Record<string, unknown>)?.due_date) || 0,
+        },
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error('Unknown error');
+      console.error(`Camera extraction attempt ${attempt + 1} failed:`, lastError.message);
+      // Wait 1s before retry
+      if (attempt < 1) await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  throw lastError || new Error('Camera extraction failed after retries');
 }
 
 // ============================================================
@@ -278,7 +290,6 @@ export async function generateInsight(
   userId: string,
   language: string = 'nl'
 ): Promise<InsightResult> {
-  // Only send essential bill data to reduce tokens
   const billsSummary = bills.map((b) => ({
     id: b.id,
     vendor: b.vendor,
@@ -362,7 +373,8 @@ export async function generateDraftLetter(
     .replace('{details}', details)
     .replace('{today}', today);
 
-  const result = await callHaiku(prompt, userId, 'draft_letter', 384);
+  // Use 1024 tokens — 384 was too small and caused truncated JSON
+  const result = await callHaiku(prompt, userId, 'draft_letter', 1024);
 
   return {
     subject: String(result.subject || ''),

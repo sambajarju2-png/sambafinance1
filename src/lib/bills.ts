@@ -7,19 +7,25 @@ export type BillSource = 'manual' | 'gmail_scan' | 'camera_scan';
 /** Escalation stages (Dutch debt collection) */
 export type EscalationStage = 'factuur' | 'herinnering' | 'aanmaning' | 'incasso' | 'deurwaarder';
 
-/** Bill category defaults */
+/** Bill category defaults — 14 main categories */
 export const BILL_CATEGORIES = [
-  'energie',
-  'water',
-  'internet',
-  'telefoon',
-  'verzekering',
-  'huur',
-  'belasting',
+  'wonen',
+  'nutsvoorzieningen',
   'zorg',
-  'abonnement',
+  'verzekeringen',
+  'telecom',
+  'overheid',
+  'vervoer',
+  'leningen',
+  'winkels',
+  'abonnementen',
+  'gezin',
+  'zakelijk',
+  'incasso_kosten',
   'overig',
 ] as const;
+
+export type BillCategory = typeof BILL_CATEGORIES[number];
 
 /** Bill row from database */
 export interface Bill {
@@ -50,7 +56,7 @@ export interface Bill {
 
 /**
  * Format cents to currency display string.
- * 12345 → "€123,45"
+ * 12345 → "€ 123,45"
  */
 export function formatCents(cents: number, currency: string = 'EUR'): string {
   const amount = cents / 100;

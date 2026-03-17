@@ -50,23 +50,20 @@ export async function callGeminiText(
 
   const data = await response.json();
 
-  // Extract text from Gemini response
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const tokensIn = data.usageMetadata?.promptTokenCount || 0;
   const tokensOut = data.usageMetadata?.candidatesTokenCount || 0;
 
-  // Log usage
   await logAiUsage({
     userId,
     model: GEMINI_MODEL,
     operation,
     tokensIn,
     tokensOut,
-    costCents: (tokensIn + tokensOut) * 0.00001, // rough estimate
+    costCents: (tokensIn + tokensOut) * 0.00001,
     durationMs,
   });
 
-  // Parse JSON from response
   return parseJsonResponse(text);
 }
 
@@ -122,12 +119,26 @@ export async function callGeminiVision(
   if (!response.ok) {
     const errText = await response.text();
     console.error('Gemini Vision API error:', response.status, '-', errText);
+
+    if (response.status === 400) {
+      throw new Error('De foto kon niet worden verwerkt. Probeer een duidelijkere foto.');
+    }
     throw new Error(`Gemini Vision API error: ${response.status}`);
   }
 
   const data = await response.json();
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // Check for blocked or empty responses
+  const candidate = data.candidates?.[0];
+  if (!candidate || candidate.finishReason === 'SAFETY') {
+    throw new Error('De foto werd geblokkeerd. Probeer een andere foto.');
+  }
+
+  const text = candidate.content?.parts?.[0]?.text || '';
+  if (!text.trim()) {
+    throw new Error('Gemini kon geen tekst uit de foto halen. Probeer een duidelijkere foto.');
+  }
+
   const tokensIn = data.usageMetadata?.promptTokenCount || 0;
   const tokensOut = data.usageMetadata?.candidatesTokenCount || 0;
 
@@ -137,7 +148,7 @@ export async function callGeminiVision(
     operation,
     tokensIn,
     tokensOut,
-    costCents: (tokensIn + tokensOut) * 0.00003, // vision is slightly more expensive
+    costCents: (tokensIn + tokensOut) * 0.00003,
     durationMs,
   });
 
@@ -148,8 +159,9 @@ export async function callGeminiVision(
  * Parse a JSON response from AI, handling markdown code fences and whitespace.
  */
 function parseJsonResponse(text: string): Record<string, unknown> {
-  // Remove markdown code fences if present
   let cleaned = text.trim();
+
+  // Remove markdown code fences
   if (cleaned.startsWith('```json')) {
     cleaned = cleaned.slice(7);
   } else if (cleaned.startsWith('```')) {
@@ -165,7 +177,7 @@ function parseJsonResponse(text: string): Record<string, unknown> {
   const end = cleaned.lastIndexOf('}');
 
   if (start === -1 || end === -1 || end <= start) {
-    console.error('No valid JSON found in AI response:', text.slice(0, 200));
+    console.error('No valid JSON found in AI response:', text.slice(0, 300));
     throw new Error('AI response did not contain valid JSON');
   }
 
@@ -174,7 +186,7 @@ function parseJsonResponse(text: string): Record<string, unknown> {
   try {
     return JSON.parse(jsonStr);
   } catch (err) {
-    console.error('Failed to parse AI JSON:', jsonStr.slice(0, 200));
+    console.error('Failed to parse AI JSON:', jsonStr.slice(0, 300));
     throw new Error('AI response contained invalid JSON');
   }
 }
