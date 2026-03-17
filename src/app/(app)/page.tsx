@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { LayoutDashboard, Camera, Mail, Plus } from 'lucide-react';
+import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle } from 'lucide-react';
 import { formatCents, type Bill } from '@/lib/bills';
+import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
 
 export default function OverzichtPage() {
@@ -44,6 +45,15 @@ export default function OverzichtPage() {
   const outstandingTotal = outstanding.reduce((sum, b) => sum + b.amount, 0);
   const settledTotal = settled.reduce((sum, b) => sum + b.amount, 0);
 
+  // Escalation stats
+  const escalated = outstanding.filter((b) => b.escalation_stage !== 'factuur');
+  const escalatedTotal = escalated.reduce((sum, b) => sum + b.amount, 0);
+
+  // Savings: WIK costs avoided by paying on time
+  const savedCents = settled
+    .filter((b) => b.paid_date && b.due_date && b.paid_date <= b.due_date)
+    .reduce((sum, b) => sum + calculateWIKCosts(b.amount), 0);
+
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
@@ -77,6 +87,38 @@ export default function OverzichtPage() {
             value={formatCents(settledTotal)}
             color="green"
           />
+        </div>
+      )}
+
+      {/* Mijn schulden card (only show if there are outstanding bills) */}
+      {!loading && outstanding.length > 0 && (
+        <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-pw-muted">{t('debtCard')}</p>
+              <p className="mt-0.5 text-[24px] font-extrabold text-pw-navy">
+                {formatCents(outstandingTotal)}
+              </p>
+            </div>
+            {escalated.length > 0 && (
+              <div className="flex items-center gap-1.5 rounded-[4px] bg-red-50 px-2 py-1">
+                <AlertTriangle className="h-3 w-3 text-pw-red" strokeWidth={2} />
+                <span className="text-[11px] font-semibold text-pw-red">
+                  {escalated.length} {t('inEscalation')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Savings counter */}
+          <div className="mt-3 flex items-center gap-2 border-t border-pw-border pt-3">
+            <Shield className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
+            <span className="text-[13px] font-semibold text-pw-green">
+              {savedCents > 0
+                ? `${formatCents(savedCents)} ${t('saved')}`
+                : t('savedZero')}
+            </span>
+          </div>
         </div>
       )}
 

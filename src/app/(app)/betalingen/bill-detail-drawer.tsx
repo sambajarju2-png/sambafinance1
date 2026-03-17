@@ -18,8 +18,10 @@ import {
   Copy,
 } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
+import DraftLetterDrawer from './draft-letter-drawer';
+import EscalationInfo from '@/components/escalation-info';
 
-type DrawerTab = 'details' | 'acties' | 'notitie';
+type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
 const STAGE_COLORS: Record<EscalationStage, { dot: string; text: string; bg: string }> = {
   factuur: { dot: 'bg-pw-blue', text: 'text-pw-blue', bg: 'bg-blue-50' },
@@ -44,6 +46,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const [notes, setNotes] = useState(bill?.notes || '');
   const [notesSaving, setNotesSaving] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
+  const [draftLetterOpen, setDraftLetterOpen] = useState(false);
 
   if (!bill) return null;
 
@@ -111,6 +114,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
   const tabs: { key: DrawerTab; label: string }[] = [
     { key: 'details', label: t('tabDetails') },
+    { key: 'escalatie', label: t('tabEscalation') },
     { key: 'acties', label: t('tabActions') },
     { key: 'notitie', label: t('tabNotes') },
   ];
@@ -129,7 +133,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
         {/* Header: Amount-first */}
         <div className="relative px-4 pb-3 pt-3">
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50"
@@ -137,15 +140,11 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
             <X className="h-5 w-5" strokeWidth={1.5} />
           </button>
 
-          {/* Hero amount */}
           <p className="text-[28px] font-extrabold tracking-tight text-pw-text">
             {formatCents(bill.amount, bill.currency)}
           </p>
-
-          {/* Vendor */}
           <p className="mt-0.5 text-[16px] font-semibold text-pw-text">{bill.vendor}</p>
 
-          {/* Escalation badge + category */}
           <div className="mt-2 flex items-center gap-3">
             <span className={`inline-flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 ${stage.bg}`}>
               <span className={`escalation-dot ${stage.dot}`} />
@@ -168,7 +167,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
             )}
           </div>
 
-          {/* Extra costs warning */}
           {bill.estimated_extra_costs > 0 && (
             <p className="mt-2 text-[12px] font-semibold text-pw-red">
               + {formatCents(bill.estimated_extra_costs)} {t('extraCosts')}
@@ -196,6 +194,13 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
         {/* Tab content */}
         <div className="px-4 pb-8 pt-4">
           {activeTab === 'details' && <DetailsTab bill={bill} t={t} />}
+          {activeTab === 'escalatie' && (
+            <EscalationInfo
+              stage={bill.escalation_stage}
+              amountCents={bill.amount}
+              language="nl"
+            />
+          )}
           {activeTab === 'acties' && (
             <ActionsTab
               bill={bill}
@@ -205,6 +210,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
               onMarkPaid={() => patchBill({ status: 'settled', paid_date: today }, 'paid')}
               onToggleFavorite={() => patchBill({ is_favorite: !bill.is_favorite }, 'favorite')}
               onDelete={deleteBill}
+              onDraftLetter={() => setDraftLetterOpen(true)}
             />
           )}
           {activeTab === 'notitie' && (
@@ -220,7 +226,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
         </div>
       </div>
 
-      {/* Draft Letter Drawer */}
+      {/* Draft Letter Modal */}
       <DraftLetterDrawer
         bill={bill}
         open={draftLetterOpen}
