@@ -12,11 +12,11 @@ const BATCH_SIZE = 5;
 /**
  * POST /api/gmail/scan
  *
- * Scans a batch of 5 emails from a connected Gmail account.
- * Frontend polls this endpoint repeatedly until done or 40 emails total.
+ * Scans a batch of 5 emails. Frontend polls repeatedly.
+ * Max 40 emails total per manual scan.
  *
- * Body: { account_id: string, page_token?: string, total_processed?: number }
- * Returns: { processed, bills_found, page_token, total_processed, done }
+ * Body: { account_id, page_token?, total_processed? }
+ * Returns: { processed, bills_found, page_token, total_processed, done, error? }
  */
 export async function POST(req: NextRequest) {
   const DEADLINE = Date.now() + 55000;
@@ -29,29 +29,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
   }
 
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const { account_id, page_token, total_processed = 0 } = body;
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400, headers: NO_CACHE });
+  }
 
-    if (!account_id) {
-      return NextResponse.json({ error: 'account_id is required' }, { status: 400, headers: NO_CACHE });
-    }
+  const account_id = body.account_id as string;
+  const page_token = (body.page_token as string) || null;
+  const total_processed = (body.total_processed as number) || 0;
 
-    // Cap at 40 emails total
-    if (total_processed >= MAX_EMAILS_PER_SCAN) {
-      return NextResponse.json({
-        processed: 0,
-        bills_found: 0,
-        page_token: null,
-        total_processed,
-        done: true,
-      }, { headers: NO_CACHE });
-    }
+  if (!account_id) {
+    return NextResponse.json({ error: 'account_id is required' }, { status: 400, headers: NO_CACHE });
+  }
 
-    // Get valid tokens
+  // Cap at max emails
+  if (total_processed >= MAX_EMAILS_PER_SCAN) {
+    return NextResponse.json({
+      processed: 0, bills_found: 0, page_token: null,
+      total_processed, done: true,
+    }, { headers: NO_CACHE });
+  }
+
+  try {
+    // Step 1: Get valid tokens
     guard();
+    console.log(`[Gmail scan] Getting tokens for account ${account_id}`);
     const tokens = await getValidTokens(account_id, userId);
     if (!tokens) {
+      console.error('[Gmail scan] Token refresh failed or account needs reauth');
       return NextResponse.json(
         { error: 'Gmail account needs re-authentication', needs_reauth: true },
         { status: 401, headers: NO_CACHE }
@@ -60,42 +67,39 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createServerSupabaseClient();
 
-    // Fetch batch of message IDs (5 at a time)
+    // Step 2: Fetch message IDs
     guard();
-    const messageList = await listMessages(tokens.accessToken, BATCH_SIZE, page_token || null);
+    console.log(`[Gmail scan] Fetching ${BATCH_SIZE} messages, page_token: ${page_token ? 'yes' : 'start'}`);
+    const messageList = await listMessages(tokens.accessToken, BATCH_SIZE, page_token);
 
     if (!messageList.messages || messageList.messages.length === 0) {
+      console.log('[Gmail scan] No more messages');
       await supabase
         .from('gmail_accounts')
-        .update({
-          last_scanned: new Date().toISOString(),
-          full_scan_complete: true,
-          scan_cursor: null,
-        })
+        .update({ last_scanned: new Date().toISOString(), scan_cursor: null })
         .eq('id', account_id)
         .eq('user_id', userId);
 
       return NextResponse.json({
-        processed: 0,
-        bills_found: 0,
-        page_token: null,
-        total_processed,
-        done: true,
+        processed: 0, bills_found: 0, page_token: null,
+        total_processed, done: true,
       }, { headers: NO_CACHE });
     }
 
-    // Get snippets
+    // Step 3: Get snippets
     guard();
     const messageIds = messageList.messages.map((m) => m.id);
+    console.log(`[Gmail scan] Got ${messageIds.length} message IDs, fetching snippets`);
     const snippets = await getMessageSnippets(tokens.accessToken, messageIds);
+    console.log(`[Gmail scan] Got ${snippets.length} snippets`);
 
-    // Classify each email with Gemini (one by one)
+    // Step 4: Process each email
     let billsFound = 0;
 
     for (const snippet of snippets) {
       guard();
 
-      // Skip if already processed
+      // Skip already processed
       const { data: alreadyDone } = await supabase
         .from('scan_processed')
         .select('gmail_message_id')
@@ -103,14 +107,12 @@ export async function POST(req: NextRequest) {
         .eq('gmail_message_id', snippet.id)
         .maybeSingle();
 
-      if (alreadyDone) {
-        await markProcessed(supabase, userId, snippet.id);
-        continue;
-      }
+      if (alreadyDone) continue;
 
-      // Classify
+      // Classify with Gemini
       let isBill = false;
       try {
+        console.log(`[Gmail scan] Classifying: "${snippet.subject?.slice(0, 50)}"`);
         const classification = await classifyEmail(
           snippet.subject,
           snippet.from,
@@ -118,16 +120,21 @@ export async function POST(req: NextRequest) {
           userId
         );
         isBill = classification.is_bill && classification.confidence > 0.6;
+        console.log(`[Gmail scan] → is_bill=${isBill}, confidence=${classification.confidence}`);
       } catch (err) {
-        console.error('Classification error:', snippet.id, err);
+        console.error(`[Gmail scan] Classification failed for ${snippet.id}:`, err);
+        // Skip this email, don't fail the whole batch
+        await markProcessed(supabase, userId, snippet.id);
+        continue;
       }
 
       if (isBill) {
-        guard();
         try {
+          guard();
           const detail = await getMessageDetail(tokens.accessToken, snippet.id);
 
           guard();
+          console.log(`[Gmail scan] Extracting bill from: "${detail.subject?.slice(0, 50)}"`);
           const extracted = await extractBillFromEmail(
             detail.subject,
             detail.body,
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest) {
             extracted.due_date || new Date().toISOString().split('T')[0]
           );
 
-          // Smart dedup: check by hash first, then by vendor+reference
+          // Smart dedup: check hash first
           const { data: existingByHash } = await supabase
             .from('bills')
             .select('id')
@@ -151,7 +158,7 @@ export async function POST(req: NextRequest) {
             .maybeSingle();
 
           if (!existingByHash) {
-            // Check if same vendor + reference exists with different amount
+            // Check vendor+reference for amount updates
             let updated = false;
             if (extracted.reference) {
               const { data: existingByRef } = await supabase
@@ -164,7 +171,6 @@ export async function POST(req: NextRequest) {
                 .maybeSingle();
 
               if (existingByRef && existingByRef.amount !== extracted.amount_cents) {
-                // Amount changed — update existing bill
                 await supabase.from('bills').update({
                   amount: extracted.amount_cents,
                   hash,
@@ -174,13 +180,13 @@ export async function POST(req: NextRequest) {
                 }).eq('id', existingByRef.id);
                 updated = true;
                 billsFound++;
+                console.log(`[Gmail scan] Updated existing bill: ${extracted.vendor}`);
               } else if (existingByRef) {
-                updated = true; // exact match, skip
+                updated = true; // exact match
               }
             }
 
             if (!updated) {
-              // New bill — insert
               const billId = generateBillId();
               const { error: insertErr } = await supabase.from('bills').insert({
                 id: billId,
@@ -192,7 +198,7 @@ export async function POST(req: NextRequest) {
                 reference: extracted.reference,
                 due_date: extracted.due_date,
                 received_date: new Date().toISOString().split('T')[0],
-                category: extracted.category_hint || 'Overig',
+                category: extracted.category_hint || 'overig',
                 status: 'outstanding',
                 source: 'gmail_scan',
                 gmail_message_id: snippet.id,
@@ -205,11 +211,17 @@ export async function POST(req: NextRequest) {
                 payment_url: extracted.payment_url || null,
                 vendor_contact: extracted.vendor_contact || null,
               });
-              if (!insertErr) billsFound++;
+              if (!insertErr) {
+                billsFound++;
+                console.log(`[Gmail scan] New bill: ${extracted.vendor} - ${extracted.amount_cents}c`);
+              } else {
+                console.error(`[Gmail scan] Insert error:`, insertErr);
+              }
             }
           }
         } catch (err) {
-          console.error('Extraction error:', snippet.id, err);
+          console.error(`[Gmail scan] Extraction error for ${snippet.id}:`, err);
+          // Don't fail the batch — just skip this email
         }
       }
 
@@ -223,10 +235,7 @@ export async function POST(req: NextRequest) {
     if (shouldStop) {
       await supabase
         .from('gmail_accounts')
-        .update({
-          last_scanned: new Date().toISOString(),
-          scan_cursor: null,
-        })
+        .update({ last_scanned: new Date().toISOString(), scan_cursor: null })
         .eq('id', account_id)
         .eq('user_id', userId);
     } else {
@@ -236,6 +245,8 @@ export async function POST(req: NextRequest) {
         .eq('id', account_id)
         .eq('user_id', userId);
     }
+
+    console.log(`[Gmail scan] Batch done: ${snippets.length} processed, ${billsFound} bills, total: ${newTotal}`);
 
     return NextResponse.json({
       processed: snippets.length,
@@ -249,10 +260,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         error: 'Batch timeout — will resume on next call',
         timeout: true,
+        total_processed,
       }, { status: 200, headers: NO_CACHE });
     }
-    console.error('Gmail scan error:', err);
-    return NextResponse.json({ error: 'Scan failed' }, { status: 500, headers: NO_CACHE });
+    console.error('[Gmail scan] Unhandled error:', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Scan failed' },
+      { status: 500, headers: NO_CACHE }
+    );
   }
 }
 
