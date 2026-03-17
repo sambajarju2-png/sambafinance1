@@ -187,7 +187,19 @@
     "charts": "Charts",
     "aiInsight": "AI Insight",
     "noData": "No data yet",
-    "noDataHint": "Once you have bills, your spending patterns and trends will appear here."
+    "noDataHint": "Once you have bills, your spending patterns and trends will appear here.",
+    "totalBills": "Total",
+    "totalOpen": "Outstanding",
+    "totalPaid": "Paid",
+    "byCategory": "Spending by category",
+    "escalated": "Escalated bills",
+    "escalatedCount": "{count} bills in escalation",
+    "aiTitle": "AI Analysis",
+    "aiDescription": "Let AI analyze your bills for priorities, warnings and patterns.",
+    "analyze": "Analyze",
+    "analyzing": "Analyzing...",
+    "reAnalyze": "Analyze again",
+    "errorGeneral": "Something went wrong during analysis."
   },
   "cashflow": {
     "title": "Cashflow",

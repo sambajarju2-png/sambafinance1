@@ -187,7 +187,19 @@
     "charts": "Grafieken",
     "aiInsight": "AI Inzicht",
     "noData": "Nog geen data",
-    "noDataHint": "Zodra je rekeningen hebt, verschijnen hier je uitgavenpatronen en trends."
+    "noDataHint": "Zodra je rekeningen hebt, verschijnen hier je uitgavenpatronen en trends.",
+    "totalBills": "Totaal",
+    "totalOpen": "Openstaand",
+    "totalPaid": "Betaald",
+    "byCategory": "Uitgaven per categorie",
+    "escalated": "Geëscaleerde rekeningen",
+    "escalatedCount": "{count} rekeningen in escalatie",
+    "aiTitle": "AI Analyse",
+    "aiDescription": "Laat AI je rekeningen analyseren voor prioriteiten, waarschuwingen en patronen.",
+    "analyze": "Analyseer",
+    "analyzing": "Bezig met analyseren...",
+    "reAnalyze": "Opnieuw analyseren",
+    "errorGeneral": "Er is iets misgegaan bij het analyseren."
   },
   "cashflow": {
     "title": "Cashflow",
