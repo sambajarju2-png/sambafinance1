@@ -11,7 +11,9 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
+  Search,
 } from 'lucide-react';
+import ScanProgress from '@/components/scan-progress';
 
 interface GmailAccount {
   id: string;
@@ -31,6 +33,7 @@ export default function GmailSettings() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [scanningAccountId, setScanningAccountId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchAccounts = useCallback(async () => {
@@ -51,13 +54,11 @@ export default function GmailSettings() {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  // Check for status from OAuth callback redirect
   useEffect(() => {
     const status = searchParams.get('status');
     if (status === 'connected') {
       setStatusMessage({ type: 'success', text: t('connected') });
       fetchAccounts();
-      // Clear the URL params
       window.history.replaceState(null, '', '/instellingen');
     } else if (status === 'denied') {
       setStatusMessage({ type: 'error', text: t('denied') });
@@ -82,7 +83,6 @@ export default function GmailSettings() {
       }
 
       const { url } = await res.json();
-      // Redirect to Google OAuth
       window.location.href = url;
     } catch {
       setStatusMessage({ type: 'error', text: t('errorGeneral') });
@@ -115,12 +115,29 @@ export default function GmailSettings() {
     }
   }
 
+  // If currently scanning, show scan progress
+  if (scanningAccountId) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-heading-sm text-pw-navy">{t('scanTitle')}</h2>
+        <ScanProgress
+          accountId={scanningAccountId}
+          onComplete={() => {
+            setScanningAccountId(null);
+            fetchAccounts();
+          }}
+          onCancel={() => {
+            setScanningAccountId(null);
+            fetchAccounts();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-heading-sm text-pw-navy">{t('title')}</h2>
-      </div>
-
+      <h2 className="text-heading-sm text-pw-navy">{t('title')}</h2>
       <p className="text-[13px] text-pw-muted">{t('description')}</p>
 
       {/* Status message */}
@@ -149,58 +166,67 @@ export default function GmailSettings() {
 
       {/* Connected accounts */}
       {loading ? (
-        <div className="space-y-2">
-          <div className="skeleton h-[68px] rounded-card" />
-        </div>
+        <div className="skeleton h-[68px] rounded-card" />
       ) : accounts.length > 0 ? (
         <div className="space-y-2">
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="flex items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3"
+              className="rounded-card border border-pw-border bg-pw-surface px-4 py-3"
             >
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-input bg-pw-blue/10">
-                <Mail className="h-[18px] w-[18px] text-pw-blue" strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold text-pw-text">{account.email}</p>
-                <p className="text-[11px] text-pw-muted">
-                  {account.needs_reauth
-                    ? t('needsReauth')
-                    : account.last_scanned
-                    ? `${t('lastScanned')}: ${new Date(account.last_scanned).toLocaleDateString('nl-NL', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : t('neverScanned')}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-input bg-pw-blue/10">
+                  <Mail className="h-[18px] w-[18px] text-pw-blue" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-semibold text-pw-text">{account.email}</p>
+                  <p className="text-[11px] text-pw-muted">
+                    {account.needs_reauth
+                      ? t('needsReauth')
+                      : account.last_scanned
+                      ? `${t('lastScanned')}: ${new Date(account.last_scanned).toLocaleDateString('nl-NL', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`
+                      : t('neverScanned')}
+                  </p>
+                </div>
+
+                {account.needs_reauth && (
+                  <button
+                    onClick={handleConnect}
+                    className="flex-shrink-0 rounded-button bg-pw-amber/10 px-2 py-1 text-[11px] font-semibold text-pw-amber"
+                  >
+                    <RefreshCw className="mr-1 inline h-3 w-3" strokeWidth={1.5} />
+                    {t('reauth')}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleDisconnect(account.id)}
+                  disabled={disconnecting === account.id}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-button text-pw-muted hover:bg-red-50 hover:text-pw-red disabled:opacity-50"
+                >
+                  {disconnecting === account.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                  ) : (
+                    <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                  )}
+                </button>
               </div>
 
-              {/* Re-auth indicator */}
-              {account.needs_reauth && (
+              {/* Scan button */}
+              {!account.needs_reauth && (
                 <button
-                  onClick={handleConnect}
-                  className="flex-shrink-0 rounded-button bg-pw-amber/10 px-2 py-1 text-[11px] font-semibold text-pw-amber"
+                  onClick={() => setScanningAccountId(account.id)}
+                  className="btn-press mt-3 flex w-full items-center justify-center gap-2 rounded-button border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-semibold text-pw-blue transition-colors hover:bg-pw-blue/10"
                 >
-                  <RefreshCw className="mr-1 inline h-3 w-3" strokeWidth={1.5} />
-                  {t('reauth')}
+                  <Search className="h-4 w-4" strokeWidth={1.5} />
+                  {account.full_scan_complete ? t('scanAgain') : t('startScan')}
                 </button>
               )}
-
-              {/* Disconnect */}
-              <button
-                onClick={() => handleDisconnect(account.id)}
-                disabled={disconnecting === account.id}
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-button text-pw-muted hover:bg-red-50 hover:text-pw-red disabled:opacity-50"
-              >
-                {disconnecting === account.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-                ) : (
-                  <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-                )}
-              </button>
             </div>
           ))}
         </div>

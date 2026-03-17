@@ -171,7 +171,10 @@
     "lastScanned": "Laatst gescand",
     "neverScanned": "Nog niet gescand",
     "needsReauth": "Opnieuw inloggen vereist",
-    "reauth": "Vernieuwen"
+    "reauth": "Vernieuwen",
+    "startScan": "Start scan",
+    "scanAgain": "Opnieuw scannen",
+    "scanTitle": "Gmail scannen..."
   },
   "pwa": {
     "installTitle": "Installeer PayWatch",
@@ -211,5 +214,19 @@
     "aanmaning": "Aanmaning",
     "incasso": "Incasso",
     "deurwaarder": "Deurwaarder"
+  },
+  "scan": {
+    "scanning": "{count} e-mails gescand...",
+    "billsFound": "{count} rekeningen gevonden",
+    "complete": "Scan voltooid!",
+    "summary": "{processed} e-mails gescand, {bills} rekeningen gevonden.",
+    "partialSummary": "{processed} e-mails gescand voor de fout, {bills} rekeningen gevonden.",
+    "done": "Bekijk rekeningen",
+    "cancel": "Annuleren",
+    "errorTitle": "Scan mislukt",
+    "errorGeneral": "Er is iets misgegaan tijdens het scannen.",
+    "errorNetwork": "Netwerkfout. Controleer je internetverbinding.",
+    "needsReauth": "Gmail toegang verlopen. Koppel opnieuw.",
+    "close": "Sluiten"
   }
 }

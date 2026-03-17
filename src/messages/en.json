@@ -171,7 +171,10 @@
     "lastScanned": "Last scanned",
     "neverScanned": "Never scanned",
     "needsReauth": "Re-authentication required",
-    "reauth": "Refresh"
+    "reauth": "Refresh",
+    "startScan": "Start scan",
+    "scanAgain": "Scan again",
+    "scanTitle": "Scanning Gmail..."
   },
   "pwa": {
     "installTitle": "Install PayWatch",
@@ -211,5 +214,19 @@
     "aanmaning": "Final notice",
     "incasso": "Collection",
     "deurwaarder": "Bailiff"
+  },
+  "scan": {
+    "scanning": "{count} emails scanned...",
+    "billsFound": "{count} bills found",
+    "complete": "Scan complete!",
+    "summary": "{processed} emails scanned, {bills} bills found.",
+    "partialSummary": "{processed} emails scanned before error, {bills} bills found.",
+    "done": "View bills",
+    "cancel": "Cancel",
+    "errorTitle": "Scan failed",
+    "errorGeneral": "Something went wrong during scanning.",
+    "errorNetwork": "Network error. Check your internet connection.",
+    "needsReauth": "Gmail access expired. Please reconnect.",
+    "close": "Close"
   }
 }
