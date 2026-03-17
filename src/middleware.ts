@@ -1,10 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback', '/plasmic-host', '/cms'];
-
-const HYBRID_ROUTES = ['/'];
-
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -26,28 +22,29 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-  const isHybridRoute = HYBRID_ROUTES.includes(pathname);
-
-  // App routes that require auth
+  // App routes that require authentication
   const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
   const isAppRoute = APP_PREFIXES.some((p) => pathname.startsWith(p));
 
-  // Hybrid routes (landing page) handle their own auth
-  if (isHybridRoute) return supabaseResponse;
+  // Root / is hybrid — page.tsx handles its own redirect logic
+  if (pathname === '/') return supabaseResponse;
 
-  // Public routes (auth pages, plasmic, cms) pass through
-  if (isPublicRoute) {
-    // But redirect logged-in users away from login/signup
-    if (user && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/overzicht';
-      return NextResponse.redirect(url);
-    }
-    return supabaseResponse;
+  // Public routes — pass through without auth
+  if (pathname.startsWith('/auth/callback')) return supabaseResponse;
+  if (pathname.startsWith('/plasmic-host')) return supabaseResponse;
+  if (pathname.startsWith('/cms')) return supabaseResponse;
+
+  // Logged-in user visiting login/signup → go to dashboard
+  if (user && (pathname === '/auth/login' || pathname === '/auth/signup')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/overzicht';
+    return NextResponse.redirect(url);
   }
 
-  // App routes require auth
+  // Auth pages for anon users — pass through
+  if (pathname.startsWith('/auth/')) return supabaseResponse;
+
+  // App routes — require auth
   if (isAppRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';

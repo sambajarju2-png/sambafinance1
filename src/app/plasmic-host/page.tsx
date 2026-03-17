@@ -1,6 +1,9 @@
 import { PlasmicCanvasHost } from '@plasmicapp/loader-nextjs';
-import { PLASMIC } from '@/lib/plasmic';
+import '@/lib/plasmic';
 
-export default function PlasmicHost() {
+// Force dynamic rendering so this page is never statically generated
+export const dynamic = 'force-dynamic';
+
+export default function PlasmicHostPage() {
   return <PlasmicCanvasHost />;
 }
