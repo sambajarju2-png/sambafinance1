@@ -31,9 +31,10 @@ interface EscalationInfoProps {
   stage: string;
   amountCents: number;
   language?: string;
+  dueDate?: string; // accepted for backwards compatibility, not used
 }
 
-export default function EscalationInfo({ stage, amountCents, language = 'nl' }: EscalationInfoProps) {
+export default function EscalationInfo({ stage, amountCents, language = 'nl', dueDate: _dueDate }: EscalationInfoProps) {
   const t = useTranslations('incasso');
   const tEsc = useTranslations('escalation');
 
