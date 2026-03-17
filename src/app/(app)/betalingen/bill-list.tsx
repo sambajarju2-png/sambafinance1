@@ -37,12 +37,6 @@ export default function BillList() {
     }
   }, [searchParams]);
 
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabFilter>('outstanding');
-  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
-  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
-
   const fetchBills = useCallback(async () => {
     try {
       const res = await fetch('/api/bills');
