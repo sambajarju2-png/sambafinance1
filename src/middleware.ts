@@ -22,29 +22,26 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // App routes that require authentication
-  const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
-  const isAppRoute = APP_PREFIXES.some((p) => pathname.startsWith(p));
-
-  // Root / is hybrid — page.tsx handles its own redirect logic
+  // Root / is hybrid — page.tsx handles its own redirect
   if (pathname === '/') return supabaseResponse;
 
-  // Public routes — pass through without auth
+  // Auth callback always passes through
   if (pathname.startsWith('/auth/callback')) return supabaseResponse;
-  if (pathname.startsWith('/plasmic-host')) return supabaseResponse;
-  if (pathname.startsWith('/cms')) return supabaseResponse;
 
-  // Logged-in user visiting login/signup → go to dashboard
+  // Logged-in user visiting login/signup → dashboard
   if (user && (pathname === '/auth/login' || pathname === '/auth/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/overzicht';
     return NextResponse.redirect(url);
   }
 
-  // Auth pages for anon users — pass through
+  // Auth pages for anon users → pass through
   if (pathname.startsWith('/auth/')) return supabaseResponse;
 
-  // App routes — require auth
+  // App routes require auth
+  const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
+  const isAppRoute = APP_PREFIXES.some((p) => pathname.startsWith(p));
+
   if (isAppRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
