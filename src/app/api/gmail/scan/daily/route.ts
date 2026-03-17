@@ -10,17 +10,17 @@ const NO_CACHE = {
   'Pragma': 'no-cache',
 };
 
+const MAX_EMAILS_PER_ACCOUNT = 40;
+
 /**
  * POST /api/gmail/scan/daily
  *
  * Daily cron scan triggered by cron-job.org at 11 AM.
- * Scans all Gmail accounts that haven't been scanned in 24h.
- * Fetches 100 most recent emails per account.
- *
+ * Scans 40 most recent emails per account that hasn't been scanned in 24h.
  * Protected by CRON_SECRET header.
  */
 export async function POST(req: NextRequest) {
-  const DEADLINE = Date.now() + 55000; // 55s Vercel Pro guard
+  const DEADLINE = Date.now() + 55000;
   const guard = () => {
     if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT');
   };
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    // Find all Gmail accounts that haven't been scanned in 24 hours
+    // Find accounts not scanned in 24h
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const { data: accounts, error: accountsErr } = await supabase
@@ -56,10 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!accounts || accounts.length === 0) {
-      return NextResponse.json({
-        message: 'No accounts need scanning',
-        accounts_scanned: 0,
-      }, { headers: NO_CACHE });
+      return NextResponse.json({ message: 'No accounts need scanning', accounts_scanned: 0 }, { headers: NO_CACHE });
     }
 
     let totalAccountsScanned = 0;
@@ -70,83 +67,62 @@ export async function POST(req: NextRequest) {
       guard();
 
       try {
-        // Decrypt tokens
+        // Decrypt and validate token
         let accessToken: string;
         try {
           accessToken = decrypt(account.access_token);
         } catch {
-          console.error(`Failed to decrypt token for account ${account.email}`);
-          // Mark as needing reauth
-          await supabase
-            .from('gmail_accounts')
-            .update({ needs_reauth: true })
-            .eq('id', account.id);
+          await supabase.from('gmail_accounts').update({ needs_reauth: true }).eq('id', account.id);
           errors.push(`${account.email}: token decryption failed`);
           continue;
         }
 
-        // Check if token is expired, try refresh
+        // Refresh token if expired
         const now = Math.floor(Date.now() / 1000);
         if (account.token_expires_at && account.token_expires_at < now + 60) {
-          // Token expired, try to refresh
           try {
             const refreshToken = decrypt(account.refresh_token);
             const refreshResult = await refreshGoogleToken(refreshToken);
-
             if (!refreshResult) {
-              await supabase
-                .from('gmail_accounts')
-                .update({ needs_reauth: true })
-                .eq('id', account.id);
+              await supabase.from('gmail_accounts').update({ needs_reauth: true }).eq('id', account.id);
               errors.push(`${account.email}: token refresh failed`);
               continue;
             }
-
             accessToken = refreshResult.accessToken;
 
-            // Re-encrypt and update
             const { encrypt } = await import('@/lib/encryption');
-            await supabase
-              .from('gmail_accounts')
-              .update({
-                access_token: encrypt(refreshResult.accessToken),
-                token_expires_at: Math.floor(Date.now() / 1000) + refreshResult.expiresIn,
-              })
-              .eq('id', account.id);
+            await supabase.from('gmail_accounts').update({
+              access_token: encrypt(refreshResult.accessToken),
+              token_expires_at: Math.floor(Date.now() / 1000) + refreshResult.expiresIn,
+            }).eq('id', account.id);
           } catch {
-            await supabase
-              .from('gmail_accounts')
-              .update({ needs_reauth: true })
-              .eq('id', account.id);
+            await supabase.from('gmail_accounts').update({ needs_reauth: true }).eq('id', account.id);
             errors.push(`${account.email}: token refresh error`);
             continue;
           }
         }
 
-        // Scan 100 most recent emails (no date filter)
-        // Fetch in batches of 50 message IDs
+        // Scan up to 40 emails
         guard();
-        let pageToken: string | null = null;
         let totalProcessed = 0;
         let accountBillsFound = 0;
-        const MAX_EMAILS = 100;
+        let pageToken: string | null = null;
 
-        while (totalProcessed < MAX_EMAILS) {
+        while (totalProcessed < MAX_EMAILS_PER_ACCOUNT) {
           guard();
 
-          const batchSize = Math.min(50, MAX_EMAILS - totalProcessed);
+          const batchSize = Math.min(10, MAX_EMAILS_PER_ACCOUNT - totalProcessed);
           const messageList = await listMessages(accessToken, batchSize, pageToken);
 
           if (!messageList.messages || messageList.messages.length === 0) break;
 
-          // Get snippets for classification
-          guard();
           const messageIds = messageList.messages.map((m) => m.id);
           const snippets = await getMessageSnippets(accessToken, messageIds);
 
-          // Skip already processed
-          const unprocessed: typeof snippets = [];
           for (const snippet of snippets) {
+            guard();
+
+            // Skip already processed
             const { data: existing } = await supabase
               .from('scan_processed')
               .select('gmail_message_id')
@@ -154,136 +130,136 @@ export async function POST(req: NextRequest) {
               .eq('gmail_message_id', snippet.id)
               .maybeSingle();
 
-            if (!existing) {
-              unprocessed.push(snippet);
-            }
-          }
+            if (existing) continue;
 
-          if (unprocessed.length > 0) {
-            // Classify with Gemini (per email)
-            guard();
-            const classifications: Array<{ id: string; is_bill: boolean; confidence: number }> = [];
-
-            for (const snippet of unprocessed) {
-              guard();
-              try {
-                const result = await classifyEmail(
-                  snippet.subject,
-                  snippet.from,
-                  snippet.snippet,
-                  account.user_id
-                );
-                classifications.push({
-                  id: snippet.id,
-                  is_bill: result.is_bill,
-                  confidence: result.confidence,
-                });
-              } catch (err) {
-                console.error('Classification error for', snippet.id, err);
-                classifications.push({ id: snippet.id, is_bill: false, confidence: 0 });
-              }
-            }
-
-            // Process confirmed bills
-            const billEmails = classifications.filter((c) => c.is_bill && c.confidence > 0.6);
-
-            for (const billEmail of billEmails) {
-              guard();
-
-              const detail = await getMessageDetail(accessToken, billEmail.id);
-
-              guard();
-              const extracted = await extractBillFromEmail(
-                detail.subject,
-                detail.body,
-                null,
+            // Classify
+            let isBill = false;
+            try {
+              const result = await classifyEmail(
+                snippet.subject,
+                snippet.from,
+                snippet.snippet,
                 account.user_id
               );
+              isBill = result.is_bill && result.confidence > 0.6;
+            } catch (err) {
+              console.error('Classification error:', snippet.id, err);
+            }
 
-              const hash = computeBillHash(
-                extracted.vendor,
-                extracted.amount_cents,
-                extracted.reference || '',
-                extracted.due_date || new Date().toISOString().split('T')[0]
-              );
+            if (isBill) {
+              guard();
+              try {
+                const detail = await getMessageDetail(accessToken, snippet.id);
 
-              // Check bill dedup
-              const { data: existingBill } = await supabase
-                .from('bills')
-                .select('id')
-                .eq('user_id', account.user_id)
-                .eq('hash', hash)
-                .maybeSingle();
+                guard();
+                const extracted = await extractBillFromEmail(
+                  detail.subject,
+                  detail.body,
+                  null,
+                  account.user_id
+                );
 
-              if (!existingBill) {
-                const billId = generateBillId();
-                const { error: insertErr } = await supabase.from('bills').insert({
-                  id: billId,
-                  user_id: account.user_id,
-                  vendor: extracted.vendor,
-                  amount: extracted.amount_cents,
-                  currency: extracted.currency || 'EUR',
-                  iban: extracted.iban,
-                  reference: extracted.reference,
-                  due_date: extracted.due_date,
-                  received_date: new Date().toISOString().split('T')[0],
-                  category: extracted.category_hint || 'Overig',
-                  status: 'outstanding',
-                  source: 'gmail_scan',
-                  gmail_message_id: billEmail.id,
-                  gmail_account_id: account.id,
-                  hash,
-                  escalation_stage: extracted.escalation_stage || 'factuur',
-                  estimated_extra_costs: extracted.estimated_extra_costs_cents || 0,
-                  original_email_subject: detail.subject,
-                  original_email_from: detail.from,
-                  payment_url: extracted.payment_url || null,
-                  vendor_contact: extracted.vendor_contact || null,
-                });
+                const hash = computeBillHash(
+                  extracted.vendor,
+                  extracted.amount_cents,
+                  extracted.reference || '',
+                  extracted.due_date || new Date().toISOString().split('T')[0]
+                );
 
-                if (!insertErr) accountBillsFound++;
+                // Smart dedup
+                const { data: existingByHash } = await supabase
+                  .from('bills')
+                  .select('id')
+                  .eq('user_id', account.user_id)
+                  .eq('hash', hash)
+                  .maybeSingle();
+
+                if (!existingByHash) {
+                  let updated = false;
+
+                  if (extracted.reference) {
+                    const { data: existingByRef } = await supabase
+                      .from('bills')
+                      .select('id, amount')
+                      .eq('user_id', account.user_id)
+                      .eq('vendor', extracted.vendor)
+                      .eq('reference', extracted.reference)
+                      .neq('status', 'settled')
+                      .maybeSingle();
+
+                    if (existingByRef && existingByRef.amount !== extracted.amount_cents) {
+                      await supabase.from('bills').update({
+                        amount: extracted.amount_cents,
+                        hash,
+                        escalation_stage: extracted.escalation_stage || undefined,
+                        estimated_extra_costs: extracted.estimated_extra_costs_cents || undefined,
+                        updated_at: new Date().toISOString(),
+                      }).eq('id', existingByRef.id);
+                      updated = true;
+                      accountBillsFound++;
+                    } else if (existingByRef) {
+                      updated = true;
+                    }
+                  }
+
+                  if (!updated) {
+                    const billId = generateBillId();
+                    const { error: insertErr } = await supabase.from('bills').insert({
+                      id: billId,
+                      user_id: account.user_id,
+                      vendor: extracted.vendor,
+                      amount: extracted.amount_cents,
+                      currency: extracted.currency || 'EUR',
+                      iban: extracted.iban,
+                      reference: extracted.reference,
+                      due_date: extracted.due_date,
+                      received_date: new Date().toISOString().split('T')[0],
+                      category: extracted.category_hint || 'Overig',
+                      status: 'outstanding',
+                      source: 'gmail_scan',
+                      gmail_message_id: snippet.id,
+                      gmail_account_id: account.id,
+                      hash,
+                      escalation_stage: extracted.escalation_stage || 'factuur',
+                      estimated_extra_costs: extracted.estimated_extra_costs_cents || 0,
+                      original_email_subject: detail.subject,
+                      original_email_from: detail.from,
+                      payment_url: extracted.payment_url || null,
+                      vendor_contact: extracted.vendor_contact || null,
+                    });
+                    if (!insertErr) accountBillsFound++;
+                  }
+                }
+              } catch (err) {
+                console.error('Extraction error:', snippet.id, err);
               }
-
-              // Mark processed
-              await supabase.from('scan_processed').upsert(
-                { user_id: account.user_id, gmail_message_id: billEmail.id },
-                { onConflict: 'user_id,gmail_message_id' }
-              );
             }
 
-            // Mark non-bills as processed too
-            for (const email of classifications.filter((c) => !c.is_bill)) {
-              await supabase.from('scan_processed').upsert(
-                { user_id: account.user_id, gmail_message_id: email.id },
-                { onConflict: 'user_id,gmail_message_id' }
-              );
-            }
+            // Mark processed
+            await supabase.from('scan_processed').upsert(
+              { user_id: account.user_id, gmail_message_id: snippet.id },
+              { onConflict: 'user_id,gmail_message_id' }
+            );
           }
 
           totalProcessed += snippets.length;
           pageToken = messageList.nextPageToken;
-
-          if (!pageToken) break; // No more pages
+          if (!pageToken) break;
         }
 
         // Update last_scanned
-        await supabase
-          .from('gmail_accounts')
-          .update({
-            last_scanned: new Date().toISOString(),
-          })
-          .eq('id', account.id);
+        await supabase.from('gmail_accounts').update({
+          last_scanned: new Date().toISOString(),
+        }).eq('id', account.id);
 
         totalAccountsScanned++;
         totalBillsFound += accountBillsFound;
-
-        console.log(`Daily scan: ${account.email} — ${accountBillsFound} new bills found`);
+        console.log(`Daily scan: ${account.email} — ${accountBillsFound} new bills`);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error(`Daily scan error for ${account.email}:`, errMsg);
         errors.push(`${account.email}: ${errMsg}`);
-
-        if (errMsg === 'TIMEOUT_ABORT') break; // Stop all processing on timeout
+        if (errMsg === 'TIMEOUT_ABORT') break;
       }
     }
 
@@ -294,22 +270,14 @@ export async function POST(req: NextRequest) {
     }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
-      return NextResponse.json({
-        error: 'Cron timeout — partial scan completed',
-        timeout: true,
-      }, { status: 200, headers: NO_CACHE });
+      return NextResponse.json({ error: 'Cron timeout — partial scan', timeout: true }, { status: 200, headers: NO_CACHE });
     }
     console.error('Daily scan cron error:', err);
     return NextResponse.json({ error: 'Cron scan failed' }, { status: 500, headers: NO_CACHE });
   }
 }
 
-/**
- * Refresh a Google access token using a refresh token.
- */
-async function refreshGoogleToken(
-  refreshToken: string
-): Promise<{ accessToken: string; expiresIn: number } | null> {
+async function refreshGoogleToken(refreshToken: string): Promise<{ accessToken: string; expiresIn: number } | null> {
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -321,19 +289,10 @@ async function refreshGoogleToken(
         grant_type: 'refresh_token',
       }),
     });
-
-    if (!response.ok) {
-      console.error('Token refresh failed:', response.status);
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
-    return {
-      accessToken: data.access_token,
-      expiresIn: data.expires_in || 3600,
-    };
-  } catch (err) {
-    console.error('Token refresh error:', err);
+    return { accessToken: data.access_token, expiresIn: data.expires_in || 3600 };
+  } catch {
     return null;
   }
 }

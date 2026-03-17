@@ -6,18 +6,20 @@ import { listMessages, getMessageSnippets, getMessageDetail } from '@/lib/gmail/
 import { classifyEmail, extractBillFromEmail } from '@/lib/ai';
 import { computeBillHash, generateBillId } from '@/lib/bills-server';
 
+const MAX_EMAILS_PER_SCAN = 40;
+const BATCH_SIZE = 5;
+
 /**
  * POST /api/gmail/scan
  *
- * Scans a batch of emails from a connected Gmail account.
- * Uses progressive batching — frontend polls this endpoint repeatedly.
- * Scans the 100 most recent inbox emails (no date filter).
+ * Scans a batch of 5 emails from a connected Gmail account.
+ * Frontend polls this endpoint repeatedly until done or 40 emails total.
  *
- * Body: { account_id: string, page_token?: string }
- * Returns: { processed, bills_found, page_token, remaining_estimate, done }
+ * Body: { account_id: string, page_token?: string, total_processed?: number }
+ * Returns: { processed, bills_found, page_token, total_processed, done }
  */
 export async function POST(req: NextRequest) {
-  const DEADLINE = Date.now() + 55000; // 55s guard for Vercel Pro
+  const DEADLINE = Date.now() + 55000;
   const guard = () => {
     if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT');
   };
@@ -29,13 +31,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { account_id, page_token } = body;
+    const { account_id, page_token, total_processed = 0 } = body;
 
     if (!account_id) {
       return NextResponse.json({ error: 'account_id is required' }, { status: 400, headers: NO_CACHE });
     }
 
-    // Get valid tokens (refresh if expired)
+    // Cap at 40 emails total
+    if (total_processed >= MAX_EMAILS_PER_SCAN) {
+      return NextResponse.json({
+        processed: 0,
+        bills_found: 0,
+        page_token: null,
+        total_processed,
+        done: true,
+      }, { headers: NO_CACHE });
+    }
+
+    // Get valid tokens
     guard();
     const tokens = await getValidTokens(account_id, userId);
     if (!tokens) {
@@ -47,14 +60,11 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createServerSupabaseClient();
 
-    // Step 1: Fetch batch of message IDs (15 per batch for progressive scanning)
-    // No date filter — we get the 100 most recent across multiple batches
+    // Fetch batch of message IDs (5 at a time)
     guard();
-    const BATCH_SIZE = 15;
     const messageList = await listMessages(tokens.accessToken, BATCH_SIZE, page_token || null);
 
     if (!messageList.messages || messageList.messages.length === 0) {
-      // No more messages — mark scan complete
       await supabase
         .from('gmail_accounts')
         .update({
@@ -69,138 +79,160 @@ export async function POST(req: NextRequest) {
         processed: 0,
         bills_found: 0,
         page_token: null,
-        remaining_estimate: 0,
+        total_processed,
         done: true,
       }, { headers: NO_CACHE });
     }
 
-    // Step 2: Get snippets for classification
+    // Get snippets
     guard();
     const messageIds = messageList.messages.map((m) => m.id);
     const snippets = await getMessageSnippets(tokens.accessToken, messageIds);
 
-    // Step 3: Classify each email with Gemini (which ones are bills?)
-    // classifyEmail takes (subject, sender, body, userId) per email
-    guard();
-    const classifications: Array<{ id: string; is_bill: boolean; confidence: number }> = [];
+    // Classify each email with Gemini (one by one)
+    let billsFound = 0;
 
     for (const snippet of snippets) {
       guard();
+
+      // Skip if already processed
+      const { data: alreadyDone } = await supabase
+        .from('scan_processed')
+        .select('gmail_message_id')
+        .eq('user_id', userId)
+        .eq('gmail_message_id', snippet.id)
+        .maybeSingle();
+
+      if (alreadyDone) {
+        await markProcessed(supabase, userId, snippet.id);
+        continue;
+      }
+
+      // Classify
+      let isBill = false;
       try {
-        const result = await classifyEmail(
+        const classification = await classifyEmail(
           snippet.subject,
           snippet.from,
           snippet.snippet,
           userId
         );
-        classifications.push({
-          id: snippet.id,
-          is_bill: result.is_bill,
-          confidence: result.confidence,
-        });
+        isBill = classification.is_bill && classification.confidence > 0.6;
       } catch (err) {
-        console.error('Classification error for', snippet.id, err);
-        classifications.push({ id: snippet.id, is_bill: false, confidence: 0 });
+        console.error('Classification error:', snippet.id, err);
       }
-    }
 
-    // Step 4: Process confirmed bills
-    let billsFound = 0;
-    const billEmails = classifications.filter((c) => c.is_bill && c.confidence > 0.6);
+      if (isBill) {
+        guard();
+        try {
+          const detail = await getMessageDetail(tokens.accessToken, snippet.id);
 
-    for (const billEmail of billEmails) {
-      guard();
+          guard();
+          const extracted = await extractBillFromEmail(
+            detail.subject,
+            detail.body,
+            null,
+            userId
+          );
 
-      // Check if already processed (dedup at scan level)
-      const { data: existing } = await supabase
-        .from('scan_processed')
-        .select('gmail_message_id')
-        .eq('user_id', userId)
-        .eq('gmail_message_id', billEmail.id)
-        .maybeSingle();
+          const hash = computeBillHash(
+            extracted.vendor,
+            extracted.amount_cents,
+            extracted.reference || '',
+            extracted.due_date || new Date().toISOString().split('T')[0]
+          );
 
-      if (existing) continue; // Already processed, skip
+          // Smart dedup: check by hash first, then by vendor+reference
+          const { data: existingByHash } = await supabase
+            .from('bills')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('hash', hash)
+            .maybeSingle();
 
-      // Fetch full email content
-      guard();
-      const detail = await getMessageDetail(tokens.accessToken, billEmail.id);
+          if (!existingByHash) {
+            // Check if same vendor + reference exists with different amount
+            let updated = false;
+            if (extracted.reference) {
+              const { data: existingByRef } = await supabase
+                .from('bills')
+                .select('id, amount')
+                .eq('user_id', userId)
+                .eq('vendor', extracted.vendor)
+                .eq('reference', extracted.reference)
+                .neq('status', 'settled')
+                .maybeSingle();
 
-      // Extract bill data with Haiku
-      guard();
-      const extracted = await extractBillFromEmail(
-        detail.subject,
-        detail.body,
-        null, // PDF attachment support later
-        userId
-      );
+              if (existingByRef && existingByRef.amount !== extracted.amount_cents) {
+                // Amount changed — update existing bill
+                await supabase.from('bills').update({
+                  amount: extracted.amount_cents,
+                  hash,
+                  escalation_stage: extracted.escalation_stage || undefined,
+                  estimated_extra_costs: extracted.estimated_extra_costs_cents || undefined,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', existingByRef.id);
+                updated = true;
+                billsFound++;
+              } else if (existingByRef) {
+                updated = true; // exact match, skip
+              }
+            }
 
-      // Compute dedup hash
-      const hash = computeBillHash(
-        extracted.vendor,
-        extracted.amount_cents,
-        extracted.reference || '',
-        extracted.due_date || new Date().toISOString().split('T')[0]
-      );
-
-      // Check if bill already exists (dedup at bill level)
-      const { data: existingBill } = await supabase
-        .from('bills')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('hash', hash)
-        .maybeSingle();
-
-      if (!existingBill) {
-        // Insert new bill
-        const billId = generateBillId();
-        const { error: insertErr } = await supabase.from('bills').insert({
-          id: billId,
-          user_id: userId,
-          vendor: extracted.vendor,
-          amount: extracted.amount_cents,
-          currency: extracted.currency || 'EUR',
-          iban: extracted.iban,
-          reference: extracted.reference,
-          due_date: extracted.due_date,
-          received_date: new Date().toISOString().split('T')[0],
-          category: extracted.category_hint || 'Overig',
-          status: 'outstanding',
-          source: 'gmail_scan',
-          gmail_message_id: billEmail.id,
-          gmail_account_id: account_id,
-          hash,
-          escalation_stage: extracted.escalation_stage || 'factuur',
-          estimated_extra_costs: extracted.estimated_extra_costs_cents || 0,
-          original_email_subject: detail.subject,
-          original_email_from: detail.from,
-          payment_url: extracted.payment_url || null,
-          vendor_contact: extracted.vendor_contact || null,
-        });
-
-        if (!insertErr) {
-          billsFound++;
-        } else {
-          console.error('Bill insert error:', insertErr);
+            if (!updated) {
+              // New bill — insert
+              const billId = generateBillId();
+              const { error: insertErr } = await supabase.from('bills').insert({
+                id: billId,
+                user_id: userId,
+                vendor: extracted.vendor,
+                amount: extracted.amount_cents,
+                currency: extracted.currency || 'EUR',
+                iban: extracted.iban,
+                reference: extracted.reference,
+                due_date: extracted.due_date,
+                received_date: new Date().toISOString().split('T')[0],
+                category: extracted.category_hint || 'Overig',
+                status: 'outstanding',
+                source: 'gmail_scan',
+                gmail_message_id: snippet.id,
+                gmail_account_id: account_id,
+                hash,
+                escalation_stage: extracted.escalation_stage || 'factuur',
+                estimated_extra_costs: extracted.estimated_extra_costs_cents || 0,
+                original_email_subject: detail.subject,
+                original_email_from: detail.from,
+                payment_url: extracted.payment_url || null,
+                vendor_contact: extracted.vendor_contact || null,
+              });
+              if (!insertErr) billsFound++;
+            }
+          }
+        } catch (err) {
+          console.error('Extraction error:', snippet.id, err);
         }
       }
 
-      // Mark as processed regardless (to avoid re-scanning)
-      await markProcessed(supabase, userId, billEmail.id);
+      // Mark processed regardless
+      await markProcessed(supabase, userId, snippet.id);
     }
 
-    // Also mark non-bill emails as processed to avoid re-classifying
-    for (const email of classifications.filter((c) => !c.is_bill)) {
-      await markProcessed(supabase, userId, email.id);
-    }
+    const newTotal = total_processed + snippets.length;
+    const shouldStop = newTotal >= MAX_EMAILS_PER_SCAN || !messageList.nextPageToken;
 
-    // Save progress cursor
-    if (messageList.nextPageToken) {
+    if (shouldStop) {
       await supabase
         .from('gmail_accounts')
         .update({
-          scan_cursor: messageList.nextPageToken,
-          scan_progress: (snippets.length || 0),
+          last_scanned: new Date().toISOString(),
+          scan_cursor: null,
         })
+        .eq('id', account_id)
+        .eq('user_id', userId);
+    } else {
+      await supabase
+        .from('gmail_accounts')
+        .update({ scan_cursor: messageList.nextPageToken })
         .eq('id', account_id)
         .eq('user_id', userId);
     }
@@ -208,16 +240,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       processed: snippets.length,
       bills_found: billsFound,
-      page_token: messageList.nextPageToken || null,
-      remaining_estimate: messageList.nextPageToken ? messageList.resultSizeEstimate : 0,
-      done: !messageList.nextPageToken,
+      page_token: shouldStop ? null : messageList.nextPageToken,
+      total_processed: newTotal,
+      done: shouldStop,
     }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
       return NextResponse.json({
         error: 'Batch timeout — will resume on next call',
         timeout: true,
-      }, { status: 200, headers: NO_CACHE }); // 200 so frontend retries
+      }, { status: 200, headers: NO_CACHE });
     }
     console.error('Gmail scan error:', err);
     return NextResponse.json({ error: 'Scan failed' }, { status: 500, headers: NO_CACHE });

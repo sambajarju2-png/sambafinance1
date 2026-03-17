@@ -24,86 +24,51 @@ interface DraftLetterDrawerProps {
 }
 
 /**
- * Safely extract subject and body from the API response.
- * Handles multiple response formats:
- * 1. { letter: { subject, body } }  — expected format
- * 2. { subject, body }               — direct format
- * 3. Raw JSON string in body          — parse and extract
+ * Clean the letter body from any JSON/markdown artifacts.
  */
-function extractLetterData(data: Record<string, unknown>): { subject: string; body: string } {
-  // Format 1: { letter: { subject, body } }
-  if (data.letter && typeof data.letter === 'object') {
-    const letter = data.letter as Record<string, unknown>;
-    return {
-      subject: String(letter.subject || ''),
-      body: cleanBody(String(letter.body || '')),
-    };
-  }
+function cleanLetterBody(raw: string): string {
+  let text = raw;
 
-  // Format 2: { subject, body }
-  if (data.subject || data.body) {
-    return {
-      subject: String(data.subject || ''),
-      body: cleanBody(String(data.body || '')),
-    };
-  }
-
-  // Fallback: try to find JSON in any string field
-  for (const value of Object.values(data)) {
-    if (typeof value === 'string' && value.includes('"subject"')) {
-      try {
-        let cleaned = value.trim();
-        // Strip markdown fences
-        if (cleaned.startsWith('```')) {
-          cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
-        }
-        const parsed = JSON.parse(cleaned);
-        if (parsed.subject || parsed.body) {
-          return {
-            subject: String(parsed.subject || ''),
-            body: cleanBody(String(parsed.body || '')),
-          };
-        }
-      } catch {
-        // Not valid JSON, skip
-      }
+  // If the whole thing looks like JSON, try to extract just the body field
+  if (text.trim().startsWith('{') || text.trim().startsWith('```')) {
+    let jsonStr = text.trim();
+    // Strip markdown fences
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '').trim();
+    }
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.body) return cleanLetterBody(String(parsed.body));
+      if (parsed.letter?.body) return cleanLetterBody(String(parsed.letter.body));
+    } catch {
+      // Not valid JSON — use as-is
     }
   }
 
-  return { subject: '', body: '' };
+  // Replace literal escaped newlines
+  text = text.replace(/\\n/g, '\n').replace(/\\t/g, '\t').trim();
+  return text;
 }
 
 /**
- * Clean up the body text:
- * - Replace literal \n with actual newlines
- * - Strip any remaining JSON artifacts
+ * Extract subject from API response, handling all possible formats.
  */
-function cleanBody(text: string): string {
-  let cleaned = text;
-
-  // If the text starts with ``` or { and looks like JSON, try to extract the body
-  if (cleaned.startsWith('```') || (cleaned.startsWith('{') && cleaned.includes('"body"'))) {
+function cleanLetterSubject(raw: string): string {
+  let text = raw;
+  if (text.trim().startsWith('{') || text.trim().startsWith('```')) {
+    let jsonStr = text.trim();
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '').trim();
+    }
     try {
-      let jsonStr = cleaned;
-      if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '');
-      }
       const parsed = JSON.parse(jsonStr);
-      if (parsed.body) {
-        cleaned = String(parsed.body);
-      }
+      if (parsed.subject) return String(parsed.subject);
+      if (parsed.letter?.subject) return String(parsed.letter.subject);
     } catch {
-      // Not JSON, use as-is
+      // not JSON
     }
   }
-
-  // Replace literal escaped newlines with actual newlines
-  cleaned = cleaned
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, '\t')
-    .trim();
-
-  return cleaned;
+  return text.replace(/\\n/g, ' ').trim();
 }
 
 export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDrawerProps) {
@@ -147,10 +112,13 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
 
       const data = await res.json();
 
-      // Use robust extraction that handles all response formats
-      const extracted = extractLetterData(data);
-      setSubject(extracted.subject);
-      setBody(extracted.body);
+      // Handle { letter: { subject, body } } format
+      const letterObj = data.letter || data;
+      const rawSubject = String(letterObj.subject || '');
+      const rawBody = String(letterObj.body || '');
+
+      setSubject(cleanLetterSubject(rawSubject));
+      setBody(cleanLetterBody(rawBody));
       setStep('result');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er ging iets mis');
@@ -165,7 +133,6 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = subject ? `${subject}\n\n${body}` : body;
       document.body.appendChild(textarea);
@@ -200,14 +167,10 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/40"
-        onClick={handleClose}
-      />
+      <div className="fixed inset-0 z-50 bg-black/40" onClick={handleClose} />
 
       {/* Drawer */}
       <div className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-[20px] bg-pw-surface drawer-enter">
-        {/* Handle bar */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-pw-border" />
         </div>
@@ -255,10 +218,10 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
             </div>
           )}
 
-          {/* STEP 2: Details */}
+          {/* STEP 2: Details — Payment plan */}
           {step === 'details' && intent === 'betalingsregeling' && (
             <div className="space-y-4">
-              <p className="text-[14px] font-semibold text-pw-text">{t('howManyMonths')}</p>
+              <p className="text-[14px] font-semibold text-pw-text">{t('detailsQuestion_betalingsregeling')}</p>
               <div className="flex gap-3">
                 {['3', '6', '12'].map((months) => (
                   <button
@@ -274,28 +237,14 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   </button>
                 ))}
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => { setStep('intent'); setDetails(''); }}
-                  className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
-                >
-                  {t('back')}
-                </button>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!details}
-                  className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
-                >
-                  <FileText className="h-4 w-4" strokeWidth={1.5} />
-                  {t('generate')}
-                </button>
-              </div>
+              <DetailsButtons onBack={() => { setStep('intent'); setDetails(''); }} onGenerate={handleGenerate} disabled={!details} t={t} />
             </div>
           )}
 
+          {/* STEP 2: Details — Postpone */}
           {step === 'details' && intent === 'uitstel' && (
             <div className="space-y-4">
-              <p className="text-[14px] font-semibold text-pw-text">{t('howManyDays')}</p>
+              <p className="text-[14px] font-semibold text-pw-text">{t('detailsQuestion_uitstel')}</p>
               <div className="flex gap-3">
                 {['14', '30', '60'].map((days) => (
                   <button
@@ -311,34 +260,20 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   </button>
                 ))}
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => { setStep('intent'); setDetails(''); }}
-                  className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
-                >
-                  {t('back')}
-                </button>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!details}
-                  className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
-                >
-                  <FileText className="h-4 w-4" strokeWidth={1.5} />
-                  {t('generate')}
-                </button>
-              </div>
+              <DetailsButtons onBack={() => { setStep('intent'); setDetails(''); }} onGenerate={handleGenerate} disabled={!details} t={t} />
             </div>
           )}
 
+          {/* STEP 2: Details — Dispute */}
           {step === 'details' && intent === 'bezwaar' && (
             <div className="space-y-4">
-              <p className="text-[14px] font-semibold text-pw-text">{t('disputeReason')}</p>
+              <p className="text-[14px] font-semibold text-pw-text">{t('detailsQuestion_bezwaar')}</p>
               <div className="space-y-2">
                 {[
-                  { value: 'bedrag klopt niet', label: t('reasonAmountWrong') },
-                  { value: 'dienst niet ontvangen', label: t('reasonNotReceived') },
-                  { value: 'al betaald', label: t('reasonAlreadyPaid') },
-                  { value: 'verjaard', label: t('reasonExpired') },
+                  { value: 'bedrag klopt niet', label: t('disputeAmountWrong') },
+                  { value: 'dienst niet ontvangen', label: t('disputeNotReceived') },
+                  { value: 'al betaald', label: t('disputeAlreadyPaid') },
+                  { value: 'verjaard', label: t('disputeExpired') },
                 ].map((reason) => (
                   <button
                     key={reason.value}
@@ -353,50 +288,21 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   </button>
                 ))}
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => { setStep('intent'); setDetails(''); }}
-                  className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
-                >
-                  {t('back')}
-                </button>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!details}
-                  className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
-                >
-                  <FileText className="h-4 w-4" strokeWidth={1.5} />
-                  {t('generate')}
-                </button>
-              </div>
+              <DetailsButtons onBack={() => { setStep('intent'); setDetails(''); }} onGenerate={handleGenerate} disabled={!details} t={t} />
             </div>
           )}
 
+          {/* STEP 2: Details — Confirm paid */}
           {step === 'details' && intent === 'bevestiging' && (
             <div className="space-y-4">
-              <p className="text-[14px] font-semibold text-pw-text">{t('paidDate')}</p>
+              <p className="text-[14px] font-semibold text-pw-text">{t('detailsQuestion_bevestiging')}</p>
               <input
                 type="date"
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
                 className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue"
               />
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => { setStep('intent'); setDetails(''); }}
-                  className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
-                >
-                  {t('back')}
-                </button>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!details}
-                  className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
-                >
-                  <FileText className="h-4 w-4" strokeWidth={1.5} />
-                  {t('generate')}
-                </button>
-              </div>
+              <DetailsButtons onBack={() => { setStep('intent'); setDetails(''); }} onGenerate={handleGenerate} disabled={!details} t={t} />
             </div>
           )}
 
@@ -411,7 +317,6 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
           {/* STEP 4: Result */}
           {step === 'result' && (
             <div className="space-y-4">
-              {/* Subject */}
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-pw-purple">{t('subject')}</label>
                 <input
@@ -421,8 +326,6 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2 text-[13px] font-semibold text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue"
                 />
               </div>
-
-              {/* Body */}
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-pw-purple">{t('letterBody')}</label>
                 <textarea
@@ -432,23 +335,13 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   className="w-full resize-none rounded-card border border-pw-border bg-pw-surface px-3 py-2.5 text-[13px] leading-relaxed text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue"
                 />
               </div>
-
-              {/* Legal disclaimer */}
-              <p className="text-[10px] italic text-pw-muted">
-                {t('disclaimer')}
-              </p>
-
-              {/* Actions */}
+              <p className="text-[10px] italic text-pw-muted">{t('disclaimer')}</p>
               <div className="flex gap-3">
                 <button
                   onClick={handleCopy}
                   className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text"
                 >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
-                  ) : (
-                    <Copy className="h-4 w-4" strokeWidth={1.5} />
-                  )}
+                  {copied ? <Check className="h-4 w-4 text-pw-green" strokeWidth={1.5} /> : <Copy className="h-4 w-4" strokeWidth={1.5} />}
                   {copied ? t('copied') : t('copy')}
                 </button>
                 <button
@@ -459,12 +352,7 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
                   {t('openEmail')}
                 </button>
               </div>
-
-              {/* New letter button */}
-              <button
-                onClick={handleReset}
-                className="w-full text-center text-[13px] font-semibold text-pw-purple"
-              >
+              <button onClick={handleReset} className="w-full text-center text-[13px] font-semibold text-pw-purple">
                 {t('newLetter')}
               </button>
             </div>
@@ -476,10 +364,7 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
               <AlertCircle className="mb-3 h-10 w-10 text-pw-red" strokeWidth={1.5} />
               <p className="text-[14px] font-semibold text-pw-text">{t('errorTitle')}</p>
               <p className="mt-1 text-[13px] text-pw-muted">{error || t('errorGeneral')}</p>
-              <button
-                onClick={handleReset}
-                className="btn-press mt-4 rounded-button bg-pw-blue px-6 py-2.5 text-[13px] font-semibold text-white"
-              >
+              <button onClick={handleReset} className="btn-press mt-4 rounded-button bg-pw-blue px-6 py-2.5 text-[13px] font-semibold text-white">
                 {t('tryAgain')}
               </button>
             </div>
@@ -490,25 +375,28 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
   );
 }
 
-function IntentOption({
-  label,
-  description,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  onClick: () => void;
-}) {
+function IntentOption({ label, description, onClick }: { label: string; description: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3.5 text-left transition-colors hover:border-pw-purple/30 hover:bg-purple-50/30"
-    >
+    <button onClick={onClick} className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3.5 text-left transition-colors hover:border-pw-purple/30 hover:bg-purple-50/30">
       <div className="flex-1">
         <p className="text-[14px] font-semibold text-pw-text">{label}</p>
         <p className="text-[11px] text-pw-muted">{description}</p>
       </div>
       <ChevronRight className="h-4 w-4 flex-shrink-0 text-pw-muted" strokeWidth={1.5} />
     </button>
+  );
+}
+
+function DetailsButtons({ onBack, onGenerate, disabled, t }: { onBack: () => void; onGenerate: () => void; disabled: boolean; t: ReturnType<typeof useTranslations> }) {
+  return (
+    <div className="flex gap-3 pt-2">
+      <button onClick={onBack} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
+        {t('back')}
+      </button>
+      <button onClick={onGenerate} disabled={disabled} className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50">
+        <FileText className="h-4 w-4" strokeWidth={1.5} />
+        {t('generate')}
+      </button>
+    </div>
   );
 }
