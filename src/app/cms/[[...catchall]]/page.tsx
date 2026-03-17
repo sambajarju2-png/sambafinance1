@@ -3,26 +3,19 @@ import { PLASMIC } from '@/lib/plasmic';
 import { notFound } from 'next/navigation';
 
 /**
- * Catch-all route for Plasmic-managed pages.
+ * /cms/[...catchall]
  * 
- * Any page you create in Plasmic Studio (e.g. /help, /over-ons, /privacy)
- * will be served by this catch-all route automatically.
- * 
- * Your existing app routes (/, /overzicht, /betalingen, etc.) take priority
- * because they're defined as explicit routes — this catch-all only handles
- * routes that don't match an existing page.
+ * Plasmic-managed pages live under /cms/ prefix.
+ * E.g. /cms/help, /cms/over-ons, /cms/privacy
  */
-
 interface PageProps {
   params: { catchall?: string[] };
 }
 
 export default async function PlasmicCatchallPage({ params }: PageProps) {
-  const plasmicPath = '/' + (params.catchall?.join('/') || '');
+  const plasmicPath = '/cms/' + (params.catchall?.join('/') || '');
 
-  // Try to fetch the Plasmic page data
   let plasmicData: ComponentRenderData | null = null;
-
   try {
     plasmicData = await PLASMIC.maybeFetchComponentData(plasmicPath);
   } catch {
@@ -40,12 +33,11 @@ export default async function PlasmicCatchallPage({ params }: PageProps) {
   );
 }
 
-/**
- * Generate static paths for all Plasmic pages at build time.
- */
 export async function generateStaticParams() {
   const pages = await PLASMIC.fetchPages();
-  return pages.map((page) => ({
-    catchall: page.path === '/' ? undefined : page.path.substring(1).split('/'),
-  }));
+  return pages
+    .filter((p) => p.path.startsWith('/cms/'))
+    .map((page) => ({
+      catchall: page.path.replace('/cms/', '').split('/'),
+    }));
 }

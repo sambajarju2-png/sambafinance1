@@ -6,7 +6,6 @@ export default async function RootPage() {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Logged-in users go straight to dashboard
   if (user) {
     const { data: settings } = await supabase
       .from('user_settings')
@@ -21,6 +20,5 @@ export default async function RootPage() {
     }
   }
 
-  // Anonymous users see the landing page
   return <LandingPage />;
 }
