@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit: 20 letters per hour
     guard();
-    const allowed = await checkRateLimit(userId, 'draft-letter', 20);
+    const allowed = await checkRateLimit(userId, 'draft-letter', 20, 3600000);
     if (!allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Try again later.' },
