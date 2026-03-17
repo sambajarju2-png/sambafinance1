@@ -40,10 +40,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'No urgent bills', sent: 0 }, { headers: NO_CACHE });
     }
 
-    const userBills: Record<string, typeof urgentBills> = {};
+    interface UrgentBill { id: string; user_id: string; vendor: string; amount: number; due_date: string; }
+
+    const userBills: Record<string, UrgentBill[]> = {};
     for (const bill of urgentBills) {
       if (!userBills[bill.user_id]) userBills[bill.user_id] = [];
-      userBills[bill.user_id].push(bill);
+      userBills[bill.user_id].push(bill as UrgentBill);
     }
 
     let totalSent = 0;
@@ -54,15 +56,15 @@ export async function POST(req: NextRequest) {
       const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', userId);
       if (!subs || subs.length === 0) continue;
 
-      const overdue = bills.filter((b) => b.due_date < today);
-      const dueTmrw = bills.filter((b) => b.due_date === tomorrow);
-      const due3d = bills.filter((b) => b.due_date === threeDays);
+      const overdue = bills.filter((b: UrgentBill) => b.due_date < today);
+      const dueTmrw = bills.filter((b: UrgentBill) => b.due_date === tomorrow);
+      const due3d = bills.filter((b: UrgentBill) => b.due_date === threeDays);
 
       let title = 'PayWatch';
       let body = '';
-      if (overdue.length > 0) { title = `${overdue.length} achterstallige rekening${overdue.length > 1 ? 'en' : ''}`; body = overdue.map((b) => b.vendor).join(', '); }
-      else if (dueTmrw.length > 0) { title = `${dueTmrw.length} rekening${dueTmrw.length > 1 ? 'en' : ''} vervalt morgen`; body = dueTmrw.map((b) => b.vendor).join(', '); }
-      else if (due3d.length > 0) { title = `${due3d.length} rekening${due3d.length > 1 ? 'en' : ''} vervalt over 3 dagen`; body = due3d.map((b) => b.vendor).join(', '); }
+      if (overdue.length > 0) { title = `${overdue.length} achterstallige rekening${overdue.length > 1 ? 'en' : ''}`; body = overdue.map((b: UrgentBill) => b.vendor).join(', '); }
+      else if (dueTmrw.length > 0) { title = `${dueTmrw.length} rekening${dueTmrw.length > 1 ? 'en' : ''} vervalt morgen`; body = dueTmrw.map((b: UrgentBill) => b.vendor).join(', '); }
+      else if (due3d.length > 0) { title = `${due3d.length} rekening${due3d.length > 1 ? 'en' : ''} vervalt over 3 dagen`; body = due3d.map((b: UrgentBill) => b.vendor).join(', '); }
 
       const payload = JSON.stringify({ title, body, tag: 'paywatch-reminder', url: '/betalingen' });
 
