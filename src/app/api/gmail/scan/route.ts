@@ -80,16 +80,29 @@ export async function POST(req: NextRequest) {
     const snippets = await getMessageSnippets(tokens.accessToken, messageIds);
 
     // Step 3: Classify each email with Gemini (which ones are bills?)
+    // classifyEmail takes (subject, sender, body, userId) per email
     guard();
-    const classifications = await classifyEmail(
-      snippets.map((s) => ({
-        id: s.id,
-        subject: s.subject,
-        from: s.from,
-        snippet: s.snippet,
-      })),
-      userId
-    );
+    const classifications: Array<{ id: string; is_bill: boolean; confidence: number }> = [];
+
+    for (const snippet of snippets) {
+      guard();
+      try {
+        const result = await classifyEmail(
+          snippet.subject,
+          snippet.from,
+          snippet.snippet,
+          userId
+        );
+        classifications.push({
+          id: snippet.id,
+          is_bill: result.is_bill,
+          confidence: result.confidence,
+        });
+      } catch (err) {
+        console.error('Classification error for', snippet.id, err);
+        classifications.push({ id: snippet.id, is_bill: false, confidence: 0 });
+      }
+    }
 
     // Step 4: Process confirmed bills
     let billsFound = 0;

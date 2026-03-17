@@ -160,17 +160,29 @@ export async function POST(req: NextRequest) {
           }
 
           if (unprocessed.length > 0) {
-            // Classify with Gemini
+            // Classify with Gemini (per email)
             guard();
-            const classifications = await classifyEmail(
-              unprocessed.map((s) => ({
-                id: s.id,
-                subject: s.subject,
-                from: s.from,
-                snippet: s.snippet,
-              })),
-              account.user_id
-            );
+            const classifications: Array<{ id: string; is_bill: boolean; confidence: number }> = [];
+
+            for (const snippet of unprocessed) {
+              guard();
+              try {
+                const result = await classifyEmail(
+                  snippet.subject,
+                  snippet.from,
+                  snippet.snippet,
+                  account.user_id
+                );
+                classifications.push({
+                  id: snippet.id,
+                  is_bill: result.is_bill,
+                  confidence: result.confidence,
+                });
+              } catch (err) {
+                console.error('Classification error for', snippet.id, err);
+                classifications.push({ id: snippet.id, is_bill: false, confidence: 0 });
+              }
+            }
 
             // Process confirmed bills
             const billEmails = classifications.filter((c) => c.is_bill && c.confidence > 0.6);
