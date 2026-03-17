@@ -21,7 +21,7 @@ export default function PushPermission() {
         const reg = await navigator.serviceWorker.ready;
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) { setSaving(false); return; }
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(vapidKey) });
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKey });
         const json = sub.toJSON();
         await fetch('/api/push/subscribe', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -67,12 +67,4 @@ export default function PushPermission() {
       </div>
     </div>
   );
-}
-
-function urlB64(b64: string): Uint8Array {
-  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-  return arr;
 }
