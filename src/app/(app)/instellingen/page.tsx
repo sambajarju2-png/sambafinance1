@@ -11,6 +11,7 @@ import DarkModeToggle from '@/components/dark-mode-toggle';
 import PushPermission from '@/components/push-permission';
 import TestNotification from '@/components/test-notification';
 import AchievementsDisplay from '@/components/achievements';
+import LanguageSwitcher from '@/components/language-switcher';
 
 type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements';
 
@@ -45,8 +46,9 @@ export default function InstellingenPage() {
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} />
         <h2 className="text-heading text-pw-navy">{t('profile')}</h2>
-        <GemeenteSelector />
+        <LanguageSwitcher />
         <DarkModeToggle />
+        <GemeenteSelector />
       </div>
     );
   }
@@ -66,13 +68,7 @@ export default function InstellingenPage() {
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} />
-        <h2 className="text-heading text-pw-navy">Prestaties</h2>
         <AchievementsDisplay />
-        <div className="rounded-card border border-pw-border bg-pw-surface p-4">
-          <p className="text-[12px] text-pw-muted">
-            Verdien prestaties door rekeningen op tijd te betalen, je Gmail te koppelen, en meer. Vergrendelde badges worden ontgrendeld als je de voorwaarde hebt bereikt.
-          </p>
-        </div>
       </div>
     );
   }
@@ -84,7 +80,7 @@ export default function InstellingenPage() {
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Mail} label={t('gmailAccounts')} description={t('gmailAccountsDesc')} onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
-        <SettingsLink icon={Trophy} label="Prestaties" description="Bekijk je verdiende badges en prestaties" onClick={() => setActiveTab('achievements')} />
+        <SettingsLink icon={Trophy} label="Prestaties" description="Bekijk je prestaties en badges" onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => {}} />
         <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => {}} />
       </div>
