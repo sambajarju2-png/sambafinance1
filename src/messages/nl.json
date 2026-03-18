@@ -134,7 +134,9 @@
       "zakelijk": "Zakelijk",
       "incasso_kosten": "Incasso & Gerechtskosten",
       "overig": "Overig"
-    }
+    },
+    "stage": "Fase",
+    "stagePlaceholder": "Selecteer escalatiefase"
   },
   "billDetail": {
     "tabDetails": "Details",
@@ -166,7 +168,11 @@
     "notesSaved": "Opgeslagen",
     "draftLetter": "Schrijf concept",
     "draftLetterDesc": "Laat AI een conceptbrief schrijven voor deze rekening",
-    "tabEscalation": "Escalatie"
+    "tabEscalation": "Escalatie",
+    "editBill": "Bewerken",
+    "editBillDesc": "Wijzig gegevens van deze rekening",
+    "saveChanges": "Opslaan",
+    "editSaved": "Wijzigingen opgeslagen"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -357,5 +363,125 @@
     "legalDisclaimer": "Let op: PayWatch biedt algemene informatie over het incassoproces. Dit is geen juridisch advies. Raadpleeg een jurist of neem contact op met het Juridisch Loket voor persoonlijk advies.",
     "overdueWarning": "Deze rekening is achterstallig. Betaal zo snel mogelijk om extra kosten te voorkomen.",
     "daysOverdue": "{days} dagen achterstallig"
+  },
+  "achievements": {
+    "title": "Prestaties",
+    "categories": {
+      "betalingen": "Betalingen",
+      "streak": "Streak",
+      "gezondheid": "Financiële gezondheid",
+      "gebruik": "App gebruik"
+    },
+    "howToTitle": "Hoe verdien je prestaties?",
+    "moreToUnlock": "meer te ontgrendelen",
+    "unlockedOn": "Ontgrendeld op",
+    "locked": "Nog niet ontgrendeld",
+    "howToUnlock": "Hoe ontgrendel je dit?",
+    "items": {
+      "eerste_betaling": {
+        "name": "Eerste Stap",
+        "desc": "Je eerste rekening betaald",
+        "howTo": "Markeer je eerste rekening als betaald."
+      },
+      "vijf_betaald": {
+        "name": "Op Dreef",
+        "desc": "5 rekeningen betaald",
+        "howTo": "Betaal in totaal 5 rekeningen."
+      },
+      "tien_betaald": {
+        "name": "Doorzetter",
+        "desc": "10 rekeningen betaald",
+        "howTo": "Betaal in totaal 10 rekeningen."
+      },
+      "twintig_betaald": {
+        "name": "Meester Betaler",
+        "desc": "20 rekeningen betaald",
+        "howTo": "Betaal in totaal 20 rekeningen."
+      },
+      "vijftig_betaald": {
+        "name": "Legende",
+        "desc": "50 rekeningen betaald",
+        "howTo": "Betaal in totaal 50 rekeningen."
+      },
+      "streak_3": {
+        "name": "Drietal",
+        "desc": "3 op tijd achter elkaar",
+        "howTo": "Betaal 3 rekeningen op tijd achter elkaar."
+      },
+      "streak_5": {
+        "name": "Vijfklapper",
+        "desc": "5 op tijd achter elkaar",
+        "howTo": "Betaal 5 rekeningen op tijd achter elkaar."
+      },
+      "streak_10": {
+        "name": "Kampioen",
+        "desc": "10 op tijd achter elkaar",
+        "howTo": "Betaal 10 rekeningen op tijd achter elkaar."
+      },
+      "streak_20": {
+        "name": "Onstopbaar",
+        "desc": "20 op tijd achter elkaar",
+        "howTo": "Betaal 20 rekeningen op tijd achter elkaar."
+      },
+      "nul_achterstallig": {
+        "name": "Schoon Bord",
+        "desc": "Geen achterstallige rekeningen",
+        "howTo": "Zorg dat je geen achterstallige rekeningen hebt."
+      },
+      "alle_betaald": {
+        "name": "Schuldenvrij",
+        "desc": "Alle rekeningen betaald",
+        "howTo": "Betaal al je openstaande rekeningen."
+      },
+      "bespaard_100": {
+        "name": "Spaarpot",
+        "desc": "€100 incassokosten bespaard",
+        "howTo": "Bespaar €100 door op tijd te betalen."
+      },
+      "bespaard_500": {
+        "name": "Geldwijs",
+        "desc": "€500 incassokosten bespaard",
+        "howTo": "Bespaar €500 door op tijd te betalen."
+      },
+      "scanner": {
+        "name": "Scanner",
+        "desc": "Eerste foto scan",
+        "howTo": "Scan een rekening met je camera."
+      },
+      "gmail_koppeling": {
+        "name": "Verbonden",
+        "desc": "Gmail gekoppeld",
+        "howTo": "Koppel je Gmail in Instellingen."
+      },
+      "brief_geschreven": {
+        "name": "Woordvoerder",
+        "desc": "Eerste conceptbrief",
+        "howTo": "Schrijf een conceptbrief via een rekening."
+      },
+      "gemeente_ingesteld": {
+        "name": "Lokale Held",
+        "desc": "Gemeente ingesteld",
+        "howTo": "Stel je gemeente in via Profiel."
+      },
+      "donkere_modus": {
+        "name": "Nachtbraker",
+        "desc": "Donkere modus aan",
+        "howTo": "Schakel donkere modus in."
+      },
+      "meldingen_aan": {
+        "name": "Op De Hoogte",
+        "desc": "Meldingen ingeschakeld",
+        "howTo": "Schakel pushmeldingen in."
+      },
+      "mood_gelogd": {
+        "name": "Gevoelsmens",
+        "desc": "Stemming gelogd",
+        "howTo": "Log je stemming op het dashboard."
+      }
+    }
+  },
+  "mood": {
+    "title": "Hoe voel je je vandaag?",
+    "logged": "Bedankt! Je stemming is gelogd."
   }
 }

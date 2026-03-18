@@ -134,7 +134,9 @@
       "zakelijk": "Business",
       "incasso_kosten": "Collection & Legal Costs",
       "overig": "Other"
-    }
+    },
+    "stage": "Stage",
+    "stagePlaceholder": "Select escalation stage"
   },
   "billDetail": {
     "tabDetails": "Details",
@@ -166,7 +168,11 @@
     "notesSaved": "Saved",
     "draftLetter": "Draft letter",
     "draftLetterDesc": "Let AI write a draft letter for this bill",
-    "tabEscalation": "Escalation"
+    "tabEscalation": "Escalation",
+    "editBill": "Edit",
+    "editBillDesc": "Change details of this bill",
+    "saveChanges": "Save changes",
+    "editSaved": "Changes saved"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -357,5 +363,125 @@
     "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice. Consult a lawyer or contact Juridisch Loket for personal advice.",
     "overdueWarning": "This bill is overdue. Pay as soon as possible to avoid extra costs.",
     "daysOverdue": "{days} days overdue"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "categories": {
+      "betalingen": "Payments",
+      "streak": "Streak",
+      "gezondheid": "Financial Health",
+      "gebruik": "App Usage"
+    },
+    "howToTitle": "How to earn achievements?",
+    "moreToUnlock": "more to unlock",
+    "unlockedOn": "Unlocked on",
+    "locked": "Not yet unlocked",
+    "howToUnlock": "How to unlock this?",
+    "items": {
+      "eerste_betaling": {
+        "name": "First Step",
+        "desc": "Paid your first bill",
+        "howTo": "Mark your first bill as paid."
+      },
+      "vijf_betaald": {
+        "name": "Rolling",
+        "desc": "5 bills paid",
+        "howTo": "Pay a total of 5 bills."
+      },
+      "tien_betaald": {
+        "name": "Persistent",
+        "desc": "10 bills paid",
+        "howTo": "Pay a total of 10 bills."
+      },
+      "twintig_betaald": {
+        "name": "Master Payer",
+        "desc": "20 bills paid",
+        "howTo": "Pay a total of 20 bills."
+      },
+      "vijftig_betaald": {
+        "name": "Legend",
+        "desc": "50 bills paid",
+        "howTo": "Pay a total of 50 bills."
+      },
+      "streak_3": {
+        "name": "Three-peat",
+        "desc": "3 on time in a row",
+        "howTo": "Pay 3 bills on time consecutively."
+      },
+      "streak_5": {
+        "name": "High Five",
+        "desc": "5 on time in a row",
+        "howTo": "Pay 5 bills on time consecutively."
+      },
+      "streak_10": {
+        "name": "Champion",
+        "desc": "10 on time in a row",
+        "howTo": "Pay 10 bills on time consecutively."
+      },
+      "streak_20": {
+        "name": "Unstoppable",
+        "desc": "20 on time in a row",
+        "howTo": "Pay 20 bills on time consecutively."
+      },
+      "nul_achterstallig": {
+        "name": "Clean Slate",
+        "desc": "No overdue bills",
+        "howTo": "Make sure you have no overdue bills."
+      },
+      "alle_betaald": {
+        "name": "Debt Free",
+        "desc": "All bills paid",
+        "howTo": "Pay all your outstanding bills."
+      },
+      "bespaard_100": {
+        "name": "Piggy Bank",
+        "desc": "€100 collection costs saved",
+        "howTo": "Save €100 by paying on time."
+      },
+      "bespaard_500": {
+        "name": "Money Wise",
+        "desc": "€500 collection costs saved",
+        "howTo": "Save €500 by paying on time."
+      },
+      "scanner": {
+        "name": "Scanner",
+        "desc": "First photo scan",
+        "howTo": "Scan a bill with your camera."
+      },
+      "gmail_koppeling": {
+        "name": "Connected",
+        "desc": "Gmail linked",
+        "howTo": "Link your Gmail in Settings."
+      },
+      "brief_geschreven": {
+        "name": "Spokesperson",
+        "desc": "First draft letter",
+        "howTo": "Write a draft letter for a bill."
+      },
+      "gemeente_ingesteld": {
+        "name": "Local Hero",
+        "desc": "Municipality set",
+        "howTo": "Set your municipality in Profile."
+      },
+      "donkere_modus": {
+        "name": "Night Owl",
+        "desc": "Dark mode enabled",
+        "howTo": "Enable dark mode."
+      },
+      "meldingen_aan": {
+        "name": "Informed",
+        "desc": "Notifications enabled",
+        "howTo": "Enable push notifications."
+      },
+      "mood_gelogd": {
+        "name": "In Touch",
+        "desc": "Mood logged",
+        "howTo": "Log your mood on the dashboard."
+      }
+    }
+  },
+  "mood": {
+    "title": "How are you feeling today?",
+    "logged": "Thanks! Your mood has been logged."
   }
 }
