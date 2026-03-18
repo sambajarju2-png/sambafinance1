@@ -133,7 +133,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
             </div>
             <div>
               <label className="mb-1.5 block text-[12px] font-semibold text-pw-text">{tAdd('stage')}</label>
-              <select value={stage} onChange={(e) => setStage(e.target.value)}
+              <select value={stage} onChange={(e) => setStage(e.target.value as typeof STAGES[number])}
                 className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text focus:border-pw-blue focus:outline-none">
                 {STAGES.map((s) => (
                   <option key={s} value={s}>{tEsc(s)}</option>
