@@ -8,16 +8,11 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    // Check for new unlocks
     const newlyUnlocked = await checkAndUnlockAchievements(userId);
 
-    // Send push notification for new unlocks
+    // Send push for new unlocks
     if (newlyUnlocked.length > 0) {
-      try {
-        await sendAchievementNotification(userId, newlyUnlocked);
-      } catch {
-        // Don't fail the response for notification errors
-      }
+      try { await sendAchievementNotification(userId, newlyUnlocked); } catch { /* silent */ }
     }
 
     const supabase = await createServerSupabaseClient();
@@ -30,30 +25,22 @@ export async function GET() {
       (unlocked || []).map((a: { achievement: string; unlocked_at: string }) => [a.achievement, a.unlocked_at])
     );
 
+    // Return key, icon, category only — names come from translation files on client
     const all = ACHIEVEMENTS.map((a) => ({
       key: a.key,
-      name: a.name,
-      description: a.description,
-      howTo: a.howTo,
       icon: a.icon,
       category: a.category,
       unlocked: unlockedMap.has(a.key),
       unlocked_at: unlockedMap.get(a.key) || null,
     }));
 
-    return NextResponse.json({
-      achievements: all,
-      newly_unlocked: newlyUnlocked,
-    }, { headers: NO_CACHE });
+    return NextResponse.json({ achievements: all, newly_unlocked: newlyUnlocked }, { headers: NO_CACHE });
   } catch (err) {
     console.error('Achievements error:', err);
     return NextResponse.json({ achievements: [], newly_unlocked: [] }, { headers: NO_CACHE });
   }
 }
 
-/**
- * Send push notification when achievement is unlocked.
- */
 async function sendAchievementNotification(userId: string, unlockedKeys: string[]) {
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
@@ -61,34 +48,25 @@ async function sendAchievementNotification(userId: string, unlockedKeys: string[
 
   let webpush: typeof import('web-push');
   try { webpush = await import('web-push'); } catch { return; }
-
   webpush.setVapidDetails('mailto:info@hypesamba.com', vapidPublic, vapidPrivate);
 
   const supabase = await createServerSupabaseClient();
-  const { data: subs } = await supabase
-    .from('push_subscriptions')
-    .select('endpoint, p256dh, auth_key')
-    .eq('user_id', userId);
-
+  const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', userId);
   if (!subs || subs.length === 0) return;
 
-  // Build message from first unlocked achievement
   const achievement = ACHIEVEMENTS.find((a) => a.key === unlockedKeys[0]);
   if (!achievement) return;
 
   const payload = JSON.stringify({
     title: `${achievement.icon} Prestatie ontgrendeld!`,
-    body: `${achievement.name}: ${achievement.description}`,
+    body: achievement.key,
     tag: 'paywatch-achievement',
     url: '/instellingen',
   });
 
   for (const sub of subs) {
     try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-        payload
-      );
+      await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, payload);
     } catch (err) {
       if (err instanceof Error && (err.message.includes('410') || err.message.includes('404'))) {
         await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
