@@ -12,6 +12,7 @@ import PushPermission from '@/components/push-permission';
 import TestNotification from '@/components/test-notification';
 import AchievementsDisplay from '@/components/achievements';
 import LanguageSwitcher from '@/components/language-switcher';
+import TestEmailButtons from '@/components/test-email-buttons';
 
 type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements';
 
@@ -60,6 +61,7 @@ export default function InstellingenPage() {
         <h2 className="text-heading text-pw-navy">{t('notifications')}</h2>
         <PushPermission />
         <TestNotification />
+        <TestEmailButtons />
       </div>
     );
   }
@@ -98,8 +100,7 @@ export default function InstellingenPage() {
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue">
-      <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} />
-      Terug
+      <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} /> Terug
     </button>
   );
 }

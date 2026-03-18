@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
-  Check, Star, Trash2, Loader2, Copy, Shield, Pencil,
+  Check, Star, Trash2, Loader2, Copy, Pencil,
 } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
@@ -12,7 +12,7 @@ import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
 
-type DrawerTab = 'details' | 'acties' | 'notitie';
+type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
 const STAGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   factuur: { bg: 'bg-pw-blue/10', text: 'text-pw-blue', dot: 'bg-pw-blue' },
@@ -55,10 +55,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        onUpdate();
-        if (loadingKey === 'paid' || loadingKey === 'delete') onClose();
-      }
+      if (res.ok) { onUpdate(); if (loadingKey === 'paid' || loadingKey === 'delete') onClose(); }
     } catch { /* silent */ } finally { setActionLoading(null); }
   }
 
@@ -75,8 +72,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
     setNotesSaving(true);
     try {
       const res = await fetch(`/api/bills/${bill!.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),
       });
       if (res.ok) { setNotesSaved(true); setTimeout(() => setNotesSaved(false), 2000); onUpdate(); }
@@ -85,6 +81,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
   const tabs: { key: DrawerTab; label: string }[] = [
     { key: 'details', label: t('tabDetails') },
+    { key: 'escalatie', label: 'Escalatie' },
     { key: 'acties', label: t('tabActions') },
     { key: 'notitie', label: t('tabNotes') },
   ];
@@ -94,62 +91,40 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
       <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
 
       <div className="drawer-enter fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
-        <div className="flex justify-center pt-3">
-          <div className="h-1 w-10 rounded-full bg-pw-border" />
-        </div>
+        <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         {/* Header */}
         <div className="relative px-4 pb-3 pt-3">
           <button onClick={onClose} className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50">
             <X className="h-5 w-5" strokeWidth={1.5} />
           </button>
-
-          <p className="text-[28px] font-extrabold tracking-tight text-pw-text">
-            {formatCents(bill.amount, bill.currency)}
-          </p>
+          <p className="text-[28px] font-extrabold tracking-tight text-pw-text">{formatCents(bill.amount, bill.currency)}</p>
           <p className="mt-0.5 text-[16px] font-semibold text-pw-navy">{bill.vendor}</p>
 
-          {/* Stage badge */}
           <div className="mt-2 flex items-center gap-2">
             <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${stage.bg}`}>
               <div className={`escalation-dot ${stage.dot}`} />
-              <span className={`text-[11px] font-semibold ${stage.text}`}>
-                {tEsc(bill.escalation_stage as EscalationStage)}
-              </span>
+              <span className={`text-[11px] font-semibold ${stage.text}`}>{tEsc(bill.escalation_stage as EscalationStage)}</span>
             </div>
-
-            {isPaid && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-pw-green">
-                <Check className="h-3 w-3" strokeWidth={2} /> {t('paid')}
-              </span>
-            )}
-
-            {isOverdue && (
-              <span className="text-[11px] font-semibold text-pw-red">{t('overdue')}</span>
-            )}
+            {isPaid && <span className="flex items-center gap-1 text-[11px] font-semibold text-pw-green"><Check className="h-3 w-3" strokeWidth={2} /> {t('paid')}</span>}
+            {isOverdue && <span className="text-[11px] font-semibold text-pw-red">{t('overdue')}</span>}
           </div>
-
-          {/* WIK costs */}
-          {bill.escalation_stage !== 'factuur' && (
-            <p className="mt-1.5 text-[11px] text-pw-muted">
-              +{formatCents(calculateWIKCosts(bill.amount), 'EUR')} {t('extraCosts')}
-            </p>
-          )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-4">
+        {/* Tabs - scrollable for 4 tabs on mobile */}
+        <div className="flex gap-1 overflow-x-auto px-4 scrollbar-none">
           {tabs.map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
                 activeTab === tab.key ? 'bg-pw-navy text-white' : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'}`}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Tab content */}
+        {/* Content */}
         <div className="px-4 pb-8 pt-4">
+          {/* === DETAILS TAB === */}
           {activeTab === 'details' && (
             <div className="space-y-3">
               <DetailRow icon={Calendar} label={t('dueDate')} value={new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
@@ -167,45 +142,56 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
               {bill.paid_date && (
                 <DetailRow icon={Check} label={t('paidOn')} value={new Date(bill.paid_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} />
               )}
+            </div>
+          )}
 
+          {/* === ESCALATIE TAB === */}
+          {activeTab === 'escalatie' && (
+            <div className="space-y-4">
+              {/* Current stage badge — always on top */}
+              <div className={`flex items-center gap-3 rounded-card p-4 ${stage.bg}`}>
+                <div className={`h-4 w-4 rounded-full ${stage.dot}`} />
+                <div>
+                  <p className={`text-[16px] font-bold ${stage.text}`}>{tEsc(bill.escalation_stage as EscalationStage)}</p>
+                  <p className="text-[11px] text-pw-muted">Huidige fase</p>
+                </div>
+              </div>
+
+              {/* WIK costs if applicable */}
+              {bill.escalation_stage !== 'factuur' && (
+                <div className="rounded-card border border-pw-red/20 bg-red-50 p-3">
+                  <p className="text-[13px] font-semibold text-pw-red">
+                    +{formatCents(calculateWIKCosts(bill.amount), 'EUR')} {t('extraCosts')}
+                  </p>
+                </div>
+              )}
+
+              {/* Escalation info with legal details */}
               <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
             </div>
           )}
 
+          {/* === ACTIES TAB === */}
           {activeTab === 'acties' && (
             <div className="space-y-3">
-              {/* Edit button — always visible */}
               <ActionButton icon={Pencil} label={t('editBill')} desc={t('editBillDesc')} color="text-pw-blue"
                 loading={false} onClick={() => setEditOpen(true)} />
-
-              {/* Mark as paid */}
               {!isPaid && (
                 <ActionButton icon={Check} label={t('markAsPaid')} desc={t('markAsPaidDesc')} color="text-pw-green"
                   loading={actionLoading === 'paid'} onClick={() => patchBill({ status: 'settled', paid_date: today }, 'paid')} />
               )}
-
-              {/* Draft letter — only for unpaid bills */}
               {!isPaid && (
                 <ActionButton icon={FileText} label="Schrijf concept" desc="Genereer een brief of bezwaar" color="text-pw-purple"
                   loading={false} onClick={() => setDraftLetterOpen(true)} />
               )}
-
-              {/* Favorite toggle */}
-              <ActionButton
-                icon={Star}
-                label={bill.is_favorite ? t('removeFavorite') : t('addFavorite')}
-                desc={t('favoriteDesc')}
-                color="text-pw-amber"
-                loading={actionLoading === 'fav'}
-                onClick={() => patchBill({ is_favorite: !bill.is_favorite }, 'fav')}
-              />
-
-              {/* Delete */}
+              <ActionButton icon={Star} label={bill.is_favorite ? t('removeFavorite') : t('addFavorite')} desc={t('favoriteDesc')} color="text-pw-amber"
+                loading={actionLoading === 'fav'} onClick={() => patchBill({ is_favorite: !bill.is_favorite }, 'fav')} />
               <ActionButton icon={Trash2} label={t('deleteBill')} desc={t('deleteBillDesc')} color="text-pw-red"
                 loading={actionLoading === 'delete'} onClick={deleteBill} />
             </div>
           )}
 
+          {/* === NOTITIE TAB === */}
           {activeTab === 'notitie' && (
             <div className="space-y-3">
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder={t('notesPlaceholder')}
@@ -221,24 +207,14 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
         </div>
       </div>
 
-      {/* Draft letter drawer */}
       <DraftLetterDrawer bill={bill} open={draftLetterOpen} onClose={() => setDraftLetterOpen(false)} />
-
-      {/* Edit bill drawer */}
-      <EditBillDrawer bill={bill} open={editOpen} onClose={() => setEditOpen(false)}
-        onSaved={() => { onUpdate(); setEditOpen(false); }} />
+      <EditBillDrawer bill={bill} open={editOpen} onClose={() => setEditOpen(false)} onSaved={() => { onUpdate(); setEditOpen(false); }} />
     </>
   );
 }
 
-function DetailRow({ icon: Icon, label, value, copyable = false }: {
-  icon: React.ElementType; label: string; value: string; copyable?: boolean;
-}) {
+function DetailRow({ icon: Icon, label, value, copyable = false }: { icon: React.ElementType; label: string; value: string; copyable?: boolean }) {
   const [copied, setCopied] = useState(false);
-  async function handleCopy() {
-    await navigator.clipboard.writeText(value);
-    setCopied(true); setTimeout(() => setCopied(false), 1500);
-  }
   return (
     <div className="flex items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-3.5 py-3">
       <Icon className="h-4 w-4 flex-shrink-0 text-pw-muted" strokeWidth={1.5} />
@@ -247,7 +223,8 @@ function DetailRow({ icon: Icon, label, value, copyable = false }: {
         <p className="truncate text-[13px] font-semibold text-pw-text">{value}</p>
       </div>
       {copyable && (
-        <button onClick={handleCopy} className="flex-shrink-0 text-pw-muted hover:text-pw-blue">
+        <button onClick={async () => { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+          className="flex-shrink-0 text-pw-muted hover:text-pw-blue">
           {copied ? <Check className="h-4 w-4 text-pw-green" strokeWidth={1.5} /> : <Copy className="h-4 w-4" strokeWidth={1.5} />}
         </button>
       )}
@@ -264,10 +241,7 @@ function ActionButton({ icon: Icon, label, desc, color, loading, onClick }: {
       <div className={`flex h-9 w-9 items-center justify-center rounded-input bg-pw-bg ${color}`}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <Icon className="h-4 w-4" strokeWidth={1.5} />}
       </div>
-      <div>
-        <p className="text-[13px] font-semibold text-pw-text">{label}</p>
-        <p className="text-[11px] text-pw-muted">{desc}</p>
-      </div>
+      <div><p className="text-[13px] font-semibold text-pw-text">{label}</p><p className="text-[11px] text-pw-muted">{desc}</p></div>
     </button>
   );
 }

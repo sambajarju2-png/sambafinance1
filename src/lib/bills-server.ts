@@ -1,38 +1,34 @@
 import { createHash } from 'crypto';
 
-/**
- * Generate a unique bill ID.
- */
 export function generateBillId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).slice(2, 8);
   return `bill_${timestamp}_${random}`;
 }
 
-/**
- * Compute dedup hash for a bill.
- * NOT async — do not await.
- */
-export function computeBillHash(
-  vendor: string,
-  amountCents: number,
-  reference: string,
-  dueDate: string
-): string {
-  const input = [
-    vendor.toLowerCase().trim(),
-    amountCents.toString(),
-    reference?.toLowerCase().trim() || dueDate,
-  ].join('|');
-
+export function computeBillHash(vendor: string, amountCents: number, reference: string, dueDate: string): string {
+  const input = [vendor.toLowerCase().trim(), amountCents.toString(), reference?.toLowerCase().trim() || dueDate].join('|');
   return createHash('sha256').update(input).digest('hex').slice(0, 32);
 }
 
+const ESCALATION_ORDER = ['factuur', 'herinnering', 'aanmaning', 'incasso', 'deurwaarder'] as const;
+
 /**
- * Smart dedup: check if a bill with same vendor + reference already exists.
- * If found with different amount → update it. If exact match → skip.
- * Returns: { action: 'insert' | 'updated' | 'duplicate', existingId?: string }
- *
+ * Get the next escalation stage.
+ * If amount went up, assume it escalated one level.
+ */
+function getNextStage(currentStage: string): string {
+  const idx = ESCALATION_ORDER.indexOf(currentStage as typeof ESCALATION_ORDER[number]);
+  if (idx === -1 || idx >= ESCALATION_ORDER.length - 1) return currentStage;
+  return ESCALATION_ORDER[idx + 1];
+}
+
+/**
+ * Smart dedup: checks reference+vendor match.
+ * If amount INCREASED → auto-escalate to next stage.
+ * If amount same → skip (duplicate).
+ * If no match → insert new.
+ * 
  * Used by: manual add, photo scan, Gmail scan.
  * SERVER-ONLY.
  */
@@ -42,13 +38,14 @@ export async function smartDedup(
   vendor: string,
   amountCents: number,
   reference: string | null,
-  hash: string
+  hash: string,
+  newStage?: string | null
 ): Promise<{ action: 'insert' | 'updated' | 'duplicate'; existingId?: string }> {
-  // 1. Check by reference + vendor (case-insensitive)
+  // 1. Check reference + vendor (case-insensitive)
   if (reference) {
     const { data: existingByRef } = await supabase
       .from('bills')
-      .select('id, amount, hash')
+      .select('id, amount, escalation_stage, hash')
       .eq('user_id', userId)
       .ilike('vendor', vendor.trim())
       .eq('reference', reference.trim())
@@ -57,15 +54,22 @@ export async function smartDedup(
 
     if (existingByRef) {
       if (existingByRef.amount !== amountCents) {
-        // Same bill, amount changed → update
-        await supabase
-          .from('bills')
-          .update({
-            amount: amountCents,
-            hash,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingByRef.id);
+        // Amount changed — update bill
+        const amountIncreased = amountCents > existingByRef.amount;
+        const currentStage = existingByRef.escalation_stage || 'factuur';
+
+        // Auto-escalate if amount went UP (more costs = next stage)
+        let updatedStage = newStage || currentStage;
+        if (amountIncreased && !newStage) {
+          updatedStage = getNextStage(currentStage);
+        }
+
+        await supabase.from('bills').update({
+          amount: amountCents,
+          hash,
+          escalation_stage: updatedStage,
+          updated_at: new Date().toISOString(),
+        }).eq('id', existingByRef.id);
 
         return { action: 'updated', existingId: existingByRef.id };
       }

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+
+const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 
 /**
  * POST /api/settings/language
  * Body: { language: 'nl' | 'en' }
- * Updates user_settings + sets locale cookie.
  */
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
     await supabase.from('user_settings').update({ language }).eq('user_id', userId);
 
-    // Set locale cookie
-    const cookieStore = await cookies();
-    cookieStore.set('locale', language, {
+    // Set locale cookie via response headers
+    const response = NextResponse.json({ ok: true, language }, { headers: NO_CACHE });
+    response.cookies.set('locale', language, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       path: '/',
     });
 
-    return NextResponse.json({ ok: true, language }, { headers: NO_CACHE });
+    return response;
   } catch (err) {
     console.error('Language switch error:', err);
     return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });
