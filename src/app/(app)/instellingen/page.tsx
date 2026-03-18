@@ -13,6 +13,7 @@ import TestNotification from '@/components/test-notification';
 import AchievementsDisplay from '@/components/achievements';
 import LanguageSwitcher from '@/components/language-switcher';
 import TestEmailButtons from '@/components/test-email-buttons';
+import TrustBadges from '@/components/trust-badges';
 
 type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements';
 
@@ -93,6 +94,7 @@ export default function InstellingenPage() {
           {tAuth('signOut')}
         </button>
       </div>
+      <TrustBadges compact />
     </div>
   );
 }
