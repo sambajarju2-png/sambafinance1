@@ -22,7 +22,8 @@ export interface GmailMessageDetail {
 
 /**
  * List message IDs from Gmail inbox.
- * Excludes promotions, social, and updates categories by default.
+ * Excludes promotions, social, updates, forums by default.
+ * Supports date filtering via `after` param (YYYY/MM/DD).
  *
  * SERVER-ONLY.
  */
@@ -40,16 +41,14 @@ export async function listMessages(
     params.set('pageToken', pageToken);
   }
 
-  // Default: primary inbox only (exclude promotions, social, updates, forums)
-  const defaultQuery = '-category:promotions -category:social -category:updates -category:forums';
+  // Primary inbox only
+  const defaultQuery = 'in:inbox -category:promotions -category:social -category:updates -category:forums';
   const finalQuery = query ? `${query} ${defaultQuery}` : defaultQuery;
   params.set('q', finalQuery);
 
   const response = await fetch(
     `${GMAIL_API_BASE}/messages?${params.toString()}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
   if (!response.ok) {
@@ -68,7 +67,7 @@ export async function listMessages(
 }
 
 /**
- * Get full message details (subject, from, body) for a single message.
+ * Get full message details for a single message.
  * SERVER-ONLY.
  */
 export async function getMessageDetail(
@@ -77,9 +76,7 @@ export async function getMessageDetail(
 ): Promise<GmailMessageDetail> {
   const response = await fetch(
     `${GMAIL_API_BASE}/messages/${messageId}?format=full`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
   if (!response.ok) {
@@ -87,7 +84,6 @@ export async function getMessageDetail(
   }
 
   const msg = await response.json();
-
   const headers = msg.payload?.headers || [];
   const getHeader = (name: string): string => {
     const h = headers.find((h: { name: string; value: string }) =>
@@ -96,12 +92,14 @@ export async function getMessageDetail(
     return h?.value || '';
   };
 
-  const subject = getHeader('Subject');
-  const from = getHeader('From');
-  const date = getHeader('Date');
-  const body = extractBodyText(msg.payload);
-
-  return { id: msg.id, subject, from, date, body, snippet: msg.snippet || '' };
+  return {
+    id: msg.id,
+    subject: getHeader('Subject'),
+    from: getHeader('From'),
+    date: getHeader('Date'),
+    body: extractBodyText(msg.payload),
+    snippet: msg.snippet || '',
+  };
 }
 
 /**
@@ -117,9 +115,7 @@ export async function getMessageSnippets(
       try {
         const response = await fetch(
           `${GMAIL_API_BASE}/messages/${id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         if (!response.ok) return null;
 
@@ -147,25 +143,17 @@ export async function getMessageSnippets(
   return results.filter((r): r is NonNullable<typeof r> => r !== null);
 }
 
-/**
- * Recursively extract plain text body from Gmail message payload.
- */
 function extractBodyText(payload: Record<string, unknown>): string {
   if (!payload) return '';
-
   const mimeType = payload.mimeType as string;
 
   if (mimeType === 'text/plain' && payload.body) {
     const body = payload.body as { data?: string };
     if (body.data) return decodeBase64Url(body.data);
   }
-
   if (mimeType === 'text/html' && payload.body) {
     const body = payload.body as { data?: string };
-    if (body.data) {
-      const html = decodeBase64Url(body.data);
-      return stripHtmlTags(html);
-    }
+    if (body.data) return stripHtmlTags(decodeBase64Url(body.data));
   }
 
   const parts = payload.parts as Array<Record<string, unknown>> | undefined;
@@ -187,17 +175,12 @@ function extractBodyText(payload: Record<string, unknown>): string {
       if (text) return text;
     }
   }
-
   return '';
 }
 
 function decodeBase64Url(data: string): string {
   const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
-  try {
-    return Buffer.from(base64, 'base64').toString('utf-8');
-  } catch {
-    return '';
-  }
+  try { return Buffer.from(base64, 'base64').toString('utf-8'); } catch { return ''; }
 }
 
 function stripHtmlTags(html: string): string {
@@ -205,12 +188,7 @@ function stripHtmlTags(html: string): string {
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ').trim();
 }
