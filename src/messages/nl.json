@@ -484,4 +484,39 @@
     "title": "Hoe voel je je vandaag?",
     "logged": "Bedankt! Je stemming is gelogd."
   }
+  ,
+  "helpResources": {
+    "title": "Hulpbronnen",
+    "desc": "Gratis hulp bij financiële problemen en schulden.",
+    "juridisch_desc": "Gratis juridisch advies",
+    "nibud_desc": "Informatie over budgetteren",
+    "schuldhulp_desc": "Vrijwillige hulp bij schulden",
+    "geldfit_desc": "Check of je geldzaken op orde zijn",
+    "ombudsman_desc": "Klachten over overheidsinstanties"
+  },
+  "notifications": {
+    "title": "E-mail & meldingen",
+    "digest_label": "Wekelijks overzicht",
+    "digest_desc": "Ontvang elke week een samenvatting per e-mail",
+    "welcome_label": "Welkomst e-mails",
+    "welcome_desc": "Ontvang onboarding e-mails na registratie",
+    "features_label": "Functie updates",
+    "features_desc": "E-mails over nieuwe functies en tips",
+    "push_label: "Push meldingen",
+    "push_desc": "Ontvang herinneringen op je apparaat"
+  },
+  "incasso": {
+    "recommendedAction": "Aanbevolen actie",
+    "wikTitle": "Geschatte incassokosten (WIK)",
+    "wikDescription": "Op basis van de Wet Incassokosten mag een incassobureau maximaal onderstaand bedrag extra in rekening brengen.",
+    "wikExtra": "extra bovenop origineel bedrag",
+    "wikDisclaimer": "Let op: dit is een schatting op basis van de WIK-staffel. Werkelijke kosten kunnen afwijken.",
+    "savingsTitle": "Bespaar op incassokosten",
+    "savingsDescription": "Betaal deze rekening op tijd en voorkom tot {amount} aan extra incassokosten.",
+    "helpTitle": "Hulp nodig?",
+    "juridischLoket": "Gratis juridisch advies (0900-8020)",
+    "nibud": "Financieel advies en budgettering",
+    "schuldhulp": "Gemeentelijke schuldhulpverlening",
+    "legalDisclaimer": "Let op: PayWatch biedt algemene informatie over het incassoproces. Dit is geen juridisch advies."
+  }
 }
