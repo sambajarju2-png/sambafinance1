@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Mail, Bell, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function NotificationPreferences() {
+  const t = useTranslations('notifications');
   const [prefs, setPrefs] = useState({ notify_email_welcome: true, notify_email_features: true, notify_email_digest: true, notify_push_enabled: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -45,15 +47,15 @@ export default function NotificationPreferences() {
   if (loading) return <div className="skeleton h-[180px] rounded-card" />;
 
   const toggleItems: { key: keyof typeof prefs; icon: typeof Mail; label: string; desc: string }[] = [
-    { key: 'notify_email_digest', icon: Mail, label: 'Wekelijks overzicht', desc: 'Ontvang elke week een samenvatting per e-mail' },
-    { key: 'notify_email_welcome', icon: Mail, label: 'Welkomst e-mails', desc: 'Ontvang onboarding e-mails na registratie' },
-    { key: 'notify_email_features', icon: Mail, label: 'Functie updates', desc: 'E-mails over nieuwe functies en tips' },
-    { key: 'notify_push_enabled', icon: Bell, label: 'Push meldingen', desc: 'Ontvang herinneringen op je apparaat' },
+    { key: 'notify_email_digest', icon: Mail, label: t('digest_label'), desc: t('digest_desc') },
+    { key: 'notify_email_welcome', icon: Mail, label: t('welcome_label'), desc: t('welcome_desc') },
+    { key: 'notify_email_features', icon: Mail, label: t('features_label'), desc: t('features_desc') },
+    { key: 'notify_push_enabled', icon: Bell, label: t('push_label'), desc: t('push_desc') },
   ];
 
   return (
     <div className="rounded-card border border-pw-border bg-pw-surface p-4">
-      <p className="mb-3 text-[14px] font-semibold text-pw-text">E-mail & meldingen</p>
+      <p className="mb-3 text-[14px] font-semibold text-pw-text">{t('title')}</p>
       <div className="space-y-3">
         {toggleItems.map((item) => (
           <div key={item.key} className="flex items-center justify-between">

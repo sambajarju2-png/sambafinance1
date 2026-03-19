@@ -60,7 +60,7 @@
     "scanSubtitle": "We gebruiken dit om je de juiste scanopties te tonen.",
     "scanGmail": "Via e-mail (Gmail)",
     "scanGmailDesc": "We scannen je Gmail inbox automatisch op rekeningen",
-    "scanCamera": "Via de post (brieven)",
+    "scanCamera": "Via the post (brieven)",
     "scanCameraDesc": "Maak een foto van papieren rekeningen met je camera",
     "scanBoth": "Beide",
     "scanBothDesc": "E-mail scannen en foto's maken van papieren rekeningen",
@@ -255,7 +255,7 @@
   },
   "settings": {
     "title": "Instellingen",
-    "backToSettings": "Terug",
+    "back": "Terug",
     "profile": "Profiel",
     "profileDesc": "Naam, taal, PIN en donkere modus",
     "gmailAccounts": "Gmail accounts",
@@ -263,7 +263,7 @@
     "notifications": "Meldingen",
     "notificationsDesc": "Push, e-mail en herinneringen",
     "budget": "Budget",
-    "budgetDesc": "Stel budgetlimieten per categorie in",
+    "budgetDesc": "Stel budgetlimieten in per categorie",
     "debtHelp": "Hulp bij schulden",
     "debtHelpDesc": "Juridisch Loket, Nibud, Schuldhulpverlening",
     "deleteAccount": "Account verwijderen",
@@ -365,9 +365,7 @@
     "juridischLoket": "Gratis juridisch advies (0900-8020)",
     "nibud": "Financieel advies en budgettering",
     "schuldhulp": "Gemeentelijke schuldhulpverlening",
-    "legalDisclaimer": "Let op: PayWatch biedt algemene informatie over het incassoproces. Dit is geen juridisch advies. Raadpleeg een jurist of neem contact op met het Juridisch Loket voor persoonlijk advies.",
-    "overdueWarning": "Deze rekening is achterstallig. Betaal zo snel mogelijk om extra kosten te voorkomen.",
-    "daysOverdue": "{days} dagen achterstallig"
+    "legalDisclaimer": "Let op: PayWatch biedt algemene informatie over het incassoproces. Dit is geen juridisch advies."
   },
   "achievements": {
     "title": "Prestaties",
@@ -489,6 +487,7 @@
     "title": "Hoe voel je je vandaag?",
     "logged": "Bedankt! Je stemming is gelogd."
   },
+<<<<<<< HEAD
   "profile": {
     "title": "Profiel",
     "firstName": "Voornaam",
@@ -508,5 +507,26 @@
     "juridischLoket": "Juridisch Loket",
     "juridischDesc": "0900-8020 (gratis) — voor gratis juridisch advies",
     "nibudDesc": "nibud.nl — voor financieel advies en schuldhulp"
+=======
+  "helpResources": {
+    "title": "Hulpbronnen",
+    "desc": "Gratis hulp bij financiële problemen en schulden.",
+    "juridisch_desc": "Gratis juridisch advies",
+    "nibud_desc": "Informatie over budgetteren",
+    "schuldhulp_desc": "Vrijwillige hulp bij schulden",
+    "geldfit_desc": "Check of je geldzaken op orde zijn",
+    "ombudsman_desc": "Klachten over overheidsinstanties"
+  },
+  "notifications": {
+    "title": "E-mail & meldingen",
+    "digest_label": "Wekelijks overzicht",
+    "digest_desc": "Ontvang elke week een samenvatting per e-mail",
+    "welcome_label": "Welkomst e-mails",
+    "welcome_desc": "Ontvang onboarding e-mails na registratie",
+    "features_label": "Functie updates",
+    "features_desc": "E-mails over nieuwe functies en tips",
+    "push_label": "Push meldingen",
+    "push_desc": "Ontvang herinneringen op je apparaat"
+>>>>>>> 9f729697af373fd01c4199cbf0b8de66e8bb1dc2
   }
 }

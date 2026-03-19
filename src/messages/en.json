@@ -255,7 +255,7 @@
   },
   "settings": {
     "title": "Settings",
-    "backToSettings": "Back",
+    "back": "Back",
     "profile": "Profile",
     "profileDesc": "Name, language, PIN and dark mode",
     "gmailAccounts": "Gmail accounts",
@@ -365,7 +365,7 @@
     "juridischLoket": "Free legal advice (0900-8020)",
     "nibud": "Financial advice and budgeting",
     "schuldhulp": "Municipal debt assistance",
-    "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice. Consult a lawyer or contact Juridisch Loket for personal advice.",
+    "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice.",
     "overdueWarning": "This bill is overdue. Pay as soon as possible to avoid extra costs.",
     "daysOverdue": "{days} days overdue"
   },
@@ -489,6 +489,7 @@
     "title": "How are you feeling today?",
     "logged": "Thanks! Your mood has been logged."
   },
+<<<<<<< HEAD
   "profile": {
     "title": "Profile",
     "firstName": "First name",
@@ -508,5 +509,26 @@
     "juridischLoket": "Legal Desk",
     "juridischDesc": "0900-8020 (free) — for free legal advice",
     "nibudDesc": "nibud.nl — for financial advice and debt help"
+=======
+  "helpResources": {
+    "title": "Help Resources",
+    "desc": "Free help with financial problems and debts.",
+    "juridisch_desc": "Free legal advice",
+    "nibud_desc": "Information about budgeting",
+    "schuldhulp_desc": "Voluntary help with debts",
+    "geldfit_desc": "Check if your finances are in order",
+    "ombudsman_desc": "Complaints about government agencies"
+  },
+  "notifications": {
+    "title": "Email & notifications",
+    "digest_label": "Weekly digest",
+    "digest_desc": "Receive a weekly summary by email",
+    "welcome_label": "Welcome emails",
+    "welcome_desc": "Receive onboarding emails after registration",
+    "features_label": "Feature updates",
+    "features_desc": "Emails about new features and tips",
+    "push_label": "Push notifications",
+    "push_desc": "Receive reminders on your device"
+>>>>>>> 9f729697af373fd01c4199cbf0b8de66e8bb1dc2
   }
 }

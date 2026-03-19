@@ -1,23 +1,26 @@
 'use client';
 
 import { HelpCircle, ExternalLink, Phone } from 'lucide-react';
-
-const RESOURCES = [
-  { name: 'Juridisch Loket', desc: 'Gratis juridisch advies', url: 'https://www.juridischloket.nl', phone: '0900-8020' },
-  { name: 'Nibud', desc: 'Nationaal Instituut voor Budgetvoorlichting', url: 'https://www.nibud.nl', phone: null },
-  { name: 'SchuldHulpMaatje', desc: 'Vrijwillige hulp bij schulden', url: 'https://www.schuldhulpmaatje.nl', phone: null },
-  { name: 'Geldfit', desc: 'Check of je geldzaken op orde zijn', url: 'https://www.geldfit.nl', phone: null },
-  { name: 'De Nationale Ombudsman', desc: 'Klachten over overheidsinstanties', url: 'https://www.nationaleombudsman.nl', phone: '0800-3355' },
-];
+import { useTranslations } from 'next-intl';
 
 export default function HelpResources() {
+  const t = useTranslations('helpResources');
+
+  const RESOURCES = [
+    { name: 'Juridisch Loket', desc: t('juridisch_desc'), url: 'https://www.juridischloket.nl', phone: '0900-8020' },
+    { name: 'Nibud', desc: t('nibud_desc'), url: 'https://www.nibud.nl', phone: null },
+    { name: 'SchuldHulpMaatje', desc: t('schuldhulp_desc'), url: 'https://www.schuldhulpmaatje.nl', phone: null },
+    { name: 'Geldfit', desc: t('geldfit_desc'), url: 'https://www.geldfit.nl', phone: null },
+    { name: 'De Nationale Ombudsman', desc: t('ombudsman_desc'), url: 'https://www.nationaleombudsman.nl', phone: '0800-3355' },
+  ];
+
   return (
     <div className="rounded-card border border-pw-border bg-pw-surface p-4">
       <div className="flex items-center gap-2 mb-3">
         <HelpCircle className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
-        <p className="text-[14px] font-semibold text-pw-text">Hulpbronnen</p>
+        <p className="text-[14px] font-semibold text-pw-text">{t('title')}</p>
       </div>
-      <p className="mb-3 text-[11px] text-pw-muted">Gratis hulp bij financiele problemen en schulden.</p>
+      <p className="mb-3 text-[11px] text-pw-muted">{t('desc')}</p>
       <div className="space-y-2">
         {RESOURCES.map((r) => (
           <a key={r.name} href={r.url} target="_blank" rel="noopener noreferrer"

@@ -50,6 +50,15 @@
   --muted: #94A3B8;
   --border: #334155;
   --topbar-bg: rgba(15, 23, 42, 0.72);
+  
+  /* Adjusted status colors to pop on dark backgrounds */
+  --blue: #3B82F6;
+  --green: #10B981;
+  --amber: #F59E0B;
+  --orange: #F97316;
+  --red: #EF4444;
+  --dark-red: #F87171;
+  --purple: #8B5CF6;
 }
 
 /* =============================================================================

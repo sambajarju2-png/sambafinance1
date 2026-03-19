@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Info, AlertTriangle, Shield, ExternalLink, MapPin } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { calculateWIKCosts, getStageDescription } from '@/lib/wik';
+import LawyerReferral from '@/components/lawyer-referral';
 
 type EscalationStage = 'factuur' | 'herinnering' | 'aanmaning' | 'incasso' | 'deurwaarder';
 
@@ -34,9 +35,10 @@ interface EscalationInfoProps {
   dueDate?: string; // accepted for backwards compatibility, not used
 }
 
-export default function EscalationInfo({ stage, amountCents, language = 'nl', dueDate: _dueDate }: EscalationInfoProps) {
+export default function EscalationInfo({ stage, amountCents, language: _providedLang, dueDate: _dueDate }: EscalationInfoProps) {
   const t = useTranslations('incasso');
   const tEsc = useTranslations('escalation');
+  const locale = useLocale(); // Detects current active language ('nl' or 'en')
 
   const [gemeenteLinks, setGemeenteLinks] = useState<GemeenteLink[]>([]);
   const [gemeente, setGemeente] = useState<string | null>(null);
@@ -60,7 +62,9 @@ export default function EscalationInfo({ stage, amountCents, language = 'nl', du
   const validStage = STAGE_ORDER.includes(stage as EscalationStage) ? (stage as EscalationStage) : 'factuur';
   const currentIndex = STAGE_ORDER.indexOf(validStage);
   const colors = STAGE_COLORS[validStage];
-  const stageInfo = getStageDescription(validStage, language);
+  
+  // Uses the dynamic locale instead of a hardcoded string
+  const stageInfo = getStageDescription(validStage, locale);
   const wikCosts = calculateWIKCosts(amountCents);
 
   return (
@@ -137,6 +141,9 @@ export default function EscalationInfo({ stage, amountCents, language = 'nl', du
           </div>
         </div>
       )}
+
+      {/* Lawyer Referral Component */}
+      <LawyerReferral stage={validStage} gemeente={gemeente} />
 
       {/* Gemeente-specific help links */}
       {gemeente && gemeenteLinks.length > 0 && (
