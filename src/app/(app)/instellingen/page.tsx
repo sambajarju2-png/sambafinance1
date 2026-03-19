@@ -10,12 +10,15 @@ import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
 import PushPermission from '@/components/push-permission';
 import TestNotification from '@/components/test-notification';
+import TestEmailButtons from '@/components/test-email-buttons';
 import AchievementsDisplay from '@/components/achievements';
 import LanguageSwitcher from '@/components/language-switcher';
-import TestEmailButtons from '@/components/test-email-buttons';
+import ProfileEditor from '@/components/profile-editor';
+import NotificationPreferences from '@/components/notification-preferences';
+import HelpResources from '@/components/help-resources';
 import TrustBadges from '@/components/trust-badges';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help';
 
 export default function InstellingenPage() {
   const t = useTranslations('settings');
@@ -33,47 +36,47 @@ export default function InstellingenPage() {
   }
 
   if (activeTab === 'gmail') {
-    return (
-      <div className="space-y-4">
-        <BackButton onClick={() => setActiveTab('menu')} />
-        <Suspense fallback={<div className="skeleton h-[200px] rounded-card" />}>
-          <GmailSettings />
-        </Suspense>
-      </div>
-    );
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} />
+      <Suspense fallback={<div className="skeleton h-[200px] rounded-card" />}><GmailSettings /></Suspense>
+    </div>);
   }
 
   if (activeTab === 'profile') {
-    return (
-      <div className="space-y-4">
-        <BackButton onClick={() => setActiveTab('menu')} />
-        <h2 className="text-heading text-pw-navy">{t('profile')}</h2>
-        <LanguageSwitcher />
-        <DarkModeToggle />
-        <GemeenteSelector />
-      </div>
-    );
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} />
+      <h2 className="text-heading text-pw-navy">{t('profile')}</h2>
+      <ProfileEditor />
+      <LanguageSwitcher />
+      <DarkModeToggle />
+      <GemeenteSelector />
+    </div>);
   }
 
   if (activeTab === 'notifications') {
-    return (
-      <div className="space-y-4">
-        <BackButton onClick={() => setActiveTab('menu')} />
-        <h2 className="text-heading text-pw-navy">{t('notifications')}</h2>
-        <PushPermission />
-        <TestNotification />
-        <TestEmailButtons />
-      </div>
-    );
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} />
+      <h2 className="text-heading text-pw-navy">{t('notifications')}</h2>
+      <NotificationPreferences />
+      <PushPermission />
+      <TestNotification />
+      <TestEmailButtons />
+    </div>);
   }
 
   if (activeTab === 'achievements') {
-    return (
-      <div className="space-y-4">
-        <BackButton onClick={() => setActiveTab('menu')} />
-        <AchievementsDisplay />
-      </div>
-    );
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} /><AchievementsDisplay /></div>);
+  }
+
+  if (activeTab === 'budget') {
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} />
+      <h2 className="text-heading text-pw-navy">{t('budget')}</h2>
+      <BudgetSetting />
+    </div>);
+  }
+
+  if (activeTab === 'help') {
+    return (<div className="space-y-4"><BackButton onClick={() => setActiveTab('menu')} />
+      <h2 className="text-heading text-pw-navy">{t('debtHelp')}</h2>
+      <HelpResources />
+    </div>);
   }
 
   return (
@@ -84,8 +87,8 @@ export default function InstellingenPage() {
         <SettingsLink icon={Mail} label={t('gmailAccounts')} description={t('gmailAccountsDesc')} onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Trophy} label="Prestaties" description="Bekijk je prestaties en badges" onClick={() => setActiveTab('achievements')} />
-        <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => {}} />
-        <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => {}} />
+        <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
+        <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => setActiveTab('help')} />
       </div>
       <div className="pt-4">
         <button onClick={handleSignOut} disabled={signingOut}
@@ -99,24 +102,59 @@ export default function InstellingenPage() {
   );
 }
 
-function BackButton({ onClick }: { onClick: () => void }) {
+/* Budget setting */
+function BudgetSetting() {
+  const [budget, setBudget] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useState(() => {
+    fetch('/api/settings/profile').then((r) => r.json()).then((d) => {
+      if (d.profile?.monthly_budget_cents) setBudget(String(d.profile.monthly_budget_cents / 100));
+    }).catch(() => {});
+  });
+
+  async function handleSave() {
+    setSaving(true);
+    const cents = Math.round(parseFloat(budget.replace(',', '.') || '0') * 100);
+    try {
+      await fetch('/api/settings/profile', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthly_budget_cents: cents }),
+      });
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  }
+
   return (
-    <button onClick={onClick} className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue">
-      <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} /> Terug
-    </button>
+    <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+      <Wallet className="h-4 w-4 text-pw-blue mb-2" strokeWidth={1.5} />
+      <p className="text-[14px] font-semibold text-pw-text mb-1">Maandelijks budget</p>
+      <p className="text-[11px] text-pw-muted mb-3">Stel een maandelijks budget in voor je rekeningen.</p>
+      <div className="flex gap-2">
+        <input type="text" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0,00"
+          className="flex-1 rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
+        <button onClick={handleSave} disabled={saving}
+          className="btn-press rounded-button bg-pw-blue px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50">
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2} /> : saved ? 'Opgeslagen' : 'Opslaan'}
+        </button>
+      </div>
+    </div>
   );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (<button onClick={onClick} className="flex items-center gap-1 text-[13px] font-semibold text-pw-blue">
+    <ChevronRight className="h-4 w-4 rotate-180" strokeWidth={1.5} /> Terug
+  </button>);
 }
 
 function SettingsLink({ icon: Icon, label, description, onClick }: { icon: React.ElementType; label: string; description: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-4 py-3.5 text-left transition-colors hover:bg-pw-bg">
-      <div className="flex h-9 w-9 items-center justify-center rounded-input bg-pw-bg">
-        <Icon className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
-      </div>
-      <div className="flex-1">
-        <p className="text-[14px] font-semibold text-pw-text">{label}</p>
-        <p className="text-[11px] text-pw-muted">{description}</p>
-      </div>
+      <div className="flex h-9 w-9 items-center justify-center rounded-input bg-pw-bg"><Icon className="h-4 w-4 text-pw-muted" strokeWidth={1.5} /></div>
+      <div className="flex-1"><p className="text-[14px] font-semibold text-pw-text">{label}</p><p className="text-[11px] text-pw-muted">{description}</p></div>
       <ChevronRight className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
     </button>
   );
