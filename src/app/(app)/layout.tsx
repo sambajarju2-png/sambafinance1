@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Topbar from '@/components/app-shell/topbar';
 import BottomNav from '@/components/app-shell/bottom-nav';
+import AppTour from '@/components/app-tour';
+import FeedbackPopup from '@/components/feedback-popup';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -25,6 +27,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Topbar displayName={displayName} streakCurrent={streakCurrent} notificationCount={0} />
       <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
       <BottomNav />
+      {/* Global popups — client components that self-manage their visibility */}
+      <AppTour />
+      <FeedbackPopup />
     </div>
   );
 }
