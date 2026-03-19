@@ -12,29 +12,30 @@ interface BeforeInstallPromptEvent extends Event {
 export default function PwaInstallDrawer() {
   const t = useTranslations('pwa');
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    // Check if already running as PWA
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+      || (navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsStandalone(standalone);
+    if (standalone) return; // Already installed, never show
 
-    const wasDismissed = localStorage.getItem('pwa-drawer-dismissed');
-    if (wasDismissed) { setDismissed(true); }
-
+    // Detect platform
     const ua = navigator.userAgent;
-    setIsIOS(/iPad|iPhone|iPod/.test(ua));
-    setIsAndroid(/Android/.test(ua));
+    const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
+    setIsIOS(ios);
 
+    // Listen for Chrome/Edge native install prompt
     const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Auto-show after 3s if not installed and not dismissed
-    if (!standalone && !wasDismissed) {
-      const timer = setTimeout(() => setShowDrawer(true), 3000);
+    // Auto-show after 4 seconds for ALL mobile users who haven't dismissed
+    const wasDismissed = localStorage.getItem('pwa-drawer-dismissed');
+    if (!wasDismissed) {
+      const timer = setTimeout(() => setShowDrawer(true), 4000);
       return () => { clearTimeout(timer); window.removeEventListener('beforeinstallprompt', handler); };
     }
 
@@ -58,11 +59,11 @@ export default function PwaInstallDrawer() {
 
   function handleDismiss() {
     setShowDrawer(false);
-    setDismissed(true);
     localStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
-  if ((isStandalone || dismissed) && !showDrawer) return null;
+  // Don't render if already standalone
+  if (isStandalone) return null;
   if (!showDrawer) return null;
 
   return (
@@ -72,6 +73,7 @@ export default function PwaInstallDrawer() {
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         <div className="px-5 pb-8 pt-4">
+          {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-pw-blue/10">
@@ -87,16 +89,15 @@ export default function PwaInstallDrawer() {
             </button>
           </div>
 
+          {/* Step-by-step instructions */}
           <div className="mt-5 space-y-3">
-            {isIOS && (
+            {isIOS ? (
               <>
                 <StepCard number={1} icon={Share} title={t('iosStep1Title')} desc={t('iosStep1Desc')} />
                 <StepCard number={2} icon={Plus} title={t('iosStep2Title')} desc={t('iosStep2Desc')} />
                 <StepCard number={3} icon={Smartphone} title={t('iosStep3Title')} desc={t('iosStep3Desc')} />
               </>
-            )}
-
-            {(isAndroid || (!isIOS && !deferredPrompt)) && (
+            ) : (
               <>
                 <StepCard number={1} icon={MoreVertical} title={t('androidStep1Title')} desc={t('androidStep1Desc')} />
                 <StepCard number={2} icon={Download} title={t('androidStep2Title')} desc={t('androidStep2Desc')} />
@@ -105,6 +106,7 @@ export default function PwaInstallDrawer() {
             )}
           </div>
 
+          {/* Native install button — only shows on Chrome/Edge when browser supports it */}
           {deferredPrompt && (
             <button onClick={handleInstall}
               className="btn-press mt-5 flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[14px] font-semibold text-white">
@@ -112,7 +114,9 @@ export default function PwaInstallDrawer() {
             </button>
           )}
 
-          <button onClick={handleDismiss} className="mt-3 w-full text-center text-[12px] font-medium text-pw-muted">{t('maybeLater')}</button>
+          <button onClick={handleDismiss} className="mt-3 w-full text-center text-[12px] font-medium text-pw-muted">
+            {t('maybeLater')}
+          </button>
         </div>
       </div>
     </>
@@ -122,7 +126,9 @@ export default function PwaInstallDrawer() {
 function StepCard({ number, icon: Icon, title, desc }: { number: number; icon: React.ElementType; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-3 rounded-card border border-pw-border bg-pw-surface p-3.5">
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">{number}</div>
+      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">
+        {number}
+      </div>
       <div className="flex-1">
         <div className="flex items-center gap-1.5">
           <Icon className="h-3.5 w-3.5 text-pw-muted" strokeWidth={1.5} />

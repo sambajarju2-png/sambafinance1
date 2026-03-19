@@ -183,10 +183,10 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
                 </div>
               )}
 
-              <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
-
-              {/* Lawyer referral for incasso/deurwaarder */}
+              {/* Lawyer referral for incasso/deurwaarder — above gemeente links */}
               <LawyerReferral stage={bill.escalation_stage} gemeente={gemeente} />
+
+              <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
             </div>
           )}
 

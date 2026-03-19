@@ -345,6 +345,9 @@ Rules:
 - Include relevant WIK law references if stage >= aanmaning
 - Keep under 250 words
 - Include today's date: {today}
+- At the bottom of the letter, add the sender's full name: {sender_name}
+- Below the name, add date of birth: {sender_dob}
+- Use date format DD-MM-YYYY for dates (e.g. 01-03-2026)
 
 Return JSON: {"subject": "string", "body": "string"}
 Start with { and end with }.`;
@@ -359,7 +362,9 @@ export async function generateDraftLetter(
   intent: string,
   details: string,
   language: string,
-  userId: string
+  userId: string,
+  senderName: string = '',
+  senderDob: string = ''
 ): Promise<DraftLetterResult> {
   const today = new Date().toISOString().split('T')[0];
   const amountEur = (bill.amount / 100).toFixed(2);
@@ -373,7 +378,9 @@ export async function generateDraftLetter(
     .replace('{escalation_stage}', bill.escalation_stage)
     .replace('{intent}', intent)
     .replace('{details}', details)
-    .replace('{today}', today);
+    .replace('{today}', today)
+    .replace('{sender_name}', senderName || 'N/A')
+    .replace('{sender_dob}', senderDob || 'N/A');
 
   // Use 1024 tokens — 384 was too small and caused truncated JSON
   const result = await callHaiku(prompt, userId, 'draft_letter', 1024);

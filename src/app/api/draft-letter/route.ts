@@ -4,84 +4,49 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { generateDraftLetter } from '@/lib/ai';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-/**
- * POST /api/draft-letter
- *
- * On-demand letter drafting via Haiku.
- * Cost: ~$0.002 per letter (384 max_tokens).
- *
- * Body: {
- *   bill_id: string,
- *   intent: 'betalingsregeling' | 'uitstel' | 'bezwaar' | 'bevestiging',
- *   details: string (e.g. "6 maanden" or "bedrag klopt niet")
- * }
- *
- * Returns: { letter: { subject: string, body: string } }
- */
 export async function POST(req: NextRequest) {
   const DEADLINE = Date.now() + 55000;
-  const guard = () => {
-    if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT');
-  };
+  const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT'); };
 
   const userId = await getAuthUserId();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
-  }
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    // Rate limit: 20 letters per hour
     guard();
     const allowed = await checkRateLimit(userId, 'draft-letter', 20, 3600000);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Try again later.' },
-        { status: 429, headers: NO_CACHE }
-      );
-    }
+    if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: NO_CACHE });
 
     const body = await req.json();
     const { bill_id, intent, details } = body;
 
-    if (!bill_id || !intent) {
-      return NextResponse.json(
-        { error: 'bill_id and intent are required' },
-        { status: 400, headers: NO_CACHE }
-      );
-    }
+    if (!bill_id || !intent) return NextResponse.json({ error: 'bill_id and intent required' }, { status: 400, headers: NO_CACHE });
 
     const validIntents = ['betalingsregeling', 'uitstel', 'bezwaar', 'bevestiging'];
-    if (!validIntents.includes(intent)) {
-      return NextResponse.json(
-        { error: 'Invalid intent' },
-        { status: 400, headers: NO_CACHE }
-      );
-    }
+    if (!validIntents.includes(intent)) return NextResponse.json({ error: 'Invalid intent' }, { status: 400, headers: NO_CACHE });
 
-    // Fetch the bill
     guard();
     const supabase = await createServerSupabaseClient();
-    const { data: bill, error: billErr } = await supabase
-      .from('bills')
-      .select('*')
-      .eq('id', bill_id)
-      .eq('user_id', userId)
-      .single();
+    const { data: bill, error: billErr } = await supabase.from('bills').select('*').eq('id', bill_id).eq('user_id', userId).single();
+    if (billErr || !bill) return NextResponse.json({ error: 'Bill not found' }, { status: 404, headers: NO_CACHE });
 
-    if (billErr || !bill) {
-      return NextResponse.json({ error: 'Bill not found' }, { status: 404, headers: NO_CACHE });
-    }
-
-    // Get user language
+    // Fetch user settings: language + profile info for the letter signature
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('language')
+      .select('language, first_name, last_name, date_of_birth')
       .eq('user_id', userId)
       .single();
 
     const language = settings?.language || 'nl';
+    const fullName = [settings?.first_name, settings?.last_name].filter(Boolean).join(' ') || '';
+    const dob = settings?.date_of_birth || '';
 
-    // Generate the letter
+    // Format DOB as DD-MM-YYYY
+    let formattedDob = '';
+    if (dob) {
+      const d = new Date(dob + 'T00:00:00');
+      formattedDob = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+    }
+
     guard();
     const letter = await generateDraftLetter(
       {
@@ -93,33 +58,19 @@ export async function POST(req: NextRequest) {
       intent,
       details || '',
       language,
-      userId
+      userId,
+      fullName,
+      formattedDob
     );
 
-    // Ensure we have clean string values (not nested JSON or raw responses)
     const cleanSubject = typeof letter.subject === 'string' ? letter.subject : String(letter.subject || '');
     const cleanBody = typeof letter.body === 'string' ? letter.body : String(letter.body || '');
+    const formattedBody = cleanBody.replace(/\\n/g, '\n').replace(/\\t/g, '\t').trim();
 
-    // Replace literal \n with actual newlines (Haiku sometimes returns escaped newlines)
-    const formattedBody = cleanBody
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
-      .trim();
-
-    return NextResponse.json({
-      letter: {
-        subject: cleanSubject,
-        body: formattedBody,
-      },
-    }, { headers: NO_CACHE });
+    return NextResponse.json({ letter: { subject: cleanSubject, body: formattedBody } }, { headers: NO_CACHE });
   } catch (err) {
-    if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
-      return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
-    }
+    if (err instanceof Error && err.message === 'TIMEOUT_ABORT') return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
     console.error('Draft letter error:', err);
-    return NextResponse.json(
-      { error: 'Failed to generate letter' },
-      { status: 500, headers: NO_CACHE }
-    );
+    return NextResponse.json({ error: 'Failed to generate letter' }, { status: 500, headers: NO_CACHE });
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { FlaskConical, Play, Check } from 'lucide-react';
 
-const ADMIN_EMAILS = ['sambajarju@gmail.com', 'reiskenners@gmail.com'];
+const ADMIN_EMAILS = ['sambajarju2@gmail.com', 'ayeitssamba@gmail.com', 'reiskenners@gmail.com'];
 
 export default function AdminTestPanel() {
   const t = useTranslations('adminTest');
