@@ -487,7 +487,6 @@
     "title": "Hoe voel je je vandaag?",
     "logged": "Bedankt! Je stemming is gelogd."
   },
-<<<<<<< HEAD
   "profile": {
     "title": "Profiel",
     "firstName": "Voornaam",
@@ -507,7 +506,7 @@
     "juridischLoket": "Juridisch Loket",
     "juridischDesc": "0900-8020 (gratis) — voor gratis juridisch advies",
     "nibudDesc": "nibud.nl — voor financieel advies en schuldhulp"
-=======
+  },
   "helpResources": {
     "title": "Hulpbronnen",
     "desc": "Gratis hulp bij financiële problemen en schulden.",
@@ -527,6 +526,5 @@
     "features_desc": "E-mails over nieuwe functies en tips",
     "push_label": "Push meldingen",
     "push_desc": "Ontvang herinneringen op je apparaat"
->>>>>>> 9f729697af373fd01c4199cbf0b8de66e8bb1dc2
   }
 }
