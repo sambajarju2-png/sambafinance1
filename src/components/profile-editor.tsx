@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { User, Loader2, Check } from 'lucide-react';
 
 export default function ProfileEditor() {
+  const t = useTranslations('profile');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
@@ -49,41 +51,41 @@ export default function ProfileEditor() {
     <div className="rounded-card border border-pw-border bg-pw-surface p-4">
       <div className="flex items-center gap-2 mb-3">
         <User className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
-        <p className="text-[14px] font-semibold text-pw-text">Profiel</p>
+        <p className="text-[14px] font-semibold text-pw-text">{t('title')}</p>
       </div>
 
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Voornaam</label>
-            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Samba"
+            <label className="mb-1 block text-[11px] font-semibold text-pw-muted">{t('firstName')}</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)}
               className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Achternaam</label>
-            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Jarju"
+            <label className="mb-1 block text-[11px] font-semibold text-pw-muted">{t('lastName')}</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)}
               className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Geboortedatum</label>
+          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">{t('dateOfBirth')}</label>
           <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
             className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">E-mailadres</label>
+          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">{t('email')}</label>
           <input type="email" value={email} disabled
             className="w-full rounded-input border border-pw-border bg-pw-border/20 px-3 py-2 text-[13px] text-pw-muted" />
-          <p className="mt-1 text-[10px] text-pw-muted">E-mail kan gewijzigd worden via Supabase account instellingen.</p>
+          <p className="mt-1 text-[10px] text-pw-muted">{t('emailHint')}</p>
         </div>
 
         <button onClick={handleSave} disabled={saving}
           className="btn-press flex items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} /> :
            saved ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : null}
-          {saved ? 'Opgeslagen' : 'Opslaan'}
+          {saved ? t('saved') : t('save')}
         </button>
       </div>
     </div>

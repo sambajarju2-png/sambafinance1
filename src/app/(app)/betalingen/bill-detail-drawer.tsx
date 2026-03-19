@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
@@ -11,6 +11,7 @@ import { calculateWIKCosts } from '@/lib/wik';
 import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
+import LawyerReferral from '@/components/lawyer-referral';
 
 type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
@@ -31,6 +32,7 @@ interface BillDetailDrawerProps {
 export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetailDrawerProps) {
   const t = useTranslations('billDetail');
   const tEsc = useTranslations('escalation');
+  const tCat = useTranslations('addBill');
 
   const [activeTab, setActiveTab] = useState<DrawerTab>('details');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -39,6 +41,21 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const [notesSaved, setNotesSaved] = useState(false);
   const [draftLetterOpen, setDraftLetterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [gemeente, setGemeente] = useState<string | null>(null);
+
+  // Fetch user's gemeente for lawyer referral
+  useEffect(() => {
+    async function loadGemeente() {
+      try {
+        const res = await fetch('/api/settings/profile');
+        if (res.ok) {
+          const { profile } = await res.json();
+          setGemeente(profile?.gemeente || null);
+        }
+      } catch { /* silent */ }
+    }
+    loadGemeente();
+  }, []);
 
   if (!bill) return null;
 
@@ -47,12 +64,16 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const isOverdue = !isPaid && bill.due_date < today;
   const stage = STAGE_COLORS[bill.escalation_stage] || STAGE_COLORS.factuur;
 
+  // Translate category name
+  function getCategoryLabel(cat: string): string {
+    try { return tCat(`categories.${cat}`); } catch { return cat; }
+  }
+
   async function patchBill(body: Record<string, unknown>, loadingKey: string) {
     setActionLoading(loadingKey);
     try {
       const res = await fetch(`/api/bills/${bill!.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (res.ok) { onUpdate(); if (loadingKey === 'paid' || loadingKey === 'delete') onClose(); }
@@ -81,7 +102,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
   const tabs: { key: DrawerTab; label: string }[] = [
     { key: 'details', label: t('tabDetails') },
-    { key: 'escalatie', label: 'Escalatie' },
+    { key: 'escalatie', label: t('tabEscalation') },
     { key: 'acties', label: t('tabActions') },
     { key: 'notitie', label: t('tabNotes') },
   ];
@@ -111,7 +132,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
           </div>
         </div>
 
-        {/* Tabs - scrollable for 4 tabs on mobile */}
+        {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto px-4 scrollbar-none">
           {tabs.map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -124,12 +145,11 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
         {/* Content */}
         <div className="px-4 pb-8 pt-4">
-          {/* === DETAILS TAB === */}
           {activeTab === 'details' && (
             <div className="space-y-3">
               <DetailRow icon={Calendar} label={t('dueDate')} value={new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
               <DetailRow icon={Calendar} label={t('receivedDate')} value={new Date(bill.received_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} />
-              <DetailRow icon={Tag} label={t('category')} value={bill.category} />
+              <DetailRow icon={Tag} label={t('category')} value={getCategoryLabel(bill.category)} />
               <DetailRow icon={FileText} label={t('source')} value={t(`source_${bill.source}`)} />
               {bill.reference && <DetailRow icon={Hash} label={t('reference')} value={bill.reference} copyable />}
               {bill.iban && <DetailRow icon={CreditCard} label="IBAN" value={bill.iban} copyable />}
@@ -145,19 +165,16 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
             </div>
           )}
 
-          {/* === ESCALATIE TAB === */}
           {activeTab === 'escalatie' && (
             <div className="space-y-4">
-              {/* Current stage badge — always on top */}
               <div className={`flex items-center gap-3 rounded-card p-4 ${stage.bg}`}>
                 <div className={`h-4 w-4 rounded-full ${stage.dot}`} />
                 <div>
                   <p className={`text-[16px] font-bold ${stage.text}`}>{tEsc(bill.escalation_stage as EscalationStage)}</p>
-                  <p className="text-[11px] text-pw-muted">Huidige fase</p>
+                  <p className="text-[11px] text-pw-muted">{t('currentStage')}</p>
                 </div>
               </div>
 
-              {/* WIK costs if applicable */}
               {bill.escalation_stage !== 'factuur' && (
                 <div className="rounded-card border border-pw-red/20 bg-red-50 p-3">
                   <p className="text-[13px] font-semibold text-pw-red">
@@ -166,12 +183,13 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
                 </div>
               )}
 
-              {/* Escalation info with legal details */}
               <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
+
+              {/* Lawyer referral for incasso/deurwaarder */}
+              <LawyerReferral stage={bill.escalation_stage} gemeente={gemeente} />
             </div>
           )}
 
-          {/* === ACTIES TAB === */}
           {activeTab === 'acties' && (
             <div className="space-y-3">
               <ActionButton icon={Pencil} label={t('editBill')} desc={t('editBillDesc')} color="text-pw-blue"
@@ -181,7 +199,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
                   loading={actionLoading === 'paid'} onClick={() => patchBill({ status: 'settled', paid_date: today }, 'paid')} />
               )}
               {!isPaid && (
-                <ActionButton icon={FileText} label="Schrijf concept" desc="Genereer een brief of bezwaar" color="text-pw-purple"
+                <ActionButton icon={FileText} label={t('draftLetter')} desc={t('draftLetterDesc')} color="text-pw-purple"
                   loading={false} onClick={() => setDraftLetterOpen(true)} />
               )}
               <ActionButton icon={Star} label={bill.is_favorite ? t('removeFavorite') : t('addFavorite')} desc={t('favoriteDesc')} color="text-pw-amber"
@@ -191,7 +209,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
             </div>
           )}
 
-          {/* === NOTITIE TAB === */}
           {activeTab === 'notitie' && (
             <div className="space-y-3">
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder={t('notesPlaceholder')}

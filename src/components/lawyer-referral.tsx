@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Scale, ExternalLink, AlertTriangle } from 'lucide-react';
 
 interface LawyerReferralProps {
@@ -13,21 +14,16 @@ interface Advocaat {
   website_url: string;
 }
 
-/**
- * Shows lawyer referral cards when bill is in incasso or deurwaarder stage.
- * Fetches lawyers based on user's gemeente/city.
- */
 export default function LawyerReferral({ stage, gemeente }: LawyerReferralProps) {
+  const t = useTranslations('lawyer');
   const [advocaten, setAdvocaten] = useState<Advocaat[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Only show for incasso or deurwaarder
   const showLawyers = stage === 'incasso' || stage === 'deurwaarder';
 
   useEffect(() => {
     if (!showLawyers || !gemeente) return;
-
-    async function fetch_advocaten() {
+    async function fetchAdvocaten() {
       setLoading(true);
       try {
         const res = await fetch(`/api/advocaten?stad=${encodeURIComponent(gemeente!)}`);
@@ -38,7 +34,7 @@ export default function LawyerReferral({ stage, gemeente }: LawyerReferralProps)
       } catch { /* silent */ }
       finally { setLoading(false); }
     }
-    fetch_advocaten();
+    fetchAdvocaten();
   }, [showLawyers, gemeente]);
 
   if (!showLawyers) return null;
@@ -48,19 +44,16 @@ export default function LawyerReferral({ stage, gemeente }: LawyerReferralProps)
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-pw-red" strokeWidth={2} />
         <p className="text-[14px] font-bold text-pw-red">
-          {stage === 'deurwaarder' ? 'Deurwaarder betrokken' : 'Incassobureau ingeschakeld'}
+          {stage === 'deurwaarder' ? t('bailiffTitle') : t('collectionTitle')}
         </p>
       </div>
 
-      <p className="text-[12px] text-pw-text leading-relaxed mb-3">
-        Bij een {stage === 'deurwaarder' ? 'deurwaarder' : 'incasso'} fase is het verstandig om juridisch advies in te winnen.
-        Hieronder vind je advocatenkantoren bij jou in de buurt die gespecialiseerd zijn in civiel recht.
-      </p>
+      <p className="text-[12px] text-pw-text leading-relaxed mb-3">{t('description')}</p>
 
       {!gemeente && (
         <div className="rounded-card border border-pw-border bg-pw-surface p-3 text-[12px] text-pw-muted">
           <Scale className="inline h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-          Stel je gemeente in via Instellingen om advocaten in jouw buurt te zien.
+          {t('noGemeente')}
         </div>
       )}
 
@@ -73,13 +66,8 @@ export default function LawyerReferral({ stage, gemeente }: LawyerReferralProps)
       {advocaten.length > 0 && (
         <div className="space-y-2">
           {advocaten.map((a) => (
-            <a
-              key={a.kantoor_naam}
-              href={a.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 transition-colors hover:bg-pw-bg"
-            >
+            <a key={a.kantoor_naam} href={a.website_url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 transition-colors hover:bg-pw-bg">
               <Scale className="h-4 w-4 flex-shrink-0 text-pw-navy" strokeWidth={1.5} />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-pw-text truncate">{a.kantoor_naam}</p>
@@ -92,16 +80,14 @@ export default function LawyerReferral({ stage, gemeente }: LawyerReferralProps)
       )}
 
       {gemeente && !loading && advocaten.length === 0 && (
-        <p className="text-[11px] text-pw-muted">
-          Geen advocatenkantoren gevonden voor {gemeente}. Bel het Juridisch Loket: 0900-8020.
-        </p>
+        <p className="text-[11px] text-pw-muted">{t('noResults')}</p>
       )}
 
       <div className="mt-3 rounded-card bg-pw-bg p-3">
         <p className="text-[11px] text-pw-muted leading-relaxed">
-          <strong>Juridisch Loket:</strong> 0900-8020 (gratis) — voor gratis juridisch advies.
+          <strong>{t('juridischLoket')}:</strong> {t('juridischDesc')}
           <br />
-          <strong>Nibud:</strong> nibud.nl — voor financieel advies en schuldhulp.
+          <strong>Nibud:</strong> {t('nibudDesc')}
         </p>
       </div>
     </div>

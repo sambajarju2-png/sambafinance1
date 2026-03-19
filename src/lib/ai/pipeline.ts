@@ -264,6 +264,8 @@ const INSIGHT_PROMPT = `You are a Dutch financial assistant analyzing a user's b
 Provide 2-4 actionable insights based on the bill data below.
 Focus on: payment priority (escalation risk), cost warnings (WIK), and spending patterns.
 
+IMPORTANT: All amounts are in EUROS (e.g. 374.92 means €374.92). Do NOT misread decimals.
+
 User's bills (JSON):
 {bills_json}
 
@@ -293,7 +295,7 @@ export async function generateInsight(
   const billsSummary = bills.map((b) => ({
     id: b.id,
     vendor: b.vendor,
-    amount: b.amount,
+    amount_euros: Number(b.amount) ? (Number(b.amount) / 100).toFixed(2) : '0.00',
     due_date: b.due_date,
     status: b.status,
     escalation_stage: b.escalation_stage,

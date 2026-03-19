@@ -21,6 +21,7 @@ const ESCALATION_COLORS: Record<EscalationStage, string> = {
 export default function BillList() {
   const t = useTranslations('bills');
   const tEsc = useTranslations('escalation');
+  const tCat = useTranslations('addBill');
   const searchParams = useSearchParams();
 
   const [bills, setBills] = useState<Bill[]>([]);
@@ -149,6 +150,7 @@ export default function BillList() {
               key={bill.id}
               bill={bill}
               tEsc={tEsc}
+              tCat={tCat}
               onTap={() => setSelectedBill(bill)}
             />
           ))}
@@ -175,10 +177,12 @@ export default function BillList() {
 function BillRow({
   bill,
   tEsc,
+  tCat,
   onTap,
 }: {
   bill: Bill;
   tEsc: ReturnType<typeof useTranslations>;
+  tCat: ReturnType<typeof useTranslations>;
   onTap: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
@@ -219,7 +223,7 @@ function BillRow({
               {tEsc(bill.escalation_stage)}
             </span>
           </span>
-          <span className="text-[11px] text-pw-muted">{bill.category}</span>
+          <span className="text-[11px] text-pw-muted">{(() => { try { return tCat(`categories.${bill.category}`); } catch { return bill.category; } })()}</span>
         </div>
       </div>
 
