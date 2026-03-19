@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { useTranslations } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
@@ -11,7 +11,7 @@ import { calculateWIKCosts } from '@/lib/wik';
 import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
-import LawyerReferral from '@/components/lawyer-referral'; // <-- 1. Added import
+import LawyerReferral from '@/components/lawyer-referral';
 
 type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
@@ -40,6 +40,23 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const [notesSaved, setNotesSaved] = useState(false);
   const [draftLetterOpen, setDraftLetterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  
+  // State to hold the dynamic gemeente, default to empty or a fallback
+  const [userGemeente, setUserGemeente] = useState<string>('');
+
+  // Fetch the user's profile to get their gemeente
+  useEffect(() => {
+    if (bill) {
+      fetch('/api/settings/profile')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.profile?.gemeente) {
+            setUserGemeente(d.profile.gemeente);
+          }
+        })
+        .catch(() => { /* silent catch */ });
+    }
+  }, [bill]);
 
   if (!bill) return null;
 
@@ -167,11 +184,14 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
                 </div>
               )}
 
+              {/* LawyerReferral component synced dynamically */}
+              <LawyerReferral 
+                stage={bill.escalation_stage} 
+                gemeente={userGemeente} 
+              />
+
               {/* Escalation info with legal details */}
               <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
-              
-              {/* 2. Added LawyerReferral component right after EscalationInfo */}
-              <LawyerReferral stage={bill.escalation_stage} gemeente="Rotterdam" />
             </div>
           )}
 
