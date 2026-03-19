@@ -489,7 +489,6 @@
     "title": "How are you feeling today?",
     "logged": "Thanks! Your mood has been logged."
   },
-<<<<<<< HEAD
   "profile": {
     "title": "Profile",
     "firstName": "First name",
@@ -509,7 +508,7 @@
     "juridischLoket": "Legal Desk",
     "juridischDesc": "0900-8020 (free) — for free legal advice",
     "nibudDesc": "nibud.nl — for financial advice and debt help"
-=======
+  },
   "helpResources": {
     "title": "Help Resources",
     "desc": "Free help with financial problems and debts.",
@@ -529,6 +528,5 @@
     "features_desc": "Emails about new features and tips",
     "push_label": "Push notifications",
     "push_desc": "Receive reminders on your device"
->>>>>>> 9f729697af373fd01c4199cbf0b8de66e8bb1dc2
   }
 }
