@@ -95,7 +95,6 @@ const EN_STAGES = {
   deurwaarder: 'Bailiff',
 };
 
-// NEW: Settings menu translations
 const NL_SETTINGS = {
   title: 'Instellingen',
   profile: 'Profiel',
@@ -109,7 +108,12 @@ const NL_SETTINGS = {
   budget: 'Budget',
   budgetDesc: 'Stel je maandelijks budget in',
   debtHelp: 'Schuldhulp',
-  debtHelpDesc: 'Vind hulp bij jou in de buurt'
+  debtHelpDesc: 'Vind hulp bij jou in de buurt',
+  back: 'Terug', 
+  monthlyBudget: 'Maandelijks budget', 
+  monthlyBudgetDesc: 'Stel een maandelijks budget in voor je rekeningen.', 
+  save: 'Opslaan', 
+  saved: 'Opgeslagen' 
 };
 
 const EN_SETTINGS = {
@@ -125,7 +129,12 @@ const EN_SETTINGS = {
   budget: 'Budget',
   budgetDesc: 'Set your monthly budget',
   debtHelp: 'Debt Help',
-  debtHelpDesc: 'Find help in your area'
+  debtHelpDesc: 'Find help in your area',
+  back: 'Back', 
+  monthlyBudget: 'Monthly budget', 
+  monthlyBudgetDesc: 'Set a monthly budget for your bills.', 
+  save: 'Save', 
+  saved: 'Saved' 
 };
 
 function updateFile(filePath, achievements, mood, stages, settings) {
