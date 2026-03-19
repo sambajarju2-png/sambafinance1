@@ -1,3 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================================================
+   PayWatch v2 — Design System CSS Variables
+   Visual DNA: Stripe × Revolut × Linear
+   ============================================================================= */
+
+:root {
+  /* Background & Surface */
+  --bg: #F4F7FB;
+  --surface: #FFFFFF;
+
+  /* Brand */
+  --navy: #0A2540;
+  --blue: #2563EB;
+
+  /* Text */
+  --text: #0F172A;
+  --muted: #64748B;
+
+  /* Borders */
+  --border: #E2E8F0;
+
+  /* Status Colors */
+  --green: #059669;
+  --amber: #D97706;
+  --orange: #EA580C;
+  --red: #DC2626;
+  --dark-red: #991B1B;
+  --purple: #7C3AED;
+
+  /* Glassmorphism Topbar */
+  --topbar-bg: rgba(255, 255, 255, 0.72);
+  --topbar-blur: 12px;
+
+  /* Shadows (modals/drawers only) */
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --shadow-drawer: 0 -4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 /* Dark mode variables (activated via .dark class) */
 .dark {
   --bg: #0B1120;
@@ -8,7 +51,7 @@
   --border: #334155;
   --topbar-bg: rgba(15, 23, 42, 0.72);
   
-  /* Add these adjusted status colors for better dark-mode contrast */
+  /* Adjusted status colors to pop on dark backgrounds */
   --blue: #3B82F6;
   --green: #10B981;
   --amber: #F59E0B;
@@ -17,3 +60,92 @@
   --dark-red: #F87171;
   --purple: #8B5CF6;
 }
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100dvh;
+}
+
+/* =============================================================================
+   Component Utilities
+   ============================================================================= */
+
+/* Stat card accent bar (3px colored top border) */
+@layer components {
+  .stat-card {
+    @apply relative overflow-hidden rounded-card border border-pw-border bg-pw-surface;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--blue);
+  }
+
+  .stat-card--green::before {
+    background: var(--green);
+  }
+
+  .stat-card--amber::before {
+    background: var(--amber);
+  }
+
+  .stat-card--red::before {
+    background: var(--red);
+  }
+
+  /* Glassmorphism topbar */
+  .glass-topbar {
+    background: var(--topbar-bg);
+    backdrop-filter: blur(var(--topbar-blur));
+    -webkit-backdrop-filter: blur(var(--topbar-blur));
+  }
+
+  /* Button press effect */
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /* Escalation badge dot */
+  .escalation-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* Active bottom nav indicator */
+  .nav-active-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+}
+
+/* =============================================================================
+   Skeleton Loading Animation
+   ============================================================================= */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.
