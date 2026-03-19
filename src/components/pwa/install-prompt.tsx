@@ -23,18 +23,16 @@ export default function PwaInstallDrawer() {
     setIsStandalone(standalone);
 
     const wasDismissed = localStorage.getItem('pwa-drawer-dismissed');
-    if (wasDismissed) { setDismissed(true); return; }
+    if (wasDismissed) { setDismissed(true); }
 
     const ua = navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
-    const android = /Android/.test(ua);
-    setIsIOS(ios);
-    setIsAndroid(android);
+    setIsIOS(/iPad|iPhone|iPod/.test(ua));
+    setIsAndroid(/Android/.test(ua));
 
     const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Show drawer after 3 seconds if not installed
+    // Auto-show after 3s if not installed and not dismissed
     if (!standalone && !wasDismissed) {
       const timer = setTimeout(() => setShowDrawer(true), 3000);
       return () => { clearTimeout(timer); window.removeEventListener('beforeinstallprompt', handler); };
@@ -43,7 +41,12 @@ export default function PwaInstallDrawer() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  if (isStandalone || dismissed || !showDrawer) return null;
+  // Admin trigger
+  useEffect(() => {
+    function handleTrigger() { setShowDrawer(true); }
+    window.addEventListener('paywatch-trigger-pwa', handleTrigger);
+    return () => window.removeEventListener('paywatch-trigger-pwa', handleTrigger);
+  }, []);
 
   async function handleInstall() {
     if (deferredPrompt) {
@@ -59,20 +62,16 @@ export default function PwaInstallDrawer() {
     localStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
+  if ((isStandalone || dismissed) && !showDrawer) return null;
+  if (!showDrawer) return null;
+
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-black/40" onClick={handleDismiss} />
-
-      {/* Drawer */}
       <div className="drawer-enter fixed bottom-0 left-0 right-0 z-50 rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
-        {/* Handle */}
-        <div className="flex justify-center pt-3">
-          <div className="h-1 w-10 rounded-full bg-pw-border" />
-        </div>
+        <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         <div className="px-5 pb-8 pt-4">
-          {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-pw-blue/10">
@@ -88,7 +87,6 @@ export default function PwaInstallDrawer() {
             </button>
           </div>
 
-          {/* Instructions */}
           <div className="mt-5 space-y-3">
             {isIOS && (
               <>
@@ -107,20 +105,14 @@ export default function PwaInstallDrawer() {
             )}
           </div>
 
-          {/* Install button (Chrome/Edge native prompt) */}
           {deferredPrompt && (
             <button onClick={handleInstall}
               className="btn-press mt-5 flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[14px] font-semibold text-white">
-              <Download className="h-4 w-4" strokeWidth={1.5} />
-              {t('install')}
+              <Download className="h-4 w-4" strokeWidth={1.5} /> {t('install')}
             </button>
           )}
 
-          {/* Dismiss */}
-          <button onClick={handleDismiss}
-            className="mt-3 w-full text-center text-[12px] font-medium text-pw-muted">
-            {t('maybeLater')}
-          </button>
+          <button onClick={handleDismiss} className="mt-3 w-full text-center text-[12px] font-medium text-pw-muted">{t('maybeLater')}</button>
         </div>
       </div>
     </>
@@ -130,9 +122,7 @@ export default function PwaInstallDrawer() {
 function StepCard({ number, icon: Icon, title, desc }: { number: number; icon: React.ElementType; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-3 rounded-card border border-pw-border bg-pw-surface p-3.5">
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">
-        {number}
-      </div>
+      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">{number}</div>
       <div className="flex-1">
         <div className="flex items-center gap-1.5">
           <Icon className="h-3.5 w-3.5 text-pw-muted" strokeWidth={1.5} />

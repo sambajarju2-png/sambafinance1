@@ -17,6 +17,7 @@ import ProfileEditor from '@/components/profile-editor';
 import NotificationPreferences from '@/components/notification-preferences';
 import HelpResources from '@/components/help-resources';
 import TrustBadges from '@/components/trust-badges';
+import AdminTestPanel from '@/components/admin-test-panel';
 
 type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help';
 
@@ -84,6 +85,7 @@ export default function InstellingenPage() {
         <PushPermission />
         <TestNotification />
         <TestEmailButtons />
+        <AdminTestPanel />
       </div>
     );
   }

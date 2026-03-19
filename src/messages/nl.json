@@ -196,9 +196,21 @@
   },
   "pwa": {
     "installTitle": "Installeer PayWatch",
-    "installDesc": "Voeg PayWatch toe aan je startscherm voor snelle toegang.",
-    "installIOS": "Tik op 'Deel' en dan 'Zet op beginscherm' om PayWatch te installeren.",
-    "install": "Installeer"
+    "installDesc": "Voeg PayWatch toe aan je startscherm",
+    "install": "Installeren",
+    "maybeLater": "Misschien later",
+    "iosStep1Title": "Tik op 'Deel'",
+    "iosStep1Desc": "Tik onderaan op het deel-icoon (vierkant met pijl omhoog).",
+    "iosStep2Title": "'Zet op beginscherm'",
+    "iosStep2Desc": "Scroll naar beneden en tik op 'Zet op beginscherm'.",
+    "iosStep3Title": "Klaar!",
+    "iosStep3Desc": "PayWatch staat nu op je startscherm als een echte app.",
+    "androidStep1Title": "Open het menu",
+    "androidStep1Desc": "Tik op de drie puntjes rechtsboven in je browser.",
+    "androidStep2Title": "'Installeren' of 'Toevoegen'",
+    "androidStep2Desc": "Tik op 'App installeren' of 'Toevoegen aan startscherm'.",
+    "androidStep3Title": "Klaar!",
+    "androidStep3Desc": "PayWatch staat nu op je startscherm als een echte app."
   },
   "stats": {
     "title": "Statistieken",
@@ -526,5 +538,39 @@
     "features_desc": "E-mails over nieuwe functies en tips",
     "push_label": "Push meldingen",
     "push_desc": "Ontvang herinneringen op je apparaat"
+  },
+  "tour": {
+    "skip": "Overslaan",
+    "next": "Volgende",
+    "getStarted": "Aan de slag",
+    "overview": {
+      "title": "Overzicht",
+      "desc": "Je dashboard. Hier zie je in een oogopslag al je openstaande rekeningen, achterstallige betalingen en bespaarde incassokosten."
+    },
+    "payments": {
+      "title": "Betalingen",
+      "desc": "Alle rekeningen op een rij. Filter op openstaand, aankomend, achterstallig of betaald. Tik op een rekening voor details en acties."
+    },
+    "stats": {
+      "title": "Statistieken",
+      "desc": "Grafieken en AI-inzichten. Bekijk je bestedingspatronen en ontvang persoonlijk financieel advies."
+    },
+    "cashflow": {
+      "title": "Cashflow",
+      "desc": "Maandelijks overzicht van je inkomsten en uitgaven. Zie in een oogopslag of je op schema ligt."
+    },
+    "settings": {
+      "title": "Instellingen",
+      "desc": "Profiel, Gmail koppeling, meldingen, prestaties, budget en hulpbronnen. Alles op een plek."
+    }
+  },
+  "feedback": {
+    "title": "Hoe bevalt PayWatch?",
+    "desc": "Je gebruikt de app nu een paar dagen. We horen graag wat je ervan vindt.",
+    "placeholder": "Vertel ons wat je vindt... (optioneel)",
+    "submit": "Verstuur",
+    "later": "Later",
+    "thankYouTitle": "Bedankt!",
+    "thankYouDesc": "Je feedback helpt ons PayWatch beter te maken voor iedereen."
   }
 }

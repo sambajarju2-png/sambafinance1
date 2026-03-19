@@ -196,9 +196,21 @@
   },
   "pwa": {
     "installTitle": "Install PayWatch",
-    "installDesc": "Add PayWatch to your home screen for quick access.",
-    "installIOS": "Tap 'Share' then 'Add to Home Screen' to install PayWatch.",
-    "install": "Install"
+    "installDesc": "Add PayWatch to your home screen",
+    "install": "Install",
+    "maybeLater": "Maybe later",
+    "iosStep1Title": "Tap 'Share'",
+    "iosStep1Desc": "Tap the share icon at the bottom (square with arrow up).",
+    "iosStep2Title": "'Add to Home Screen'",
+    "iosStep2Desc": "Scroll down and tap 'Add to Home Screen'.",
+    "iosStep3Title": "Done!",
+    "iosStep3Desc": "PayWatch is now on your home screen like a real app.",
+    "androidStep1Title": "Open the menu",
+    "androidStep1Desc": "Tap the three dots in the top right of your browser.",
+    "androidStep2Title": "'Install' or 'Add to home screen'",
+    "androidStep2Desc": "Tap 'Install app' or 'Add to home screen'.",
+    "androidStep3Title": "Done!",
+    "androidStep3Desc": "PayWatch is now on your home screen like a real app."
   },
   "stats": {
     "title": "Statistics",
@@ -528,5 +540,39 @@
     "features_desc": "Emails about new features and tips",
     "push_label": "Push notifications",
     "push_desc": "Receive reminders on your device"
+  },
+  "tour": {
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Let's go",
+    "overview": {
+      "title": "Overview",
+      "desc": "Your dashboard. See all your outstanding bills, overdue payments and saved collection costs at a glance."
+    },
+    "payments": {
+      "title": "Payments",
+      "desc": "All your bills in one place. Filter by outstanding, upcoming, overdue or paid. Tap a bill for details and actions."
+    },
+    "stats": {
+      "title": "Statistics",
+      "desc": "Charts and AI insights. View your spending patterns and receive personalized financial advice."
+    },
+    "cashflow": {
+      "title": "Cashflow",
+      "desc": "Monthly overview of your income and expenses. See at a glance if you are on track."
+    },
+    "settings": {
+      "title": "Settings",
+      "desc": "Profile, Gmail connection, notifications, achievements, budget and help resources. All in one place."
+    }
+  },
+  "feedback": {
+    "title": "How do you like PayWatch?",
+    "desc": "You've been using the app for a few days. We'd love to hear what you think.",
+    "placeholder": "Tell us what you think... (optional)",
+    "submit": "Submit",
+    "later": "Later",
+    "thankYouTitle": "Thank you!",
+    "thankYouDesc": "Your feedback helps us make PayWatch better for everyone."
   }
 }

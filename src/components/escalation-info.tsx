@@ -5,7 +5,6 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Info, AlertTriangle, Shield, ExternalLink, MapPin } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { calculateWIKCosts, getStageDescription } from '@/lib/wik';
-import LawyerReferral from '@/components/lawyer-referral';
 
 type EscalationStage = 'factuur' | 'herinnering' | 'aanmaning' | 'incasso' | 'deurwaarder';
 
@@ -141,9 +140,6 @@ export default function EscalationInfo({ stage, amountCents, language: _provided
           </div>
         </div>
       )}
-
-      {/* Lawyer Referral Component */}
-      <LawyerReferral stage={validStage} gemeente={gemeente} />
 
       {/* Gemeente-specific help links */}
       {gemeente && gemeenteLinks.length > 0 && (
