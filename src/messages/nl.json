@@ -254,7 +254,7 @@
   },
   "settings": {
     "title": "Instellingen",
-    "backToSettings": "Terug",
+    "back": "Terug",
     "profile": "Profiel",
     "profileDesc": "Naam, taal, PIN en donkere modus",
     "gmailAccounts": "Gmail accounts",
