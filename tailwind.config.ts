@@ -4,28 +4,29 @@ const config: Config = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class',
+  darkMode: 'class', // <--- This enables the switch
   theme: {
     extend: {
       fontFamily: {
         sans: ['var(--font-plus-jakarta)', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // PayWatch Design System
+        // This maps your Tailwind classes (like 'bg-pw-surface') 
+        // to your CSS variables (like '--surface')
         pw: {
-          bg: '#F4F7FB',
-          surface: '#FFFFFF',
-          navy: '#0A2540',
-          blue: '#2563EB',
-          text: '#0F172A',
-          muted: '#64748B',
-          border: '#E2E8F0',
-          green: '#059669',
-          amber: '#D97706',
-          orange: '#EA580C',
-          red: '#DC2626',
-          'dark-red': '#991B1B',
-          purple: '#7C3AED',
+          bg: 'var(--bg)',
+          surface: 'var(--surface)',
+          navy: 'var(--navy)',
+          blue: 'var(--blue)',
+          text: 'var(--text)',
+          muted: 'var(--muted)',
+          border: 'var(--border)',
+          green: 'var(--green)',
+          amber: 'var(--amber)',
+          orange: 'var(--orange)',
+          red: 'var(--red)',
+          'dark-red': 'var(--dark-red)',
+          purple: 'var(--purple)',
         },
       },
       borderRadius: {
