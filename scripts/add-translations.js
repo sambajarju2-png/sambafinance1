@@ -1,10 +1,11 @@
 /**
  * scripts/add-translations.js
- * Run this to sync all app translations to nl.json and en.json
+ * Run with: node scripts/add-translations.js
  */
 const fs = require('fs');
 const path = require('path');
 
+// --- DUTCH DATA ---
 const NL_ACHIEVEMENTS = {
   title: 'Prestaties',
   categories: { betalingen: 'Betalingen', streak: 'Streak', gezondheid: 'Financiële gezondheid', gebruik: 'App gebruik' },
@@ -37,6 +38,75 @@ const NL_ACHIEVEMENTS = {
   },
 };
 
+const NL_SETTINGS = {
+  title: 'Instellingen',
+  profile: 'Profiel',
+  profileDesc: 'Beheer je persoonlijke gegevens',
+  gmailAccounts: 'Gmail Accounts',
+  gmailAccountsDesc: 'Koppel je e-mail voor automatische import',
+  notifications: 'Meldingen',
+  notificationsDesc: 'Beheer je notificaties',
+  achievements: 'Prestaties',
+  achievementsDesc: 'Bekijk je prestaties en badges',
+  budget: 'Budget',
+  budgetDesc: 'Stel je maandelijks budget in',
+  debtHelp: 'Schuldhulp',
+  debtHelpDesc: 'Vind hulp bij jou in de buurt',
+  back: 'Terug',
+  monthlyBudget: 'Maandelijks budget',
+  monthlyBudgetDesc: 'Stel een maandelijks budget in voor je rekeningen.',
+  save: 'Opslaan',
+  saved: 'Opgeslagen'
+};
+
+const NL_HELP_RESOURCES = {
+  title: 'Hulpbronnen',
+  desc: 'Gratis hulp bij financiële problemen en schulden.',
+  juridisch_desc: 'Gratis juridisch advies',
+  nibud_desc: 'Informatie over budgetteren',
+  schuldhulp_desc: 'Vrijwillige hulp bij schulden',
+  geldfit_desc: 'Check of je geldzaken op orde zijn',
+  ombudsman_desc: 'Klachten over overheidsinstanties'
+};
+
+const NL_NOTIFICATIONS = {
+  title: 'E-mail & meldingen',
+  digest_label: 'Wekelijks overzicht',
+  digest_desc: 'Ontvang elke week een samenvatting per e-mail',
+  welcome_label: 'Welkomst e-mails',
+  welcome_desc: 'Ontvang onboarding e-mails na registratie',
+  features_label: 'Functie updates',
+  features_desc: 'E-mails over nieuwe functies en tips',
+  push_label: 'Push meldingen',
+  push_desc: 'Ontvang herinneringen op je apparaat'
+};
+
+const NL_MOOD = { title: 'Hoe voel je je vandaag?', logged: 'Bedankt! Je stemming is gelogd.' };
+
+const NL_STAGES = {
+  factuur: 'Factuur',
+  herinnering: 'Herinnering',
+  aanmaning: 'Aanmaning',
+  incasso: 'Incasso',
+  deurwaarder: 'Deurwaarder',
+};
+
+const NL_INCASSO = {
+  recommendedAction: 'Aanbevolen actie',
+  wikTitle: 'WIK-incassokosten (indicatie)',
+  wikDescription: 'Als u niet op tijd betaalt, mag de schuldeiser deze extra kosten in rekening brengen.',
+  wikExtra: 'extra kosten',
+  wikDisclaimer: 'Dit is een berekening op basis van de Wet Incassokosten (WIK).',
+  savingsTitle: 'Bespaar op incassokosten',
+  savingsDescription: 'Betaal deze rekening op tijd en voorkom tot {amount} aan extra incassokosten.',
+  helpTitle: 'Hulp nodig?',
+  juridischLoket: 'Gratis juridisch advies',
+  nibud: 'Informatie over budgetteren',
+  schuldhulp: 'Hulp bij schulden via de overheid',
+  legalDisclaimer: 'Let op: Dit is een indicatie. Er kunnen geen rechten aan deze berekening worden ontleend.'
+};
+
+// --- ENGLISH DATA ---
 const EN_ACHIEVEMENTS = {
   title: 'Achievements',
   categories: { betalingen: 'Payments', streak: 'Streak', gezondheid: 'Financial Health', gebruik: 'App Usage' },
@@ -69,27 +139,6 @@ const EN_ACHIEVEMENTS = {
   },
 };
 
-const NL_SETTINGS = {
-  title: 'Instellingen',
-  profile: 'Profiel',
-  profileDesc: 'Beheer je persoonlijke gegevens',
-  gmailAccounts: 'Gmail Accounts',
-  gmailAccountsDesc: 'Koppel je e-mail voor automatische import',
-  notifications: 'Meldingen',
-  notificationsDesc: 'Beheer je notificaties',
-  achievements: 'Prestaties',
-  achievementsDesc: 'Bekijk je prestaties en badges',
-  budget: 'Budget',
-  budgetDesc: 'Stel je maandelijks budget in',
-  debtHelp: 'Schuldhulp',
-  debtHelpDesc: 'Vind hulp bij jou in de buurt',
-  back: 'Terug',
-  monthlyBudget: 'Maandelijks budget',
-  monthlyBudgetDesc: 'Stel een maandelijks budget in voor je rekeningen.',
-  save: 'Opslaan',
-  saved: 'Opgeslagen'
-};
-
 const EN_SETTINGS = {
   title: 'Settings',
   profile: 'Profile',
@@ -111,36 +160,14 @@ const EN_SETTINGS = {
   saved: 'Saved'
 };
 
-const NL_HELP_RESOURCES = {
-  title: 'Hulpbronnen',
-  desc: 'Gratis hulp bij financiële problemen en schulden.',
-  juridisch_desc: 'Gratis juridisch advies',
-  nibud_desc: 'Nationaal Instituut voor Budgetvoorlichting',
-  schuldhulp_desc: 'Vrijwillige hulp bij schulden',
-  geldfit_desc: 'Check of je geldzaken op orde zijn',
-  ombudsman_desc: 'Klachten over overheidsinstanties'
-};
-
 const EN_HELP_RESOURCES = {
   title: 'Help Resources',
   desc: 'Free help with financial problems and debts.',
   juridisch_desc: 'Free legal advice',
-  nibud_desc: 'National Institute for Family Finance Information',
-  schuldhulp_desc: 'Voluntary debt assistance',
+  nibud_desc: 'Information about budgeting',
+  schuldhulp_desc: 'Voluntary help with debts',
   geldfit_desc: 'Check if your finances are in order',
   ombudsman_desc: 'Complaints about government agencies'
-};
-
-const NL_NOTIFICATIONS = {
-  title: 'E-mail & meldingen',
-  digest_label: 'Wekelijks overzicht',
-  digest_desc: 'Ontvang elke week een samenvatting per e-mail',
-  welcome_label: 'Welkomst e-mails',
-  welcome_desc: 'Ontvang onboarding e-mails na registratie',
-  features_label: 'Functie updates',
-  features_desc: 'E-mails over nieuwe functies en tips',
-  push_label: 'Push meldingen',
-  push_desc: 'Ontvang herinneringen op je apparaat'
 };
 
 const EN_NOTIFICATIONS = {
@@ -155,46 +182,69 @@ const EN_NOTIFICATIONS = {
   push_desc: 'Receive reminders on your device'
 };
 
-const NL_MOOD = { title: 'Hoe voel je je vandaag?', logged: 'Bedankt! Je stemming is gelogd.' };
 const EN_MOOD = { title: 'How are you feeling today?', logged: 'Thanks! Your mood has been logged.' };
 
-const NL_STAGES = { factuur: 'Factuur', herinnering: 'Herinnering', aanmaning: 'Aanmaning', incasso: 'Incasso', deurwaarder: 'Deurwaarder' };
-const EN_STAGES = { factuur: 'Invoice', herinnering: 'Reminder', aanmaning: 'Final notice', incasso: 'Collection', deurwaarder: 'Bailiff' };
+const EN_STAGES = {
+  factuur: 'Invoice',
+  herinnering: 'Reminder',
+  aanmaning: 'Final notice',
+  incasso: 'Collection',
+  deurwaarder: 'Bailiff',
+};
 
-function updateFile(filePath, achievements, mood, stages, settings, help, notifications) {
+const EN_INCASSO = {
+  recommendedAction: 'Recommended action',
+  wikTitle: 'Collection costs (indication)',
+  wikDescription: 'If you do not pay on time, the creditor may charge these extra costs.',
+  wikExtra: 'extra costs',
+  wikDisclaimer: 'This is a calculation based on the Dutch Collection Costs Act (WIK).',
+  savingsTitle: 'Save on collection costs',
+  savingsDescription: 'Pay this bill on time and avoid up to {amount} in extra collection costs.',
+  helpTitle: 'Need help?',
+  juridischLoket: 'Free legal advice',
+  nibud: 'Information about budgeting',
+  schuldhulp: 'Debt assistance via the government',
+  legalDisclaimer: 'Note: This is an indication. No rights can be derived from this calculation.'
+};
+
+// --- LOGIC ---
+
+function updateFile(filePath, achievements, mood, stages, settings, helpResources, notifications, incasso) {
   if (!fs.existsSync(filePath)) {
-    console.error('File not found:', filePath);
+    console.error(`File not found: ${filePath}`);
     return;
   }
-  
+
   const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   
   content.achievements = achievements;
   content.mood = mood;
   content.escalation = stages;
   content.settings = { ...content.settings, ...settings };
-  content.helpResources = help;
+  content.helpResources = helpResources;
   content.notifications = notifications;
+  content.incasso = incasso;
   
-  // Helpers for Add Bill / Bill Details
+  // Add stage to addBill
   if (!content.addBill) content.addBill = {};
   content.addBill.stage = achievements === NL_ACHIEVEMENTS ? 'Fase' : 'Stage';
   content.addBill.stagePlaceholder = achievements === NL_ACHIEVEMENTS ? 'Selecteer escalatiefase' : 'Select escalation stage';
   
+  // Add edit keys
   if (!content.billDetail) content.billDetail = {};
   content.billDetail.editBill = achievements === NL_ACHIEVEMENTS ? 'Bewerken' : 'Edit';
   content.billDetail.editBillDesc = achievements === NL_ACHIEVEMENTS ? 'Wijzig gegevens van deze rekening' : 'Change details of this bill';
   content.billDetail.saveChanges = achievements === NL_ACHIEVEMENTS ? 'Opslaan' : 'Save changes';
   content.billDetail.editSaved = achievements === NL_ACHIEVEMENTS ? 'Wijzigingen opgeslagen' : 'Changes saved';
-
+  
   fs.writeFileSync(filePath, JSON.stringify(content, null, 2) + '\n', 'utf-8');
-  console.log('Successfully updated:', filePath);
+  console.log('Updated:', filePath);
 }
 
 const nlPath = path.join(__dirname, '..', 'src', 'messages', 'nl.json');
 const enPath = path.join(__dirname, '..', 'src', 'messages', 'en.json');
 
-updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES, NL_SETTINGS, NL_HELP_RESOURCES, NL_NOTIFICATIONS);
-updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES, EN_SETTINGS, EN_HELP_RESOURCES, EN_NOTIFICATIONS);
+updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES, NL_SETTINGS, NL_HELP_RESOURCES, NL_NOTIFICATIONS, NL_INCASSO);
+updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES, EN_SETTINGS, EN_HELP_RESOURCES, EN_NOTIFICATIONS, EN_INCASSO);
 
-console.log('--- All translations synchronized successfully! ---');
+console.log('Done! All translations synchronized successfully.');
