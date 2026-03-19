@@ -1,6 +1,6 @@
 /**
- * Run ONCE after unzipping: node scripts/add-translations.js
- * Adds achievement, mood, escalation stage, and settings translations to nl.json and en.json
+ * scripts/add-translations.js
+ * Run this to sync all app translations to nl.json and en.json
  */
 const fs = require('fs');
 const path = require('path');
@@ -69,32 +69,6 @@ const EN_ACHIEVEMENTS = {
   },
 };
 
-const NL_MOOD = {
-  title: 'Hoe voel je je vandaag?',
-  logged: 'Bedankt! Je stemming is gelogd.',
-};
-
-const EN_MOOD = {
-  title: 'How are you feeling today?',
-  logged: 'Thanks! Your mood has been logged.',
-};
-
-const NL_STAGES = {
-  factuur: 'Factuur',
-  herinnering: 'Herinnering',
-  aanmaning: 'Aanmaning',
-  incasso: 'Incasso',
-  deurwaarder: 'Deurwaarder',
-};
-
-const EN_STAGES = {
-  factuur: 'Invoice',
-  herinnering: 'Reminder',
-  aanmaning: 'Final notice',
-  incasso: 'Collection',
-  deurwaarder: 'Bailiff',
-};
-
 const NL_SETTINGS = {
   title: 'Instellingen',
   profile: 'Profiel',
@@ -109,11 +83,11 @@ const NL_SETTINGS = {
   budgetDesc: 'Stel je maandelijks budget in',
   debtHelp: 'Schuldhulp',
   debtHelpDesc: 'Vind hulp bij jou in de buurt',
-  back: 'Terug', 
-  monthlyBudget: 'Maandelijks budget', 
-  monthlyBudgetDesc: 'Stel een maandelijks budget in voor je rekeningen.', 
-  save: 'Opslaan', 
-  saved: 'Opgeslagen' 
+  back: 'Terug',
+  monthlyBudget: 'Maandelijks budget',
+  monthlyBudgetDesc: 'Stel een maandelijks budget in voor je rekeningen.',
+  save: 'Opslaan',
+  saved: 'Opgeslagen'
 };
 
 const EN_SETTINGS = {
@@ -130,42 +104,97 @@ const EN_SETTINGS = {
   budgetDesc: 'Set your monthly budget',
   debtHelp: 'Debt Help',
   debtHelpDesc: 'Find help in your area',
-  back: 'Back', 
-  monthlyBudget: 'Monthly budget', 
-  monthlyBudgetDesc: 'Set a monthly budget for your bills.', 
-  save: 'Save', 
-  saved: 'Saved' 
+  back: 'Back',
+  monthlyBudget: 'Monthly budget',
+  monthlyBudgetDesc: 'Set a monthly budget for your bills.',
+  save: 'Save',
+  saved: 'Saved'
 };
 
-function updateFile(filePath, achievements, mood, stages, settings) {
+const NL_HELP_RESOURCES = {
+  title: 'Hulpbronnen',
+  desc: 'Gratis hulp bij financiële problemen en schulden.',
+  juridisch_desc: 'Gratis juridisch advies',
+  nibud_desc: 'Nationaal Instituut voor Budgetvoorlichting',
+  schuldhulp_desc: 'Vrijwillige hulp bij schulden',
+  geldfit_desc: 'Check of je geldzaken op orde zijn',
+  ombudsman_desc: 'Klachten over overheidsinstanties'
+};
+
+const EN_HELP_RESOURCES = {
+  title: 'Help Resources',
+  desc: 'Free help with financial problems and debts.',
+  juridisch_desc: 'Free legal advice',
+  nibud_desc: 'National Institute for Family Finance Information',
+  schuldhulp_desc: 'Voluntary debt assistance',
+  geldfit_desc: 'Check if your finances are in order',
+  ombudsman_desc: 'Complaints about government agencies'
+};
+
+const NL_NOTIFICATIONS = {
+  title: 'E-mail & meldingen',
+  digest_label: 'Wekelijks overzicht',
+  digest_desc: 'Ontvang elke week een samenvatting per e-mail',
+  welcome_label: 'Welkomst e-mails',
+  welcome_desc: 'Ontvang onboarding e-mails na registratie',
+  features_label: 'Functie updates',
+  features_desc: 'E-mails over nieuwe functies en tips',
+  push_label: 'Push meldingen',
+  push_desc: 'Ontvang herinneringen op je apparaat'
+};
+
+const EN_NOTIFICATIONS = {
+  title: 'Email & notifications',
+  digest_label: 'Weekly digest',
+  digest_desc: 'Receive a weekly summary by email',
+  welcome_label: 'Welcome emails',
+  welcome_desc: 'Receive onboarding emails after registration',
+  features_label: 'Feature updates',
+  features_desc: 'Emails about new features and tips',
+  push_label: 'Push notifications',
+  push_desc: 'Receive reminders on your device'
+};
+
+const NL_MOOD = { title: 'Hoe voel je je vandaag?', logged: 'Bedankt! Je stemming is gelogd.' };
+const EN_MOOD = { title: 'How are you feeling today?', logged: 'Thanks! Your mood has been logged.' };
+
+const NL_STAGES = { factuur: 'Factuur', herinnering: 'Herinnering', aanmaning: 'Aanmaning', incasso: 'Incasso', deurwaarder: 'Deurwaarder' };
+const EN_STAGES = { factuur: 'Invoice', herinnering: 'Reminder', aanmaning: 'Final notice', incasso: 'Collection', deurwaarder: 'Bailiff' };
+
+function updateFile(filePath, achievements, mood, stages, settings, help, notifications) {
+  if (!fs.existsSync(filePath)) {
+    console.error('File not found:', filePath);
+    return;
+  }
+  
   const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  
   content.achievements = achievements;
   content.mood = mood;
   content.escalation = stages;
-  
-  // Merge settings without overwriting existing settings keys
   content.settings = { ...content.settings, ...settings };
+  content.helpResources = help;
+  content.notifications = notifications;
   
-  // Add stage to addBill
+  // Helpers for Add Bill / Bill Details
   if (!content.addBill) content.addBill = {};
   content.addBill.stage = achievements === NL_ACHIEVEMENTS ? 'Fase' : 'Stage';
   content.addBill.stagePlaceholder = achievements === NL_ACHIEVEMENTS ? 'Selecteer escalatiefase' : 'Select escalation stage';
   
-  // Add edit keys
   if (!content.billDetail) content.billDetail = {};
   content.billDetail.editBill = achievements === NL_ACHIEVEMENTS ? 'Bewerken' : 'Edit';
   content.billDetail.editBillDesc = achievements === NL_ACHIEVEMENTS ? 'Wijzig gegevens van deze rekening' : 'Change details of this bill';
   content.billDetail.saveChanges = achievements === NL_ACHIEVEMENTS ? 'Opslaan' : 'Save changes';
   content.billDetail.editSaved = achievements === NL_ACHIEVEMENTS ? 'Wijzigingen opgeslagen' : 'Changes saved';
-  
+
   fs.writeFileSync(filePath, JSON.stringify(content, null, 2) + '\n', 'utf-8');
-  console.log('Updated:', filePath);
+  console.log('Successfully updated:', filePath);
 }
 
 const nlPath = path.join(__dirname, '..', 'src', 'messages', 'nl.json');
 const enPath = path.join(__dirname, '..', 'src', 'messages', 'en.json');
 
-updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES, NL_SETTINGS);
-updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES, EN_SETTINGS);
+updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES, NL_SETTINGS, NL_HELP_RESOURCES, NL_NOTIFICATIONS);
+updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES, EN_SETTINGS, EN_HELP_RESOURCES, EN_NOTIFICATIONS);
 
-console.log('Done! Achievement, mood, stage, and settings translations added.');
+console.log('--- All translations synchronized successfully! ---');
