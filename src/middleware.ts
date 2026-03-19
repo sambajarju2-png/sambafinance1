@@ -1,9 +1,16 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from './i18n/routing';
+
+// Initialize next-intl middleware
+const intlMiddleware = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // 1. Run next-intl middleware first
+  const response = intlMiddleware(request);
 
+  // 2. Setup Supabase
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -12,8 +19,8 @@ export async function middleware(request: NextRequest) {
         getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
+          // Note: we apply cookie changes to the 'response' object from intlMiddleware
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     }
@@ -22,21 +29,21 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // Root / is hybrid — page.tsx handles its own redirect
-  if (pathname === '/') return supabaseResponse;
+  // Root / is hybrid
+  if (pathname === '/') return response;
 
-  // Auth callback always passes through
-  if (pathname.startsWith('/auth/callback')) return supabaseResponse;
+  // Auth callback
+  if (pathname.startsWith('/auth/callback')) return response;
 
-  // Logged-in user visiting login/signup → dashboard
+  // Redirect logged-in users away from login
   if (user && (pathname === '/auth/login' || pathname === '/auth/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/overzicht';
     return NextResponse.redirect(url);
   }
 
-  // Auth pages for anon users → pass through
-  if (pathname.startsWith('/auth/')) return supabaseResponse;
+  // Auth pages for anon users
+  if (pathname.startsWith('/auth/')) return response;
 
   // App routes require auth
   const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
@@ -48,11 +55,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|sw\\.js|api/).*)',
-  ],
+  // Matcher for both next-intl and supabase
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|auth/callback).*)']
 };
