@@ -360,7 +360,7 @@
     "juridischLoket": "Free legal advice (0900-8020)",
     "nibud": "Financial advice and budgeting",
     "schuldhulp": "Municipal debt assistance",
-    "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice. Consult a lawyer or contact Juridisch Loket for personal advice.",
+    "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice.",
     "overdueWarning": "This bill is overdue. Pay as soon as possible to avoid extra costs.",
     "daysOverdue": "{days} days overdue"
   },
