@@ -1,6 +1,6 @@
 /**
  * Run ONCE after unzipping: node scripts/add-translations.js
- * Adds achievement, mood, escalation stage translations to nl.json and en.json
+ * Adds achievement, mood, escalation stage, and settings translations to nl.json and en.json
  */
 const fs = require('fs');
 const path = require('path');
@@ -95,21 +95,60 @@ const EN_STAGES = {
   deurwaarder: 'Bailiff',
 };
 
-function updateFile(filePath, achievements, mood, stages) {
+// NEW: Settings menu translations
+const NL_SETTINGS = {
+  title: 'Instellingen',
+  profile: 'Profiel',
+  profileDesc: 'Beheer je persoonlijke gegevens',
+  gmailAccounts: 'Gmail Accounts',
+  gmailAccountsDesc: 'Koppel je e-mail voor automatische import',
+  notifications: 'Meldingen',
+  notificationsDesc: 'Beheer je notificaties',
+  achievements: 'Prestaties',
+  achievementsDesc: 'Bekijk je prestaties en badges',
+  budget: 'Budget',
+  budgetDesc: 'Stel je maandelijks budget in',
+  debtHelp: 'Schuldhulp',
+  debtHelpDesc: 'Vind hulp bij jou in de buurt'
+};
+
+const EN_SETTINGS = {
+  title: 'Settings',
+  profile: 'Profile',
+  profileDesc: 'Manage your personal details',
+  gmailAccounts: 'Gmail Accounts',
+  gmailAccountsDesc: 'Link your email for automatic import',
+  notifications: 'Notifications',
+  notificationsDesc: 'Manage your notification preferences',
+  achievements: 'Achievements',
+  achievementsDesc: 'View your achievements and badges',
+  budget: 'Budget',
+  budgetDesc: 'Set your monthly budget',
+  debtHelp: 'Debt Help',
+  debtHelpDesc: 'Find help in your area'
+};
+
+function updateFile(filePath, achievements, mood, stages, settings) {
   const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   content.achievements = achievements;
   content.mood = mood;
   content.escalation = stages;
+  
+  // Merge settings without overwriting existing settings keys
+  content.settings = { ...content.settings, ...settings };
+  
   // Add stage to addBill
   if (!content.addBill) content.addBill = {};
   content.addBill.stage = achievements === NL_ACHIEVEMENTS ? 'Fase' : 'Stage';
   content.addBill.stagePlaceholder = achievements === NL_ACHIEVEMENTS ? 'Selecteer escalatiefase' : 'Select escalation stage';
+  
   // Add edit keys
   if (!content.billDetail) content.billDetail = {};
   content.billDetail.editBill = achievements === NL_ACHIEVEMENTS ? 'Bewerken' : 'Edit';
   content.billDetail.editBillDesc = achievements === NL_ACHIEVEMENTS ? 'Wijzig gegevens van deze rekening' : 'Change details of this bill';
   content.billDetail.saveChanges = achievements === NL_ACHIEVEMENTS ? 'Opslaan' : 'Save changes';
   content.billDetail.editSaved = achievements === NL_ACHIEVEMENTS ? 'Wijzigingen opgeslagen' : 'Changes saved';
+  
   fs.writeFileSync(filePath, JSON.stringify(content, null, 2) + '\n', 'utf-8');
   console.log('Updated:', filePath);
 }
@@ -117,7 +156,7 @@ function updateFile(filePath, achievements, mood, stages) {
 const nlPath = path.join(__dirname, '..', 'src', 'messages', 'nl.json');
 const enPath = path.join(__dirname, '..', 'src', 'messages', 'en.json');
 
-updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES);
-updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES);
+updateFile(nlPath, NL_ACHIEVEMENTS, NL_MOOD, NL_STAGES, NL_SETTINGS);
+updateFile(enPath, EN_ACHIEVEMENTS, EN_MOOD, EN_STAGES, EN_SETTINGS);
 
-console.log('Done! Achievement, mood, and stage translations added.');
+console.log('Done! Achievement, mood, stage, and settings translations added.');
