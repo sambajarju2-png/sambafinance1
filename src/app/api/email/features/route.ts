@@ -6,8 +6,7 @@ export async function POST(req: NextRequest) {
     const { email, name, language } = await req.json();
     if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
     const { subject, html } = buildFeaturesEmail(name || '', language !== 'en');
-    const result = await sendEmail({ to: email, subject, html });
-    return NextResponse.json(result);
+    return NextResponse.json(await sendEmail({ to: email, subject, html }));
   } catch (err) {
     console.error('Features email error:', err);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });

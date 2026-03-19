@@ -7,6 +7,7 @@ const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 /**
  * POST /api/settings/language
  * Body: { language: 'nl' | 'en' }
+ * Updates user_settings + sets the CORRECT locale cookie.
  */
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
@@ -19,9 +20,9 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
     await supabase.from('user_settings').update({ language }).eq('user_id', userId);
 
-    // Set locale cookie via response headers
+    // CRITICAL: cookie name must match src/i18n/routing.ts → 'paywatch-locale'
     const response = NextResponse.json({ ok: true, language }, { headers: NO_CACHE });
-    response.cookies.set('locale', language, {
+    response.cookies.set('paywatch-locale', language, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
