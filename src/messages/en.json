@@ -167,12 +167,13 @@
     "saveNotes": "Save notes",
     "notesSaved": "Saved",
     "draftLetter": "Draft letter",
-    "draftLetterDesc": "Let AI write a draft letter for this bill",
+    "draftLetterDesc": "Generate a letter or dispute",
     "tabEscalation": "Escalation",
     "editBill": "Edit",
     "editBillDesc": "Change details of this bill",
     "saveChanges": "Save changes",
-    "editSaved": "Changes saved"
+    "editSaved": "Changes saved",
+    "currentStage": "Current stage"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -264,7 +265,11 @@
     "budget": "Budget",
     "budgetDesc": "Set budget limits per category",
     "debtHelp": "Debt help",
-    "debtHelpDesc": "Legal aid, Nibud, Schuldhulpverlening"
+    "debtHelpDesc": "Legal aid, Nibud, Schuldhulpverlening",
+    "deleteAccount": "Delete account",
+    "deleteAccountDesc": "Permanently delete your account and all data",
+    "deleteAccountConfirm": "Are you sure you want to delete your account? This cannot be undone. All your bills, scans and data will be permanently deleted.",
+    "deleteAccountButton": "Yes, delete my account"
   },
   "escalation": {
     "factuur": "Invoice",
@@ -483,5 +488,25 @@
   "mood": {
     "title": "How are you feeling today?",
     "logged": "Thanks! Your mood has been logged."
+  },
+  "profile": {
+    "title": "Profile",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "dateOfBirth": "Date of birth",
+    "email": "Email address",
+    "emailHint": "Email cannot be changed in the app.",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "lawyer": {
+    "bailiffTitle": "Bailiff involved",
+    "collectionTitle": "Collection agency involved",
+    "description": "At this stage it is wise to seek legal advice. Below are law firms near you.",
+    "noGemeente": "Set your municipality in Settings to see lawyers near you.",
+    "noResults": "No law firms found. Call the Legal Desk: 0900-8020.",
+    "juridischLoket": "Legal Desk",
+    "juridischDesc": "0900-8020 (free) — for free legal advice",
+    "nibudDesc": "nibud.nl — for financial advice and debt help"
   }
 }

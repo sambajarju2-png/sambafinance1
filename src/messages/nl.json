@@ -167,12 +167,13 @@
     "saveNotes": "Notities opslaan",
     "notesSaved": "Opgeslagen",
     "draftLetter": "Schrijf concept",
-    "draftLetterDesc": "Laat AI een conceptbrief schrijven voor deze rekening",
+    "draftLetterDesc": "Genereer een brief of bezwaar",
     "tabEscalation": "Escalatie",
     "editBill": "Bewerken",
     "editBillDesc": "Wijzig gegevens van deze rekening",
     "saveChanges": "Opslaan",
-    "editSaved": "Wijzigingen opgeslagen"
+    "editSaved": "Wijzigingen opgeslagen",
+    "currentStage": "Huidige fase"
   },
   "gmail": {
     "title": "Gmail Accounts",
@@ -264,7 +265,11 @@
     "budget": "Budget",
     "budgetDesc": "Stel budgetlimieten per categorie in",
     "debtHelp": "Hulp bij schulden",
-    "debtHelpDesc": "Juridisch Loket, Nibud, Schuldhulpverlening"
+    "debtHelpDesc": "Juridisch Loket, Nibud, Schuldhulpverlening",
+    "deleteAccount": "Account verwijderen",
+    "deleteAccountDesc": "Verwijder je account en al je gegevens permanent",
+    "deleteAccountConfirm": "Weet je zeker dat je je account wilt verwijderen? Dit kan niet ongedaan worden gemaakt. Al je rekeningen, scans en gegevens worden permanent verwijderd.",
+    "deleteAccountButton": "Ja, verwijder mijn account"
   },
   "escalation": {
     "factuur": "Factuur",
@@ -483,5 +488,25 @@
   "mood": {
     "title": "Hoe voel je je vandaag?",
     "logged": "Bedankt! Je stemming is gelogd."
+  },
+  "profile": {
+    "title": "Profiel",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "dateOfBirth": "Geboortedatum",
+    "email": "E-mailadres",
+    "emailHint": "E-mail kan niet gewijzigd worden in de app.",
+    "save": "Opslaan",
+    "saved": "Opgeslagen"
+  },
+  "lawyer": {
+    "bailiffTitle": "Deurwaarder betrokken",
+    "collectionTitle": "Incassobureau ingeschakeld",
+    "description": "Bij deze fase is het verstandig om juridisch advies in te winnen. Hieronder vind je advocatenkantoren bij jou in de buurt.",
+    "noGemeente": "Stel je gemeente in via Instellingen om advocaten bij jou in de buurt te zien.",
+    "noResults": "Geen advocatenkantoren gevonden. Bel het Juridisch Loket: 0900-8020.",
+    "juridischLoket": "Juridisch Loket",
+    "juridischDesc": "0900-8020 (gratis) — voor gratis juridisch advies",
+    "nibudDesc": "nibud.nl — voor financieel advies en schuldhulp"
   }
 }
