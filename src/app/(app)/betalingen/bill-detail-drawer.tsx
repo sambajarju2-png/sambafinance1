@@ -11,6 +11,7 @@ import { calculateWIKCosts } from '@/lib/wik';
 import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
+import LawyerReferral from '@/components/lawyer-referral'; // <-- 1. Added import
 
 type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
@@ -168,6 +169,9 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
               {/* Escalation info with legal details */}
               <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
+              
+              {/* 2. Added LawyerReferral component right after EscalationInfo */}
+              <LawyerReferral stage={bill.escalation_stage} gemeente="Rotterdam" />
             </div>
           )}
 
