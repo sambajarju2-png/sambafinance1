@@ -92,7 +92,7 @@ export function buildWelcomeEmail(name: string, isNl: boolean): { subject: strin
           : "We want to make sure no one ever has to feel that pit in their stomach when opening the mailbox or their inbox again. Together, we'll make sure those bills don't sneak up on you anymore."}</p>
         ${zenBox(isNl ? '<strong>Jij houdt de regie, wij houden de wacht.</strong>' : "<strong>You stay in control; we'll keep watch.</strong>")}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Start je eerste scan' : 'Start your first scan', 'https://app.hypesamba.com/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Start je eerste scan' : 'Start your first scan', 'https://app.paywatch.app/overzicht')}</td></tr>
       <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Welkom bij de familie,' : 'Welcome to the family,'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
       ${footerHtml(isNl)}
     `, isNl ? 'Adem in, adem uit. Je staat er niet meer alleen voor.' : "Breathe in, breathe out. You're not doing this alone anymore.")
@@ -118,7 +118,7 @@ export function buildFeaturesEmail(name: string, isNl: boolean): { subject: stri
         ${featureCard('#FDF4FF', isNl ? 'Slimme matching' : 'Smart matching', isNl ? 'Wij herkennen of die nieuwe aanmaning bij die oude factuur hoort, zodat jij altijd het overzicht houdt. Geen gedoe meer met losse papieren.' : 'We recognize if that new reminder belongs to an old invoice, so you always have the full picture.')}
         ${zenBox(isNl ? 'Het doel? Dat jij je weer kunt focussen op wat echt belangrijk is, zonder die constante "cloud" van onbetaalde rekeningen boven je hoofd.' : 'The goal? To let you focus on what truly matters, without that constant "cloud" of unpaid bills hanging over your head.')}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Open de App' : 'Open the App', 'https://app.hypesamba.com/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Open de App' : 'Open the App', 'https://app.paywatch.app/overzicht')}</td></tr>
       <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Geniet van je dag,' : 'Have a great day,'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
       ${footerHtml(isNl)}
     `, isNl ? 'Rust in je hoofd begint hier.' : 'Peace of mind starts here.')
@@ -149,7 +149,7 @@ export function buildDigestEmail(name: string, isNl: boolean, stats: {
         ${card(`<p style="margin:0 0 6px;font-size:11px;font-weight:600;color:${C.blue};text-transform:uppercase;letter-spacing:1px">${isNl ? 'WIST JE DAT?' : 'DID YOU KNOW?'}</p><p style="margin:0;font-size:13px;color:${C.navy};line-height:1.6">${isNl ? "In Nederland heb je vaak recht op een '14-dagen brief' voordat er incassokosten in rekening mogen worden gebracht. Heb je er een ontvangen? Upload hem direct, dan checken wij of de kosten wel kloppen!" : 'In the Netherlands, you are usually entitled to a "14-day letter" before any collection fees can be charged. Did you receive one? Upload it immediately, and we\'ll check if the fees are legally correct!'}</p>`)}
         ${zenBox(`<em>"${isNl ? 'Geld is een hulpmiddel, geen meester.' : 'Money is a tool, not a master.'}"</em><br><span style="font-size:12px;color:${C.muted}">${isNl ? 'Neem vandaag 5 minuten voor jezelf. Je hebt je zaken onder controle.' : 'Take 5 minutes for yourself today. You are in control.'}</span>`)}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Bekijk je overzicht' : 'View your overview', 'https://app.hypesamba.com/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Bekijk je overzicht' : 'View your overview', 'https://app.paywatch.app/overzicht')}</td></tr>
       <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Tot volgende week!' : 'See you next week!'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
       ${footerHtml(isNl)}
     `, isNl ? 'Je wekelijkse overzicht staat klaar.' : 'Your weekly overview is ready.')
