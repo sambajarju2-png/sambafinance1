@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   X,
@@ -11,11 +11,13 @@ import {
   Check,
   ChevronRight,
   AlertCircle,
+  Users,
+  Share2,
 } from 'lucide-react';
 import { type Bill, formatCents } from '@/lib/bills';
 
 type LetterIntent = 'betalingsregeling' | 'uitstel' | 'bezwaar' | 'bevestiging';
-type FlowStep = 'intent' | 'details' | 'generating' | 'result' | 'error';
+type FlowStep = 'intent' | 'details' | 'generating' | 'result' | 'error' | 'referral';
 
 interface DraftLetterDrawerProps {
   bill: Bill;
@@ -107,6 +109,10 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
 
       if (!res.ok) {
         const errData = await res.json();
+        if (errData.error === 'letter_limit') {
+          setStep('referral');
+          return;
+        }
         throw new Error(errData.error || 'Failed');
       }
 
@@ -369,9 +375,58 @@ export default function DraftLetterDrawer({ bill, open, onClose }: DraftLetterDr
               </button>
             </div>
           )}
+
+          {/* REFERRAL GATE — shown when letter limit reached */}
+          {step === 'referral' && (
+            <ReferralGateCard onClose={onClose} />
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+function ReferralGateCard({ onClose }: { onClose: () => void }) {
+  const [shareUrl, setShareUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/referral').then(r => r.json()).then(d => setShareUrl(d.share_url || '')).catch(() => {});
+  }, []);
+
+  async function handleShare() {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'PayWatch', text: 'Probeer PayWatch — rust in je hoofd over elke rekening.', url: shareUrl }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center py-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue/10 mb-3">
+        <Users className="h-7 w-7 text-pw-blue" strokeWidth={1.5} />
+      </div>
+      <h3 className="text-[16px] font-bold text-pw-navy">Nodig een vriend uit</h3>
+      <p className="mt-2 text-[12px] text-pw-muted leading-relaxed max-w-[260px]">
+        Je hebt je gratis brieven gebruikt. Nodig een vriend uit om meer te ontgrendelen.
+      </p>
+      <div className="mt-3 w-full space-y-2 text-left">
+        <p className="text-[11px] text-pw-muted">1 vriend = alle functies + 10 extra brieven</p>
+        <p className="text-[11px] text-pw-muted">2 vrienden = 20 extra brieven</p>
+        <p className="text-[11px] text-pw-green font-semibold">3+ vrienden = onbeperkt</p>
+      </div>
+      {shareUrl && (
+        <button onClick={handleShare}
+          className="btn-press mt-4 flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
+          {copied ? <Check className="h-4 w-4" strokeWidth={1.5} /> : <Share2 className="h-4 w-4" strokeWidth={1.5} />}
+          {copied ? 'Gekopieerd!' : 'Deel met een vriend'}
+        </button>
+      )}
+      <button onClick={onClose} className="mt-2 text-[12px] text-pw-muted">Sluiten</button>
+    </div>
   );
 }
 

@@ -8,7 +8,6 @@ import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
 import MoodTracker from '@/components/mood-tracker';
 import AchievementsDisplay from '@/components/achievements';
-import LanguageSwitcher from '@/components/language-switcher';
 
 export default function OverzichtPage() {
   const t = useTranslations('dashboard');
@@ -60,10 +59,7 @@ export default function OverzichtPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-heading text-pw-navy">{t('title')}</h1>
-        <LanguageSwitcher />
-      </div>
+      <h1 className="text-heading text-pw-navy">{t('title')}</h1>
 
       {/* Stat cards (2x2) */}
       {loading ? (
