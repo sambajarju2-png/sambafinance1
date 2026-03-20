@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
     const redirectUri = `${appUrl}/api/gmail/callback`;
 
     const params = new URLSearchParams({
