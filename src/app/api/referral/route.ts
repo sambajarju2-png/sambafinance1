@@ -40,7 +40,7 @@ export async function GET() {
       stats_unlocked: settings?.stats_unlocked || false,
       referrals: referrals || [],
       completed_count: completedCount,
-      share_url: `https://app.hypesamba.com/auth/signup?ref=${code}`,
+      share_url: `https://app.paywatch.app/auth/signup?ref=${code}`,
     }, { headers: NO_CACHE });
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     });
 
-    return NextResponse.json({ ok: true, share_url: `https://app.hypesamba.com/auth/signup?ref=${settings.referral_code}` }, { headers: NO_CACHE });
+    return NextResponse.json({ ok: true, share_url: `https://app.paywatch.app/auth/signup?ref=${settings.referral_code}` }, { headers: NO_CACHE });
   } catch {
     return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });
   }
