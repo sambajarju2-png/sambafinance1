@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/auth/')) return supabaseResponse;
 
   // App routes require auth
-  const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding'];
+  const APP_PREFIXES = ['/overzicht', '/betalingen', '/stats', '/cashflow', '/instellingen', '/scan', '/onboarding', '/notifications'];
   const isAppRoute = APP_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (isAppRoute && !user) {

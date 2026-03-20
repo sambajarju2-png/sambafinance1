@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { Bell, Flame } from 'lucide-react';
 
 interface TopbarProps {
@@ -12,19 +13,16 @@ interface TopbarProps {
 
 export default function Topbar({ displayName, streakCurrent, notificationCount: initialCount }: TopbarProps) {
   const t = useTranslations('nav');
+  const router = useRouter();
   const firstName = displayName?.split(' ')[0] || '';
   const [notifCount, setNotifCount] = useState(initialCount);
 
-  // Fetch live notification count
   useEffect(() => {
     async function fetchCount() {
       try {
         const res = await fetch('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          setNotifCount(data.count || 0);
-        }
-      } catch { /* silent */ }
+        if (res.ok) { const data = await res.json(); setNotifCount(data.count || 0); }
+      } catch {}
     }
     fetchCount();
     const interval = setInterval(fetchCount, 60000);
@@ -35,11 +33,8 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
     <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center justify-between border-b border-pw-border/50 px-4">
       <div className="flex items-center gap-3">
         <span className="text-[15px] font-bold tracking-tight text-pw-navy">PayWatch</span>
-        {firstName && (
-          <span className="hidden text-body text-pw-muted sm:inline">Hoi, {firstName}</span>
-        )}
+        {firstName && <span className="hidden text-body text-pw-muted sm:inline">Hoi, {firstName}</span>}
       </div>
-
       <div className="flex items-center gap-4">
         {streakCurrent > 0 && (
           <div className="flex items-center gap-1">
@@ -47,8 +42,8 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
             <span className="text-[14px] font-bold text-pw-blue">{streakCurrent}</span>
           </div>
         )}
-
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-input text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
+        <button onClick={() => router.push('/notifications')}
+          className="relative flex h-9 w-9 items-center justify-center rounded-input text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
           aria-label={t('notifications')}>
           <Bell className="h-5 w-5" strokeWidth={1.5} />
           {notifCount > 0 && (
