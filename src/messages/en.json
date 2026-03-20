@@ -550,7 +550,14 @@
     "features_label": "Feature updates",
     "features_desc": "Emails about new features and tips",
     "push_label": "Push notifications",
-    "push_desc": "Receive reminders on your device"
+    "push_desc": "Receive reminders on your device",
+    "overdueSection": "Overdue",
+    "upcomingSection": "Upcoming",
+    "achievementsSection": "Achievements",
+    "noNotifications": "No notifications",
+    "allGood": "Everything is on track!",
+    "clearAll": "Clear all",
+    "cleared": "Cleared"
   },
   "tour": {
     "skip": "Skip",
@@ -585,5 +592,22 @@
     "later": "Later",
     "thankYouTitle": "Thank you!",
     "thankYouDesc": "Your feedback helps us make PayWatch better for everyone."
+  },
+  "referral": {
+    "title": "Invite friends",
+    "desc": "Share PayWatch with friends. The more you share, the more features you unlock.",
+    "shareLink": "Your invite link",
+    "copied": "Copied!",
+    "shareButton": "Share with a friend",
+    "friendsReferred": "Friends invited",
+    "statusPending": "Pending",
+    "statusCompleted": "Completed",
+    "unlockTitle": "Invite a friend",
+    "unlockDesc": "Share PayWatch with a friend. When they create an account, you both unlock all features.",
+    "tier1": "1 friend = all features + 10 extra letters & insights",
+    "tier2": "2 friends = 20 extra letters & insights",
+    "tier3": "3+ friends = unlimited access",
+    "letterLimit": "You've used all your free letters. Invite a friend for more.",
+    "insightLimit": "You've used all your free AI insights. Invite a friend for more."
   }
 }
