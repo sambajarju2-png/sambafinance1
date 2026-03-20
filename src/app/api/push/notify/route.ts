@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     // === BUDGET ALERTS (max 1 per week per user) ===
     let budgetAlertsSent = 0;
     const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
 
     const { data: budgetUsers } = await supabase
       .from('user_settings')
