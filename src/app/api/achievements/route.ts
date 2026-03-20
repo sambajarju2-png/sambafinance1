@@ -48,7 +48,7 @@ async function sendAchievementNotification(userId: string, unlockedKeys: string[
 
   let webpush: typeof import('web-push');
   try { webpush = await import('web-push'); } catch { return; }
-  webpush.setVapidDetails('mailto:info@hypesamba.com', vapidPublic, vapidPrivate);
+  webpush.setVapidDetails('mailto:info@paywatch.app', vapidPublic, vapidPrivate);
 
   const supabase = await createServerSupabaseClient();
   const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', userId);
