@@ -14,10 +14,20 @@ export default async function OnboardingPage() {
     .eq('user_id', user.id)
     .single();
 
+  // If no settings row exists, create one (edge case: trigger didn't fire)
+  if (!settings) {
+    await supabase.from('user_settings').upsert({
+      user_id: user.id,
+      display_name: user.email?.split('@')[0] || '',
+      language: 'nl',
+      onboarding_complete: false,
+    }, { onConflict: 'user_id' });
+  }
+
   if (settings?.onboarding_complete) redirect('/overzicht');
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col bg-pw-bg">
       <TrustBadges />
       <div className="flex-1">
         <OnboardingWizard

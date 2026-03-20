@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Bell, Flame } from 'lucide-react';
 
 interface TopbarProps {
@@ -14,6 +14,7 @@ interface TopbarProps {
 export default function Topbar({ displayName, streakCurrent, notificationCount: initialCount }: TopbarProps) {
   const t = useTranslations('nav');
   const router = useRouter();
+  const pathname = usePathname();
   const firstName = displayName?.split(' ')[0] || '';
   const [notifCount, setNotifCount] = useState(initialCount);
 
@@ -29,6 +30,15 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
     return () => clearInterval(interval);
   }, []);
 
+  function handleBellClick() {
+    // Toggle: if already on notifications, go back to dashboard
+    if (pathname === '/notifications') {
+      router.push('/overzicht');
+    } else {
+      router.push('/notifications');
+    }
+  }
+
   return (
     <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center justify-between border-b border-pw-border/50 px-4">
       <div className="flex items-center gap-3">
@@ -42,8 +52,10 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
             <span className="text-[14px] font-bold text-pw-blue">{streakCurrent}</span>
           </div>
         )}
-        <button onClick={() => router.push('/notifications')}
-          className="relative flex h-9 w-9 items-center justify-center rounded-input text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
+        <button onClick={handleBellClick}
+          className={`relative flex h-9 w-9 items-center justify-center rounded-input transition-colors ${
+            pathname === '/notifications' ? 'bg-pw-blue/10 text-pw-blue' : 'text-pw-muted hover:bg-pw-border/30 hover:text-pw-text'
+          }`}
           aria-label={t('notifications')}>
           <Bell className="h-5 w-5" strokeWidth={1.5} />
           {notifCount > 0 && (
