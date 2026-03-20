@@ -23,7 +23,7 @@ export async function POST() {
       return NextResponse.json({ error: 'web-push niet geinstalleerd' }, { status: 500, headers: NO_CACHE });
     }
 
-    webpush.setVapidDetails('mailto:info@hypesamba.com', vapidPublic, vapidPrivate);
+    webpush.setVapidDetails('mailto:info@paywatch.app', vapidPublic, vapidPrivate);
 
     const supabase = await createServerSupabaseClient();
     const { data: subs } = await supabase
