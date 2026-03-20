@@ -25,11 +25,15 @@ export default function NotificationsPage() {
     : {};
 
   useEffect(() => {
+    // If previously cleared this session, don't fetch
+    const wasCleared = sessionStorage.getItem('pw-notif-cleared');
+    if (wasCleared) { setLoading(false); return; }
+
     async function load() {
       try {
         const res = await fetch('/api/notifications');
         if (res.ok) { const data = await res.json(); setItems(data.items || []); }
-      } catch { /* silent */ }
+      } catch {}
       finally { setLoading(false); }
     }
     load();
@@ -42,6 +46,9 @@ export default function NotificationsPage() {
   function handleClearAll() {
     setItems([]);
     setCleared(true);
+    sessionStorage.setItem('pw-notif-cleared', 'true');
+    // Dispatch event so topbar resets badge to 0
+    window.dispatchEvent(new CustomEvent('pw-notif-cleared'));
     setTimeout(() => setCleared(false), 2000);
   }
 
@@ -78,38 +85,29 @@ export default function NotificationsPage() {
             <Section title={t('overdueSection')} count={overdue.length} color="text-pw-red">
               {overdue.map((item, i) => {
                 const d = item.data as { vendor: string; amount: number; due_date: string };
-                return (
-                  <NotifCard key={i} icon={AlertTriangle} iconColor="text-pw-red" bgColor="bg-red-50/50" borderColor="border-pw-red/20"
-                    title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
-                    onClick={() => router.push('/betalingen')} />
-                );
+                return (<NotifCard key={i} icon={AlertTriangle} iconColor="text-pw-red" bgColor="bg-red-50/50" borderColor="border-pw-red/20"
+                  title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
+                  onClick={() => router.push('/betalingen')} />);
               })}
             </Section>
           )}
-
           {upcoming.length > 0 && (
             <Section title={t('upcomingSection')} count={upcoming.length} color="text-amber-600">
               {upcoming.map((item, i) => {
                 const d = item.data as { vendor: string; amount: number; due_date: string };
-                return (
-                  <NotifCard key={i} icon={Clock} iconColor="text-amber-600" bgColor="bg-amber-50/50" borderColor="border-amber-500/20"
-                    title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
-                    onClick={() => router.push('/betalingen')} />
-                );
+                return (<NotifCard key={i} icon={Clock} iconColor="text-amber-600" bgColor="bg-amber-50/50" borderColor="border-amber-500/20"
+                  title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
+                  onClick={() => router.push('/betalingen')} />);
               })}
             </Section>
           )}
-
           {achievements.length > 0 && (
             <Section title={t('achievementsSection')} count={achievements.length} color="text-amber-500">
               {achievements.map((item, i) => {
                 const d = item.data as { achievement: string; unlocked_at: string };
-                return (
-                  <NotifCard key={i} icon={Trophy} iconColor="text-amber-500" bgColor="bg-amber-50/30" borderColor="border-amber-400/20"
-                    title={getAchievementName(d.achievement)}
-                    subtitle={new Date(d.unlocked_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                    onClick={() => router.push('/instellingen?tab=achievements')} />
-                );
+                return (<NotifCard key={i} icon={Trophy} iconColor="text-amber-500" bgColor="bg-amber-50/30" borderColor="border-amber-400/20"
+                  title={getAchievementName(d.achievement)} subtitle={new Date(d.unlocked_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                  onClick={() => router.push('/instellingen?tab=achievements')} />);
               })}
             </Section>
           )}
@@ -120,30 +118,16 @@ export default function NotificationsPage() {
 }
 
 function Section({ title, count, color, children }: { title: string; count: number; color: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2">
-        <p className={`text-[13px] font-bold ${color}`}>{title}</p>
-        <span className="rounded-full bg-pw-border/50 px-1.5 py-0.5 text-[10px] font-bold text-pw-muted">{count}</span>
-      </div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
+  return (<div><div className="mb-2 flex items-center gap-2"><p className={`text-[13px] font-bold ${color}`}>{title}</p><span className="rounded-full bg-pw-border/50 px-1.5 py-0.5 text-[10px] font-bold text-pw-muted">{count}</span></div><div className="space-y-2">{children}</div></div>);
 }
 
 function NotifCard({ icon: Icon, iconColor, bgColor, borderColor, title, subtitle, right, onClick }: {
-  icon: React.ElementType; iconColor: string; bgColor: string; borderColor: string;
-  title: string; subtitle: string; right?: string; onClick: () => void;
+  icon: React.ElementType; iconColor: string; bgColor: string; borderColor: string; title: string; subtitle: string; right?: string; onClick: () => void;
 }) {
-  return (
-    <button onClick={onClick} className={`btn-press flex w-full items-center gap-3 rounded-card border ${borderColor} ${bgColor} px-3.5 py-3 text-left`}>
-      <Icon className={`h-4 w-4 flex-shrink-0 ${iconColor}`} strokeWidth={1.5} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-pw-text truncate">{title}</p>
-        <p className="text-[10px] text-pw-muted">{subtitle}</p>
-      </div>
-      {right && <p className="text-[13px] font-bold text-pw-text">{right}</p>}
-      <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-pw-muted" strokeWidth={1.5} />
-    </button>
-  );
+  return (<button onClick={onClick} className={`btn-press flex w-full items-center gap-3 rounded-card border ${borderColor} ${bgColor} px-3.5 py-3 text-left`}>
+    <Icon className={`h-4 w-4 flex-shrink-0 ${iconColor}`} strokeWidth={1.5} />
+    <div className="flex-1 min-w-0"><p className="text-[13px] font-semibold text-pw-text truncate">{title}</p><p className="text-[10px] text-pw-muted">{subtitle}</p></div>
+    {right && <p className="text-[13px] font-bold text-pw-text">{right}</p>}
+    <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-pw-muted" strokeWidth={1.5} />
+  </button>);
 }
