@@ -13,7 +13,7 @@ function getResend() {
   return resendInstance!;
 }
 
-const FROM_EMAIL = 'PayWatch <noreply@email.paywatch.app';
+const FROM_EMAIL = 'PayWatch <noreply@email.paywatch.app>';
 
 export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
