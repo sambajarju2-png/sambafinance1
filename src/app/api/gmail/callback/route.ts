@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
 
   if (error) {
     return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=denied`);
