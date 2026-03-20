@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'web-push not installed' }, { status: 200, headers: NO_CACHE });
     }
 
-    webpush.setVapidDetails('mailto:info@hypesamba.com', vapidPublic, vapidPrivate);
+    webpush.setVapidDetails('mailto:info@paywatch.app', vapidPublic, vapidPrivate);
 
     const supabase = createServiceRoleClient();
     const today = new Date().toISOString().split('T')[0];
