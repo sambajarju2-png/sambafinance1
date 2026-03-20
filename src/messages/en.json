@@ -287,7 +287,12 @@
     "monthlyBudget": "Monthly budget",
     "monthlyBudgetDesc": "Set a budget and get a warning when you exceed it.",
     "save": "Save",
-    "saved": "Saved"
+    "saved": "Saved",
+    "maxOpenBills": "Max. open bills",
+    "maxOpenBillsDesc": "Warning when you have more open bills than this number.",
+    "overBudgetWarning": "Budget exceeded",
+    "overBudgetDesc": "Your outstanding bills ({total}) exceed your budget ({budget}).",
+    "categoryBreakdown": "Breakdown by category"
   },
   "escalation": {
     "factuur": "Invoice",

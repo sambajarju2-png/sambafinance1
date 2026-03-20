@@ -287,7 +287,12 @@
     "monthlyBudget": "Maandelijks budget",
     "monthlyBudgetDesc": "Stel een budget in en ontvang een waarschuwing als je erover gaat.",
     "save": "Opslaan",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "maxOpenBills": "Max. openstaande rekeningen",
+    "maxOpenBillsDesc": "Waarschuwing als je meer openstaande rekeningen hebt dan dit aantal.",
+    "overBudgetWarning": "Budget overschreden",
+    "overBudgetDesc": "Je openstaande rekeningen ({total}) zijn hoger dan je budget ({budget}).",
+    "categoryBreakdown": "Overzicht per categorie"
   },
   "escalation": {
     "factuur": "Factuur",
