@@ -21,22 +21,23 @@ export default function CashflowPage() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [forecastDays, setForecastDays] = useState<ForecastPeriod>('14');
+  const [statsUnlocked, setStatsUnlocked] = useState(false);
+
+  const ADMIN_EMAILS = ['sambajarju2@gmail.com', 'ayeitssamba@gmail.com', 'reiskenners@gmail.com'];
 
   useEffect(() => {
-    async function fetchBills() {
+    async function fetchData() {
       try {
-        const res = await fetch('/api/bills');
-        if (res.ok) {
-          const data = await res.json();
-          setBills(data.bills || []);
+        const [billsRes, profileRes] = await Promise.all([fetch('/api/bills'), fetch('/api/settings/profile')]);
+        if (billsRes.ok) { const data = await billsRes.json(); setBills(data.bills || []); }
+        if (profileRes.ok) {
+          const d = await profileRes.json();
+          setStatsUnlocked(d.profile?.stats_unlocked || false);
+          if (d.profile?.email && ADMIN_EMAILS.includes(d.profile.email.toLowerCase())) setStatsUnlocked(true);
         }
-      } catch {
-        console.error('Failed to fetch bills');
-      } finally {
-        setLoading(false);
-      }
+      } catch { console.error('Failed to fetch'); } finally { setLoading(false); }
     }
-    fetchBills();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -287,8 +288,10 @@ export default function CashflowPage() {
         </div>
       </div>
 
-      {/* Top Vendors */}
+      {/* Top Vendors — blurred unless unlocked */}
       {topVendors.length > 0 && (
+        <div className="relative">
+          <div className={statsUnlocked ? '' : 'pointer-events-none select-none blur-[6px] opacity-60'}>
         <div className="rounded-card border border-pw-border bg-pw-surface p-4">
           <div className="mb-3 flex items-center gap-2">
             <Wallet className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
@@ -315,6 +318,16 @@ export default function CashflowPage() {
               </div>
             ))}
           </div>
+        </div>
+          </div>
+          {!statsUnlocked && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="rounded-card bg-pw-surface/95 border border-pw-blue/20 px-4 py-3 text-center shadow-lg">
+                <p className="text-[12px] font-semibold text-pw-navy">Nodig een vriend uit</p>
+                <p className="text-[10px] text-pw-muted mt-0.5">om je top leveranciers te zien</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

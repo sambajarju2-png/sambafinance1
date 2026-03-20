@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Bell, AlertTriangle, Clock, Trophy, ChevronRight } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
@@ -13,9 +13,17 @@ interface NotifItem {
 
 export default function NotificationsPage() {
   const t = useTranslations('nav');
+  const tNotif = useTranslations('notifications');
   const router = useRouter();
+  const messages = useMessages();
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Build achievement name lookup from translations
+  const achItems = (messages as Record<string, unknown>)?.achievements &&
+    typeof (messages as Record<string, unknown>).achievements === 'object'
+    ? ((messages as Record<string, Record<string, unknown>>).achievements?.items as Record<string, { name: string; desc: string }>) || {}
+    : {};
 
   useEffect(() => {
     async function load() {
@@ -32,6 +40,10 @@ export default function NotificationsPage() {
   const upcoming = items.filter((i) => i.type === 'upcoming');
   const achievements = items.filter((i) => i.type === 'achievement');
 
+  function getAchievementName(key: string): string {
+    return achItems[key]?.name || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
@@ -44,18 +56,18 @@ export default function NotificationsPage() {
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
           <Bell className="mb-3 h-10 w-10 text-pw-muted/30" strokeWidth={1.5} />
-          <p className="text-[14px] font-semibold text-pw-text">Geen meldingen</p>
-          <p className="mt-1 text-[12px] text-pw-muted">Alles is op orde. Goed bezig!</p>
+          <p className="text-[14px] font-semibold text-pw-text">{tNotif('noNotifications') || 'Geen meldingen'}</p>
+          <p className="mt-1 text-[12px] text-pw-muted">{tNotif('allGood') || 'Alles is op orde!'}</p>
         </div>
       ) : (
         <>
           {overdue.length > 0 && (
-            <Section title="Achterstallig" count={overdue.length} color="text-pw-red">
+            <Section title={tNotif('overdueSection') || 'Achterstallig'} count={overdue.length} color="text-pw-red">
               {overdue.map((item, i) => {
                 const d = item.data as { vendor: string; amount: number; due_date: string };
                 return (
                   <NotifCard key={i} icon={AlertTriangle} iconColor="text-pw-red" bgColor="bg-red-50/50" borderColor="border-pw-red/20"
-                    title={d.vendor} subtitle={`Vervaldatum: ${d.due_date}`} right={formatCents(d.amount)}
+                    title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
                     onClick={() => router.push('/betalingen')} />
                 );
               })}
@@ -63,12 +75,12 @@ export default function NotificationsPage() {
           )}
 
           {upcoming.length > 0 && (
-            <Section title="Binnenkort" count={upcoming.length} color="text-pw-amber">
+            <Section title={tNotif('upcomingSection') || 'Binnenkort'} count={upcoming.length} color="text-amber-600">
               {upcoming.map((item, i) => {
                 const d = item.data as { vendor: string; amount: number; due_date: string };
                 return (
                   <NotifCard key={i} icon={Clock} iconColor="text-amber-600" bgColor="bg-amber-50/50" borderColor="border-amber-500/20"
-                    title={d.vendor} subtitle={`Vervalt: ${d.due_date}`} right={formatCents(d.amount)}
+                    title={d.vendor} subtitle={new Date(d.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} right={formatCents(d.amount)}
                     onClick={() => router.push('/betalingen')} />
                 );
               })}
@@ -76,12 +88,13 @@ export default function NotificationsPage() {
           )}
 
           {achievements.length > 0 && (
-            <Section title="Prestaties" count={achievements.length} color="text-amber-500">
+            <Section title={tNotif('achievementsSection') || 'Prestaties'} count={achievements.length} color="text-amber-500">
               {achievements.map((item, i) => {
                 const d = item.data as { achievement: string; unlocked_at: string };
                 return (
                   <NotifCard key={i} icon={Trophy} iconColor="text-amber-500" bgColor="bg-amber-50/30" borderColor="border-amber-400/20"
-                    title={d.achievement} subtitle={new Date(d.unlocked_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                    title={getAchievementName(d.achievement)}
+                    subtitle={new Date(d.unlocked_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                     onClick={() => router.push('/instellingen?tab=achievements')} />
                 );
               })}
