@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users } from 'lucide-react';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
@@ -18,8 +18,9 @@ import NotificationPreferences from '@/components/notification-preferences';
 import HelpResources from '@/components/help-resources';
 import TrustBadges from '@/components/trust-badges';
 import AdminTestPanel from '@/components/admin-test-panel';
+import ReferralSettings from '@/components/referral-settings';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -34,7 +35,7 @@ function SettingsContent() {
   // Read ?tab=gmail (or other tabs) from URL
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['gmail', 'profile', 'notifications', 'achievements', 'budget', 'help'].includes(tab)) {
+    if (tab && ['gmail', 'profile', 'notifications', 'achievements', 'budget', 'help', 'referral'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       // Clean URL
       window.history.replaceState(null, '', '/instellingen');
@@ -130,6 +131,15 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'referral') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <ReferralSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
@@ -139,6 +149,7 @@ function SettingsContent() {
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
+        <SettingsLink icon={Users} label="Vrienden uitnodigen" description="Deel PayWatch en ontgrendel functies" onClick={() => setActiveTab('referral')} />
         <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => setActiveTab('help')} />
       </div>
 

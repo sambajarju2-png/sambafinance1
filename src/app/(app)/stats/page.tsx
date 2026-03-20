@@ -326,21 +326,69 @@ function AiInsightsTab({ bills, t }: { bills: Bill[]; t: ReturnType<typeof useTr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [hitLimit, setHitLimit] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => { const cached = getCachedInsights(); if (cached) { setInsights(cached.insights); setSummary(cached.summary); setHasAnalyzed(true); } }, []);
+  useEffect(() => { fetch('/api/referral').then(r => r.json()).then(d => setShareUrl(d.share_url || '')).catch(() => {}); }, []);
 
   async function handleAnalyze() {
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setHitLimit(false);
     try {
       const res = await fetch('/api/insights', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) {
+        if (data.error === 'insight_limit') { setHitLimit(true); setLoading(false); return; }
+        throw new Error(data.error || 'Failed');
+      }
       setInsights(data.insights || []); setSummary(data.summary || ''); setHasAnalyzed(true);
       setCachedInsights({ insights: data.insights || [], summary: data.summary || '', timestamp: Date.now() });
     } catch (err) { setError(err instanceof Error ? err.message : 'Error'); } finally { setLoading(false); }
   }
 
+  async function handleShare() {
+    if (navigator.share) { try { await navigator.share({ title: 'PayWatch', text: 'Probeer PayWatch — rust in je hoofd over elke rekening.', url: shareUrl }); } catch {} }
+    else { await navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+  }
+
   if (bills.length === 0) return (<div className="flex flex-col items-center py-16 text-center"><Zap className="mb-4 h-12 w-12 text-pw-muted/40" strokeWidth={1.5} /><h2 className="text-[16px] font-semibold text-pw-text">{t('noData')}</h2><p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">{t('noDataHint')}</p></div>);
+
+  /* Referral gate when limit reached */
+  if (hitLimit) {
+    return (
+      <div className="space-y-4">
+        <div className="relative">
+          <div className="pointer-events-none select-none blur-[6px] opacity-50">
+            <div className="rounded-card border border-pw-purple/20 bg-purple-50/30 px-4 py-3"><p className="text-[13px] text-pw-muted">AI insight preview...</p></div>
+            <div className="mt-2 rounded-card border border-pw-amber/30 bg-amber-50/50 px-4 py-3"><p className="text-[13px] text-pw-muted">Priority insight...</p></div>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="mx-4 w-full max-w-sm rounded-card-lg border-2 border-pw-purple/20 bg-pw-surface p-6 shadow-lg">
+              <div className="flex flex-col items-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-purple/10 mb-3">
+                  <Users className="h-7 w-7 text-pw-purple" strokeWidth={1.5} />
+                </div>
+                <h3 className="text-[16px] font-bold text-pw-navy">Nodig een vriend uit</h3>
+                <p className="mt-1 text-[12px] text-pw-muted leading-relaxed">Je hebt je gratis AI-inzichten gebruikt. Nodig een vriend uit voor meer.</p>
+                <div className="mt-3 w-full space-y-1 text-left">
+                  <p className="text-[11px] text-pw-muted">1 vriend = alle functies + 10 extra inzichten</p>
+                  <p className="text-[11px] text-pw-muted">2 vrienden = 20 extra inzichten</p>
+                  <p className="text-[11px] text-pw-green font-semibold">3+ vrienden = onbeperkt</p>
+                </div>
+                {shareUrl && (
+                  <button onClick={handleShare} className="btn-press mt-4 flex w-full items-center justify-center gap-2 rounded-button bg-pw-purple px-4 py-2.5 text-[13px] font-semibold text-white">
+                    {copied ? <Check className="h-4 w-4" strokeWidth={1.5} /> : <Share2 className="h-4 w-4" strokeWidth={1.5} />}
+                    {copied ? 'Gekopieerd!' : 'Deel met een vriend'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

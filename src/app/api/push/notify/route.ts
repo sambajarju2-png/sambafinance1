@@ -80,7 +80,84 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ sent: totalSent }, { headers: NO_CACHE });
+    // === BUDGET ALERTS (max 1 per week per user) ===
+    let budgetAlertsSent = 0;
+    const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.hypesamba.com';
+
+    const { data: budgetUsers } = await supabase
+      .from('user_settings')
+      .select('user_id, monthly_budget_cents, last_budget_alert_at, notify_push_enabled, notify_email_digest, display_name, language')
+      .gt('monthly_budget_cents', 0);
+
+    for (const bu of (budgetUsers || [])) {
+      // Skip if alert sent within last week
+      if (bu.last_budget_alert_at && bu.last_budget_alert_at > oneWeekAgo) continue;
+
+      // Get total outstanding
+      const { data: outBills } = await supabase
+        .from('bills')
+        .select('amount')
+        .eq('user_id', bu.user_id)
+        .neq('status', 'settled');
+
+      const totalOutstanding = (outBills || []).reduce((s: number, b: { amount: number }) => s + b.amount, 0);
+      if (totalOutstanding <= bu.monthly_budget_cents) continue;
+
+      // Over budget! Send push if enabled
+      if (bu.notify_push_enabled) {
+        const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', bu.user_id);
+        const budgetEur = (bu.monthly_budget_cents / 100).toFixed(2);
+        const totalEur = (totalOutstanding / 100).toFixed(2);
+        const payload = JSON.stringify({
+          title: 'Budget overschreden',
+          body: `Je openstaande rekeningen (€${totalEur}) zijn hoger dan je budget (€${budgetEur}).`,
+          tag: 'paywatch-budget',
+          url: '/instellingen?tab=budget',
+        });
+
+        for (const sub of (subs || [])) {
+          try {
+            await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, payload);
+            budgetAlertsSent++;
+          } catch (err) {
+            if (err instanceof Error && (err.message.includes('410') || err.message.includes('404'))) {
+              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+            }
+          }
+        }
+      }
+
+      // Send budget alert email (fire and forget)
+      if (bu.notify_email_digest !== false) {
+        try {
+          const { data: authData } = await supabase.auth.admin.getUserById(bu.user_id);
+          if (authData?.user?.email) {
+            fetch(`${baseUrl}/api/email/digest`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: authData.user.email,
+                name: bu.display_name || '',
+                language: bu.language || 'nl',
+                stats: {
+                  outstanding: (outBills || []).length,
+                  overdue: 0,
+                  total_outstanding_cents: totalOutstanding,
+                  budget_exceeded: true,
+                  budget_cents: bu.monthly_budget_cents,
+                },
+              }),
+            }).catch(() => {});
+          }
+        } catch {}
+      }
+
+      // Mark alert sent
+      await supabase.from('user_settings').update({ last_budget_alert_at: new Date().toISOString() }).eq('user_id', bu.user_id);
+    }
+
+    return NextResponse.json({ sent: totalSent, budget_alerts: budgetAlertsSent }, { headers: NO_CACHE });
   } catch (err) {
     console.error('Push notify error:', err);
     return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });
