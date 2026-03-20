@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Star, Check, CreditCard } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
@@ -22,6 +22,10 @@ export default function BillList() {
   const t = useTranslations('bills');
   const tEsc = useTranslations('escalation');
   const tCat = useTranslations('addBill');
+  const messages = useMessages();
+  const catMap = (messages as Record<string, unknown>)?.addBill && typeof (messages as Record<string, unknown>).addBill === 'object'
+    ? ((messages as Record<string, Record<string, unknown>>).addBill.categories as Record<string, string>) || {}
+    : {};
   const searchParams = useSearchParams();
 
   const [bills, setBills] = useState<Bill[]>([]);
@@ -223,7 +227,7 @@ function BillRow({
               {tEsc(bill.escalation_stage)}
             </span>
           </span>
-          <span className="text-[11px] text-pw-muted">{(() => { try { return tCat(`categories.${bill.category}`); } catch { return bill.category; } })()}</span>
+          <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
         </div>
       </div>
 

@@ -14,7 +14,7 @@ export async function GET() {
     const supabase = await createServerSupabaseClient();
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('display_name, first_name, last_name, date_of_birth, gemeente, language, dark_mode, notify_push_enabled, notify_email_welcome, notify_email_features, notify_email_digest, monthly_budget_cents')
+      .select('display_name, first_name, last_name, date_of_birth, gemeente, language, dark_mode, notify_push_enabled, notify_email_welcome, notify_email_features, notify_email_digest, monthly_budget_cents, budgets')
       .eq('user_id', userId)
       .single();
 
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     if (typeof body.notify_email_digest === 'boolean') updates.notify_email_digest = body.notify_email_digest;
     if (typeof body.notify_push_enabled === 'boolean') updates.notify_push_enabled = body.notify_push_enabled;
     if (typeof body.monthly_budget_cents === 'number') updates.monthly_budget_cents = body.monthly_budget_cents;
+    if (body.budgets && typeof body.budgets === 'object') updates.budgets = body.budgets;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400, headers: NO_CACHE });

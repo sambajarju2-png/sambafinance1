@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
   Check, Star, Trash2, Loader2, Copy, Pencil,
@@ -33,6 +33,10 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const t = useTranslations('billDetail');
   const tEsc = useTranslations('escalation');
   const tCat = useTranslations('addBill');
+  const messages = useMessages();
+  const catMap = (messages as Record<string, unknown>)?.addBill && typeof (messages as Record<string, unknown>).addBill === 'object'
+    ? ((messages as Record<string, Record<string, unknown>>).addBill.categories as Record<string, string>) || {}
+    : {};
 
   const [activeTab, setActiveTab] = useState<DrawerTab>('details');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -64,9 +68,8 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
   const isOverdue = !isPaid && bill.due_date < today;
   const stage = STAGE_COLORS[bill.escalation_stage] || STAGE_COLORS.factuur;
 
-  // Translate category name
   function getCategoryLabel(cat: string): string {
-    try { return tCat(`categories.${cat}`); } catch { return cat; }
+    return catMap[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
   }
 
   async function patchBill(body: Record<string, unknown>, loadingKey: string) {
