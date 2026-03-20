@@ -17,22 +17,18 @@ export default function PwaInstallDrawer() {
   const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
-    // Check if already running as PWA
     const standalone = window.matchMedia('(display-mode: standalone)').matches
       || (navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsStandalone(standalone);
-    if (standalone) return; // Already installed, never show
+    if (standalone) return;
 
-    // Detect platform
     const ua = navigator.userAgent;
     const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
     setIsIOS(ios);
 
-    // Listen for Chrome/Edge native install prompt
     const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Auto-show after 4 seconds for ALL mobile users who haven't dismissed
     const wasDismissed = localStorage.getItem('pwa-drawer-dismissed');
     if (!wasDismissed) {
       const timer = setTimeout(() => setShowDrawer(true), 4000);
@@ -42,7 +38,6 @@ export default function PwaInstallDrawer() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Admin trigger
   useEffect(() => {
     function handleTrigger() { setShowDrawer(true); }
     window.addEventListener('paywatch-trigger-pwa', handleTrigger);
@@ -62,7 +57,6 @@ export default function PwaInstallDrawer() {
     localStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
-  // Don't render if already standalone
   if (isStandalone) return null;
   if (!showDrawer) return null;
 
@@ -73,7 +67,6 @@ export default function PwaInstallDrawer() {
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         <div className="px-5 pb-8 pt-4">
-          {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-pw-blue/10">
@@ -89,24 +82,49 @@ export default function PwaInstallDrawer() {
             </button>
           </div>
 
-          {/* Step-by-step instructions */}
           <div className="mt-5 space-y-3">
             {isIOS ? (
+              /* iOS Safari: Share button is at the BOTTOM of the screen */
               <>
-                <StepCard number={1} icon={Share} title={t('iosStep1Title')} desc={t('iosStep1Desc')} />
-                <StepCard number={2} icon={Plus} title={t('iosStep2Title')} desc={t('iosStep2Desc')} />
-                <StepCard number={3} icon={Smartphone} title={t('iosStep3Title')} desc={t('iosStep3Desc')} />
+                <StepCard number={1} title={t('iosStep1Title')} desc={t('iosStep1Desc')}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-blue/10">
+                    <Share className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
+                  </div>
+                </StepCard>
+                <StepCard number={2} title={t('iosStep2Title')} desc={t('iosStep2Desc')}>
+                  <div className="flex items-center gap-1.5 rounded-lg bg-pw-border/30 px-2 py-1">
+                    <Plus className="h-3.5 w-3.5 text-pw-text" strokeWidth={2} />
+                    <span className="text-[10px] font-semibold text-pw-text">Add to Home Screen</span>
+                  </div>
+                </StepCard>
+                <StepCard number={3} title={t('iosStep3Title')} desc={t('iosStep3Desc')}>
+                  <div className="flex items-center gap-1 rounded-lg bg-pw-blue/10 px-2.5 py-1">
+                    <span className="text-[10px] font-bold text-pw-blue">Add</span>
+                  </div>
+                </StepCard>
               </>
             ) : (
+              /* Android/Desktop: Three dots menu */
               <>
-                <StepCard number={1} icon={MoreVertical} title={t('androidStep1Title')} desc={t('androidStep1Desc')} />
-                <StepCard number={2} icon={Download} title={t('androidStep2Title')} desc={t('androidStep2Desc')} />
-                <StepCard number={3} icon={Smartphone} title={t('androidStep3Title')} desc={t('androidStep3Desc')} />
+                <StepCard number={1} title={t('androidStep1Title')} desc={t('androidStep1Desc')}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-border/30">
+                    <MoreVertical className="h-4 w-4 text-pw-text" strokeWidth={1.5} />
+                  </div>
+                </StepCard>
+                <StepCard number={2} title={t('androidStep2Title')} desc={t('androidStep2Desc')}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-blue/10">
+                    <Download className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
+                  </div>
+                </StepCard>
+                <StepCard number={3} title={t('androidStep3Title')} desc={t('androidStep3Desc')}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-green/10">
+                    <Smartphone className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
+                  </div>
+                </StepCard>
               </>
             )}
           </div>
 
-          {/* Native install button — only shows on Chrome/Edge when browser supports it */}
           {deferredPrompt && (
             <button onClick={handleInstall}
               className="btn-press mt-5 flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[14px] font-semibold text-white">
@@ -123,18 +141,18 @@ export default function PwaInstallDrawer() {
   );
 }
 
-function StepCard({ number, icon: Icon, title, desc }: { number: number; icon: React.ElementType; title: string; desc: string }) {
+function StepCard({ number, title, desc, children }: { number: number; title: string; desc: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-card border border-pw-border bg-pw-surface p-3.5">
       <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">
         {number}
       </div>
       <div className="flex-1">
-        <div className="flex items-center gap-1.5">
-          <Icon className="h-3.5 w-3.5 text-pw-muted" strokeWidth={1.5} />
+        <div className="flex items-center gap-2">
+          {children}
           <p className="text-[13px] font-semibold text-pw-text">{title}</p>
         </div>
-        <p className="mt-0.5 text-[11px] text-pw-muted leading-relaxed">{desc}</p>
+        <p className="mt-1 text-[11px] text-pw-muted leading-relaxed">{desc}</p>
       </div>
     </div>
   );
