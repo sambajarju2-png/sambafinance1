@@ -23,9 +23,12 @@ export default function BillList() {
   const tEsc = useTranslations('escalation');
   const tCat = useTranslations('addBill');
   const messages = useMessages();
+  
+  // Extract category map dynamically from translations
   const catMap = (messages as Record<string, unknown>)?.addBill && typeof (messages as Record<string, unknown>).addBill === 'object'
     ? ((messages as Record<string, Record<string, unknown>>).addBill.categories as Record<string, string>) || {}
     : {};
+    
   const searchParams = useSearchParams();
 
   const [bills, setBills] = useState<Bill[]>([]);
@@ -60,17 +63,17 @@ export default function BillList() {
     fetchBills();
   }, [fetchBills]);
 
-  // When bills refresh, update the selected bill if it's open
+  // When bills refresh, update the selected bill if it's open (Fixes the useEffect warning)
   useEffect(() => {
     if (selectedBill) {
       const updated = bills.find((b) => b.id === selectedBill.id);
-      if (updated) {
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedBill)) {
         setSelectedBill(updated);
-      } else {
+      } else if (!updated) {
         setSelectedBill(null);
       }
     }
-  }, [bills, selectedBill?.id]);
+  }, [bills, selectedBill]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
@@ -155,6 +158,7 @@ export default function BillList() {
               bill={bill}
               tEsc={tEsc}
               tCat={tCat}
+              catMap={catMap} // Pass catMap down to the component!
               onTap={() => setSelectedBill(bill)}
             />
           ))}
@@ -182,11 +186,13 @@ function BillRow({
   bill,
   tEsc,
   tCat,
+  catMap,
   onTap,
 }: {
   bill: Bill;
   tEsc: ReturnType<typeof useTranslations>;
   tCat: ReturnType<typeof useTranslations>;
+  catMap: Record<string, string>; // Define catMap in the props
   onTap: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
