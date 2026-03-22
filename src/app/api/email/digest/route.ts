@@ -3,9 +3,9 @@ import { sendEmail, buildDigestEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, language, stats } = await req.json();
+    const { email, name, language, stats, userId } = await req.json();
     if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
-    const { subject, html } = buildDigestEmail(name || '', language !== 'en', stats || {});
+    const { subject, html } = buildDigestEmail(name || '', language !== 'en', stats || {}, userId);
     return NextResponse.json(await sendEmail({ to: email, subject, html }));
   } catch (err) {
     console.error('Digest email error:', err);
