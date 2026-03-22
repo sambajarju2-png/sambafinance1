@@ -3,6 +3,8 @@
  * Lazy initialization to prevent build-time crash when RESEND_API_KEY is not set.
  */
 
+import { generateUnsubscribeUrl } from './unsubscribe';
+
 let resendInstance: import('resend').Resend | null = null;
 
 function getResend() {
@@ -129,9 +131,21 @@ export function buildFeaturesEmail(name: string, isNl: boolean): { subject: stri
 export function buildDigestEmail(name: string, isNl: boolean, stats: {
   outstanding: number; overdue: number; paid_this_week: number; streak: number;
   total_outstanding_cents: number; next_due_vendor: string | null; next_due_date: string | null;
-}): { subject: string; html: string } {
+}, userId?: string): { subject: string; html: string } {
   const firstName = name?.split(' ')[0] || '';
   const total = `€${((stats?.total_outstanding_cents || 0) / 100).toFixed(2).replace('.', ',')}`;
+
+  // Generate unsubscribe link for this user (only if userId is provided)
+  let unsubscribeHtml = '';
+  if (userId) {
+    try {
+      const url = generateUnsubscribeUrl(userId, isNl ? 'nl' : 'en');
+      unsubscribeHtml = `<tr><td style="padding:0 32px 24px;text-align:center"><p style="margin:0;font-size:11px;color:#94A3B8">${isNl ? 'Je ontvangt deze e-mail omdat je een PayWatch account hebt.' : "You're receiving this email because you have a PayWatch account."}<br><a href="${url}" style="color:#94A3B8;text-decoration:underline">${isNl ? 'Uitschrijven voor wekelijkse e-mails' : 'Unsubscribe from weekly emails'}</a></p></td></tr>`;
+    } catch {
+      // If token generation fails, skip unsubscribe link silently
+    }
+  }
+
   return {
     subject: isNl ? 'Jouw Paywatch Check-in: Lekker bezig!' : "Your Paywatch Check-in: You've got this!",
     html: wrap(`
@@ -152,6 +166,7 @@ export function buildDigestEmail(name: string, isNl: boolean, stats: {
       <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Bekijk je overzicht' : 'View your overview', 'https://app.paywatch.app/overzicht')}</td></tr>
       <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Tot volgende week!' : 'See you next week!'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
       ${footerHtml(isNl)}
+      ${unsubscribeHtml}
     `, isNl ? 'Je wekelijkse overzicht staat klaar.' : 'Your weekly overview is ready.')
   };
 }
