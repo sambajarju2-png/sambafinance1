@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type Bill, type EscalationStage, formatCents } from '@/lib/bills';
 
 const STAGE_DOT_COLORS: Record<EscalationStage, string> = {
@@ -28,11 +29,43 @@ interface CalendarViewProps {
 
 export default function CalendarView({ bills, onSelectBill }: CalendarViewProps) {
   const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayDate = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+
+  // Month offset from current month (-6 to +6)
+  const [monthOffset, setMonthOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  const viewMonth = new Date(todayYear, todayMonth + monthOffset, 1);
+  const currentMonth = viewMonth.getMonth();
+  const currentYear = viewMonth.getFullYear();
+  const isCurrentMonth = monthOffset === 0;
+
+  // Navigation limits: 6 months back, 6 months forward
+  const canGoBack = monthOffset > -6;
+  const canGoForward = monthOffset < 6;
+
+  function handlePrevMonth() {
+    if (canGoBack) {
+      setMonthOffset((prev) => prev - 1);
+      setSelectedDay(null);
+    }
+  }
+
+  function handleNextMonth() {
+    if (canGoForward) {
+      setMonthOffset((prev) => prev + 1);
+      setSelectedDay(null);
+    }
+  }
+
+  function handleGoToToday() {
+    setMonthOffset(0);
+    setSelectedDay(null);
+  }
+
+  // Build calendar grid
   const { weeks, monthLabel } = useMemo(() => {
     const firstDay = new Date(currentYear, currentMonth, 1);
     const lastDay = new Date(currentYear, currentMonth + 1, 0);
@@ -55,6 +88,7 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
     return { weeks: wks, monthLabel: label.charAt(0).toUpperCase() + label.slice(1) };
   }, [currentMonth, currentYear]);
 
+  // Map bills to day numbers for current view month
   const billsByDay = useMemo(() => {
     const map: Record<number, Bill[]> = {};
     bills.forEach((bill) => {
@@ -71,35 +105,78 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
   // Bills for the selected day
   const selectedDayBills = selectedDay ? (billsByDay[selectedDay] || []) : [];
 
-  // Upcoming bills (next 14 days, not settled)
+  // Upcoming bills (next 14 days from today, not settled) — only on current month
   const upcomingBills = useMemo(() => {
+    if (!isCurrentMonth) return [];
+    const todayStr = today.toISOString().split('T')[0];
     const futureStr = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
     return bills
       .filter((b) => b.status !== 'settled' && b.due_date >= todayStr && b.due_date <= futureStr)
       .sort((a, b) => a.due_date.localeCompare(b.due_date))
       .slice(0, 5);
-  }, [bills, todayStr]);
+  }, [bills, isCurrentMonth, today]);
 
-  const todayDate = today.getDate();
+  // Count total bills in this month
+  const monthBillCount = Object.values(billsByDay).reduce((sum, arr) => sum + arr.length, 0);
 
   function handleDayTap(day: number) {
     const dayBills = billsByDay[day] || [];
     if (dayBills.length === 1) {
-      // Single bill → open drawer directly
       onSelectBill(dayBills[0]);
       setSelectedDay(null);
     } else if (dayBills.length > 1) {
-      // Multiple bills → show below calendar
       setSelectedDay(selectedDay === day ? null : day);
     }
   }
 
   return (
     <div className="space-y-4">
-      {/* Month header */}
-      <div className="text-center">
-        <h2 className="text-[16px] font-bold text-pw-navy">{monthLabel}</h2>
+      {/* Month navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={handlePrevMonth}
+          disabled={!canGoBack}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            canGoBack ? 'text-pw-text hover:bg-pw-border/50' : 'text-pw-muted/30'
+          }`}
+        >
+          <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+        </button>
+
+        <div className="text-center">
+          <button
+            onClick={handleGoToToday}
+            className="text-[16px] font-bold text-pw-navy hover:text-pw-blue transition-colors"
+          >
+            {monthLabel}
+          </button>
+          {monthBillCount > 0 && (
+            <p className="text-[10px] text-pw-muted">
+              {monthBillCount} {monthBillCount === 1 ? 'rekening' : 'rekeningen'}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={handleNextMonth}
+          disabled={!canGoForward}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            canGoForward ? 'text-pw-text hover:bg-pw-border/50' : 'text-pw-muted/30'
+          }`}
+        >
+          <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+        </button>
       </div>
+
+      {/* "Vandaag" button when not on current month */}
+      {!isCurrentMonth && (
+        <button
+          onClick={handleGoToToday}
+          className="mx-auto flex items-center gap-1 rounded-full bg-pw-blue/10 px-3 py-1 text-[11px] font-semibold text-pw-blue"
+        >
+          Vandaag
+        </button>
+      )}
 
       {/* Calendar grid */}
       <div className="rounded-card border border-pw-border bg-pw-surface p-3">
@@ -119,9 +196,12 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
               if (day === null) return <div key={di} className="h-10" />;
 
               const dayBills = billsByDay[day] || [];
-              const isToday = day === todayDate;
+              const isToday = isCurrentMonth && day === todayDate;
               const hasBills = dayBills.length > 0;
               const isSelected = selectedDay === day;
+              const isPast = isCurrentMonth
+                ? day < todayDate
+                : monthOffset < 0;
 
               return (
                 <button
@@ -136,11 +216,17 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
                         : hasBills
                           ? 'hover:bg-pw-bg'
                           : ''
-                  }`}
+                  } ${isPast && !isToday && !hasBills ? 'opacity-40' : ''}`}
                 >
                   <span
                     className={`text-[12px] ${
-                      isSelected ? 'font-bold text-pw-blue' : isToday ? 'font-bold text-pw-blue' : 'text-pw-text'
+                      isSelected
+                        ? 'font-bold text-pw-blue'
+                        : isToday
+                          ? 'font-bold text-pw-blue'
+                          : isPast
+                            ? 'text-pw-muted'
+                            : 'text-pw-text'
                     }`}
                   >
                     {day}
@@ -164,7 +250,7 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
         ))}
       </div>
 
-      {/* Selected day bills — shown when tapping a day with multiple bills */}
+      {/* Selected day bills */}
       {selectedDay && selectedDayBills.length > 0 && (
         <div>
           <h3 className="mb-2 text-[14px] font-bold text-pw-navy">
@@ -199,8 +285,8 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
         </div>
       )}
 
-      {/* Upcoming section — only when no day selected */}
-      {!selectedDay && upcomingBills.length > 0 && (
+      {/* Upcoming section — only on current month, when no day selected */}
+      {!selectedDay && isCurrentMonth && upcomingBills.length > 0 && (
         <div>
           <h3 className="mb-2 text-[14px] font-bold text-pw-navy">Binnenkort</h3>
           <div className="space-y-2">

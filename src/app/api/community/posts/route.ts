@@ -3,7 +3,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
 
-// Simple keyword filter for moderation
 const BLOCKED_WORDS = ['kanker', 'tering', 'tyfus', 'hoer', 'kut', 'fuck', 'shit'];
 function containsBlockedWords(text: string): boolean {
   const lower = text.toLowerCase();
@@ -18,34 +17,60 @@ export async function GET(req: NextRequest) {
   const filter = req.nextUrl.searchParams.get('filter') || 'all';
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20'), 50);
 
-  let query = supabase
+  // Fetch posts
+  let postsQuery = supabase
     .from('community_posts')
-    .select('*, community_profiles(display_name), community_reactions(id, reaction_type, user_id)')
+    .select('*')
     .eq('is_approved', true)
     .eq('is_flagged', false)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (filter === 'succesverhalen') {
-    query = query.eq('badge_type', 'milestone');
+    postsQuery = postsQuery.eq('badge_type', 'milestone');
   } else if (filter === 'tips') {
-    query = query.eq('badge_type', 'tip');
+    postsQuery = postsQuery.eq('badge_type', 'tip');
   } else if (filter === 'steun') {
-    query = query.is('badge_type', null);
+    postsQuery = postsQuery.is('badge_type', null);
   }
 
-  const { data: posts, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
+  const { data: posts, error: postsError } = await postsQuery;
+  if (postsError) return NextResponse.json({ error: postsError.message }, { status: 500, headers: NO_CACHE });
+  if (!posts || posts.length === 0) return NextResponse.json({ posts: [] }, { headers: NO_CACHE });
 
-  // Transform posts for client
-  const enriched = (posts || []).map((post) => {
-    const profile = Array.isArray(post.community_profiles) ? post.community_profiles[0] : post.community_profiles;
-    const reactions = post.community_reactions || [];
+  // Fetch profiles for all post authors
+  const userIds = [...new Set(posts.map((p) => p.user_id))];
+  const { data: profiles } = await supabase
+    .from('community_profiles')
+    .select('user_id, display_name')
+    .in('user_id', userIds);
 
-    // Count reactions by type
+  const profileMap: Record<string, string> = {};
+  for (const p of profiles || []) {
+    profileMap[p.user_id] = p.display_name;
+  }
+
+  // Fetch reactions for all posts
+  const postIds = posts.map((p) => p.id);
+  const { data: reactions } = await supabase
+    .from('community_reactions')
+    .select('post_id, reaction_type, user_id')
+    .in('post_id', postIds);
+
+  // Group reactions by post
+  const reactionsByPost: Record<string, Array<{ reaction_type: string; user_id: string }>> = {};
+  for (const r of reactions || []) {
+    if (!reactionsByPost[r.post_id]) reactionsByPost[r.post_id] = [];
+    reactionsByPost[r.post_id].push(r);
+  }
+
+  // Enrich posts
+  const enriched = posts.map((post) => {
+    const postReactions = reactionsByPost[post.id] || [];
     const reactionCounts: Record<string, number> = {};
     const userReactions: string[] = [];
-    for (const r of reactions) {
+
+    for (const r of postReactions) {
       reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1;
       if (r.user_id === user.id) userReactions.push(r.reaction_type);
     }
@@ -57,11 +82,11 @@ export async function GET(req: NextRequest) {
       badge_type: post.badge_type,
       badge_data: post.badge_data,
       created_at: post.created_at,
-      display_name: post.is_anonymous ? 'Anoniem' : (profile?.display_name || 'Gebruiker'),
+      display_name: post.is_anonymous ? 'Anoniem' : (profileMap[post.user_id] || 'Gebruiker'),
       user_id: post.user_id,
       reaction_counts: reactionCounts,
       user_reactions: userReactions,
-      total_reactions: reactions.length,
+      total_reactions: postReactions.length,
     };
   });
 
