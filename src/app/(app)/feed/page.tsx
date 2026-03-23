@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   MessageCircle, Send, Loader2, X, ChevronDown, ChevronUp, Trophy,
   MoreHorizontal, Pencil, Trash2,
@@ -65,7 +66,20 @@ const POST_LABELS = [
   { key: 'debt_free', label: 'Schuldenvrij!', icon: '🎉' },
 ];
 
+/* Wrap in Suspense for useSearchParams */
 export default function FeedPage() {
+  return (
+    <Suspense fallback={<div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[120px] rounded-card" />)}</div>}>
+      <FeedContent />
+    </Suspense>
+  );
+}
+
+function FeedContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const highlightPostId = searchParams.get('post') || null;
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<{ display_name: string } | null>(null);
@@ -73,6 +87,13 @@ export default function FeedPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [composeOpen, setComposeOpen] = useState(false);
   const [weekLabel, setWeekLabel] = useState('');
+
+  // Clean up ?post= from URL after reading it
+  useEffect(() => {
+    if (highlightPostId) {
+      window.history.replaceState(null, '', '/feed');
+    }
+  }, [highlightPostId]);
 
   useEffect(() => {
     async function load() {
@@ -107,7 +128,6 @@ export default function FeedPage() {
     setShowNamePicker(false);
   }
 
-  // Update comment count locally — NO full page refresh
   function handleCommentCountChange(postId: string, delta: number) {
     setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, comment_count: p.comment_count + delta } : p));
   }
@@ -210,7 +230,8 @@ export default function FeedPage() {
             <PostCard key={post.id} post={post} index={index} onReaction={handleReaction}
               rank={activeFilter === 'populair' ? index + 1 : undefined}
               onCommentCountChange={handleCommentCountChange}
-              onDelete={handleDeletePost} onEdit={handleEditPost} />
+              onDelete={handleDeletePost} onEdit={handleEditPost}
+              autoOpenComments={post.id === highlightPostId} />
           ))}
         </div>
       )}
@@ -224,10 +245,11 @@ export default function FeedPage() {
 }
 
 /* ============ Post Card ============ */
-function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelete, onEdit }: {
+function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelete, onEdit, autoOpenComments }: {
   post: Post; index: number; onReaction: (id: string, type: string) => void;
   rank?: number; onCommentCountChange: (id: string, delta: number) => void;
   onDelete: (id: string) => void; onEdit: (id: string, content: string) => void;
+  autoOpenComments?: boolean;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<FlatComment[]>([]);
@@ -238,11 +260,25 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const avatarUrl = post.is_anonymous
     ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
     : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(post.display_name)}`;
   const badge = post.badge_type ? BADGE_LABELS[post.badge_type] : null;
+
+  // Auto-open comments when navigated from notification deep link
+  useEffect(() => {
+    if (autoOpenComments) {
+      loadComments();
+      setShowComments(true);
+      // Scroll this post into view after a short delay
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenComments]);
 
   async function loadComments() {
     setLoadingComments(true);
@@ -274,7 +310,7 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
       if (res.ok) {
         setNewComment('');
         loadComments();
-        onCommentCountChange(post.id, 1); // Update count locally, no page refresh
+        onCommentCountChange(post.id, 1);
       } else {
         const data = await res.json();
         alert(data.error || 'Fout bij plaatsen');
@@ -315,7 +351,13 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
   }
 
   return (
-    <div className="bill-row-enter rounded-card border border-pw-border bg-pw-surface p-4" style={{ animationDelay: `${index * 60}ms` }}>
+    <div
+      ref={cardRef}
+      className={`bill-row-enter rounded-card border bg-pw-surface p-4 transition-colors ${
+        autoOpenComments ? 'border-pw-blue/40 ring-2 ring-pw-blue/20' : 'border-pw-border'
+      }`}
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
       {rank && (
         <div className="mb-2 flex items-center gap-1.5">
           <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white ${
@@ -418,7 +460,6 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
             </div>
           )}
 
-          {/* Comment input */}
           <div className="mt-3 flex gap-2">
             <input ref={inputRef} type="text" value={newComment} onChange={(e) => setNewComment(e.target.value.slice(0, 300))}
               placeholder="Schrijf een reactie..."

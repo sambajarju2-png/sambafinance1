@@ -299,7 +299,14 @@
     "digest_desc": "Weekly overview of your bills",
     "noNotifications": "No notifications",
     "clearAll": "Clear all",
-    "cleared": "Notifications cleared"
+    "cleared": "Notifications cleared",
+    "community_label": "Community notifications",
+    "community_desc": "Notifications for @mentions in the feed",
+    "mentionSection": "Mentions",
+    "allGood": "All caught up. Nice work!",
+    "overdueSection": "Overdue",
+    "upcomingSection": "Upcoming",
+    "achievementsSection": "Achievements"
   },
   "gmail": {
     "title": "Gmail accounts",

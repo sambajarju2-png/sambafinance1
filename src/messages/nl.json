@@ -299,7 +299,14 @@
     "digest_desc": "Wekelijks overzicht van je rekeningen",
     "noNotifications": "Geen meldingen",
     "clearAll": "Alles wissen",
-    "cleared": "Meldingen gewist"
+    "cleared": "Meldingen gewist",
+    "community_label": "Community meldingen",
+    "community_desc": "Meldingen bij @mentions in de feed",
+    "mentionSection": "Vermeldingen",
+    "allGood": "Alles is bij. Goed bezig!",
+    "overdueSection": "Achterstallig",
+    "upcomingSection": "Binnenkort",
+    "achievementsSection": "Prestaties"
   },
   "gmail": {
     "title": "Gmail accounts",

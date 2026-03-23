@@ -42,6 +42,15 @@ export async function GET() {
       .order('unlocked_at', { ascending: false })
       .limit(5);
 
+    // Community notifications (unread mentions)
+    const { data: communityNotifs } = await supabase
+      .from('community_notifications')
+      .select('id, type, from_display_name, post_id, comment_id, content_preview, created_at')
+      .eq('user_id', userId)
+      .eq('is_read', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
     const items: Array<{ type: string; data: unknown }> = [];
 
     for (const bill of (overdueBills || [])) {
@@ -53,10 +62,19 @@ export async function GET() {
     for (const ach of (recentAchievements || [])) {
       items.push({ type: 'achievement', data: ach });
     }
+    for (const notif of (communityNotifs || [])) {
+      items.push({ type: 'mention', data: notif });
+    }
 
-    const count = (overdueBills?.length || 0) + (recentAchievements?.length || 0);
+    const count = (overdueBills?.length || 0) + (recentAchievements?.length || 0) + (communityNotifs?.length || 0);
 
-    return NextResponse.json({ count, items, overdue: overdueBills?.length || 0, achievements: recentAchievements?.length || 0 }, { headers: NO_CACHE });
+    return NextResponse.json({
+      count,
+      items,
+      overdue: overdueBills?.length || 0,
+      achievements: recentAchievements?.length || 0,
+      mentions: communityNotifs?.length || 0,
+    }, { headers: NO_CACHE });
   } catch {
     return NextResponse.json({ count: 0, items: [] }, { headers: NO_CACHE });
   }
