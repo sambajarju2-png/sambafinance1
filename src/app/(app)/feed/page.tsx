@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MessageCircle, Send, Loader2, X, ChevronDown, ChevronUp, Trophy,
+  MoreHorizontal, Pencil, Trash2,
 } from 'lucide-react';
 import CommunityNamePicker from '@/components/community-name-picker';
 
@@ -15,6 +16,7 @@ interface Post {
   created_at: string;
   display_name: string;
   user_id: string;
+  is_own: boolean;
   reaction_counts: Record<string, number>;
   user_reactions: string[];
   total_reactions: number;
@@ -27,16 +29,17 @@ interface FlatComment {
   is_anonymous: boolean;
   display_name: string;
   user_id: string;
+  is_own: boolean;
   created_at: string;
 }
 
 type FilterKey = 'all' | 'populair' | 'succesverhalen' | 'tips' | 'steun';
 
 const REACTION_BUTTONS = [
-  { key: 'heart', emoji: '❤️', label: '' },
-  { key: 'goed', emoji: '👏', label: 'Goed gedaan' },
-  { key: 'trots', emoji: '💪', label: 'Trots op je' },
-  { key: 'top', emoji: '⭐', label: 'Top gedaan' },
+  { key: 'heart', emoji: '❤️' },
+  { key: 'goed', emoji: '👏' },
+  { key: 'trots', emoji: '💪' },
+  { key: 'top', emoji: '⭐' },
 ];
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -74,9 +77,9 @@ export default function FeedPage() {
   useEffect(() => {
     async function load() {
       try {
-        const profileRes = await fetch('/api/community/profile');
-        if (profileRes.ok) {
-          const data = await profileRes.json();
+        const res = await fetch('/api/community/profile');
+        if (res.ok) {
+          const data = await res.json();
           if (data.profile) setProfile(data.profile);
           else setShowNamePicker(true);
         }
@@ -104,6 +107,11 @@ export default function FeedPage() {
     setShowNamePicker(false);
   }
 
+  // Update comment count locally — NO full page refresh
+  function handleCommentCountChange(postId: string, delta: number) {
+    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, comment_count: p.comment_count + delta } : p));
+  }
+
   async function handleReaction(postId: string, reactionType: string) {
     setPosts((prev) =>
       prev.map((p) => {
@@ -123,6 +131,29 @@ export default function FeedPage() {
         body: JSON.stringify({ post_id: postId, reaction_type: reactionType }),
       });
     } catch { fetchPosts(); }
+  }
+
+  async function handleDeletePost(postId: string) {
+    if (!confirm('Weet je zeker dat je dit bericht wilt verwijderen?')) return;
+    try {
+      const res = await fetch('/api/community/posts', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: postId }),
+      });
+      if (res.ok) setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch {}
+  }
+
+  async function handleEditPost(postId: string, newContent: string) {
+    try {
+      const res = await fetch('/api/community/posts', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: postId, content: newContent }),
+      });
+      if (res.ok) {
+        setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, content: newContent } : p));
+      }
+    } catch {}
   }
 
   return (
@@ -177,7 +208,9 @@ export default function FeedPage() {
         <div className="space-y-3">
           {posts.map((post, index) => (
             <PostCard key={post.id} post={post} index={index} onReaction={handleReaction}
-              rank={activeFilter === 'populair' ? index + 1 : undefined} onCommentAdded={fetchPosts} />
+              rank={activeFilter === 'populair' ? index + 1 : undefined}
+              onCommentCountChange={handleCommentCountChange}
+              onDelete={handleDeletePost} onEdit={handleEditPost} />
           ))}
         </div>
       )}
@@ -190,22 +223,25 @@ export default function FeedPage() {
   );
 }
 
-/* ============ Post Card with Flat Comments ============ */
-function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
+/* ============ Post Card ============ */
+function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelete, onEdit }: {
   post: Post; index: number; onReaction: (id: string, type: string) => void;
-  rank?: number; onCommentAdded: () => void;
+  rank?: number; onCommentCountChange: (id: string, delta: number) => void;
+  onDelete: (id: string) => void; onEdit: (id: string, content: string) => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<FlatComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const avatarUrl = post.is_anonymous
     ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
     : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(post.display_name)}`;
-
   const badge = post.badge_type ? BADGE_LABELS[post.badge_type] : null;
 
   async function loadComments() {
@@ -238,7 +274,7 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
       if (res.ok) {
         setNewComment('');
         loadComments();
-        onCommentAdded();
+        onCommentCountChange(post.id, 1); // Update count locally, no page refresh
       } else {
         const data = await res.json();
         alert(data.error || 'Fout bij plaatsen');
@@ -246,9 +282,40 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
     } catch {} finally { setPosting(false); }
   }
 
+  async function handleDeleteComment(commentId: string) {
+    try {
+      const res = await fetch('/api/community/comments', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: commentId }),
+      });
+      if (res.ok) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        onCommentCountChange(post.id, -1);
+      }
+    } catch {}
+  }
+
+  async function handleEditComment(commentId: string, newContent: string) {
+    try {
+      const res = await fetch('/api/community/comments', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: commentId, content: newContent }),
+      });
+      if (res.ok) {
+        setComments((prev) => prev.map((c) => c.id === commentId ? { ...c, content: newContent } : c));
+      }
+    } catch {}
+  }
+
+  function handleSaveEdit() {
+    if (editContent.trim().length < 3) return;
+    onEdit(post.id, editContent.trim());
+    setEditing(false);
+    setShowMenu(false);
+  }
+
   return (
     <div className="bill-row-enter rounded-card border border-pw-border bg-pw-surface p-4" style={{ animationDelay: `${index * 60}ms` }}>
-      {/* Rank badge for popular */}
       {rank && (
         <div className="mb-2 flex items-center gap-1.5">
           <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white ${
@@ -258,7 +325,7 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with menu */}
       <div className="flex items-center gap-3 mb-2.5">
         <div className="h-9 w-9 overflow-hidden rounded-full border border-pw-border bg-pw-bg">
           <img src={avatarUrl} alt="" className="h-full w-full" />
@@ -267,6 +334,28 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
           <p className="text-[13px] font-semibold text-pw-text">{post.display_name}</p>
           <p className="text-[10px] text-pw-muted">{getTimeAgo(post.created_at)}</p>
         </div>
+        {post.is_own && (
+          <div className="relative">
+            <button onClick={() => setShowMenu(!showMenu)} className="flex h-7 w-7 items-center justify-center rounded-full text-pw-muted hover:bg-pw-bg">
+              <MoreHorizontal className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-8 z-20 w-36 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
+                  <button onClick={() => { setEditing(true); setShowMenu(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-text hover:bg-pw-bg">
+                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} /> Bewerken
+                  </button>
+                  <button onClick={() => { onDelete(post.id); setShowMenu(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-red hover:bg-red-50">
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Verwijderen
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {badge && (
@@ -276,10 +365,19 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </div>
       )}
 
-      {/* Content with @mention highlighting */}
-      <p className="text-[13px] leading-relaxed text-pw-text">
-        <MentionText text={post.content} />
-      </p>
+      {/* Content or edit mode */}
+      {editing ? (
+        <div className="mb-2">
+          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value.slice(0, 500))} rows={3}
+            className="w-full rounded-input border border-pw-blue bg-pw-surface px-3 py-2 text-[13px] text-pw-text focus:outline-none" />
+          <div className="mt-1.5 flex gap-2">
+            <button onClick={handleSaveEdit} className="rounded-button bg-pw-blue px-3 py-1.5 text-[11px] font-semibold text-white">Opslaan</button>
+            <button onClick={() => { setEditing(false); setEditContent(post.content); }} className="text-[11px] text-pw-muted">Annuleren</button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-[13px] leading-relaxed text-pw-text"><MentionText text={post.content} /></p>
+      )}
 
       {/* Reactions + Comments toggle */}
       <div className="mt-3 flex items-center justify-between border-t border-pw-border pt-2.5">
@@ -306,7 +404,7 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </button>
       </div>
 
-      {/* Flat comments section (Instagram/TikTok style) */}
+      {/* Flat comments (Instagram/TikTok style) */}
       {showComments && (
         <div className="mt-3 border-t border-pw-border pt-3">
           {loadingComments ? (
@@ -314,48 +412,18 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
           ) : (
             <div className="space-y-3">
               {comments.length === 0 && <p className="text-center text-[12px] text-pw-muted py-2">Nog geen reacties</p>}
-              {comments.map((c) => {
-                const cAvatar = c.is_anonymous
-                  ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
-                  : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(c.display_name)}`;
-
-                return (
-                  <div key={c.id} className="flex items-start gap-2.5">
-                    <div className="mt-0.5 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full border border-pw-border bg-pw-bg">
-                      <img src={cAvatar} alt="" className="h-full w-full" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[12px] font-bold text-pw-text">{c.display_name}</span>
-                        <span className="text-[9px] text-pw-muted">{getTimeAgo(c.created_at)}</span>
-                      </div>
-                      <p className="text-[12px] text-pw-text leading-relaxed">
-                        <MentionText text={c.content} />
-                      </p>
-                      <button
-                        onClick={() => handleReplyTo(c.display_name)}
-                        className="mt-0.5 text-[10px] font-semibold text-pw-muted hover:text-pw-blue"
-                      >
-                        Reageer
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              {comments.map((c) => (
+                <CommentRow key={c.id} comment={c} onReplyTo={handleReplyTo} onDelete={handleDeleteComment} onEdit={handleEditComment} />
+              ))}
             </div>
           )}
 
           {/* Comment input */}
           <div className="mt-3 flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value.slice(0, 300))}
+            <input ref={inputRef} type="text" value={newComment} onChange={(e) => setNewComment(e.target.value.slice(0, 300))}
               placeholder="Schrijf een reactie..."
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
-              className="flex-1 rounded-full border border-pw-border bg-pw-bg px-4 py-2 text-[12px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none"
-            />
+              className="flex-1 rounded-full border border-pw-border bg-pw-bg px-4 py-2 text-[12px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none" />
             <button onClick={handlePostComment} disabled={posting || !newComment.trim()}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-pw-blue text-white disabled:opacity-40">
               {posting ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} /> : <Send className="h-3.5 w-3.5" strokeWidth={1.5} />}
@@ -367,21 +435,76 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
   );
 }
 
+/* ============ Single Comment Row ============ */
+function CommentRow({ comment, onReplyTo, onDelete, onEdit }: {
+  comment: FlatComment; onReplyTo: (name: string) => void;
+  onDelete: (id: string) => void; onEdit: (id: string, content: string) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+
+  const cAvatar = comment.is_anonymous
+    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
+    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(comment.display_name)}`;
+
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="mt-0.5 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full border border-pw-border bg-pw-bg">
+        <img src={cAvatar} alt="" className="h-full w-full" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[12px] font-bold text-pw-text">{comment.display_name}</span>
+          <span className="text-[9px] text-pw-muted">{getTimeAgo(comment.created_at)}</span>
+          {comment.is_own && (
+            <div className="relative ml-auto">
+              <button onClick={() => setShowMenu(!showMenu)} className="text-pw-muted hover:text-pw-text">
+                <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-5 z-20 w-32 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
+                    <button onClick={() => { setEditing(true); setShowMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-text hover:bg-pw-bg">
+                      <Pencil className="h-3 w-3" strokeWidth={1.5} /> Bewerken
+                    </button>
+                    <button onClick={() => { onDelete(comment.id); setShowMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-red hover:bg-red-50">
+                      <Trash2 className="h-3 w-3" strokeWidth={1.5} /> Verwijderen
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        {editing ? (
+          <div className="mt-1">
+            <input type="text" value={editContent} onChange={(e) => setEditContent(e.target.value.slice(0, 300))}
+              className="w-full rounded-input border border-pw-blue bg-pw-surface px-2 py-1 text-[12px] text-pw-text focus:outline-none"
+              onKeyDown={(e) => { if (e.key === 'Enter') { onEdit(comment.id, editContent.trim()); setEditing(false); } if (e.key === 'Escape') { setEditing(false); setEditContent(comment.content); } }} />
+            <div className="mt-1 flex gap-2">
+              <button onClick={() => { onEdit(comment.id, editContent.trim()); setEditing(false); }} className="text-[10px] font-semibold text-pw-blue">Opslaan</button>
+              <button onClick={() => { setEditing(false); setEditContent(comment.content); }} className="text-[10px] text-pw-muted">Annuleren</button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[12px] text-pw-text leading-relaxed"><MentionText text={comment.content} /></p>
+        )}
+        <button onClick={() => onReplyTo(comment.display_name)} className="mt-0.5 text-[10px] font-semibold text-pw-muted hover:text-pw-blue">
+          Reageer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ============ @Mention highlighter ============ */
 function MentionText({ text }: { text: string }) {
-  // Split on @username patterns and highlight them blue
   const parts = text.split(/(@\S+)/g);
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.startsWith('@') ? (
-          <span key={i} className="font-semibold text-pw-blue">{part}</span>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
+  return (<>{parts.map((part, i) => part.startsWith('@') ? <span key={i} className="font-semibold text-pw-blue">{part}</span> : <span key={i}>{part}</span>)}</>);
 }
 
 /* ============ Compose Drawer ============ */
@@ -395,8 +518,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
   async function handlePost() {
     const trimmed = content.trim();
     if (!trimmed || trimmed.length < 3) { setError('Minimaal 3 tekens'); return; }
-    setPosting(true);
-    setError('');
+    setPosting(true); setError('');
     try {
       const res = await fetch('/api/community/posts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -404,8 +526,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
       });
       if (!res.ok) {
         const data = await res.json();
-        if (data.error === 'daily_limit') { setError(data.message); return; }
-        setError(data.error || 'Er ging iets mis');
+        setError(data.error === 'daily_limit' ? data.message : (data.error || 'Er ging iets mis'));
         return;
       }
       onPosted();
@@ -424,24 +545,17 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
         <div className="px-5 pb-8 pt-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[18px] font-bold text-pw-navy">Deel je verhaal</h2>
-            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50">
-              <X className="h-5 w-5" strokeWidth={1.5} />
-            </button>
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50"><X className="h-5 w-5" strokeWidth={1.5} /></button>
           </div>
 
           <div className="mb-4 flex items-center gap-3">
-            <div className="h-9 w-9 overflow-hidden rounded-full border border-pw-border bg-pw-surface">
-              <img src={avatarUrl} alt="" className="h-full w-full" />
-            </div>
+            <div className="h-9 w-9 overflow-hidden rounded-full border border-pw-border bg-pw-surface"><img src={avatarUrl} alt="" className="h-full w-full" /></div>
             <div>
               <p className="text-[13px] font-semibold text-pw-text">{isAnonymous ? 'Anoniem' : displayName}</p>
-              <button onClick={() => setIsAnonymous(!isAnonymous)} className="text-[11px] text-pw-blue">
-                {isAnonymous ? 'Post met naam' : 'Post anoniem'}
-              </button>
+              <button onClick={() => setIsAnonymous(!isAnonymous)} className="text-[11px] text-pw-blue">{isAnonymous ? 'Post met naam' : 'Post anoniem'}</button>
             </div>
           </div>
 
-          {/* Label selector */}
           <div className="mb-3">
             <p className="mb-1.5 text-[11px] font-medium text-pw-muted">Label (optioneel)</p>
             <div className="flex flex-wrap gap-1.5">
@@ -450,8 +564,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
                   className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
                     selectedLabel === pl.key ? 'bg-pw-blue text-white' : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'
                   }`}>
-                  {pl.icon && <span>{pl.icon}</span>}
-                  {pl.label}
+                  {pl.icon && <span>{pl.icon}</span>}{pl.label}
                 </button>
               ))}
             </div>
@@ -459,17 +572,10 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
 
           <textarea value={content} onChange={(e) => setContent(e.target.value.slice(0, 500))} rows={4}
             placeholder="Waar wil je over praten? Een tip, een succes, of gewoon even stoom afblazen..."
-            className="w-full rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue"
-            autoFocus />
-          <div className="mt-1 flex items-center justify-between">
-            <p className="text-[10px] text-pw-muted">{content.length}/500</p>
-          </div>
+            className="w-full rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" autoFocus />
+          <p className="mt-1 text-[10px] text-pw-muted">{content.length}/500</p>
 
-          {error && (
-            <div className="mt-2 rounded-card border border-pw-amber/20 bg-amber-50/50 p-3">
-              <p className="text-[12px] text-pw-text leading-relaxed">{error}</p>
-            </div>
-          )}
+          {error && (<div className="mt-2 rounded-card border border-pw-amber/20 bg-amber-50/50 p-3"><p className="text-[12px] text-pw-text leading-relaxed">{error}</p></div>)}
 
           <button onClick={handlePost} disabled={posting || content.trim().length < 3}
             className="btn-press mt-4 flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[14px] font-semibold text-white disabled:opacity-50">
@@ -482,7 +588,6 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
   );
 }
 
-/* ============ Helper ============ */
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);

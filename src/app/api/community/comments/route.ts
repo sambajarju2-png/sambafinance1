@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
   const postId = req.nextUrl.searchParams.get('post_id');
   if (!postId) return NextResponse.json({ error: 'post_id required' }, { status: 400, headers: NO_CACHE });
 
-  // Flat list, oldest first (like Instagram/TikTok)
   const { data: comments, error } = await supabase
     .from('community_comments')
     .select('*')
@@ -29,7 +28,6 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
   if (!comments || comments.length === 0) return NextResponse.json({ comments: [] }, { headers: NO_CACHE });
 
-  // Fetch profiles
   const userIds = Array.from(new Set(comments.map((c) => c.user_id)));
   const { data: profiles } = await supabase
     .from('community_profiles')
@@ -45,6 +43,7 @@ export async function GET(req: NextRequest) {
     is_anonymous: c.is_anonymous,
     display_name: c.is_anonymous ? 'Anoniem' : (profileMap[c.user_id] || 'Gebruiker'),
     user_id: c.user_id,
+    is_own: c.user_id === user.id,
     created_at: c.created_at,
   }));
 
@@ -67,15 +66,37 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('community_comments')
-    .insert({
-      post_id: postId,
-      user_id: user.id,
-      content,
-      is_anonymous: body.is_anonymous || false,
-    })
+    .insert({ post_id: postId, user_id: user.id, content, is_anonymous: body.is_anonymous || false })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
   return NextResponse.json({ comment: data }, { status: 201, headers: NO_CACHE });
+}
+
+export async function PATCH(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const { id, content } = await req.json();
+  if (!id || !content?.trim()) return NextResponse.json({ error: 'Missing fields' }, { status: 400, headers: NO_CACHE });
+  if (containsBlockedWords(content)) return NextResponse.json({ error: 'Ongepaste taal gedetecteerd' }, { status: 400, headers: NO_CACHE });
+
+  const { error } = await supabase.from('community_comments').update({ content: content.trim() }).eq('id', id).eq('user_id', user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
+  return NextResponse.json({ success: true }, { headers: NO_CACHE });
+}
+
+export async function DELETE(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400, headers: NO_CACHE });
+
+  const { error } = await supabase.from('community_comments').delete().eq('id', id).eq('user_id', user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
+  return NextResponse.json({ success: true }, { headers: NO_CACHE });
 }

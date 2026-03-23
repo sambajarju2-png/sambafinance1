@@ -18,12 +18,10 @@ export async function GET(req: NextRequest) {
   const filter = req.nextUrl.searchParams.get('filter') || 'all';
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20'), 50);
 
-  // Popular tab: top 10 by reactions+comments this week
   if (filter === 'populair') {
     return getPopularPosts(supabase, user.id);
   }
 
-  // Regular posts
   let postsQuery = supabase
     .from('community_posts')
     .select('*')
@@ -49,56 +47,39 @@ export async function GET(req: NextRequest) {
 }
 
 async function getPopularPosts(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, userId: string) {
-  // Get start of current week (Monday)
   const now = new Date();
   const dayOfWeek = now.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() + mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
-  const weekStartStr = weekStart.toISOString();
 
-  // Get posts from this week
   const { data: posts } = await supabase
     .from('community_posts')
     .select('*')
     .eq('is_approved', true)
     .eq('is_flagged', false)
-    .gte('created_at', weekStartStr)
+    .gte('created_at', weekStart.toISOString())
     .order('created_at', { ascending: false })
     .limit(50);
 
   if (!posts || posts.length === 0) return NextResponse.json({ posts: [], week_label: getWeekLabel(weekStart) }, { headers: NO_CACHE });
 
-  // Get reaction counts and comment counts
   const postIds = posts.map((p) => p.id);
-  
-  const { data: reactions } = await supabase
-    .from('community_reactions')
-    .select('post_id')
-    .in('post_id', postIds);
+  const [reactionsRes, commentsRes] = await Promise.all([
+    supabase.from('community_reactions').select('post_id').in('post_id', postIds),
+    supabase.from('community_comments').select('post_id').in('post_id', postIds).eq('is_flagged', false),
+  ]);
 
-  const { data: comments } = await supabase
-    .from('community_comments')
-    .select('post_id')
-    .in('post_id', postIds)
-    .eq('is_flagged', false);
+  const rc: Record<string, number> = {};
+  const cc: Record<string, number> = {};
+  for (const r of reactionsRes.data || []) rc[r.post_id] = (rc[r.post_id] || 0) + 1;
+  for (const c of commentsRes.data || []) cc[c.post_id] = (cc[c.post_id] || 0) + 1;
 
-  // Count per post
-  const reactionCount: Record<string, number> = {};
-  const commentCount: Record<string, number> = {};
-  for (const r of reactions || []) reactionCount[r.post_id] = (reactionCount[r.post_id] || 0) + 1;
-  for (const c of comments || []) commentCount[c.post_id] = (commentCount[c.post_id] || 0) + 1;
-
-  // Score = reactions + comments, sort descending, take top 10
-  const scored = posts.map((p) => ({
-    ...p,
-    _score: (reactionCount[p.id] || 0) + (commentCount[p.id] || 0),
-  }));
+  const scored = posts.map((p) => ({ ...p, _score: (rc[p.id] || 0) + (cc[p.id] || 0) }));
   scored.sort((a, b) => b._score - a._score);
-  const top10 = scored.slice(0, 10);
 
-  const enriched = await enrichPosts(supabase, top10, userId);
+  const enriched = await enrichPosts(supabase, scored.slice(0, 10), userId);
   return NextResponse.json({ posts: enriched, week_label: getWeekLabel(weekStart) }, { headers: NO_CACHE });
 }
 
@@ -133,20 +114,16 @@ async function enrichPosts(
   }
 
   const commentCountByPost: Record<string, number> = {};
-  for (const c of commentsRes.data || []) {
-    commentCountByPost[c.post_id] = (commentCountByPost[c.post_id] || 0) + 1;
-  }
+  for (const c of commentsRes.data || []) commentCountByPost[c.post_id] = (commentCountByPost[c.post_id] || 0) + 1;
 
   return posts.map((post) => {
     const postReactions = reactionsByPost[post.id as string] || [];
     const reactionCounts: Record<string, number> = {};
     const userReactions: string[] = [];
-
     for (const r of postReactions) {
       reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1;
       if (r.user_id === userId) userReactions.push(r.reaction_type);
     }
-
     return {
       id: post.id,
       content: post.content,
@@ -156,6 +133,7 @@ async function enrichPosts(
       created_at: post.created_at,
       display_name: post.is_anonymous ? 'Anoniem' : (profileMap[post.user_id as string] || 'Gebruiker'),
       user_id: post.user_id,
+      is_own: post.user_id === userId,
       reaction_counts: reactionCounts,
       user_reactions: userReactions,
       total_reactions: postReactions.length,
@@ -169,7 +147,6 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
-  // Rate limit: 3 posts per day
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const { count } = await supabase
@@ -193,16 +170,38 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('community_posts')
-    .insert({
-      user_id: user.id,
-      content,
-      is_anonymous: body.is_anonymous || false,
-      badge_type: body.badge_type || null,
-      badge_data: body.badge_data || null,
-    })
+    .insert({ user_id: user.id, content, is_anonymous: body.is_anonymous || false, badge_type: body.badge_type || null, badge_data: body.badge_data || null })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
   return NextResponse.json({ post: data }, { status: 201, headers: NO_CACHE });
+}
+
+export async function PATCH(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const body = await req.json();
+  const { id, content } = body;
+  if (!id || !content?.trim()) return NextResponse.json({ error: 'Missing fields' }, { status: 400, headers: NO_CACHE });
+  if (containsBlockedWords(content)) return NextResponse.json({ error: 'Ongepaste taal gedetecteerd' }, { status: 400, headers: NO_CACHE });
+
+  const { error } = await supabase.from('community_posts').update({ content: content.trim() }).eq('id', id).eq('user_id', user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
+  return NextResponse.json({ success: true }, { headers: NO_CACHE });
+}
+
+export async function DELETE(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400, headers: NO_CACHE });
+
+  const { error } = await supabase.from('community_posts').delete().eq('id', id).eq('user_id', user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
+  return NextResponse.json({ success: true }, { headers: NO_CACHE });
 }
