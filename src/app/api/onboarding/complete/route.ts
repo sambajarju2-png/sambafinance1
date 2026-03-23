@@ -9,17 +9,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { display_name, language, scan_preference } = body;
+    const { first_name, last_name, language } = body;
 
-    if (!display_name || typeof display_name !== 'string' || display_name.trim().length === 0) {
-      return NextResponse.json({ error: 'Display name is required' }, { status: 400, headers: NO_CACHE });
+    // Validate first_name (required)
+    if (!first_name || typeof first_name !== 'string' || first_name.trim().length === 0) {
+      return NextResponse.json({ error: 'First name is required' }, { status: 400, headers: NO_CACHE });
     }
+
     if (!['nl', 'en'].includes(language)) {
       return NextResponse.json({ error: 'Invalid language' }, { status: 400, headers: NO_CACHE });
     }
-    if (!['gmail', 'camera', 'both'].includes(scan_preference)) {
-      return NextResponse.json({ error: 'Invalid scan preference' }, { status: 400, headers: NO_CACHE });
-    }
+
+    // Build display_name from first + last
+    const trimmedFirst = first_name.trim();
+    const trimmedLast = typeof last_name === 'string' ? last_name.trim() : '';
+    const displayName = [trimmedFirst, trimmedLast].filter(Boolean).join(' ');
 
     const supabase = await createServerSupabaseClient();
 
@@ -29,9 +33,10 @@ export async function POST(req: NextRequest) {
     const { error: updateError } = await supabase
       .from('user_settings')
       .update({
-        display_name: display_name.trim(),
+        first_name: trimmedFirst,
+        last_name: trimmedLast,
+        display_name: displayName,
         language,
-        scan_preference,
         onboarding_complete: true,
         referral_code: referralCode,
       })
@@ -59,7 +64,7 @@ export async function POST(req: NextRequest) {
         fetch(`${baseUrl}/api/email/welcome`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email, name: display_name.trim(), language }),
+          body: JSON.stringify({ email: user.email, name: displayName, language }),
         }).catch(() => {}); // Fire and forget
       }
     } catch { /* silent */ }

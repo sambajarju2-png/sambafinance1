@@ -282,7 +282,10 @@
     "gemeente": "Municipality",
     "language": "Language",
     "saveChanges": "Save",
-    "saved": "Saved"
+    "saved": "Saved",
+    "email": "Email address",
+    "emailHint": "Your email address cannot be changed.",
+    "save": "Save"
   },
   "notifications": {
     "title": "Notifications",

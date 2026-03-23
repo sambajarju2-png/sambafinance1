@@ -282,7 +282,10 @@
     "gemeente": "Gemeente",
     "language": "Taal",
     "saveChanges": "Opslaan",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "email": "E-mailadres",
+    "emailHint": "Je e-mailadres kan niet worden gewijzigd.",
+    "save": "Opslaan"
   },
   "notifications": {
     "title": "Meldingen",
