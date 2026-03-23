@@ -102,8 +102,14 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
     return map;
   }, [bills, currentMonth, currentYear]);
 
-  // Bills for the selected day
-  const selectedDayBills = selectedDay ? (billsByDay[selectedDay] || []) : [];
+  // Bills for the selected day — unpaid first, then paid
+  const selectedDayBills = selectedDay
+    ? [...(billsByDay[selectedDay] || [])].sort((a, b) => {
+        if (a.status === 'settled' && b.status !== 'settled') return 1;
+        if (a.status !== 'settled' && b.status === 'settled') return -1;
+        return 0;
+      })
+    : [];
 
   // Upcoming bills (next 14 days from today, not settled) — only on current month
   const upcomingBills = useMemo(() => {
@@ -233,7 +239,13 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
                   </span>
                   {hasBills && (
                     <div className="mt-0.5 flex gap-0.5">
-                      {dayBills.slice(0, 3).map((bill, bi) => (
+                      {[...dayBills]
+                        .sort((a, b) => {
+                          if (a.status === 'settled' && b.status !== 'settled') return 1;
+                          if (a.status !== 'settled' && b.status === 'settled') return -1;
+                          return 0;
+                        })
+                        .slice(0, 3).map((bill, bi) => (
                         <div
                           key={bi}
                           className={`h-1.5 w-1.5 rounded-full ${
