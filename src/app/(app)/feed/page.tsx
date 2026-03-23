@@ -7,6 +7,7 @@ import {
   MoreHorizontal, Pencil, Trash2,
 } from 'lucide-react';
 import CommunityNamePicker from '@/components/community-name-picker';
+import CommunityBanOverlay from '@/components/community-ban-overlay';
 
 interface Post {
   id: string;
@@ -82,7 +83,7 @@ function FeedContent() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ display_name: string } | null>(null);
+  const [profile, setProfile] = useState<{ display_name: string; is_banned?: boolean; banned_until?: string | null; ban_reason?: string | null } | null>(null);
   const [showNamePicker, setShowNamePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [composeOpen, setComposeOpen] = useState(false);
@@ -183,7 +184,7 @@ function FeedContent() {
         <p className="text-[13px] text-pw-muted">Deel ervaringen, steun elkaar</p>
       </div>
 
-      {profile && (
+      {profile && !profile.is_banned && (
         <button onClick={() => setComposeOpen(true)}
           className="bill-row-press flex w-full items-center gap-3 rounded-card border border-dashed border-pw-blue/30 bg-pw-blue/5 px-4 py-3 text-left">
           <div className="h-8 w-8 overflow-hidden rounded-full border border-pw-border bg-pw-surface">
@@ -237,8 +238,19 @@ function FeedContent() {
       )}
 
       {showNamePicker && <CommunityNamePicker onComplete={handleProfileComplete} onClose={() => setShowNamePicker(false)} />}
-      {composeOpen && profile && (
+      {composeOpen && profile && !profile.is_banned && (
         <ComposeDrawer displayName={profile.display_name} onClose={() => setComposeOpen(false)} onPosted={() => { setComposeOpen(false); fetchPosts(); }} />
+      )}
+
+      {/* Ban/timeout overlay */}
+      {profile?.is_banned && (
+        <div id="ban-overlay">
+          <CommunityBanOverlay
+            isBanned={true}
+            bannedUntil={profile.banned_until || null}
+            banReason={profile.ban_reason || null}
+          />
+        </div>
       )}
     </div>
   );
