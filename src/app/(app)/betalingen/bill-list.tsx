@@ -28,11 +28,11 @@ export default function BillList() {
   const tEsc = useTranslations('escalation');
   const tCat = useTranslations('addBill');
   const messages = useMessages();
-  
+
   const catMap = (messages as Record<string, unknown>)?.addBill && typeof (messages as Record<string, unknown>).addBill === 'object'
     ? ((messages as Record<string, Record<string, unknown>>).addBill.categories as Record<string, string>) || {}
     : {};
-    
+
   const searchParams = useSearchParams();
 
   const [bills, setBills] = useState<Bill[]>([]);
@@ -79,8 +79,8 @@ export default function BillList() {
     }
   }, [bills, selectedBill]);
 
+  // Shared paid handler — used by drawer AND quick-pay button
   const handleBillPaid = useCallback((billId: string) => {
-    // Find bill info for toast before it disappears
     const paidBill = bills.find((b) => b.id === billId);
     if (paidBill) {
       setPaidToast({ vendor: paidBill.vendor, amount: paidBill.amount, currency: paidBill.currency || 'EUR' });
@@ -101,6 +101,21 @@ export default function BillList() {
       fetchBills();
     }, 600);
   }, [fetchBills, bills]);
+
+  // Quick pay — mark as paid without opening drawer
+  const handleQuickPay = useCallback(async (bill: Bill) => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const res = await fetch(`/api/bills/${bill.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'settled', paid_date: today }),
+      });
+      if (res.ok) {
+        handleBillPaid(bill.id);
+      }
+    } catch { /* silent */ }
+  }, [handleBillPaid]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
@@ -178,22 +193,17 @@ export default function BillList() {
           ) : (
             <div className="space-y-2">
               {sortedBills.map((bill, index) => (
-                <BillRow key={bill.id} bill={bill} index={index} tEsc={tEsc} tCat={tCat} catMap={catMap}
-                  isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)} />
+                <BillRow key={bill.id} bill={bill} index={index} tEsc={tEsc} catMap={catMap}
+                  isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)}
+                  onQuickPay={() => handleQuickPay(bill)} />
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* Confetti */}
       {confettiOrigin && <ConfettiBurst x={confettiOrigin.x} y={confettiOrigin.y} />}
-
-      {/* Paid toast notification */}
-      {paidToast && (
-        <PaidToast vendor={paidToast.vendor} amount={paidToast.amount} currency={paidToast.currency}
-          onDone={() => setPaidToast(null)} />
-      )}
+      {paidToast && <PaidToast vendor={paidToast.vendor} amount={paidToast.amount} currency={paidToast.currency} onDone={() => setPaidToast(null)} />}
 
       <AddBillDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} onBillAdded={fetchBills} />
       <BillDetailDrawer bill={selectedBill} onClose={() => setSelectedBill(null)} onUpdate={fetchBills} onPaid={handleBillPaid} />
@@ -201,9 +211,9 @@ export default function BillList() {
   );
 }
 
-function BillRow({ bill, index, tEsc, tCat, catMap, isExiting, onTap }: {
-  bill: Bill; index: number; tEsc: ReturnType<typeof useTranslations>; tCat: ReturnType<typeof useTranslations>;
-  catMap: Record<string, string>; isExiting: boolean; onTap: () => void;
+function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
+  bill: Bill; index: number; tEsc: ReturnType<typeof useTranslations>;
+  catMap: Record<string, string>; isExiting: boolean; onTap: () => void; onQuickPay: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
   const isOverdue = bill.status !== 'settled' && bill.due_date < today;
@@ -215,15 +225,20 @@ function BillRow({ bill, index, tEsc, tCat, catMap, isExiting, onTap }: {
   const dueDisplay = new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 
   return (
-    <button data-bill-id={bill.id} onClick={onTap}
-      className={`bill-row-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50 ${
+    <div
+      data-bill-id={bill.id}
+      className={`bill-row-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 transition-colors ${
         isExiting ? 'bill-paid-exit' : 'bill-row-enter'
       } ${isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'}`}
-      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}>
+      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}
+    >
+      {/* Favorite indicator */}
       <div className="flex-shrink-0">
         {bill.is_favorite ? <Star className="h-4 w-4 fill-pw-amber text-pw-amber" strokeWidth={1.5} /> : <div className="h-4 w-4" />}
       </div>
-      <div className="min-w-0 flex-1">
+
+      {/* Bill info — tappable to open drawer */}
+      <button onClick={onTap} className="min-w-0 flex-1 text-left">
         <p className="truncate text-[14px] font-semibold text-pw-text">{bill.vendor}</p>
         <div className="mt-0.5 flex items-center gap-2">
           <span className="flex items-center gap-1.5">
@@ -232,8 +247,10 @@ function BillRow({ bill, index, tEsc, tCat, catMap, isExiting, onTap }: {
           </span>
           <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
         </div>
-      </div>
-      <div className="flex-shrink-0 text-right">
+      </button>
+
+      {/* Amount + due date */}
+      <button onClick={onTap} className="flex-shrink-0 text-right">
         <p className="text-[15px] font-bold text-pw-text">{formatCents(bill.amount, bill.currency)}</p>
         {isPaid ? (
           <span className="flex items-center justify-end gap-1 text-[11px] font-medium text-pw-green"><Check className="h-3 w-3" strokeWidth={2} />{dueDisplay}</span>
@@ -244,8 +261,19 @@ function BillRow({ bill, index, tEsc, tCat, catMap, isExiting, onTap }: {
         ) : (
           <span className="text-[11px] text-pw-muted">{dueDisplay}</span>
         )}
-      </div>
-    </button>
+      </button>
+
+      {/* Quick pay button — only for unpaid bills */}
+      {!isPaid && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onQuickPay(); }}
+          className="btn-press flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-input border border-pw-green/20 bg-green-50/50 text-pw-green transition-colors hover:bg-green-50"
+          aria-label="Markeer als betaald"
+        >
+          <Check className="h-4 w-4" strokeWidth={2} />
+        </button>
+      )}
+    </div>
   );
 }
 
