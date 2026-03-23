@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   CreditCard,
   TrendingUp,
-  ArrowDownUp,
   MoreHorizontal,
 } from 'lucide-react';
 
@@ -15,7 +14,6 @@ const NAV_ITEMS = [
   { href: '/overzicht', icon: LayoutDashboard, labelKey: 'overview' as const },
   { href: '/betalingen', icon: CreditCard, labelKey: 'payments' as const },
   { href: '/stats', icon: TrendingUp, labelKey: 'stats' as const },
-  { href: '/cashflow', icon: ArrowDownUp, labelKey: 'cashflow' as const },
   { href: '/instellingen', icon: MoreHorizontal, labelKey: 'settings' as const },
 ] as const;
 
