@@ -15,41 +15,50 @@ export default function PwaInstallDrawer() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('init');
 
   useEffect(() => {
-    // iOS Safari: only use navigator.standalone (the matchMedia check is unreliable)
-    const ua = navigator.userAgent;
-    const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
-    setIsIOS(ios);
+    try {
+      const ua = navigator.userAgent;
+      const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
+      setIsIOS(ios);
 
-    // Standalone detection — different per platform
-    let standalone = false;
-    if (ios) {
-      // iOS: ONLY check navigator.standalone (true when launched from home screen)
-      standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
-    } else {
-      // Android/Desktop: use display-mode media query
-      standalone = window.matchMedia('(display-mode: standalone)').matches;
-    }
+      let standalone = false;
+      if (ios) {
+        standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+      } else {
+        standalone = window.matchMedia('(display-mode: standalone)').matches;
+      }
 
-    setIsStandalone(standalone);
-    if (standalone) return;
+      setIsStandalone(standalone);
+      setDebugInfo(`ios:${ios} sa:${standalone}`);
 
-    // Android/Chrome: listen for native install prompt
-    const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
-    window.addEventListener('beforeinstallprompt', handler);
+      if (standalone) {
+        setDebugInfo(`BLOCKED:standalone`);
+        return;
+      }
 
-    // Show drawer after delay (if not dismissed this session)
-    const wasDismissed = sessionStorage.getItem('pwa-drawer-dismissed');
-    if (!wasDismissed) {
-      const timer = setTimeout(() => setShowDrawer(true), 3000);
+      const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
+      window.addEventListener('beforeinstallprompt', handler);
+
+      const wasDismissed = sessionStorage.getItem('pwa-drawer-dismissed');
+      if (wasDismissed) {
+        setDebugInfo(`BLOCKED:dismissed ios:${ios} sa:${standalone}`);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+      }
+
+      setDebugInfo(`WAITING:3s ios:${ios} sa:${standalone}`);
+      const timer = setTimeout(() => {
+        setShowDrawer(true);
+        setDebugInfo(`SHOWING ios:${ios} sa:${standalone}`);
+      }, 3000);
+
       return () => { clearTimeout(timer); window.removeEventListener('beforeinstallprompt', handler); };
+    } catch (err) {
+      setDebugInfo(`ERROR:${String(err)}`);
     }
-
-    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Manual trigger from settings or elsewhere
   useEffect(() => {
     function handleTrigger() {
       sessionStorage.removeItem('pwa-drawer-dismissed');
@@ -72,11 +81,25 @@ export default function PwaInstallDrawer() {
     sessionStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
-  if (isStandalone) return null;
-  if (!showDrawer) return null;
+  // DEBUG: Always show a small indicator so we can see the state
+  const debugBadge = (
+    <div style={{
+      position: 'fixed', top: 4, left: 4, zIndex: 9999,
+      background: showDrawer ? '#059669' : '#DC2626',
+      color: '#fff', fontSize: 9, padding: '2px 6px', borderRadius: 4,
+      fontFamily: 'monospace', maxWidth: 200, wordBreak: 'break-all',
+      pointerEvents: 'none', opacity: 0.9,
+    }}>
+      PWA: {debugInfo}
+    </div>
+  );
+
+  if (isStandalone) return debugBadge;
+  if (!showDrawer) return debugBadge;
 
   return (
     <>
+      {debugBadge}
       <div className="fixed inset-0 z-50 bg-black/40" onClick={handleDismiss} />
       <div className="drawer-enter fixed bottom-0 left-0 right-0 z-50 rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
@@ -100,51 +123,21 @@ export default function PwaInstallDrawer() {
           <div className="mt-5 space-y-3">
             {isIOS ? (
               <>
-                <StepCard
-                  number={1}
-                  title={t('iosStep1Title')}
-                  desc={t('iosStep1Desc')}
-                  icon={<Share className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />}
-                  iconBg="bg-pw-blue/10"
-                />
-                <StepCard
-                  number={2}
-                  title={t('iosStep2Title')}
-                  desc={t('iosStep2Desc')}
-                  icon={<Plus className="h-4 w-4 text-pw-text" strokeWidth={2} />}
-                  iconBg="bg-pw-border/30"
-                />
-                <StepCard
-                  number={3}
-                  title={t('iosStep3Title')}
-                  desc={t('iosStep3Desc')}
-                  icon={<Check className="h-4 w-4 text-pw-blue" strokeWidth={2} />}
-                  iconBg="bg-pw-blue/10"
-                />
+                <StepCard number={1} title={t('iosStep1Title')} desc={t('iosStep1Desc')}
+                  icon={<Share className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />} iconBg="bg-pw-blue/10" />
+                <StepCard number={2} title={t('iosStep2Title')} desc={t('iosStep2Desc')}
+                  icon={<Plus className="h-4 w-4 text-pw-text" strokeWidth={2} />} iconBg="bg-pw-border/30" />
+                <StepCard number={3} title={t('iosStep3Title')} desc={t('iosStep3Desc')}
+                  icon={<Check className="h-4 w-4 text-pw-blue" strokeWidth={2} />} iconBg="bg-pw-blue/10" />
               </>
             ) : (
               <>
-                <StepCard
-                  number={1}
-                  title={t('androidStep1Title')}
-                  desc={t('androidStep1Desc')}
-                  icon={<MoreVertical className="h-4 w-4 text-pw-text" strokeWidth={1.5} />}
-                  iconBg="bg-pw-border/30"
-                />
-                <StepCard
-                  number={2}
-                  title={t('androidStep2Title')}
-                  desc={t('androidStep2Desc')}
-                  icon={<Download className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />}
-                  iconBg="bg-pw-blue/10"
-                />
-                <StepCard
-                  number={3}
-                  title={t('androidStep3Title')}
-                  desc={t('androidStep3Desc')}
-                  icon={<Check className="h-4 w-4 text-pw-green" strokeWidth={2} />}
-                  iconBg="bg-pw-green/10"
-                />
+                <StepCard number={1} title={t('androidStep1Title')} desc={t('androidStep1Desc')}
+                  icon={<MoreVertical className="h-4 w-4 text-pw-text" strokeWidth={1.5} />} iconBg="bg-pw-border/30" />
+                <StepCard number={2} title={t('androidStep2Title')} desc={t('androidStep2Desc')}
+                  icon={<Download className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />} iconBg="bg-pw-blue/10" />
+                <StepCard number={3} title={t('androidStep3Title')} desc={t('androidStep3Desc')}
+                  icon={<Check className="h-4 w-4 text-pw-green" strokeWidth={2} />} iconBg="bg-pw-green/10" />
               </>
             )}
           </div>
@@ -165,18 +158,8 @@ export default function PwaInstallDrawer() {
   );
 }
 
-function StepCard({
-  number,
-  title,
-  desc,
-  icon,
-  iconBg,
-}: {
-  number: number;
-  title: string;
-  desc: string;
-  icon: React.ReactNode;
-  iconBg: string;
+function StepCard({ number, title, desc, icon, iconBg }: {
+  number: number; title: string; desc: string; icon: React.ReactNode; iconBg: string;
 }) {
   return (
     <div className="flex items-start gap-3 rounded-card border border-pw-border bg-pw-surface p-3.5">
@@ -185,9 +168,7 @@ function StepCard({
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2.5">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>
-            {icon}
-          </div>
+          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>{icon}</div>
           <p className="text-[13px] font-semibold text-pw-text">{title}</p>
         </div>
         <p className="mt-1.5 text-[11px] text-pw-muted leading-relaxed">{desc}</p>
