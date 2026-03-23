@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
-  Check, Star, Trash2, Loader2, Copy, Pencil,
+  Check, Star, Trash2, Loader2, Copy, Pencil, ShieldAlert, Landmark, Clock,
 } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
+import { detectGovBrand, getGovBrandInfo, detectCjibSubtype, detectBelastingSubtype } from '@/lib/gov-brands';
 import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
@@ -48,7 +49,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
   const [editOpen, setEditOpen] = useState(false);
   const [gemeente, setGemeente] = useState<string | null>(null);
 
-  // Fetch user's gemeente for lawyer referral
   useEffect(() => {
     async function loadGemeente() {
       try {
@@ -69,6 +69,15 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
   const isOverdue = !isPaid && bill.due_date < today;
   const stage = STAGE_COLORS[bill.escalation_stage] || STAGE_COLORS.factuur;
 
+  // Government brand detection
+  const govBrand = detectGovBrand(bill.vendor);
+  const brandInfo = govBrand ? getGovBrandInfo(govBrand) : null;
+  const billSubtype = govBrand === 'cjib'
+    ? detectCjibSubtype(bill.vendor, bill.notes || '')
+    : govBrand === 'belastingdienst'
+      ? detectBelastingSubtype(bill.vendor, bill.notes || '')
+      : null;
+
   function getCategoryLabel(cat: string): string {
     return catMap[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
   }
@@ -81,7 +90,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        // If marking as paid and onPaid callback exists, use the animated flow
         if (loadingKey === 'paid' && onPaid) {
           onPaid(bill!.id);
           return;
@@ -121,33 +129,97 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
 
   return (
     <>
-      {/* Overlay with backdrop blur */}
       <div className="drawer-backdrop fixed inset-0 z-50 bg-black/40" onClick={onClose} />
 
-      {/* Drawer with spring animation */}
       <div className="drawer-spring fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
-        {/* Header */}
-        <div className="relative px-4 pb-3 pt-3">
-          <button onClick={onClose} className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50">
-            <X className="h-5 w-5" strokeWidth={1.5} />
-          </button>
-          <p className="text-[28px] font-extrabold tracking-tight text-pw-text">{formatCents(bill.amount, bill.currency)}</p>
-          <p className="mt-0.5 text-[16px] font-semibold text-pw-navy">{bill.vendor}</p>
+        {/* ── Branded Gov Header (CJIB / Belastingdienst) ── */}
+        {brandInfo ? (
+          <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${brandInfo.color}, ${brandInfo.color}DD)` }}>
+            {/* Decorative circle */}
+            <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
-          <div className="mt-2 flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${stage.bg}`}>
-              <div className={`escalation-dot ${stage.dot}`} />
-              <span className={`text-[11px] font-semibold ${stage.text}`}>{tEsc(bill.escalation_stage as EscalationStage)}</span>
+            <button onClick={onClose} className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full text-white/60 hover:bg-white/10">
+              <X className="h-5 w-5" strokeWidth={1.5} />
+            </button>
+
+            <div className="px-4 pb-4 pt-3">
+              {/* Brand badge */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+                  {brandInfo.brand === 'cjib' ? (
+                    <ShieldAlert className="h-5 w-5 text-white" strokeWidth={1.5} />
+                  ) : (
+                    <Landmark className="h-5 w-5 text-white" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-white">{brandInfo.shortName}</p>
+                  {brandInfo.brand === 'cjib' && (
+                    <p className="text-[10px] text-white/60">Centraal Justitieel Incassobureau</p>
+                  )}
+                </div>
+                <div className="ml-auto rounded-[3px] px-[6px] py-[2px]" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}>
+                  <span className="text-[8px] font-bold tracking-wider text-white">PRIORITEIT</span>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <p className="text-[28px] font-extrabold tracking-tight text-white">
+                {formatCents(bill.amount, bill.currency)}
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold text-white/90">{bill.vendor}</p>
+
+              {/* Subtype + stage */}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                {billSubtype && (
+                  <span className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)' }}>
+                    {billSubtype}
+                  </span>
+                )}
+                <span className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)' }}>
+                  {tEsc(bill.escalation_stage as EscalationStage)}
+                </span>
+                {isPaid && <span className="flex items-center gap-1 text-[10px] font-semibold text-white/80"><Check className="h-3 w-3" strokeWidth={2} /> Betaald</span>}
+                {isOverdue && <span className="text-[10px] font-semibold text-red-200">Achterstallig</span>}
+              </div>
+
+              {/* Deadline warning */}
+              {!isPaid && (
+                <div className="mt-3 flex items-center gap-2 rounded-[8px] px-3 py-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <Clock className="h-3.5 w-3.5 text-white/70 flex-shrink-0" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-[11px] font-semibold text-white/90">{brandInfo.deadlineNote}</p>
+                    <p className="text-[10px] text-white/50">{brandInfo.escalationNote}</p>
+                  </div>
+                </div>
+              )}
             </div>
-            {isPaid && <span className="flex items-center gap-1 text-[11px] font-semibold text-pw-green"><Check className="h-3 w-3" strokeWidth={2} /> {t('paid')}</span>}
-            {isOverdue && <span className="text-[11px] font-semibold text-pw-red">{t('overdue')}</span>}
           </div>
-        </div>
+        ) : (
+          /* ── Standard Header ── */
+          <div className="relative px-4 pb-3 pt-3">
+            <button onClick={onClose} className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50">
+              <X className="h-5 w-5" strokeWidth={1.5} />
+            </button>
+            <p className="text-[28px] font-extrabold tracking-tight text-pw-text">{formatCents(bill.amount, bill.currency)}</p>
+            <p className="mt-0.5 text-[16px] font-semibold text-pw-navy">{bill.vendor}</p>
+
+            <div className="mt-2 flex items-center gap-2">
+              <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${stage.bg}`}>
+                <div className={`escalation-dot ${stage.dot}`} />
+                <span className={`text-[11px] font-semibold ${stage.text}`}>{tEsc(bill.escalation_stage as EscalationStage)}</span>
+              </div>
+              {isPaid && <span className="flex items-center gap-1 text-[11px] font-semibold text-pw-green"><Check className="h-3 w-3" strokeWidth={2} /> {t('paid')}</span>}
+              {isOverdue && <span className="text-[11px] font-semibold text-pw-red">{t('overdue')}</span>}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
-        <div className="flex gap-1 overflow-x-auto px-4 scrollbar-none">
+        <div className="flex gap-1 overflow-x-auto px-4 pt-3 scrollbar-none">
           {tabs.map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
@@ -165,6 +237,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
               <DetailRow icon={Calendar} label={t('receivedDate')} value={new Date(bill.received_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} />
               <DetailRow icon={Tag} label={t('category')} value={getCategoryLabel(bill.category)} />
               <DetailRow icon={FileText} label={t('source')} value={t(`source_${bill.source}`)} />
+              {billSubtype && <DetailRow icon={brandInfo?.brand === 'cjib' ? ShieldAlert : Landmark} label="Type" value={billSubtype} />}
               {bill.reference && <DetailRow icon={Hash} label={t('reference')} value={bill.reference} copyable />}
               {bill.iban && <DetailRow icon={CreditCard} label="IBAN" value={bill.iban} copyable />}
               {bill.payment_url && (
@@ -197,9 +270,23 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 </div>
               )}
 
-              {/* Lawyer referral for incasso/deurwaarder — above gemeente links */}
-              <LawyerReferral stage={bill.escalation_stage} gemeente={gemeente} />
+              {/* Gov-specific deadline info */}
+              {brandInfo && !isPaid && (
+                <div className="rounded-card p-4" style={{ background: brandInfo.colorLight, border: `1px solid ${brandInfo.color}20` }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {brandInfo.brand === 'cjib' ? (
+                      <ShieldAlert className="h-4 w-4 flex-shrink-0" style={{ color: brandInfo.color }} strokeWidth={1.5} />
+                    ) : (
+                      <Landmark className="h-4 w-4 flex-shrink-0" style={{ color: brandInfo.color }} strokeWidth={1.5} />
+                    )}
+                    <p className="text-[13px] font-bold" style={{ color: brandInfo.color }}>{brandInfo.shortName}</p>
+                  </div>
+                  <p className="text-[12px] font-semibold" style={{ color: brandInfo.color }}>{brandInfo.deadlineNote}</p>
+                  <p className="text-[11px] text-pw-muted mt-1">{brandInfo.escalationNote}</p>
+                </div>
+              )}
 
+              <LawyerReferral stage={bill.escalation_stage} gemeente={gemeente} />
               <EscalationInfo stage={bill.escalation_stage} amountCents={bill.amount} dueDate={bill.due_date} />
             </div>
           )}

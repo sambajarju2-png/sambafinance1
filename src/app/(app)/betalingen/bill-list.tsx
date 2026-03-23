@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Star, Check, CreditCard, List, CalendarDays } from 'lucide-react';
+import { Plus, Star, Check, CreditCard, List, CalendarDays, ShieldAlert, Landmark } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
+import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
 import AddBillDrawer from './add-bill-drawer';
 import BillDetailDrawer from './bill-detail-drawer';
 import CalendarView from '@/components/calendar-view';
@@ -79,7 +80,6 @@ export default function BillList() {
     }
   }, [bills, selectedBill]);
 
-  // Shared paid handler — used by drawer AND quick-pay button
   const handleBillPaid = useCallback((billId: string) => {
     const paidBill = bills.find((b) => b.id === billId);
     if (paidBill) {
@@ -102,7 +102,6 @@ export default function BillList() {
     }, 600);
   }, [fetchBills, bills]);
 
-  // Quick pay — mark as paid without opening drawer
   const handleQuickPay = useCallback(async (bill: Bill) => {
     const today = new Date().toISOString().split('T')[0];
     try {
@@ -131,6 +130,11 @@ export default function BillList() {
   });
 
   const sortedBills = [...filteredBills].sort((a, b) => {
+    // Gov bills (CJIB/Belastingdienst) always sort to top
+    const aGov = detectGovBrand(a.vendor);
+    const bGov = detectGovBrand(b.vendor);
+    if (aGov && !bGov) return -1;
+    if (!aGov && bGov) return 1;
     if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
     return a.due_date.localeCompare(b.due_date);
   });
@@ -222,30 +226,75 @@ function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
   const isUpcoming = !isPaid && !isOverdue && bill.due_date <= fourDaysFromNow;
   const escColor = ESCALATION_COLORS[bill.escalation_stage] || ESCALATION_COLORS.factuur;
 
+  // Government brand detection
+  const govBrand = detectGovBrand(bill.vendor);
+  const brandInfo = govBrand ? getGovBrandInfo(govBrand) : null;
+
   const dueDisplay = new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+
+  // Determine row styling
+  const baseStyle = isOverdue ? 'border-pw-red/20 bg-red-50/30'
+    : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20'
+    : brandInfo ? `bg-pw-surface` : 'border-pw-border bg-pw-surface';
+
+  const borderStyle = brandInfo ? { borderColor: `${brandInfo.color}30` } : undefined;
 
   return (
     <div
       data-bill-id={bill.id}
-      className={`bill-row-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 transition-colors ${
+      className={`bill-row-press relative flex w-full items-center gap-3 rounded-card border px-3.5 py-3 transition-colors overflow-hidden ${
         isExiting ? 'bill-paid-exit' : 'bill-row-enter'
-      } ${isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'}`}
-      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}
+      } ${baseStyle}`}
+      style={{
+        ...(brandInfo ? { borderColor: `${brandInfo.color}30`, boxShadow: `0 0 12px ${brandInfo.color}10` } : {}),
+        ...(!isExiting ? { animationDelay: `${index * 60}ms` } : {}),
+      }}
     >
-      {/* Favorite indicator */}
-      <div className="flex-shrink-0">
-        {bill.is_favorite ? <Star className="h-4 w-4 fill-pw-amber text-pw-amber" strokeWidth={1.5} /> : <div className="h-4 w-4" />}
+      {/* Brand accent stripe for gov bills */}
+      {brandInfo && (
+        <div className="absolute left-0 top-0 bottom-0 w-[4px]" style={{ background: brandInfo.color }} />
+      )}
+
+      {/* Icon area — brand icon or favorite star */}
+      <div className="flex-shrink-0" style={brandInfo ? { marginLeft: 4 } : undefined}>
+        {brandInfo ? (
+          <div className="flex h-9 w-9 items-center justify-center rounded-input" style={{ background: brandInfo.colorLight }}>
+            {brandInfo.brand === 'cjib' ? (
+              <ShieldAlert className="h-4 w-4" style={{ color: brandInfo.color }} strokeWidth={1.5} />
+            ) : (
+              <Landmark className="h-4 w-4" style={{ color: brandInfo.color }} strokeWidth={1.5} />
+            )}
+          </div>
+        ) : bill.is_favorite ? (
+          <Star className="h-4 w-4 fill-pw-amber text-pw-amber" strokeWidth={1.5} />
+        ) : (
+          <div className="h-4 w-4" />
+        )}
       </div>
 
       {/* Bill info — tappable to open drawer */}
       <button onClick={onTap} className="min-w-0 flex-1 text-left">
-        <p className="truncate text-[14px] font-semibold text-pw-text">{bill.vendor}</p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-[14px] font-semibold text-pw-text">{bill.vendor}</p>
+          {brandInfo && (
+            <span className="flex-shrink-0 rounded-[3px] px-[5px] py-[1px] text-[8px] font-bold tracking-wider text-white"
+              style={{ background: brandInfo.color }}>
+              PRIORITEIT
+            </span>
+          )}
+        </div>
         <div className="mt-0.5 flex items-center gap-2">
           <span className="flex items-center gap-1.5">
             <span className={`escalation-dot ${escColor.split(' ')[0]}`} />
             <span className={`text-[11px] font-semibold ${escColor.split(' ')[1]}`}>{tEsc(bill.escalation_stage)}</span>
           </span>
-          <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
+          {brandInfo && (bill as Record<string, unknown>).bill_subtype ? (
+            <span className="text-[11px] font-medium" style={{ color: brandInfo.color }}>
+              {(bill as Record<string, unknown>).bill_subtype as string}
+            </span>
+          ) : (
+            <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
+          )}
         </div>
       </button>
 
@@ -263,7 +312,7 @@ function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
         )}
       </button>
 
-      {/* Quick pay button — only for unpaid bills */}
+      {/* Quick pay button */}
       {!isPaid && (
         <button
           onClick={(e) => { e.stopPropagation(); onQuickPay(); }}
