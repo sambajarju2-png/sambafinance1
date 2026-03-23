@@ -41,7 +41,7 @@
   --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Dark mode variables (activated via .dark class) */
+/* Dark mode variables (activated via .dark class from next-themes) */
 .dark {
   --bg: #0B1120;
   --surface: #1E293B;
@@ -49,17 +49,48 @@
   --text: #F1F5F9;
   --muted: #94A3B8;
   --border: #334155;
+  --dark-red: #F87171;
   --topbar-bg: rgba(15, 23, 42, 0.72);
-  
-  /* Adjusted status colors to pop on dark backgrounds */
+  --shadow-drawer: 0 -4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* Brighter status colors for dark backgrounds */
   --blue: #3B82F6;
   --green: #10B981;
   --amber: #F59E0B;
   --orange: #F97316;
   --red: #EF4444;
-  --dark-red: #F87171;
   --purple: #8B5CF6;
 }
+
+/* Dark mode overrides for Tailwind tinted backgrounds */
+.dark .bg-red-50\/30,
+.dark .bg-red-50\/50,
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1) !important; }
+.dark .bg-amber-50\/20,
+.dark .bg-amber-50\/50,
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.dark .bg-green-50\/30,
+.dark .bg-green-50\/50,
+.dark .bg-green-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
+.dark .bg-blue-50\/30,
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+.dark .bg-purple-50\/30,
+.dark .bg-purple-50 { background-color: rgba(139, 92, 246, 0.1) !important; }
+.dark .bg-orange-50\/50,
+.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1) !important; }
+.dark .bg-gray-50\/50,
+.dark .bg-gray-50,
+.dark .bg-gray-100 { background-color: rgba(148, 163, 184, 0.08) !important; }
+.dark .hover\:bg-gray-50\/50:hover { background-color: rgba(148, 163, 184, 0.12) !important; }
+
+/* Dark mode gradient overrides for stat cards */
+.dark [class*="from-green-50"] { --tw-gradient-from: rgba(16, 185, 129, 0.1); }
+.dark [class*="from-blue-50"] { --tw-gradient-from: rgba(59, 130, 246, 0.1); }
+.dark [class*="from-red-50"] { --tw-gradient-from: rgba(239, 68, 68, 0.1); }
+.dark [class*="from-amber-50"] { --tw-gradient-from: rgba(245, 158, 11, 0.1); }
+.dark [class*="from-gray-50"] { --tw-gradient-from: rgba(148, 163, 184, 0.05); }
+.dark [class*="to-white"] { --tw-gradient-to: var(--surface); }
 
 /* =============================================================================
    Base Styles
@@ -84,7 +115,6 @@ body {
    Component Utilities
    ============================================================================= */
 
-/* Stat card accent bar (3px colored top border) */
 @layer components {
   .stat-card {
     @apply relative overflow-hidden rounded-card border border-pw-border bg-pw-surface;
@@ -100,31 +130,18 @@ body {
     background: var(--blue);
   }
 
-  .stat-card--green::before {
-    background: var(--green);
-  }
+  .stat-card--green::before { background: var(--green); }
+  .stat-card--amber::before { background: var(--amber); }
+  .stat-card--red::before { background: var(--red); }
 
-  .stat-card--amber::before {
-    background: var(--amber);
-  }
-
-  .stat-card--red::before {
-    background: var(--red);
-  }
-
-  /* Glassmorphism topbar */
   .glass-topbar {
     background: var(--topbar-bg);
     backdrop-filter: blur(var(--topbar-blur));
     -webkit-backdrop-filter: blur(var(--topbar-blur));
   }
 
-  /* Button press effect */
-  .btn-press:active {
-    transform: scale(0.97);
-  }
+  .btn-press:active { transform: scale(0.97); }
 
-  /* Escalation badge dot */
   .escalation-dot {
     width: 8px;
     height: 8px;
@@ -133,7 +150,6 @@ body {
     flex-shrink: 0;
   }
 
-  /* Active bottom nav indicator */
   .nav-active-dot {
     width: 4px;
     height: 4px;
@@ -179,52 +195,41 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes toast-exit {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-100%); opacity: 0; }
+}
+
 .toast-enter {
   animation: toast-drop 300ms ease-out;
+}
+
+.toast-exit {
+  animation: toast-exit 300ms ease-in forwards;
 }
 
 /* =============================================================================
    Scrollbar Styling
    ============================================================================= */
 
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* =============================================================================
    Premium Animations (Step 2)
    ============================================================================= */
 
-/* Staggered bill row entrance */
 @keyframes bill-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .bill-row-enter {
   animation: bill-slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Bill row press feedback (enhanced) */
 .bill-row-press {
   transition: transform 0.12s ease;
 }
@@ -233,52 +238,32 @@ body {
   transform: scale(0.98);
 }
 
-/* Spring drawer entrance (replaces default ease-out with spring curve) */
 @keyframes spring-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 .drawer-spring {
   animation: spring-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Backdrop blur for drawer overlay */
 .drawer-backdrop {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Paid bill exit animation */
 @keyframes bill-paid-exit {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(60px);
-  }
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(60px); }
 }
 
 .bill-paid-exit {
   animation: bill-paid-exit 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Confetti particle burst (used after marking paid) */
 @keyframes confetti-pop {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--confetti-x, 20px), var(--confetti-y, -30px)) scale(0);
-  }
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--confetti-x, 20px), var(--confetti-y, -30px)) scale(0); }
 }
 
 .confetti-particle {

@@ -8,6 +8,7 @@ import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import AddBillDrawer from './add-bill-drawer';
 import BillDetailDrawer from './bill-detail-drawer';
 import CalendarView from '@/components/calendar-view';
+import PaidToast from '@/components/paid-toast';
 
 type TabFilter = 'outstanding' | 'upcoming' | 'overdue' | 'settled';
 type ViewMode = 'list' | 'calendar';
@@ -42,6 +43,7 @@ export default function BillList() {
   const [justPaidId, setJustPaidId] = useState<string | null>(null);
   const [confettiOrigin, setConfettiOrigin] = useState<{ x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [paidToast, setPaidToast] = useState<{ vendor: string; amount: number; currency: string } | null>(null);
 
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
@@ -64,9 +66,7 @@ export default function BillList() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchBills();
-  }, [fetchBills]);
+  useEffect(() => { fetchBills(); }, [fetchBills]);
 
   useEffect(() => {
     if (selectedBill) {
@@ -80,35 +80,38 @@ export default function BillList() {
   }, [bills, selectedBill]);
 
   const handleBillPaid = useCallback((billId: string) => {
+    // Find bill info for toast before it disappears
+    const paidBill = bills.find((b) => b.id === billId);
+    if (paidBill) {
+      setPaidToast({ vendor: paidBill.vendor, amount: paidBill.amount, currency: paidBill.currency || 'EUR' });
+    }
+
     setJustPaidId(billId);
     setSelectedBill(null);
+
     const el = document.querySelector(`[data-bill-id="${billId}"]`);
     if (el) {
       const rect = el.getBoundingClientRect();
       setConfettiOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     }
+
     setTimeout(() => {
       setJustPaidId(null);
       setConfettiOrigin(null);
       fetchBills();
     }, 600);
-  }, [fetchBills]);
+  }, [fetchBills, bills]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
 
   const filteredBills = bills.filter((bill) => {
     switch (activeTab) {
-      case 'outstanding':
-        return bill.status !== 'settled' && bill.due_date >= today;
-      case 'upcoming':
-        return bill.status !== 'settled' && bill.due_date >= today && bill.due_date <= threeDaysFromNow;
-      case 'overdue':
-        return bill.status !== 'settled' && bill.due_date < today;
-      case 'settled':
-        return bill.status === 'settled';
-      default:
-        return true;
+      case 'outstanding': return bill.status !== 'settled' && bill.due_date >= today;
+      case 'upcoming': return bill.status !== 'settled' && bill.due_date >= today && bill.due_date <= threeDaysFromNow;
+      case 'overdue': return bill.status !== 'settled' && bill.due_date < today;
+      case 'settled': return bill.status === 'settled';
+      default: return true;
     }
   });
 
@@ -129,130 +132,78 @@ export default function BillList() {
       <div className="flex items-center justify-between">
         <h1 className="text-heading text-pw-navy">{t('pageTitle')}</h1>
         <div className="flex items-center gap-2">
-          {/* View mode toggle */}
           <div className="flex items-center rounded-input border border-pw-border bg-pw-surface">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center justify-center rounded-[6px] p-1.5 transition-colors ${
-                viewMode === 'list' ? 'bg-pw-blue text-white' : 'text-pw-muted hover:text-pw-text'
-              }`}
-              aria-label="Lijstweergave"
-            >
+            <button onClick={() => setViewMode('list')}
+              className={`flex items-center justify-center rounded-[6px] p-1.5 transition-colors ${viewMode === 'list' ? 'bg-pw-blue text-white' : 'text-pw-muted hover:text-pw-text'}`}
+              aria-label="Lijstweergave">
               <List className="h-4 w-4" strokeWidth={1.5} />
             </button>
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`flex items-center justify-center rounded-[6px] p-1.5 transition-colors ${
-                viewMode === 'calendar' ? 'bg-pw-blue text-white' : 'text-pw-muted hover:text-pw-text'
-              }`}
-              aria-label="Kalenderweergave"
-            >
+            <button onClick={() => setViewMode('calendar')}
+              className={`flex items-center justify-center rounded-[6px] p-1.5 transition-colors ${viewMode === 'calendar' ? 'bg-pw-blue text-white' : 'text-pw-muted hover:text-pw-text'}`}
+              aria-label="Kalenderweergave">
               <CalendarDays className="h-4 w-4" strokeWidth={1.5} />
             </button>
           </div>
-          <button
-            onClick={() => setAddDrawerOpen(true)}
-            className="btn-press flex items-center gap-1.5 rounded-button bg-pw-blue px-3 py-2 text-[13px] font-semibold text-white"
-          >
+          <button onClick={() => setAddDrawerOpen(true)}
+            className="btn-press flex items-center gap-1.5 rounded-button bg-pw-blue px-3 py-2 text-[13px] font-semibold text-white">
             <Plus className="h-4 w-4" strokeWidth={1.5} />
             {t('addBill')}
           </button>
         </div>
       </div>
 
-      {/* Calendar view */}
       {viewMode === 'calendar' ? (
         <CalendarView bills={bills} onSelectBill={(bill) => setSelectedBill(bill)} />
       ) : (
         <>
-          {/* Tab pills */}
           <div className="flex gap-1.5 rounded-input bg-pw-border/50 p-1">
             {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-pw-surface text-pw-text shadow-sm'
-                    : 'text-pw-muted hover:text-pw-text'
-                }`}
-              >
+                  activeTab === tab.key ? 'bg-pw-surface text-pw-text shadow-sm' : 'text-pw-muted hover:text-pw-text'
+                }`}>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Bill list */}
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-[72px] rounded-card" />
-              ))}
-            </div>
+            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[72px] rounded-card" />)}</div>
           ) : sortedBills.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center">
               <CreditCard className="mb-4 h-12 w-12 text-pw-muted/40" strokeWidth={1.5} />
               <h2 className="text-[16px] font-semibold text-pw-text">{t('noBills')}</h2>
-              <p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">
-                {t('noBillsHint')}
-              </p>
+              <p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">{t('noBillsHint')}</p>
             </div>
           ) : (
             <div className="space-y-2">
               {sortedBills.map((bill, index) => (
-                <BillRow
-                  key={bill.id}
-                  bill={bill}
-                  index={index}
-                  tEsc={tEsc}
-                  tCat={tCat}
-                  catMap={catMap}
-                  isExiting={justPaidId === bill.id}
-                  onTap={() => setSelectedBill(bill)}
-                />
+                <BillRow key={bill.id} bill={bill} index={index} tEsc={tEsc} tCat={tCat} catMap={catMap}
+                  isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)} />
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* Confetti burst */}
+      {/* Confetti */}
       {confettiOrigin && <ConfettiBurst x={confettiOrigin.x} y={confettiOrigin.y} />}
 
-      {/* Add Bill Drawer */}
-      <AddBillDrawer
-        open={addDrawerOpen}
-        onClose={() => setAddDrawerOpen(false)}
-        onBillAdded={fetchBills}
-      />
+      {/* Paid toast notification */}
+      {paidToast && (
+        <PaidToast vendor={paidToast.vendor} amount={paidToast.amount} currency={paidToast.currency}
+          onDone={() => setPaidToast(null)} />
+      )}
 
-      {/* Bill Detail Drawer */}
-      <BillDetailDrawer
-        bill={selectedBill}
-        onClose={() => setSelectedBill(null)}
-        onUpdate={fetchBills}
-        onPaid={handleBillPaid}
-      />
+      <AddBillDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} onBillAdded={fetchBills} />
+      <BillDetailDrawer bill={selectedBill} onClose={() => setSelectedBill(null)} onUpdate={fetchBills} onPaid={handleBillPaid} />
     </div>
   );
 }
 
-function BillRow({
-  bill,
-  index,
-  tEsc,
-  tCat,
-  catMap,
-  isExiting,
-  onTap,
-}: {
-  bill: Bill;
-  index: number;
-  tEsc: ReturnType<typeof useTranslations>;
-  tCat: ReturnType<typeof useTranslations>;
-  catMap: Record<string, string>;
-  isExiting: boolean;
-  onTap: () => void;
+function BillRow({ bill, index, tEsc, tCat, catMap, isExiting, onTap }: {
+  bill: Bill; index: number; tEsc: ReturnType<typeof useTranslations>; tCat: ReturnType<typeof useTranslations>;
+  catMap: Record<string, string>; isExiting: boolean; onTap: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
   const isOverdue = bill.status !== 'settled' && bill.due_date < today;
@@ -261,50 +212,31 @@ function BillRow({
   const isUpcoming = !isPaid && !isOverdue && bill.due_date <= fourDaysFromNow;
   const escColor = ESCALATION_COLORS[bill.escalation_stage] || ESCALATION_COLORS.factuur;
 
-  const dueDisplay = new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  });
+  const dueDisplay = new Date(bill.due_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 
   return (
-    <button
-      data-bill-id={bill.id}
-      onClick={onTap}
+    <button data-bill-id={bill.id} onClick={onTap}
       className={`bill-row-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50 ${
         isExiting ? 'bill-paid-exit' : 'bill-row-enter'
-      } ${
-        isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'
-      }`}
-      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}
-    >
+      } ${isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'}`}
+      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}>
       <div className="flex-shrink-0">
-        {bill.is_favorite ? (
-          <Star className="h-4 w-4 fill-pw-amber text-pw-amber" strokeWidth={1.5} />
-        ) : (
-          <div className="h-4 w-4" />
-        )}
+        {bill.is_favorite ? <Star className="h-4 w-4 fill-pw-amber text-pw-amber" strokeWidth={1.5} /> : <div className="h-4 w-4" />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-semibold text-pw-text">{bill.vendor}</p>
         <div className="mt-0.5 flex items-center gap-2">
           <span className="flex items-center gap-1.5">
             <span className={`escalation-dot ${escColor.split(' ')[0]}`} />
-            <span className={`text-[11px] font-semibold ${escColor.split(' ')[1]}`}>
-              {tEsc(bill.escalation_stage)}
-            </span>
+            <span className={`text-[11px] font-semibold ${escColor.split(' ')[1]}`}>{tEsc(bill.escalation_stage)}</span>
           </span>
           <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
         </div>
       </div>
       <div className="flex-shrink-0 text-right">
-        <p className="text-[15px] font-bold text-pw-text">
-          {formatCents(bill.amount, bill.currency)}
-        </p>
+        <p className="text-[15px] font-bold text-pw-text">{formatCents(bill.amount, bill.currency)}</p>
         {isPaid ? (
-          <span className="flex items-center justify-end gap-1 text-[11px] font-medium text-pw-green">
-            <Check className="h-3 w-3" strokeWidth={2} />
-            {dueDisplay}
-          </span>
+          <span className="flex items-center justify-end gap-1 text-[11px] font-medium text-pw-green"><Check className="h-3 w-3" strokeWidth={2} />{dueDisplay}</span>
         ) : isOverdue ? (
           <span className="text-[11px] font-medium text-pw-red">{dueDisplay}</span>
         ) : isUpcoming ? (
@@ -325,15 +257,8 @@ function ConfettiBurst({ x, y }: { x: number; y: number }) {
     const dy = Math.sin((angle * Math.PI) / 180) * distance - 20;
     const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
     return (
-      <div
-        key={i}
-        className="confetti-particle"
-        style={{
-          left: x, top: y, backgroundColor: color,
-          '--confetti-x': `${dx}px`, '--confetti-y': `${dy}px`,
-          animationDelay: `${Math.random() * 100}ms`,
-        } as React.CSSProperties}
-      />
+      <div key={i} className="confetti-particle"
+        style={{ left: x, top: y, backgroundColor: color, '--confetti-x': `${dx}px`, '--confetti-y': `${dy}px`, animationDelay: `${Math.random() * 100}ms` } as React.CSSProperties} />
     );
   });
   return <div className="pointer-events-none fixed inset-0 z-[100]">{particles}</div>;
