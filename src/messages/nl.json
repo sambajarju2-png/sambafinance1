@@ -603,7 +603,8 @@
     "settings": {
       "title": "Instellingen",
       "desc": "Pas je profiel, meldingen en Gmail-koppeling aan."
-    }
+    },
+    "previous": "Vorige"
   },
   "adminTest": {
     "title": "Admin testpaneel",

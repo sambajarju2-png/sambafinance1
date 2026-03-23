@@ -603,7 +603,8 @@
     "settings": {
       "title": "Settings",
       "desc": "Customize your profile, notifications and Gmail connection."
-    }
+    },
+    "previous": "Previous"
   },
   "adminTest": {
     "title": "Admin test panel",

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   X,
   ChevronRight,
+  ChevronLeft,
   LayoutDashboard,
   CreditCard,
   Users,
@@ -38,7 +39,6 @@ export default function AppTour() {
       const timer = setTimeout(() => {
         setShow(true);
         setEntering(true);
-        // Remove entering class after entrance animation
         setTimeout(() => setEntering(false), 500);
       }, 1500);
       return () => clearTimeout(timer);
@@ -70,11 +70,9 @@ export default function AppTour() {
       setAnimating(true);
       setDirection('next');
       const nextStep = step + 1;
-      // Short delay for exit animation, then switch step
       timeoutRef.current = setTimeout(() => {
         setStep(nextStep);
         router.push(TOUR_STEPS[nextStep].route);
-        // Let entrance animation play
         setTimeout(() => setAnimating(false), 350);
       }, 150);
     } else {
@@ -131,25 +129,16 @@ export default function AppTour() {
           100% { opacity: 1; transform: scale(1); }
         }
         @keyframes tour-pulse-ring {
-          0% { transform: scale(1); opacity: 0.6; }
-          100% { transform: scale(1.8); opacity: 0; }
+          0% { transform: scale(1); opacity: 0.5; }
+          100% { transform: scale(2); opacity: 0; }
         }
         @keyframes tour-glow {
           0%, 100% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); }
           50% { box-shadow: 0 0 35px rgba(37, 99, 235, 0.5); }
         }
-        @keyframes tour-dot-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
         @keyframes tour-backdrop-in {
           0% { opacity: 0; }
           100% { opacity: 1; }
-        }
-        @keyframes tour-nav-pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.15); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
         }
         .tour-content-enter-next {
           animation: tour-slide-next 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -163,79 +152,93 @@ export default function AppTour() {
       <div
         className="fixed inset-0 z-[60]"
         style={{
-          background: 'rgba(0, 0, 0, 0.55)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
           animation: 'tour-backdrop-in 400ms ease-out both',
         }}
       />
 
-      {/* Bottom nav indicator — pulsing dot showing which tab */}
+      {/* Bottom nav highlight — clearly visible on light + dark */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[61] flex items-center justify-around"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)', paddingTop: '6px', height: '72px' }}
+        className="fixed bottom-0 left-0 right-0 z-[61]"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+          paddingTop: '8px',
+          height: '76px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderTop: '1px solid var(--border)',
+        }}
       >
-        {TOUR_STEPS.map((s, i) => {
-          const NavIcon = s.icon;
-          const isActive = i === step;
-          return (
-            <div key={i} className="flex flex-1 flex-col items-center justify-center gap-1 relative">
-              {isActive && (
-                <>
-                  {/* Pulse ring */}
+        <div className="flex items-center justify-around h-full">
+          {TOUR_STEPS.map((s, i) => {
+            const NavIcon = s.icon;
+            const isActive = i === step;
+            return (
+              <div key={i} className="flex flex-1 flex-col items-center justify-center gap-1 relative">
+                {/* Pulse ring on active tab */}
+                {isActive && (
                   <div
-                    className="absolute rounded-full bg-pw-blue/20"
+                    className="absolute rounded-full"
                     style={{
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       top: '50%',
                       left: '50%',
-                      marginTop: -28,
-                      marginLeft: -24,
+                      marginTop: -26,
+                      marginLeft: -22,
+                      border: '2px solid var(--blue)',
                       animation: 'tour-pulse-ring 1.5s ease-out infinite',
                     }}
                   />
-                </>
-              )}
-              <div
-                style={{
-                  animation: isActive ? 'tour-nav-pulse 2s ease-in-out infinite' : 'none',
-                }}
-              >
+                )}
                 {s.tabKey === 'feed' ? (
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                      isActive ? 'bg-pw-blue shadow-md shadow-pw-blue/30' : 'bg-white/10'
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 ${
+                      isActive
+                        ? 'bg-pw-blue shadow-lg shadow-pw-blue/40 scale-110'
+                        : 'bg-pw-border/40'
                     }`}
                   >
                     <NavIcon
-                      className={`h-5 w-5 ${isActive ? 'text-white' : 'text-white/40'}`}
+                      className={`h-5 w-5 ${isActive ? 'text-white' : 'text-pw-muted/50'}`}
                       strokeWidth={1.5}
                     />
                   </div>
                 ) : (
                   <NavIcon
-                    className={`h-6 w-6 ${isActive ? 'text-pw-blue' : 'text-white/30'}`}
+                    className={`h-6 w-6 transition-all duration-300 ${
+                      isActive ? 'text-pw-blue scale-110' : 'text-pw-muted/40'
+                    }`}
                     strokeWidth={1.5}
                   />
                 )}
+                {/* Label */}
+                <span
+                  className={`text-[10px] font-medium transition-all duration-300 ${
+                    isActive ? 'text-pw-blue font-semibold' : 'text-pw-muted/40'
+                  }`}
+                >
+                  {s.tabKey === 'overview' ? 'Overzicht' :
+                   s.tabKey === 'payments' ? 'Betalingen' :
+                   s.tabKey === 'feed' ? 'Feed' :
+                   s.tabKey === 'stats' ? 'Stats' : 'Meer'}
+                </span>
+                {/* Active dot */}
+                {isActive && (
+                  <div className="h-1 w-1 rounded-full bg-pw-blue" />
+                )}
               </div>
-              {isActive && (
-                <div
-                  className="h-1 w-1 rounded-full bg-pw-blue"
-                  style={{ animation: 'tour-dot-bounce 1.2s ease-in-out infinite' }}
-                />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Main tour card */}
       <div
         className="fixed z-[62] w-[calc(100%-32px)] max-w-sm"
         style={{
-          top: '45%',
+          top: '42%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           animation: entering ? 'tour-enter 500ms cubic-bezier(0.22, 1, 0.36, 1) both' : 'none',
@@ -245,10 +248,11 @@ export default function AppTour() {
           className="rounded-card-lg bg-pw-surface p-6 relative overflow-hidden"
           style={{ boxShadow: '0 8px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255,255,255,0.05)' }}
         >
-          {/* Close button */}
+          {/* Close/skip button — top right X */}
           <button
             onClick={handleDismiss}
-            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-pw-bg/50 text-pw-muted hover:text-pw-text transition-colors"
+            className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-pw-bg/80 text-pw-muted hover:text-pw-text transition-colors"
+            title={t('skip')}
           >
             <X className="h-4 w-4" strokeWidth={1.5} />
           </button>
@@ -282,7 +286,6 @@ export default function AppTour() {
             {/* Icon with glow effect */}
             <div className="flex justify-center mb-5">
               <div className="relative">
-                {/* Glow ring */}
                 <div
                   className="absolute inset-[-8px] rounded-[22px]"
                   style={{ animation: 'tour-glow 2s ease-in-out infinite' }}
@@ -312,21 +315,19 @@ export default function AppTour() {
             </p>
           </div>
 
-          {/* Actions */}
+          {/* Actions — Previous / Next */}
           <div className="flex gap-3">
             {isFirst ? (
-              <button
-                onClick={handleDismiss}
-                className="flex-1 rounded-button border border-pw-border px-3 py-2.5 text-[13px] font-semibold text-pw-muted active:scale-[0.97] transition-transform"
-              >
-                {t('skip')}
-              </button>
+              /* On step 1, left button is just empty space — X handles skip */
+              <div className="flex-1" />
             ) : (
               <button
                 onClick={handlePrev}
-                className="flex-1 rounded-button border border-pw-border px-3 py-2.5 text-[13px] font-semibold text-pw-muted active:scale-[0.97] transition-transform"
+                disabled={animating}
+                className="flex-1 flex items-center justify-center gap-1 rounded-button border border-pw-border px-3 py-2.5 text-[13px] font-semibold text-pw-muted active:scale-[0.97] transition-transform disabled:opacity-50"
               >
-                {t('skip')}
+                <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
+                {t('previous')}
               </button>
             )}
             <button
