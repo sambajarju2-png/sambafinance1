@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  MessageCircle, Send, Loader2, Heart, X, ChevronDown, ChevronUp,
-  Award, Trophy,
+  MessageCircle, Send, Loader2, X, ChevronDown, ChevronUp, Trophy,
 } from 'lucide-react';
 import CommunityNamePicker from '@/components/community-name-picker';
 
@@ -22,15 +21,13 @@ interface Post {
   comment_count: number;
 }
 
-interface ThreadedComment {
+interface FlatComment {
   id: string;
   content: string;
   is_anonymous: boolean;
   display_name: string;
   user_id: string;
   created_at: string;
-  parent_comment_id: string | null;
-  replies: ThreadedComment[];
 }
 
 type FilterKey = 'all' | 'populair' | 'succesverhalen' | 'tips' | 'steun';
@@ -146,7 +143,6 @@ export default function FeedPage() {
         </button>
       )}
 
-      {/* Filters with Populair */}
       <div className="flex gap-2 overflow-x-auto scrollbar-none">
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setActiveFilter(f.key)}
@@ -158,7 +154,6 @@ export default function FeedPage() {
         ))}
       </div>
 
-      {/* Week label for popular tab */}
       {activeFilter === 'populair' && weekLabel && (
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 text-pw-amber" strokeWidth={1.5} />
@@ -166,7 +161,6 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Posts */}
       {loading ? (
         <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[120px] rounded-card" />)}</div>
       ) : posts.length === 0 ? (
@@ -176,7 +170,7 @@ export default function FeedPage() {
             {activeFilter === 'populair' ? 'Nog geen populaire posts deze week' : 'Nog geen berichten'}
           </h2>
           <p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">
-            {activeFilter === 'populair' ? 'Post iets en verzamel reacties!' : 'Wees de eerste die iets deelt met de community!'}
+            {activeFilter === 'populair' ? 'Post iets en verzamel reacties!' : 'Wees de eerste die iets deelt!'}
           </p>
         </div>
       ) : (
@@ -196,24 +190,23 @@ export default function FeedPage() {
   );
 }
 
-/* ============ Post Card with Comments ============ */
+/* ============ Post Card with Flat Comments ============ */
 function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
   post: Post; index: number; onReaction: (id: string, type: string) => void;
   rank?: number; onCommentAdded: () => void;
 }) {
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<ThreadedComment[]>([]);
+  const [comments, setComments] = useState<FlatComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null);
   const [posting, setPosting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const avatarUrl = post.is_anonymous
     ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
     : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(post.display_name)}`;
 
   const badge = post.badge_type ? BADGE_LABELS[post.badge_type] : null;
-  const timeAgo = getTimeAgo(post.created_at);
 
   async function loadComments() {
     setLoadingComments(true);
@@ -226,7 +219,11 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
   function handleToggleComments() {
     if (!showComments) loadComments();
     setShowComments(!showComments);
-    setReplyTo(null);
+  }
+
+  function handleReplyTo(displayName: string) {
+    setNewComment(`@${displayName} `);
+    inputRef.current?.focus();
   }
 
   async function handlePostComment() {
@@ -236,11 +233,10 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
     try {
       const res = await fetch('/api/community/comments', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ post_id: post.id, content: trimmed, parent_comment_id: replyTo?.id || null }),
+        body: JSON.stringify({ post_id: post.id, content: trimmed }),
       });
       if (res.ok) {
         setNewComment('');
-        setReplyTo(null);
         loadComments();
         onCommentAdded();
       } else {
@@ -252,7 +248,7 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
 
   return (
     <div className="bill-row-enter rounded-card border border-pw-border bg-pw-surface p-4" style={{ animationDelay: `${index * 60}ms` }}>
-      {/* Rank badge for popular tab */}
+      {/* Rank badge for popular */}
       {rank && (
         <div className="mb-2 flex items-center gap-1.5">
           <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white ${
@@ -269,11 +265,10 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-pw-text">{post.display_name}</p>
-          <p className="text-[10px] text-pw-muted">{timeAgo}</p>
+          <p className="text-[10px] text-pw-muted">{getTimeAgo(post.created_at)}</p>
         </div>
       </div>
 
-      {/* Badge */}
       {badge && (
         <div className={`mb-2.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${badge.bg}`}>
           <span className="text-[12px]">{badge.icon}</span>
@@ -281,10 +276,12 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </div>
       )}
 
-      {/* Content */}
-      <p className="text-[13px] leading-relaxed text-pw-text">{post.content}</p>
+      {/* Content with @mention highlighting */}
+      <p className="text-[13px] leading-relaxed text-pw-text">
+        <MentionText text={post.content} />
+      </p>
 
-      {/* Reactions + Comment toggle */}
+      {/* Reactions + Comments toggle */}
       <div className="mt-3 flex items-center justify-between border-t border-pw-border pt-2.5">
         <div className="flex items-center gap-1.5">
           {REACTION_BUTTONS.map((rb) => {
@@ -309,7 +306,7 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
         </button>
       </div>
 
-      {/* Comments section */}
+      {/* Flat comments section (Instagram/TikTok style) */}
       {showComments && (
         <div className="mt-3 border-t border-pw-border pt-3">
           {loadingComments ? (
@@ -317,75 +314,77 @@ function PostCard({ post, index, onReaction, rank, onCommentAdded }: {
           ) : (
             <div className="space-y-3">
               {comments.length === 0 && <p className="text-center text-[12px] text-pw-muted py-2">Nog geen reacties</p>}
-              {comments.map((c) => (
-                <CommentThread key={c.id} comment={c} onReply={(id, name) => { setReplyTo({ id, name }); }} />
-              ))}
+              {comments.map((c) => {
+                const cAvatar = c.is_anonymous
+                  ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
+                  : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(c.display_name)}`;
+
+                return (
+                  <div key={c.id} className="flex items-start gap-2.5">
+                    <div className="mt-0.5 h-7 w-7 flex-shrink-0 overflow-hidden rounded-full border border-pw-border bg-pw-bg">
+                      <img src={cAvatar} alt="" className="h-full w-full" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[12px] font-bold text-pw-text">{c.display_name}</span>
+                        <span className="text-[9px] text-pw-muted">{getTimeAgo(c.created_at)}</span>
+                      </div>
+                      <p className="text-[12px] text-pw-text leading-relaxed">
+                        <MentionText text={c.content} />
+                      </p>
+                      <button
+                        onClick={() => handleReplyTo(c.display_name)}
+                        className="mt-0.5 text-[10px] font-semibold text-pw-muted hover:text-pw-blue"
+                      >
+                        Reageer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
           {/* Comment input */}
-          <div className="mt-3">
-            {replyTo && (
-              <div className="mb-1 flex items-center gap-1 text-[10px] text-pw-blue">
-                <span>Reageren op {replyTo.name}</span>
-                <button onClick={() => setReplyTo(null)} className="text-pw-muted hover:text-pw-text"><X className="h-3 w-3" strokeWidth={2} /></button>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value.slice(0, 300))}
-                placeholder={replyTo ? `Reageer op ${replyTo.name}...` : 'Schrijf een reactie...'}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
-                className="flex-1 rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[12px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none" />
-              <button onClick={handlePostComment} disabled={posting || !newComment.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-input bg-pw-blue text-white disabled:opacity-40">
-                {posting ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} /> : <Send className="h-3.5 w-3.5" strokeWidth={1.5} />}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ============ Threaded Comment (recursive) ============ */
-function CommentThread({ comment, onReply, depth = 0 }: { comment: ThreadedComment; onReply: (id: string, name: string) => void; depth?: number }) {
-  const avatarUrl = comment.is_anonymous
-    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
-    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(comment.display_name)}`;
-
-  return (
-    <div className={depth > 0 ? 'ml-6 border-l-2 border-pw-border pl-3' : ''}>
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 h-6 w-6 flex-shrink-0 overflow-hidden rounded-full border border-pw-border bg-pw-bg">
-          <img src={avatarUrl} alt="" className="h-full w-full" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-pw-text">{comment.display_name}</span>
-            <span className="text-[9px] text-pw-muted">{getTimeAgo(comment.created_at)}</span>
-          </div>
-          <p className="text-[12px] text-pw-text leading-relaxed">{comment.content}</p>
-          {depth < 2 && (
-            <button onClick={() => onReply(comment.id, comment.display_name)}
-              className="mt-0.5 text-[10px] font-semibold text-pw-blue">
-              Reageer
+          <div className="mt-3 flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value.slice(0, 300))}
+              placeholder="Schrijf een reactie..."
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
+              className="flex-1 rounded-full border border-pw-border bg-pw-bg px-4 py-2 text-[12px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none"
+            />
+            <button onClick={handlePostComment} disabled={posting || !newComment.trim()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-pw-blue text-white disabled:opacity-40">
+              {posting ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} /> : <Send className="h-3.5 w-3.5" strokeWidth={1.5} />}
             </button>
-          )}
-        </div>
-      </div>
-      {comment.replies.length > 0 && (
-        <div className="mt-2 space-y-2">
-          {comment.replies.map((reply) => (
-            <CommentThread key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
-          ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-/* ============ Compose Drawer with Labels ============ */
+/* ============ @Mention highlighter ============ */
+function MentionText({ text }: { text: string }) {
+  // Split on @username patterns and highlight them blue
+  const parts = text.split(/(@\S+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('@') ? (
+          <span key={i} className="font-semibold text-pw-blue">{part}</span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+/* ============ Compose Drawer ============ */
 function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string; onClose: () => void; onPosted: () => void }) {
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -405,10 +404,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
       });
       if (!res.ok) {
         const data = await res.json();
-        if (data.error === 'daily_limit') {
-          setError(data.message);
-          return;
-        }
+        if (data.error === 'daily_limit') { setError(data.message); return; }
         setError(data.error || 'Er ging iets mis');
         return;
       }
@@ -433,7 +429,6 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
             </button>
           </div>
 
-          {/* Author */}
           <div className="mb-4 flex items-center gap-3">
             <div className="h-9 w-9 overflow-hidden rounded-full border border-pw-border bg-pw-surface">
               <img src={avatarUrl} alt="" className="h-full w-full" />
@@ -453,9 +448,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
               {POST_LABELS.map((pl) => (
                 <button key={pl.key || 'none'} onClick={() => setSelectedLabel(pl.key)}
                   className={`flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-                    selectedLabel === pl.key
-                      ? 'bg-pw-blue text-white'
-                      : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'
+                    selectedLabel === pl.key ? 'bg-pw-blue text-white' : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'
                   }`}>
                   {pl.icon && <span>{pl.icon}</span>}
                   {pl.label}
@@ -464,7 +457,6 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
             </div>
           </div>
 
-          {/* Content */}
           <textarea value={content} onChange={(e) => setContent(e.target.value.slice(0, 500))} rows={4}
             placeholder="Waar wil je over praten? Een tip, een succes, of gewoon even stoom afblazen..."
             className="w-full rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue"
@@ -473,7 +465,6 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
             <p className="text-[10px] text-pw-muted">{content.length}/500</p>
           </div>
 
-          {/* Error / rate limit message */}
           {error && (
             <div className="mt-2 rounded-card border border-pw-amber/20 bg-amber-50/50 p-3">
               <p className="text-[12px] text-pw-text leading-relaxed">{error}</p>

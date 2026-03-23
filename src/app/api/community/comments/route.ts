@@ -9,28 +9,6 @@ function containsBlockedWords(text: string): boolean {
   return BLOCKED_WORDS.some((w) => lower.includes(w));
 }
 
-interface CommentRow {
-  id: string;
-  post_id: string;
-  user_id: string;
-  content: string;
-  is_anonymous: boolean;
-  is_flagged: boolean;
-  parent_comment_id: string | null;
-  created_at: string;
-}
-
-interface ThreadedComment {
-  id: string;
-  content: string;
-  is_anonymous: boolean;
-  display_name: string;
-  user_id: string;
-  created_at: string;
-  parent_comment_id: string | null;
-  replies: ThreadedComment[];
-}
-
 export async function GET(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -39,18 +17,20 @@ export async function GET(req: NextRequest) {
   const postId = req.nextUrl.searchParams.get('post_id');
   if (!postId) return NextResponse.json({ error: 'post_id required' }, { status: 400, headers: NO_CACHE });
 
+  // Flat list, oldest first (like Instagram/TikTok)
   const { data: comments, error } = await supabase
     .from('community_comments')
     .select('*')
     .eq('post_id', postId)
     .eq('is_flagged', false)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .limit(100);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: NO_CACHE });
   if (!comments || comments.length === 0) return NextResponse.json({ comments: [] }, { headers: NO_CACHE });
 
   // Fetch profiles
-  const userIds = Array.from(new Set(comments.map((c: CommentRow) => c.user_id)));
+  const userIds = Array.from(new Set(comments.map((c) => c.user_id)));
   const { data: profiles } = await supabase
     .from('community_profiles')
     .select('user_id, display_name')
@@ -59,34 +39,16 @@ export async function GET(req: NextRequest) {
   const profileMap: Record<string, string> = {};
   for (const p of profiles || []) profileMap[p.user_id] = p.display_name;
 
-  // Build threaded structure
-  const commentMap: Record<string, ThreadedComment> = {};
-  const topLevel: ThreadedComment[] = [];
+  const enriched = comments.map((c) => ({
+    id: c.id,
+    content: c.content,
+    is_anonymous: c.is_anonymous,
+    display_name: c.is_anonymous ? 'Anoniem' : (profileMap[c.user_id] || 'Gebruiker'),
+    user_id: c.user_id,
+    created_at: c.created_at,
+  }));
 
-  for (const c of comments as CommentRow[]) {
-    const tc: ThreadedComment = {
-      id: c.id,
-      content: c.content,
-      is_anonymous: c.is_anonymous,
-      display_name: c.is_anonymous ? 'Anoniem' : (profileMap[c.user_id] || 'Gebruiker'),
-      user_id: c.user_id,
-      created_at: c.created_at,
-      parent_comment_id: c.parent_comment_id,
-      replies: [],
-    };
-    commentMap[c.id] = tc;
-  }
-
-  for (const c of comments as CommentRow[]) {
-    const tc = commentMap[c.id];
-    if (c.parent_comment_id && commentMap[c.parent_comment_id]) {
-      commentMap[c.parent_comment_id].replies.push(tc);
-    } else {
-      topLevel.push(tc);
-    }
-  }
-
-  return NextResponse.json({ comments: topLevel }, { headers: NO_CACHE });
+  return NextResponse.json({ comments: enriched }, { headers: NO_CACHE });
 }
 
 export async function POST(req: NextRequest) {
@@ -97,7 +59,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const content = (body.content || '').trim();
   const postId = body.post_id;
-  const parentCommentId = body.parent_comment_id || null;
 
   if (!postId) return NextResponse.json({ error: 'post_id required' }, { status: 400, headers: NO_CACHE });
   if (!content || content.length < 1) return NextResponse.json({ error: 'Content too short' }, { status: 400, headers: NO_CACHE });
@@ -111,7 +72,6 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       content,
       is_anonymous: body.is_anonymous || false,
-      parent_comment_id: parentCommentId,
     })
     .select()
     .single();
