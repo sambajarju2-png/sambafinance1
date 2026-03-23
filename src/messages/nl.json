@@ -585,6 +585,10 @@
       "title": "Betalingen",
       "desc": "Beheer al je rekeningen, markeer ze als betaald en bekijk de kalender."
     },
+    "feed": {
+      "title": "Community Feed",
+      "desc": "Deel ervaringen, tips en succesverhalen met andere gebruikers."
+    },
     "stats": {
       "title": "Statistieken",
       "desc": "Bekijk je betaalprestaties, health score en cashflow."

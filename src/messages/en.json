@@ -585,6 +585,10 @@
       "title": "Payments",
       "desc": "Manage all your bills, mark them as paid and check the calendar."
     },
+    "feed": {
+      "title": "Community Feed",
+      "desc": "Share experiences, tips and success stories with other users."
+    },
     "stats": {
       "title": "Statistics",
       "desc": "View your payment performance, health score and cashflow."
