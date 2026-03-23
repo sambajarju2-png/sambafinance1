@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   MessageCircle, Send, Loader2, X, ChevronDown, ChevronUp, Trophy,
-  MoreHorizontal, Pencil, Trash2,
+  MoreHorizontal, Pencil, Trash2, Flag,
 } from 'lucide-react';
 import CommunityNamePicker from '@/components/community-name-picker';
 import CommunityBanOverlay from '@/components/community-ban-overlay';
+import ReportDrawer from '@/components/report-drawer';
 
 interface Post {
   id: string;
@@ -88,7 +89,7 @@ function FeedContent() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [composeOpen, setComposeOpen] = useState(false);
   const [weekLabel, setWeekLabel] = useState('');
-
+  const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: string; authorName: string; content: string } | null>(null);
   // Clean up ?post= from URL after reading it
   useEffect(() => {
     if (highlightPostId) {
@@ -232,7 +233,9 @@ function FeedContent() {
               rank={activeFilter === 'populair' ? index + 1 : undefined}
               onCommentCountChange={handleCommentCountChange}
               onDelete={handleDeletePost} onEdit={handleEditPost}
-              autoOpenComments={post.id === highlightPostId} />
+              autoOpenComments={post.id === highlightPostId}
+              onReportPost={(id, name, content) => setReportTarget({ type: 'post', id, authorName: name, content })}
+              onReportComment={(id, name, content) => setReportTarget({ type: 'comment', id, authorName: name, content })} />
           ))}
         </div>
       )}
@@ -252,16 +255,30 @@ function FeedContent() {
           />
         </div>
       )}
+
+      {/* Report drawer */}
+      {reportTarget && (
+        <ReportDrawer
+          type={reportTarget.type}
+          targetId={reportTarget.id}
+          authorName={reportTarget.authorName}
+          contentPreview={reportTarget.content}
+          onClose={() => setReportTarget(null)}
+          onReported={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
 /* ============ Post Card ============ */
-function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelete, onEdit, autoOpenComments }: {
+function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelete, onEdit, autoOpenComments, onReportPost, onReportComment }: {
   post: Post; index: number; onReaction: (id: string, type: string) => void;
   rank?: number; onCommentCountChange: (id: string, delta: number) => void;
   onDelete: (id: string) => void; onEdit: (id: string, content: string) => void;
   autoOpenComments?: boolean;
+  onReportPost: (id: string, name: string, content: string) => void;
+  onReportComment: (id: string, name: string, content: string) => void;
 }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<FlatComment[]>([]);
@@ -388,28 +405,36 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
           <p className="text-[13px] font-semibold text-pw-text">{post.display_name}</p>
           <p className="text-[10px] text-pw-muted">{getTimeAgo(post.created_at)}</p>
         </div>
-        {post.is_own && (
-          <div className="relative">
-            <button onClick={() => setShowMenu(!showMenu)} className="flex h-7 w-7 items-center justify-center rounded-full text-pw-muted hover:bg-pw-bg">
-              <MoreHorizontal className="h-4 w-4" strokeWidth={1.5} />
-            </button>
-            {showMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-8 z-20 w-36 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
-                  <button onClick={() => { setEditing(true); setShowMenu(false); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-text hover:bg-pw-bg">
-                    <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} /> Bewerken
-                  </button>
-                  <button onClick={() => { onDelete(post.id); setShowMenu(false); }}
+        {/* Menu — own: edit/delete, others: report */}
+        <div className="relative">
+          <button onClick={() => setShowMenu(!showMenu)} className="flex h-7 w-7 items-center justify-center rounded-full text-pw-muted hover:bg-pw-bg">
+            <MoreHorizontal className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-8 z-20 w-40 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
+                {post.is_own ? (
+                  <>
+                    <button onClick={() => { setEditing(true); setShowMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-text hover:bg-pw-bg">
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} /> Bewerken
+                    </button>
+                    <button onClick={() => { onDelete(post.id); setShowMenu(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-red hover:bg-red-50">
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Verwijderen
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => { onReportPost(post.id, post.display_name, post.content); setShowMenu(false); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-[12px] text-pw-red hover:bg-red-50">
-                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Verwijderen
+                    <Flag className="h-3.5 w-3.5" strokeWidth={1.5} /> Melden
                   </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {badge && (
@@ -467,7 +492,7 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
             <div className="space-y-3">
               {comments.length === 0 && <p className="text-center text-[12px] text-pw-muted py-2">Nog geen reacties</p>}
               {comments.map((c) => (
-                <CommentRow key={c.id} comment={c} onReplyTo={handleReplyTo} onDelete={handleDeleteComment} onEdit={handleEditComment} />
+                <CommentRow key={c.id} comment={c} onReplyTo={handleReplyTo} onDelete={handleDeleteComment} onEdit={handleEditComment} onReport={(id, name, content) => onReportComment(id, name, content)} />
               ))}
             </div>
           )}
@@ -489,9 +514,10 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
 }
 
 /* ============ Single Comment Row ============ */
-function CommentRow({ comment, onReplyTo, onDelete, onEdit }: {
+function CommentRow({ comment, onReplyTo, onDelete, onEdit, onReport }: {
   comment: FlatComment; onReplyTo: (name: string) => void;
   onDelete: (id: string) => void; onEdit: (id: string, content: string) => void;
+  onReport: (id: string, name: string, content: string) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -510,28 +536,35 @@ function CommentRow({ comment, onReplyTo, onDelete, onEdit }: {
         <div className="flex items-baseline gap-2">
           <span className="text-[12px] font-bold text-pw-text">{comment.display_name}</span>
           <span className="text-[9px] text-pw-muted">{getTimeAgo(comment.created_at)}</span>
-          {comment.is_own && (
-            <div className="relative ml-auto">
-              <button onClick={() => setShowMenu(!showMenu)} className="text-pw-muted hover:text-pw-text">
-                <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </button>
-              {showMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-5 z-20 w-32 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
-                    <button onClick={() => { setEditing(true); setShowMenu(false); }}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-text hover:bg-pw-bg">
-                      <Pencil className="h-3 w-3" strokeWidth={1.5} /> Bewerken
-                    </button>
-                    <button onClick={() => { onDelete(comment.id); setShowMenu(false); }}
+          <div className="relative ml-auto">
+            <button onClick={() => setShowMenu(!showMenu)} className="text-pw-muted hover:text-pw-text">
+              <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-5 z-20 w-36 rounded-card border border-pw-border bg-pw-surface py-1 shadow-lg">
+                  {comment.is_own ? (
+                    <>
+                      <button onClick={() => { setEditing(true); setShowMenu(false); }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-text hover:bg-pw-bg">
+                        <Pencil className="h-3 w-3" strokeWidth={1.5} /> Bewerken
+                      </button>
+                      <button onClick={() => { onDelete(comment.id); setShowMenu(false); }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-red hover:bg-red-50">
+                        <Trash2 className="h-3 w-3" strokeWidth={1.5} /> Verwijderen
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => { onReport(comment.id, comment.display_name, comment.content); setShowMenu(false); }}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-pw-red hover:bg-red-50">
-                      <Trash2 className="h-3 w-3" strokeWidth={1.5} /> Verwijderen
+                      <Flag className="h-3 w-3" strokeWidth={1.5} /> Melden
                     </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         {editing ? (
           <div className="mt-1">
