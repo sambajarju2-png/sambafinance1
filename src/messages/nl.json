@@ -26,6 +26,7 @@
     "payments": "Betalingen",
     "stats": "Stats",
     "cashflow": "Cashflow",
+    "feed": "Feed",
     "settings": "Instellingen"
   },
   "auth": {
