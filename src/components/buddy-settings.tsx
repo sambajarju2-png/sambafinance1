@@ -42,6 +42,8 @@ export default function BuddySettings() {
   const [viewingDashboard, setViewingDashboard] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteRole, setInviteRole] = useState('partner');
+  const [inviteShareAmounts, setInviteShareAmounts] = useState(false);
+  const [inviteNotifyIncasso, setInviteNotifyIncasso] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newInviteCode, setNewInviteCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -69,7 +71,7 @@ export default function BuddySettings() {
       const res = await fetch('/api/buddies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: inviteRole }),
+        body: JSON.stringify({ role: inviteRole, share_amounts: inviteShareAmounts, notify_on_incasso: inviteNotifyIncasso }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -310,6 +312,37 @@ export default function BuddySettings() {
                 {ROLE_LABELS[r]}
               </button>
             ))}
+          </div>
+
+          {/* Share settings for this invite */}
+          <p className="text-[11px] font-semibold text-pw-muted uppercase tracking-wider mb-2">Wat mag deze buddy zien?</p>
+          <div className="space-y-2.5 mb-4">
+            <div className="flex items-center justify-between rounded-card bg-pw-surface border border-pw-border px-3 py-2.5">
+              <div className="flex items-center gap-2.5">
+                {inviteShareAmounts ? <Eye className="h-3.5 w-3.5 text-pw-blue" strokeWidth={1.5} /> : <EyeOff className="h-3.5 w-3.5 text-pw-muted" strokeWidth={1.5} />}
+                <div>
+                  <p className="text-[12px] font-semibold text-pw-text">Bedragen tonen</p>
+                  <p className="text-[10px] text-pw-muted">Buddy kan exacte bedragen zien</p>
+                </div>
+              </div>
+              <button onClick={() => setInviteShareAmounts(!inviteShareAmounts)}
+                className={`relative h-6 w-10 rounded-full transition-colors ${inviteShareAmounts ? 'bg-pw-blue' : 'bg-pw-border'}`}>
+                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${inviteShareAmounts ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between rounded-card bg-pw-surface border border-pw-border px-3 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <Bell className={`h-3.5 w-3.5 ${inviteNotifyIncasso ? 'text-pw-blue' : 'text-pw-muted'}`} strokeWidth={1.5} />
+                <div>
+                  <p className="text-[12px] font-semibold text-pw-text">Incasso-alert</p>
+                  <p className="text-[10px] text-pw-muted">Melding als een rekening naar incasso gaat</p>
+                </div>
+              </div>
+              <button onClick={() => setInviteNotifyIncasso(!inviteNotifyIncasso)}
+                className={`relative h-6 w-10 rounded-full transition-colors ${inviteNotifyIncasso ? 'bg-pw-blue' : 'bg-pw-border'}`}>
+                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${inviteNotifyIncasso ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
           </div>
 
           {newInviteCode ? (

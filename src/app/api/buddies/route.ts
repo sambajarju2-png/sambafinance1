@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const role = body.role || 'partner';
+    const shareAmounts = body.share_amounts === true;
+    const notifyOnIncasso = body.notify_on_incasso !== false; // default true
     const supabase = await createServerSupabaseClient();
 
     // Check max buddies (3)
@@ -126,6 +128,8 @@ export async function POST(req: NextRequest) {
         role,
         invite_code: inviteCode,
         status: 'pending',
+        share_amounts: shareAmounts,
+        notify_on_incasso: notifyOnIncasso,
       })
       .select()
       .single();
