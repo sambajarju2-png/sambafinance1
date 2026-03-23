@@ -1,7 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, UserPlus, Trash2, Copy, Check, Loader2, Share2, Users, Bell, Eye, EyeOff, ChevronRight, ExternalLink } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Copy, Check, Loader2, Share2, Users, Bell, Eye, EyeOff, ChevronRight, ExternalLink, LayoutDashboard } from 'lucide-react';
+import BuddyDashboardView from '@/components/buddy-dashboard-view';
+
+interface BuddyOf {
+  id: string;
+  user_id: string;
+  owner_name: string;
+  role: string;
+  share_amounts: boolean;
+  notify_on_incasso: boolean;
+}
 
 interface Buddy {
   id: string;
@@ -27,7 +37,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function BuddySettings() {
   const [buddies, setBuddies] = useState<Buddy[]>([]);
+  const [buddyOf, setBuddyOf] = useState<BuddyOf[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingDashboard, setViewingDashboard] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteRole, setInviteRole] = useState('partner');
   const [creating, setCreating] = useState(false);
@@ -43,6 +55,7 @@ export default function BuddySettings() {
       if (res.ok) {
         const data = await res.json();
         setBuddies(data.buddies || []);
+        setBuddyOf(data.buddy_of || []);
         setStatuses(data.statuses || {});
       }
     } catch {} finally { setLoading(false); }
@@ -115,6 +128,11 @@ export default function BuddySettings() {
 
   if (loading) return <div className="skeleton h-[300px] rounded-card" />;
 
+  // Show buddy dashboard if viewing
+  if (viewingDashboard) {
+    return <BuddyDashboardView userId={viewingDashboard} onBack={() => setViewingDashboard(null)} />;
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -133,14 +151,11 @@ export default function BuddySettings() {
         {accepted.length > 0 && (
           <div className="flex items-center justify-center py-4">
             <div className="relative" style={{ width: 140, height: 140 }}>
-              {/* Dashed outer ring */}
               <div className="absolute inset-0 rounded-full" style={{ border: '2px dashed var(--border)' }} />
-              {/* Center — you */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-pw-blue text-[13px] font-extrabold text-white"
                 style={{ boxShadow: '0 0 0 3px var(--surface), 0 0 0 5px rgba(37,99,235,0.25)' }}>
                 JIJ
               </div>
-              {/* Buddy avatars */}
               {accepted.map((b, i) => {
                 const angle = -90 + (i * (360 / Math.max(accepted.length, 2)));
                 const rad = (angle * Math.PI) / 180;
@@ -159,21 +174,41 @@ export default function BuddySettings() {
             </div>
           </div>
         )}
-
-        {/* Legend */}
         {accepted.length > 0 && (
           <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-pw-green" />
-              <span className="text-[10px] text-pw-muted">Alles goed</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-pw-red" />
-              <span className="text-[10px] text-pw-muted">Actie nodig</span>
-            </div>
+            <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-pw-green" /><span className="text-[10px] text-pw-muted">Alles goed</span></div>
+            <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-pw-red" /><span className="text-[10px] text-pw-muted">Actie nodig</span></div>
           </div>
         )}
       </div>
+
+      {/* Buddy of — people who added me as buddy */}
+      {buddyOf.length > 0 && (
+        <div className="rounded-card border border-pw-blue/20 bg-pw-blue/5">
+          <div className="px-4 py-3 border-b border-pw-blue/10">
+            <p className="text-[13px] font-semibold text-pw-navy">Je bent buddy van</p>
+          </div>
+          {buddyOf.map((b) => {
+            const initials = b.owner_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+            return (
+              <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-b border-pw-blue/10 last:border-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-blue/10 text-[12px] font-bold text-pw-blue">
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-pw-text truncate">{b.owner_name}</p>
+                  <p className="text-[10px] text-pw-muted capitalize">{ROLE_LABELS[b.role] || b.role}</p>
+                </div>
+                <button onClick={() => setViewingDashboard(b.user_id)}
+                  className="btn-press flex items-center gap-1.5 rounded-button bg-pw-blue px-3 py-2 text-[11px] font-semibold text-white">
+                  <LayoutDashboard className="h-3 w-3" strokeWidth={1.5} />
+                  Dashboard
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Buddy list — accepted */}
       {accepted.length > 0 && (

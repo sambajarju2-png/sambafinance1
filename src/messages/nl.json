@@ -383,7 +383,10 @@
     "openEmail": "Open in e-mail",
     "subject": "Onderwerp",
     "disclaimer": "Deze brief is gegenereerd door AI. Controleer de inhoud voordat je deze verstuurt.",
-    "legalDisclaimer": "PayWatch is geen juridisch adviesbureau. Raadpleeg een professional voor juridisch advies."
+    "legalDisclaimer": "PayWatch is geen juridisch adviesbureau. Raadpleeg een professional voor juridisch advies.",
+    "days": "dagen",
+    "months": "maanden",
+    "back": "Terug"
   },
   "incasso": {
     "wikTitle": "WIK Incassokosten",
@@ -616,5 +619,17 @@
   "adminTest": {
     "title": "Admin testpaneel",
     "description": "Test functies voor ontwikkelaars"
+  },
+  "buddy": {
+    "title": "Buddy / Vangnet",
+    "description": "Nodig iemand uit als veiligheidsnetwerk",
+    "acceptTitle": "Buddy uitnodiging",
+    "acceptDesc": "Je bent uitgenodigd als buddy",
+    "acceptButton": "Uitnodiging accepteren",
+    "accepted": "Geaccepteerd!",
+    "acceptedDesc": "Je bent nu buddy. Je kunt het dashboard bekijken.",
+    "goToDashboard": "Bekijk dashboard",
+    "invalidCode": "Uitnodiging niet gevonden of verlopen",
+    "loginFirst": "Log eerst in om de uitnodiging te accepteren"
   }
 }
