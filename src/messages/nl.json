@@ -116,7 +116,8 @@
     "deleteConfirm": "Weet je zeker dat je deze rekening wilt verwijderen?",
     "notesPlaceholder": "Voeg een notitie toe...",
     "notesSaved": "Opgeslagen",
-    "saveNotes": "Notitie opslaan"
+    "saveNotes": "Notitie opslaan",
+    "saveChanges": "Wijzigingen opslaan"
   },
   "addBill": {
     "title": "Rekening toevoegen",
