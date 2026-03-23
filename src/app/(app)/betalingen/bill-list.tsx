@@ -18,6 +18,8 @@ const ESCALATION_COLORS: Record<EscalationStage, string> = {
   deurwaarder: 'bg-[#991B1B] text-[#991B1B]',
 };
 
+const CONFETTI_COLORS = ['#059669', '#2563EB', '#D97706', '#7C3AED', '#EA580C'];
+
 export default function BillList() {
   const t = useTranslations('bills');
   const tEsc = useTranslations('escalation');
@@ -36,6 +38,8 @@ export default function BillList() {
   const [activeTab, setActiveTab] = useState<TabFilter>('outstanding');
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [justPaidId, setJustPaidId] = useState<string | null>(null);
+  const [confettiOrigin, setConfettiOrigin] = useState<{ x: number; y: number } | null>(null);
 
   // Auto-open add drawer when navigated with ?add=true
   useEffect(() => {
@@ -74,6 +78,26 @@ export default function BillList() {
       }
     }
   }, [bills, selectedBill]);
+
+  // Handle paid animation: drawer tells us which bill was paid
+  const handleBillPaid = useCallback((billId: string) => {
+    setJustPaidId(billId);
+    setSelectedBill(null); // close drawer immediately
+
+    // Find the bill row element for confetti origin
+    const el = document.querySelector(`[data-bill-id="${billId}"]`);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      setConfettiOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    }
+
+    // Wait for exit animation, then refresh
+    setTimeout(() => {
+      setJustPaidId(null);
+      setConfettiOrigin(null);
+      fetchBills();
+    }, 600);
+  }, [fetchBills]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
@@ -152,18 +176,23 @@ export default function BillList() {
         </div>
       ) : (
         <div className="space-y-2">
-          {sortedBills.map((bill) => (
+          {sortedBills.map((bill, index) => (
             <BillRow
               key={bill.id}
               bill={bill}
+              index={index}
               tEsc={tEsc}
               tCat={tCat}
-              catMap={catMap} // Pass catMap down to the component!
+              catMap={catMap}
+              isExiting={justPaidId === bill.id}
               onTap={() => setSelectedBill(bill)}
             />
           ))}
         </div>
       )}
+
+      {/* Confetti burst */}
+      {confettiOrigin && <ConfettiBurst x={confettiOrigin.x} y={confettiOrigin.y} />}
 
       {/* Add Bill Drawer */}
       <AddBillDrawer
@@ -177,6 +206,7 @@ export default function BillList() {
         bill={selectedBill}
         onClose={() => setSelectedBill(null)}
         onUpdate={fetchBills}
+        onPaid={handleBillPaid}
       />
     </div>
   );
@@ -184,15 +214,19 @@ export default function BillList() {
 
 function BillRow({
   bill,
+  index,
   tEsc,
   tCat,
   catMap,
+  isExiting,
   onTap,
 }: {
   bill: Bill;
+  index: number;
   tEsc: ReturnType<typeof useTranslations>;
   tCat: ReturnType<typeof useTranslations>;
-  catMap: Record<string, string>; // Define catMap in the props
+  catMap: Record<string, string>;
+  isExiting: boolean;
   onTap: () => void;
 }) {
   const today = new Date().toISOString().split('T')[0];
@@ -209,10 +243,14 @@ function BillRow({
 
   return (
     <button
+      data-bill-id={bill.id}
       onClick={onTap}
-      className={`btn-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50 ${
+      className={`bill-row-press flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left transition-colors hover:bg-gray-50/50 ${
+        isExiting ? 'bill-paid-exit' : 'bill-row-enter'
+      } ${
         isOverdue ? 'border-pw-red/20 bg-red-50/30' : isUpcoming ? 'border-pw-amber/20 bg-amber-50/20' : 'border-pw-border bg-pw-surface'
       }`}
+      style={!isExiting ? { animationDelay: `${index * 60}ms` } : undefined}
     >
       {/* Favorite indicator */}
       <div className="flex-shrink-0">
@@ -257,4 +295,32 @@ function BillRow({
       </div>
     </button>
   );
+}
+
+/* Confetti burst component — shows particles at the paid bill location */
+function ConfettiBurst({ x, y }: { x: number; y: number }) {
+  const particles = Array.from({ length: 12 }, (_, i) => {
+    const angle = (i / 12) * 360;
+    const distance = 20 + Math.random() * 30;
+    const dx = Math.cos((angle * Math.PI) / 180) * distance;
+    const dy = Math.sin((angle * Math.PI) / 180) * distance - 20;
+    const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+
+    return (
+      <div
+        key={i}
+        className="confetti-particle"
+        style={{
+          left: x,
+          top: y,
+          backgroundColor: color,
+          '--confetti-x': `${dx}px`,
+          '--confetti-y': `${dy}px`,
+          animationDelay: `${Math.random() * 100}ms`,
+        } as React.CSSProperties}
+      />
+    );
+  });
+
+  return <div className="pointer-events-none fixed inset-0 z-[100]">{particles}</div>;
 }

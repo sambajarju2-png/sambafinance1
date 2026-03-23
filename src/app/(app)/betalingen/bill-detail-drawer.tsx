@@ -27,9 +27,10 @@ interface BillDetailDrawerProps {
   bill: Bill | null;
   onClose: () => void;
   onUpdate: () => void;
+  onPaid?: (billId: string) => void;
 }
 
-export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetailDrawerProps) {
+export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: BillDetailDrawerProps) {
   const t = useTranslations('billDetail');
   const tEsc = useTranslations('escalation');
   const tCat = useTranslations('addBill');
@@ -79,7 +80,15 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (res.ok) { onUpdate(); if (loadingKey === 'paid' || loadingKey === 'delete') onClose(); }
+      if (res.ok) {
+        // If marking as paid and onPaid callback exists, use the animated flow
+        if (loadingKey === 'paid' && onPaid) {
+          onPaid(bill!.id);
+          return;
+        }
+        onUpdate();
+        if (loadingKey === 'paid' || loadingKey === 'delete') onClose();
+      }
     } catch { /* silent */ } finally { setActionLoading(null); }
   }
 
@@ -112,9 +121,11 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate }: BillDetail
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
+      {/* Overlay with backdrop blur */}
+      <div className="drawer-backdrop fixed inset-0 z-50 bg-black/40" onClick={onClose} />
 
-      <div className="drawer-enter fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
+      {/* Drawer with spring animation */}
+      <div className="drawer-spring fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         {/* Header */}
