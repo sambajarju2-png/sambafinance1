@@ -17,29 +17,44 @@ export default function PwaInstallDrawer() {
   const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-      || (navigator as unknown as { standalone?: boolean }).standalone === true;
-    setIsStandalone(standalone);
-    if (standalone) return;
-
+    // iOS Safari: only use navigator.standalone (the matchMedia check is unreliable)
     const ua = navigator.userAgent;
     const ios = /iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream;
     setIsIOS(ios);
 
+    // Standalone detection — different per platform
+    let standalone = false;
+    if (ios) {
+      // iOS: ONLY check navigator.standalone (true when launched from home screen)
+      standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+    } else {
+      // Android/Desktop: use display-mode media query
+      standalone = window.matchMedia('(display-mode: standalone)').matches;
+    }
+
+    setIsStandalone(standalone);
+    if (standalone) return;
+
+    // Android/Chrome: listen for native install prompt
     const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as BeforeInstallPromptEvent); };
     window.addEventListener('beforeinstallprompt', handler);
 
-    const wasDismissed = localStorage.getItem('pwa-drawer-dismissed');
+    // Show drawer after delay (if not dismissed this session)
+    const wasDismissed = sessionStorage.getItem('pwa-drawer-dismissed');
     if (!wasDismissed) {
-      const timer = setTimeout(() => setShowDrawer(true), 4000);
+      const timer = setTimeout(() => setShowDrawer(true), 3000);
       return () => { clearTimeout(timer); window.removeEventListener('beforeinstallprompt', handler); };
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  // Manual trigger from settings or elsewhere
   useEffect(() => {
-    function handleTrigger() { setShowDrawer(true); }
+    function handleTrigger() {
+      sessionStorage.removeItem('pwa-drawer-dismissed');
+      setShowDrawer(true);
+    }
     window.addEventListener('paywatch-trigger-pwa', handleTrigger);
     return () => window.removeEventListener('paywatch-trigger-pwa', handleTrigger);
   }, []);
@@ -54,7 +69,7 @@ export default function PwaInstallDrawer() {
 
   function handleDismiss() {
     setShowDrawer(false);
-    localStorage.setItem('pwa-drawer-dismissed', 'true');
+    sessionStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
   if (isStandalone) return null;
