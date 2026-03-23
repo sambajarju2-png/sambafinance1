@@ -30,28 +30,32 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
     loadBudget();
   }, []);
 
-  const { totalOutstanding, daysRemaining, progressPercent, totalSettled } = useMemo(() => {
+  const { totalOutstanding, weeksRemaining, progressPercent, totalSettled } = useMemo(() => {
     const outstanding = bills.filter((b) => b.status !== 'settled');
     const settled = bills.filter((b) => b.status === 'settled');
     const total = outstanding.reduce((sum, b) => sum + b.amount, 0);
     const settledTotal = settled.reduce((sum, b) => sum + b.amount, 0);
 
     if (total === 0) {
-      return { totalOutstanding: 0, daysRemaining: 0, progressPercent: 100, totalSettled: settledTotal };
+      return { totalOutstanding: 0, weeksRemaining: 0, progressPercent: 100, totalSettled: settledTotal };
     }
 
-    // If no budget set, we can't calculate days
+    // If no budget set, we can't calculate
     if (!monthlyBudget || monthlyBudget <= 0) {
       const allBillsTotal = total + settledTotal;
       const progress = allBillsTotal > 0 ? Math.round((settledTotal / allBillsTotal) * 100) : 0;
-      return { totalOutstanding: total, daysRemaining: -1, progressPercent: progress, totalSettled: settledTotal };
+      return { totalOutstanding: total, weeksRemaining: -1, progressPercent: progress, totalSettled: settledTotal };
     }
 
-    const days = Math.ceil((total / monthlyBudget) * 30);
+    // Calculate weeks: (total / monthly) * 4.33 weeks per month
+    const rawWeeks = (total / monthlyBudget) * 4.33;
+    // Round: < .5 rounds down, >= .5 rounds up
+    const weeks = Math.round(rawWeeks);
+
     const allBillsTotal = total + settledTotal;
     const progress = allBillsTotal > 0 ? Math.round((settledTotal / allBillsTotal) * 100) : 0;
 
-    return { totalOutstanding: total, daysRemaining: days, progressPercent: progress, totalSettled: settledTotal };
+    return { totalOutstanding: total, weeksRemaining: Math.max(weeks, 1), progressPercent: progress, totalSettled: settledTotal };
   }, [bills, monthlyBudget]);
 
   if (loading) return <div className="skeleton h-[100px] rounded-card" />;
@@ -75,7 +79,7 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
   if (bills.length === 0) return null;
 
   // No budget set — show prompt to set one
-  if (!monthlyBudget || daysRemaining === -1) {
+  if (!monthlyBudget || weeksRemaining === -1) {
     return (
       <a href="/instellingen?tab=budget" className="bill-row-press flex w-full items-center gap-3 rounded-card border border-pw-amber/20 bg-amber-50/30 p-4 text-left">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-amber/10">
@@ -107,7 +111,7 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
               <Info className="h-3 w-3 text-pw-muted/50" strokeWidth={1.5} />
             </div>
             <p className="text-[24px] font-extrabold tracking-tight text-pw-navy">
-              {daysRemaining} <span className="text-[14px] font-semibold text-pw-muted">dagen</span>
+              {weeksRemaining} <span className="text-[14px] font-semibold text-pw-muted">{weeksRemaining === 1 ? 'week' : 'weken'}</span>
             </p>
           </div>
           <div className="text-right">
@@ -153,7 +157,7 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
 
               <div className="space-y-4">
                 <div className="rounded-card border border-pw-border bg-pw-surface p-4">
-                  <p className="text-[14px] font-semibold text-pw-navy mb-2">De countdown berekent hoeveel dagen je nodig hebt om schuldenvrij te worden.</p>
+                  <p className="text-[14px] font-semibold text-pw-navy mb-2">De countdown berekent hoeveel weken je nodig hebt om schuldenvrij te worden.</p>
                   <p className="text-[13px] text-pw-muted leading-relaxed">
                     We nemen je totale openstaande bedrag en delen dit door wat je maandelijks kunt betalen. Zo weet je precies wanneer je klaar bent.
                   </p>
@@ -171,8 +175,8 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
                       <span className="text-[13px] font-bold text-pw-text">{formatCents(monthlyBudget)}</span>
                     </div>
                     <div className="border-t border-pw-border pt-2 flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-pw-navy">Geschatte dagen</span>
-                      <span className="text-[16px] font-extrabold text-pw-blue">{daysRemaining} dagen</span>
+                      <span className="text-[13px] font-semibold text-pw-navy">Geschatte tijd</span>
+                      <span className="text-[16px] font-extrabold text-pw-blue">{weeksRemaining} {weeksRemaining === 1 ? 'week' : 'weken'}</span>
                     </div>
                   </div>
                 </div>

@@ -1,27 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
+
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 /**
  * GET /api/buddy/invite?code=PW-B-XXXXXX
  * Public endpoint — returns inviter name + role for the accept page.
- * No auth required (so the page can show who invited you before login).
+ * No auth required. Uses service role to read data.
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   if (!code) return NextResponse.json({ error: 'code required' }, { status: 400, headers: NO_CACHE });
 
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = getServiceClient();
 
-    const { data: invite } = await supabase
+    const { data: invite, error: inviteErr } = await supabase
       .from('user_buddies')
       .select('user_id, role, status')
       .eq('invite_code', code)
       .single();
 
-    if (!invite) {
+    if (inviteErr || !invite) {
       return NextResponse.json({ error: 'not_found' }, { status: 404, headers: NO_CACHE });
     }
 
@@ -36,15 +43,14 @@ export async function GET(req: NextRequest) {
       .eq('user_id', invite.user_id)
       .single();
 
-    const name = settings?.display_name
+    const fullName = settings?.display_name
       || [settings?.first_name, settings?.last_name].filter(Boolean).join(' ')
       || 'Iemand';
 
-    // Only return first name for privacy
-    const firstName = settings?.first_name || name.split(' ')[0] || 'Iemand';
+    const firstName = settings?.first_name || fullName.split(' ')[0] || 'Iemand';
 
     return NextResponse.json({
-      inviter_name: name,
+      inviter_name: fullName,
       inviter_first_name: firstName,
       role: invite.role,
     }, { headers: NO_CACHE });
