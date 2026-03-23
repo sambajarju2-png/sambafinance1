@@ -288,9 +288,9 @@ function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
             <span className={`escalation-dot ${escColor.split(' ')[0]}`} />
             <span className={`text-[11px] font-semibold ${escColor.split(' ')[1]}`}>{tEsc(bill.escalation_stage)}</span>
           </span>
-          {brandInfo && (bill as Record<string, unknown>).bill_subtype ? (
+          {brandInfo && (bill as unknown as Record<string, unknown>).bill_subtype ? (
             <span className="text-[11px] font-medium" style={{ color: brandInfo.color }}>
-              {(bill as Record<string, unknown>).bill_subtype as string}
+              {(bill as unknown as Record<string, unknown>).bill_subtype as string}
             </span>
           ) : (
             <span className="text-[11px] text-pw-muted">{catMap[bill.category] || bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}</span>
