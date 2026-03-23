@@ -128,23 +128,29 @@
     "reference": "Reference",
     "referencePlaceholder": "Invoice number (optional)",
     "notes": "Notes",
+    "notesPlaceholder": "Remarks (optional)",
     "save": "Save",
     "cancel": "Cancel",
     "errorVendor": "Enter a vendor name",
     "errorAmount": "Enter an amount",
     "errorDueDate": "Choose a due date",
+    "errorGeneral": "Failed to save. Try again.",
     "errorSave": "Failed to save",
     "editSaved": "Changes saved",
     "categories": {
-      "energie": "Energy",
-      "telecom": "Telecom",
-      "verzekering": "Insurance",
       "wonen": "Housing",
-      "water": "Water",
-      "belasting": "Tax",
+      "nutsvoorzieningen": "Utilities",
       "zorg": "Healthcare",
-      "transport": "Transport",
-      "abonnement": "Subscription",
+      "verzekeringen": "Insurance",
+      "telecom": "Telecom",
+      "overheid": "Government",
+      "vervoer": "Transport",
+      "leningen": "Loans",
+      "winkels": "Shops",
+      "abonnementen": "Subscriptions",
+      "gezin": "Family",
+      "zakelijk": "Business",
+      "incasso_kosten": "Collection costs",
       "overig": "Other"
     }
   },
@@ -233,6 +239,8 @@
   },
   "settings": {
     "title": "Settings",
+    "back": "Back",
+    "tab": "Settings",
     "profile": "Profile",
     "profileDesc": "Name, municipality and language",
     "notifications": "Notifications",
@@ -243,6 +251,11 @@
     "budgetDesc": "Set your monthly budget",
     "monthlyBudget": "Monthly budget",
     "monthlyBudgetDesc": "How much can you spend on bills per month?",
+    "maxOpenBills": "Maximum outstanding",
+    "maxOpenBillsDesc": "Warning when too many bills are outstanding",
+    "overBudgetWarning": "You're over your monthly budget",
+    "overBudgetDesc": "Try to reduce your spending or adjust your budget.",
+    "categoryBreakdown": "Spending by category",
     "achievements": "Achievements",
     "achievementsDesc": "View your earned badges",
     "debtHelp": "Debt help",
@@ -257,6 +270,8 @@
     "tourReset": "Tour will restart",
     "feedbackReset": "Feedback popup will be shown",
     "pwaReset": "Install prompt will be shown",
+    "save": "Save",
+    "saved": "Saved",
     "saveChanges": "Save changes"
   },
   "profile": {
@@ -285,9 +300,11 @@
   },
   "gmail": {
     "title": "Gmail accounts",
+    "description": "Connect your Gmail to automatically detect invoices from your inbox.",
     "noAccounts": "No accounts connected",
     "noAccountsHint": "Connect your Gmail to automatically scan for bills.",
     "connected": "Connected",
+    "connectGmail": "Connect Gmail",
     "lastScanned": "Last scanned",
     "neverScanned": "Never scanned",
     "needsReauth": "Reconnection required",
@@ -368,6 +385,10 @@
     "collectionTitle": "Collection agency",
     "bailiffTitle": "Bailiff",
     "howToTitle": "What can you do?",
+    "helpTitle": "Need help?",
+    "juridischLoket": "Juridisch Loket",
+    "nibud": "Nibud",
+    "schuldhulp": "Debt counseling",
     "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
   },
   "achievements": {
@@ -375,7 +396,117 @@
     "locked": "Locked",
     "unlockedOn": "Unlocked on",
     "achievementsSection": "Badges",
-    "moreToUnlock": "more to unlock"
+    "moreToUnlock": "more to unlock",
+    "howToTitle": "How to earn badges?",
+    "howToUnlock": "Keep paying bills on time and use all features to unlock badges.",
+    "categories": {
+      "betalingen": "Payments",
+      "streak": "Streaks",
+      "gezondheid": "Health",
+      "gebruik": "Usage"
+    },
+    "items": {
+      "eerste_betaling": {
+        "name": "First payment",
+        "desc": "Paid your first bill!",
+        "howTo": "Mark your first bill as paid"
+      },
+      "vijf_betaald": {
+        "name": "Five paid",
+        "desc": "5 bills paid",
+        "howTo": "Pay 5 bills"
+      },
+      "tien_betaald": {
+        "name": "Ten paid",
+        "desc": "10 bills paid",
+        "howTo": "Pay 10 bills"
+      },
+      "twintig_betaald": {
+        "name": "Twenty paid",
+        "desc": "20 bills paid!",
+        "howTo": "Pay 20 bills"
+      },
+      "vijftig_betaald": {
+        "name": "Fifty paid",
+        "desc": "50 bills paid — champion!",
+        "howTo": "Pay 50 bills"
+      },
+      "streak_3": {
+        "name": "Streak 3",
+        "desc": "3 paid on time in a row",
+        "howTo": "Pay 3 bills on time consecutively"
+      },
+      "streak_5": {
+        "name": "Streak 5",
+        "desc": "5 paid on time in a row",
+        "howTo": "Pay 5 bills on time consecutively"
+      },
+      "streak_10": {
+        "name": "Streak 10",
+        "desc": "10 paid on time in a row!",
+        "howTo": "Pay 10 bills on time consecutively"
+      },
+      "streak_20": {
+        "name": "Streak 20",
+        "desc": "20 in a row — unstoppable!",
+        "howTo": "Pay 20 bills on time consecutively"
+      },
+      "nul_achterstallig": {
+        "name": "Clean slate",
+        "desc": "No overdue bills",
+        "howTo": "Have no overdue bills"
+      },
+      "alle_betaald": {
+        "name": "All paid",
+        "desc": "All bills are paid!",
+        "howTo": "Pay all your outstanding bills"
+      },
+      "bespaard_100": {
+        "name": "€100 saved",
+        "desc": "€100 in collection costs saved",
+        "howTo": "Save €100 by paying on time"
+      },
+      "bespaard_500": {
+        "name": "€500 saved",
+        "desc": "€500 in collection costs saved!",
+        "howTo": "Save €500 by paying on time"
+      },
+      "scanner": {
+        "name": "Scanner",
+        "desc": "First bill scanned with camera",
+        "howTo": "Scan a bill with your camera"
+      },
+      "gmail_koppeling": {
+        "name": "Gmail connected",
+        "desc": "Gmail account connected",
+        "howTo": "Connect your Gmail account"
+      },
+      "brief_geschreven": {
+        "name": "Letter writer",
+        "desc": "First AI letter drafted",
+        "howTo": "Let AI draft a letter for you"
+      },
+      "gemeente_ingesteld": {
+        "name": "Municipality set",
+        "desc": "Your municipality is set",
+        "howTo": "Set your municipality in your profile"
+      },
+      "donkere_modus": {
+        "name": "Night mode",
+        "desc": "Dark theme activated",
+        "howTo": "Enable the dark theme"
+      },
+      "meldingen_aan": {
+        "name": "Notifications on",
+        "desc": "Push notifications activated",
+        "howTo": "Turn on push notifications"
+      },
+      "mood_gelogd": {
+        "name": "Mood logged",
+        "desc": "First mood check done",
+        "howTo": "Log your mood via the mood tracker"
+      }
+    }
   },
   "helpResources": {
     "helpTitle": "Debt help",
@@ -392,9 +523,14 @@
   },
   "lawyer": {
     "title": "Lawyers in your area",
+    "collectionTitle": "Collection case? Get a lawyer",
+    "description": "These law firms specialize in collection and debt cases.",
     "noGemeente": "Set your municipality to find lawyers near you.",
     "noResults": "No lawyers found in your area.",
-    "stad": "City"
+    "stad": "City",
+    "juridischLoket": "Juridisch Loket",
+    "juridischDesc": "Call for free legal advice: 0900-8020",
+    "nibudDesc": "Budget coach and debt help: nibud.nl"
   },
   "referral": {
     "title": "Share PayWatch",
@@ -437,7 +573,30 @@
   },
   "tour": {
     "title": "Tour",
-    "done": "Done"
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Done",
+    "getStarted": "Get started",
+    "overview": {
+      "title": "Overview",
+      "desc": "See your outstanding bills, savings and debts in one place."
+    },
+    "payments": {
+      "title": "Payments",
+      "desc": "Manage all your bills, mark them as paid and check the calendar."
+    },
+    "stats": {
+      "title": "Statistics",
+      "desc": "View your payment performance, health score and cashflow."
+    },
+    "cashflow": {
+      "title": "Cashflow",
+      "desc": "See your monthly spending and expected costs."
+    },
+    "settings": {
+      "title": "Settings",
+      "desc": "Customize your profile, notifications and Gmail connection."
+    }
   },
   "adminTest": {
     "title": "Admin test panel",

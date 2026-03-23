@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   CreditCard,
-  MessageCircle,
+  Users,
   TrendingUp,
   MoreHorizontal,
 } from 'lucide-react';
@@ -14,7 +14,7 @@ import {
 const NAV_ITEMS = [
   { href: '/overzicht', icon: LayoutDashboard, labelKey: 'overview' as const, isFeed: false },
   { href: '/betalingen', icon: CreditCard, labelKey: 'payments' as const, isFeed: false },
-  { href: '/feed', icon: MessageCircle, labelKey: 'feed' as const, isFeed: true },
+  { href: '/feed', icon: Users, labelKey: 'feed' as const, isFeed: true },
   { href: '/stats', icon: TrendingUp, labelKey: 'stats' as const, isFeed: false },
   { href: '/instellingen', icon: MoreHorizontal, labelKey: 'settings' as const, isFeed: false },
 ] as const;
@@ -39,7 +39,6 @@ export default function BottomNav() {
         const active = isActive(item.href);
         const Icon = item.icon;
 
-        // Feed tab — center, accent styling
         if (item.isFeed) {
           return (
             <Link
@@ -48,8 +47,10 @@ export default function BottomNav() {
               className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1"
             >
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                  active ? 'bg-pw-blue shadow-md' : 'bg-pw-blue/90'
+                className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                  active
+                    ? 'bg-pw-blue shadow-md shadow-pw-blue/30'
+                    : 'bg-pw-blue'
                 }`}
               >
                 <Icon className="h-5 w-5 text-white" strokeWidth={1.5} />

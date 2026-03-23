@@ -128,23 +128,29 @@
     "reference": "Referentie",
     "referencePlaceholder": "Factuurnummer (optioneel)",
     "notes": "Notities",
+    "notesPlaceholder": "Opmerkingen (optioneel)",
     "save": "Opslaan",
     "cancel": "Annuleren",
     "errorVendor": "Vul een afzender in",
     "errorAmount": "Vul een bedrag in",
     "errorDueDate": "Kies een vervaldatum",
+    "errorGeneral": "Opslaan mislukt. Probeer opnieuw.",
     "errorSave": "Opslaan mislukt",
     "editSaved": "Wijzigingen opgeslagen",
     "categories": {
-      "energie": "Energie",
-      "telecom": "Telecom",
-      "verzekering": "Verzekering",
       "wonen": "Wonen",
-      "water": "Water",
-      "belasting": "Belasting",
+      "nutsvoorzieningen": "Nutsvoorzieningen",
       "zorg": "Zorg",
-      "transport": "Transport",
-      "abonnement": "Abonnement",
+      "verzekeringen": "Verzekeringen",
+      "telecom": "Telecom",
+      "overheid": "Overheid",
+      "vervoer": "Vervoer",
+      "leningen": "Leningen",
+      "winkels": "Winkels",
+      "abonnementen": "Abonnementen",
+      "gezin": "Gezin",
+      "zakelijk": "Zakelijk",
+      "incasso_kosten": "Incassokosten",
       "overig": "Overig"
     }
   },
@@ -233,6 +239,8 @@
   },
   "settings": {
     "title": "Instellingen",
+    "back": "Terug",
+    "tab": "Instellingen",
     "profile": "Profiel",
     "profileDesc": "Naam, gemeente en taal",
     "notifications": "Meldingen",
@@ -243,6 +251,11 @@
     "budgetDesc": "Stel je maandelijkse budget in",
     "monthlyBudget": "Maandbudget",
     "monthlyBudgetDesc": "Hoeveel kun je per maand aan rekeningen besteden?",
+    "maxOpenBills": "Maximum openstaand",
+    "maxOpenBillsDesc": "Waarschuwing bij te veel openstaande rekeningen",
+    "overBudgetWarning": "Je zit boven je maandbudget",
+    "overBudgetDesc": "Probeer je uitgaven te verlagen of je budget aan te passen.",
+    "categoryBreakdown": "Uitgaven per categorie",
     "achievements": "Prestaties",
     "achievementsDesc": "Bekijk je behaalde badges",
     "debtHelp": "Hulp bij schulden",
@@ -257,6 +270,8 @@
     "tourReset": "Rondleiding wordt opnieuw gestart",
     "feedbackReset": "Feedback popup wordt getoond",
     "pwaReset": "Installatieprompt wordt getoond",
+    "save": "Opslaan",
+    "saved": "Opgeslagen",
     "saveChanges": "Wijzigingen opslaan"
   },
   "profile": {
@@ -285,9 +300,11 @@
   },
   "gmail": {
     "title": "Gmail accounts",
+    "description": "Verbind je Gmail om automatisch rekeningen te detecteren uit je inbox.",
     "noAccounts": "Geen accounts verbonden",
     "noAccountsHint": "Verbind je Gmail om automatisch rekeningen te scannen.",
     "connected": "Verbonden",
+    "connectGmail": "Gmail verbinden",
     "lastScanned": "Laatst gescand",
     "neverScanned": "Nog niet gescand",
     "needsReauth": "Opnieuw verbinden vereist",
@@ -368,6 +385,10 @@
     "collectionTitle": "Incassobureau",
     "bailiffTitle": "Deurwaarder",
     "howToTitle": "Wat kun je doen?",
+    "helpTitle": "Hulp nodig?",
+    "juridischLoket": "Juridisch Loket",
+    "nibud": "Nibud",
+    "schuldhulp": "Schuldhulpverlening",
     "legalDisclaimer": "PayWatch geeft geen juridisch advies. Raadpleeg het Juridisch Loket of een advocaat."
   },
   "achievements": {
@@ -375,7 +396,117 @@
     "locked": "Vergrendeld",
     "unlockedOn": "Behaald op",
     "achievementsSection": "Badges",
-    "moreToUnlock": "meer te behalen"
+    "moreToUnlock": "meer te behalen",
+    "howToTitle": "Hoe behaal je badges?",
+    "howToUnlock": "Blijf rekeningen op tijd betalen en gebruik alle functies om badges te ontgrendelen.",
+    "categories": {
+      "betalingen": "Betalingen",
+      "streak": "Streaks",
+      "gezondheid": "Gezondheid",
+      "gebruik": "Gebruik"
+    },
+    "items": {
+      "eerste_betaling": {
+        "name": "Eerste betaling",
+        "desc": "Je eerste rekening betaald!",
+        "howTo": "Markeer je eerste rekening als betaald"
+      },
+      "vijf_betaald": {
+        "name": "Vijf betaald",
+        "desc": "5 rekeningen betaald",
+        "howTo": "Betaal 5 rekeningen"
+      },
+      "tien_betaald": {
+        "name": "Tien betaald",
+        "desc": "10 rekeningen betaald",
+        "howTo": "Betaal 10 rekeningen"
+      },
+      "twintig_betaald": {
+        "name": "Twintig betaald",
+        "desc": "20 rekeningen betaald!",
+        "howTo": "Betaal 20 rekeningen"
+      },
+      "vijftig_betaald": {
+        "name": "Vijftig betaald",
+        "desc": "50 rekeningen betaald — kampioen!",
+        "howTo": "Betaal 50 rekeningen"
+      },
+      "streak_3": {
+        "name": "Streak 3",
+        "desc": "3 op rij op tijd betaald",
+        "howTo": "Betaal 3 rekeningen achter elkaar op tijd"
+      },
+      "streak_5": {
+        "name": "Streak 5",
+        "desc": "5 op rij op tijd betaald",
+        "howTo": "Betaal 5 rekeningen achter elkaar op tijd"
+      },
+      "streak_10": {
+        "name": "Streak 10",
+        "desc": "10 op rij op tijd betaald!",
+        "howTo": "Betaal 10 rekeningen achter elkaar op tijd"
+      },
+      "streak_20": {
+        "name": "Streak 20",
+        "desc": "20 op rij — onverslaanbaar!",
+        "howTo": "Betaal 20 rekeningen achter elkaar op tijd"
+      },
+      "nul_achterstallig": {
+        "name": "Schoon schema",
+        "desc": "Geen achterstallige rekeningen",
+        "howTo": "Zorg dat je geen achterstallige rekeningen hebt"
+      },
+      "alle_betaald": {
+        "name": "Alles betaald",
+        "desc": "Alle rekeningen zijn betaald!",
+        "howTo": "Betaal al je openstaande rekeningen"
+      },
+      "bespaard_100": {
+        "name": "€100 bespaard",
+        "desc": "€100 aan incassokosten bespaard",
+        "howTo": "Bespaar €100 door op tijd te betalen"
+      },
+      "bespaard_500": {
+        "name": "€500 bespaard",
+        "desc": "€500 aan incassokosten bespaard!",
+        "howTo": "Bespaar €500 door op tijd te betalen"
+      },
+      "scanner": {
+        "name": "Scanner",
+        "desc": "Eerste rekening gescand met camera",
+        "howTo": "Scan een rekening met je camera"
+      },
+      "gmail_koppeling": {
+        "name": "Gmail gekoppeld",
+        "desc": "Gmail account verbonden",
+        "howTo": "Verbind je Gmail account"
+      },
+      "brief_geschreven": {
+        "name": "Briefschrijver",
+        "desc": "Eerste AI-brief opgesteld",
+        "howTo": "Laat AI een brief voor je opstellen"
+      },
+      "gemeente_ingesteld": {
+        "name": "Gemeente ingesteld",
+        "desc": "Je gemeente is ingesteld",
+        "howTo": "Stel je gemeente in bij profiel"
+      },
+      "donkere_modus": {
+        "name": "Nachtmodus",
+        "desc": "Donker thema geactiveerd",
+        "howTo": "Schakel het donkere thema in"
+      },
+      "meldingen_aan": {
+        "name": "Meldingen aan",
+        "desc": "Push-meldingen geactiveerd",
+        "howTo": "Zet push-meldingen aan"
+      },
+      "mood_gelogd": {
+        "name": "Humeur gelogd",
+        "desc": "Je eerste humeurcheck gedaan",
+        "howTo": "Log je humeur via de mood tracker"
+      }
+    }
   },
   "helpResources": {
     "helpTitle": "Hulp bij schulden",
@@ -392,9 +523,14 @@
   },
   "lawyer": {
     "title": "Advocaten in je regio",
+    "collectionTitle": "Incassozaak? Schakel een advocaat in",
+    "description": "Deze advocatenkantoren zijn gespecialiseerd in incasso- en schuldenzaken.",
     "noGemeente": "Stel je gemeente in om advocaten bij jou in de buurt te vinden.",
     "noResults": "Geen advocaten gevonden in je regio.",
-    "stad": "Stad"
+    "stad": "Stad",
+    "juridischLoket": "Juridisch Loket",
+    "juridischDesc": "Bel gratis voor juridisch advies: 0900-8020",
+    "nibudDesc": "Budgetcoach en schuldhulp: nibud.nl"
   },
   "referral": {
     "title": "Deel PayWatch",
@@ -437,7 +573,30 @@
   },
   "tour": {
     "title": "Rondleiding",
-    "done": "Klaar"
+    "skip": "Overslaan",
+    "next": "Volgende",
+    "done": "Klaar",
+    "getStarted": "Aan de slag",
+    "overview": {
+      "title": "Overzicht",
+      "desc": "Bekijk je openstaande rekeningen, besparingen en schulden op één plek."
+    },
+    "payments": {
+      "title": "Betalingen",
+      "desc": "Beheer al je rekeningen, markeer ze als betaald en bekijk de kalender."
+    },
+    "stats": {
+      "title": "Statistieken",
+      "desc": "Bekijk je betaalprestaties, health score en cashflow."
+    },
+    "cashflow": {
+      "title": "Cashflow",
+      "desc": "Zie je maandelijkse uitgaven en verwachte kosten."
+    },
+    "settings": {
+      "title": "Instellingen",
+      "desc": "Pas je profiel, meldingen en Gmail-koppeling aan."
+    }
   },
   "adminTest": {
     "title": "Admin testpaneel",

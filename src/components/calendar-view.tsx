@@ -237,7 +237,9 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
                         <div
                           key={bi}
                           className={`h-1.5 w-1.5 rounded-full ${
-                            STAGE_DOT_COLORS[bill.escalation_stage] || 'bg-pw-blue'
+                            bill.status === 'settled'
+                              ? 'bg-pw-green'
+                              : STAGE_DOT_COLORS[bill.escalation_stage] || 'bg-pw-blue'
                           }`}
                         />
                       ))}
@@ -270,9 +272,17 @@ export default function CalendarView({ bills, onSelectBill }: CalendarViewProps)
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-pw-text">{bill.vendor}</p>
                   <div className="mt-0.5 flex items-center gap-1.5">
-                    <span className={`escalation-dot ${STAGE_DOT_COLORS[bill.escalation_stage] || 'bg-pw-blue'}`} />
-                    <span className={`text-[11px] font-semibold ${STAGE_TEXT_COLORS[bill.escalation_stage] || 'text-pw-blue'}`}>
-                      {bill.escalation_stage}
+                    <span className={`escalation-dot ${
+                      bill.status === 'settled'
+                        ? 'bg-pw-green'
+                        : STAGE_DOT_COLORS[bill.escalation_stage] || 'bg-pw-blue'
+                    }`} />
+                    <span className={`text-[11px] font-semibold ${
+                      bill.status === 'settled'
+                        ? 'text-pw-green'
+                        : STAGE_TEXT_COLORS[bill.escalation_stage] || 'text-pw-blue'
+                    }`}>
+                      {bill.status === 'settled' ? 'Betaald' : bill.escalation_stage}
                     </span>
                   </div>
                 </div>
