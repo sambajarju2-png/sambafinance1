@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import ServiceWorkerRegistration from '@/components/pwa/sw-register';
 import { ThemeProvider } from '@/components/theme-provider';
+import SplashScreen from '@/components/splash-screen';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -55,6 +56,7 @@ export default async function RootLayout({
         >
           <NextIntlClientProvider messages={messages}>
             <ServiceWorkerRegistration />
+            <SplashScreen />
             {children}
           </NextIntlClientProvider>
         </ThemeProvider>
