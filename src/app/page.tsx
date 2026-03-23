@@ -1,21 +1,13 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAuthUserId } from '@/lib/auth';
+import AuthenticatedHome from './authenticated-home';
 
-export default async function RootPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default async function HomePage() {
+  const userId = await getAuthUserId();
 
-  if (user) {
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('onboarding_complete')
-      .eq('user_id', user.id)
-      .single();
-
-    if (settings?.onboarding_complete) redirect('/overzicht');
-    else redirect('/onboarding');
+  if (!userId) {
+    redirect('/auth/login');
   }
 
-  // Not logged in → login page
-  redirect('/auth/login');
+  return <AuthenticatedHome />;
 }
