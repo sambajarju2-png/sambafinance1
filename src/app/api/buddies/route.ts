@@ -39,7 +39,7 @@ export async function GET() {
       .map((b) => b.buddy_user_id);
 
     const ownerUserIds = (buddyOf || []).map((b) => b.user_id);
-    const allUserIds = [...new Set([...buddyUserIds, ...ownerUserIds])];
+    const allUserIds = Array.from(new Set([...buddyUserIds, ...ownerUserIds]));
 
     let nameMap: Record<string, string> = {};
     if (allUserIds.length > 0) {
