@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   if (!posts || posts.length === 0) return NextResponse.json({ posts: [] }, { headers: NO_CACHE });
 
   // Fetch profiles for all post authors
-  const userIds = [...new Set(posts.map((p) => p.user_id))];
+  const userIds = Array.from(new Set(posts.map((p) => p.user_id)));
   const { data: profiles } = await supabase
     .from('community_profiles')
     .select('user_id, display_name')
