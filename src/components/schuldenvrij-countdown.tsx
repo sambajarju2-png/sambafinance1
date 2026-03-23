@@ -1,16 +1,34 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Target, X, Info } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Target, X, Info, Settings } from 'lucide-react';
 import { type Bill, formatCents } from '@/lib/bills';
 
 interface SchuldenvrijCountdownProps {
   bills: Bill[];
-  monthlyBudget?: number; // cents, defaults to 35000 (€350)
 }
 
-export default function SchuldenvrijCountdown({ bills, monthlyBudget = 35000 }: SchuldenvrijCountdownProps) {
+export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownProps) {
   const [showExplainer, setShowExplainer] = useState(false);
+  const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user's actual monthly budget from settings
+  useEffect(() => {
+    async function loadBudget() {
+      try {
+        const res = await fetch('/api/settings/profile');
+        if (res.ok) {
+          const { profile } = await res.json();
+          if (profile?.monthly_budget_cents && profile.monthly_budget_cents > 0) {
+            setMonthlyBudget(profile.monthly_budget_cents);
+          }
+        }
+      } catch { /* silent */ }
+      finally { setLoading(false); }
+    }
+    loadBudget();
+  }, []);
 
   const { totalOutstanding, daysRemaining, progressPercent, totalSettled } = useMemo(() => {
     const outstanding = bills.filter((b) => b.status !== 'settled');
@@ -22,12 +40,21 @@ export default function SchuldenvrijCountdown({ bills, monthlyBudget = 35000 }: 
       return { totalOutstanding: 0, daysRemaining: 0, progressPercent: 100, totalSettled: settledTotal };
     }
 
+    // If no budget set, we can't calculate days
+    if (!monthlyBudget || monthlyBudget <= 0) {
+      const allBillsTotal = total + settledTotal;
+      const progress = allBillsTotal > 0 ? Math.round((settledTotal / allBillsTotal) * 100) : 0;
+      return { totalOutstanding: total, daysRemaining: -1, progressPercent: progress, totalSettled: settledTotal };
+    }
+
     const days = Math.ceil((total / monthlyBudget) * 30);
     const allBillsTotal = total + settledTotal;
     const progress = allBillsTotal > 0 ? Math.round((settledTotal / allBillsTotal) * 100) : 0;
 
     return { totalOutstanding: total, daysRemaining: days, progressPercent: progress, totalSettled: settledTotal };
   }, [bills, monthlyBudget]);
+
+  if (loading) return <div className="skeleton h-[100px] rounded-card" />;
 
   if (totalOutstanding === 0 && bills.length > 0) {
     return (
@@ -46,6 +73,22 @@ export default function SchuldenvrijCountdown({ bills, monthlyBudget = 35000 }: 
   }
 
   if (bills.length === 0) return null;
+
+  // No budget set — show prompt to set one
+  if (!monthlyBudget || daysRemaining === -1) {
+    return (
+      <a href="/instellingen?tab=budget" className="bill-row-press flex w-full items-center gap-3 rounded-card border border-pw-amber/20 bg-amber-50/30 p-4 text-left">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-amber/10">
+          <Target className="h-5 w-5 text-pw-amber" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1">
+          <p className="text-[13px] font-semibold text-pw-navy">Stel je maandbudget in</p>
+          <p className="text-[11px] text-pw-muted">Dan berekenen we wanneer je schuldenvrij bent</p>
+        </div>
+        <Settings className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
+      </a>
+    );
+  }
 
   return (
     <>
@@ -141,9 +184,10 @@ export default function SchuldenvrijCountdown({ bills, monthlyBudget = 35000 }: 
                   </p>
                 </div>
 
-                <p className="text-[11px] text-pw-muted text-center">
-                  Het maandbedrag kun je aanpassen in Instellingen → Budget.
-                </p>
+                <a href="/instellingen?tab=budget" className="flex items-center justify-center gap-2 text-[12px] font-semibold text-pw-blue">
+                  <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  Budget aanpassen
+                </a>
               </div>
             </div>
           </div>
