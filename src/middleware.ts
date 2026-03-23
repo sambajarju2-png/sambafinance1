@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback', '/buddy/accept'];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user IS logged in and tries to access auth pages → redirect to home
-  if (user && isPublicRoute) {
+  if (user && isPublicRoute && pathname.startsWith('/auth/')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
