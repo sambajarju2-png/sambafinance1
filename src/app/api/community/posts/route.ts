@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { checkCommunityBan } from '@/lib/community-ban';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
 const MAX_POSTS_PER_DAY = 3;
@@ -146,6 +147,15 @@ export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  // Check if user is banned from community
+  const ban = await checkCommunityBan(user.id);
+  if (ban.isBanned) {
+    const msg = ban.until
+      ? `Je bent geblokkeerd tot ${new Date(ban.until).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      : 'Je bent geblokkeerd van de community';
+    return NextResponse.json({ error: msg }, { status: 403, headers: NO_CACHE });
+  }
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
