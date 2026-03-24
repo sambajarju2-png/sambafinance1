@@ -436,8 +436,8 @@ function StepMission({ isNl }: { isNl: boolean }) {
       </h1>
       <p className="ob-fade-enter mt-2 text-[13px] text-pw-muted" style={{ animationDelay: '80ms' }}>
         {isNl
-          ? 'Gebouwd door Samba en Mariama. Omdat het ons ook overkwam.'
-          : 'Built by Samba and Mariama. Because it happened to us too.'}
+          ? 'Gebouwd door Samba en Mariama.'
+          : 'Built by Samba and Mariama.'}
       </p>
       <div className="mt-6 w-full space-y-3">
         <Feature icon={Mail} title={isNl ? 'Gmail scanner' : 'Gmail scanner'} desc={isNl ? 'AI herkent automatisch facturen in je inbox.' : 'AI automatically detects invoices in your inbox.'} delay={120} />
