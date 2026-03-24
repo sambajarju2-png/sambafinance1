@@ -132,7 +132,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine if we got useful data
-    const hasData = extraction.vendor || extraction.amount_cents || extraction.iban;
+    // Require at least vendor AND amount to count as useful data
+    const hasData = !!(extraction.vendor && extraction.amount_cents);
 
     return NextResponse.json({
       extraction,
