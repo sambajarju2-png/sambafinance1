@@ -13,13 +13,14 @@ import {
   QrCode,
   Link as LinkIcon,
   Sparkles,
+  Globe,
 } from 'lucide-react';
 import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
 import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
-import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
+import { detectGovBrand } from '@/lib/gov-brands';
 import QRScanner from '@/components/qr-scanner';
 
-type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr';
+type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching';
 
 export default function CameraScanPage() {
   const t = useTranslations('cameraScan');
@@ -29,7 +30,6 @@ export default function CameraScanPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Extracted data (editable)
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -39,42 +39,95 @@ export default function CameraScanPage() {
   const [paymentUrl, setPaymentUrl] = useState('');
   const [escalationStage, setEscalationStage] = useState('factuur');
   const [scanSource, setScanSource] = useState<'camera' | 'qr'>('camera');
+  const [dueDateEstimated, setDueDateEstimated] = useState(false);
 
   // Handle QR code scan result
-  function handleQRResult(data: string) {
+  async function handleQRResult(data: string) {
+    // First check if it's an EPC (inline payment data) QR
     const payment = parsePaymentQR(data);
 
-    if (payment) {
-      // EPC QR with payment data
-      setVendor(payment.vendor || '');
+    if (payment && payment.vendor) {
+      // EPC QR with full payment data — use directly
+      setVendor(payment.vendor);
       setIban(payment.iban || '');
       setReference(payment.reference || '');
       if (payment.amount_cents > 0) {
         setAmount((payment.amount_cents / 100).toFixed(2).replace('.', ','));
       }
-      // If it's an iDEAL URL, store as payment URL
       if (payment.description && payment.description.startsWith('https://')) {
         setPaymentUrl(payment.description);
       }
-
-      // Auto-detect category from vendor
       const govBrand = detectGovBrand(payment.vendor);
-      if (govBrand) {
-        setCategory('overheid');
-      }
+      if (govBrand) setCategory('overheid');
+
+      // EPC QR doesn't include due date — default to 14 days from now
+      const defaultDue = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+      setDueDate(defaultDue);
+      setDueDateEstimated(true);
 
       setScanSource('qr');
       setStep('confirm');
-    } else if (data.startsWith('http')) {
-      // Generic URL — might be a payment link
-      setPaymentUrl(data);
-      setScanSource('qr');
-      setStep('confirm');
-    } else {
-      // Unknown QR format
-      setError('QR-code herkend, maar bevat geen betaalgegevens. Probeer een foto te maken van de factuur.');
-      setStep('error');
+      return;
     }
+
+    // If it's a URL — fetch the page behind it and extract data
+    if (data.startsWith('http')) {
+      setStep('fetching');
+      setPaymentUrl(data); // Store the original QR URL as fallback
+
+      try {
+        const res = await fetch('/api/scan/qr-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: data }),
+        });
+
+        if (res.ok) {
+          const { extraction, final_url } = await res.json();
+
+          setVendor(extraction.vendor || '');
+          setIban(extraction.iban || '');
+          setReference(extraction.reference || '');
+          setPaymentUrl(extraction.payment_url || final_url || data);
+          if (extraction.amount_cents) {
+            setAmount((extraction.amount_cents / 100).toFixed(2).replace('.', ','));
+          }
+          if (extraction.due_date) {
+            setDueDate(extraction.due_date);
+            setDueDateEstimated(false);
+          } else {
+            // No due date extracted — default to 14 days
+            setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+            setDueDateEstimated(true);
+          }
+          if (extraction.category_hint && extraction.category_hint !== 'overig') {
+            setCategory(extraction.category_hint);
+          }
+          if (extraction.vendor) {
+            const govBrand = detectGovBrand(extraction.vendor);
+            if (govBrand) setCategory('overheid');
+          }
+
+          setScanSource('qr');
+          setStep('confirm');
+        } else {
+          // Fetch failed — still let user fill in manually with payment URL
+          const errData = await res.json();
+          setPaymentUrl(errData.payment_url || data);
+          setScanSource('qr');
+          setStep('confirm');
+        }
+      } catch {
+        // Network error — still let user fill in manually
+        setScanSource('qr');
+        setStep('confirm');
+      }
+      return;
+    }
+
+    // Unknown QR format
+    setError('QR-code herkend, maar bevat geen betaalgegevens. Probeer een foto te maken van de factuur.');
+    setStep('error');
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -90,10 +143,7 @@ export default function CameraScanPage() {
       const res = await fetch('/api/scan/camera', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: compressed.base64,
-          mime_type: compressed.mimeType,
-        }),
+        body: JSON.stringify({ image: compressed.base64, mime_type: compressed.mimeType }),
       });
 
       if (!res.ok) {
@@ -146,7 +196,7 @@ export default function CameraScanPage() {
           reference: reference || null,
           payment_url: paymentUrl || null,
           escalation_stage: escalationStage,
-          source: scanSource === 'qr' ? 'camera_scan' : 'camera_scan',
+          source: 'camera_scan',
         }),
       });
 
@@ -167,6 +217,7 @@ export default function CameraScanPage() {
     setError(null);
     setVendor(''); setAmount(''); setDueDate(''); setCategory('overig');
     setIban(''); setReference(''); setPaymentUrl('');
+    setDueDateEstimated(false);
   }
 
   return (
@@ -191,11 +242,8 @@ export default function CameraScanPage() {
               <p className="mt-1 text-[13px] text-pw-muted">Kies een methode om je rekening toe te voegen</p>
             </div>
 
-            {/* Photo option */}
-            <button
-              onClick={() => setStep('capture')}
-              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg"
-            >
+            <button onClick={() => setStep('capture')}
+              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-blue/10 flex-shrink-0">
                 <Camera className="h-7 w-7 text-pw-blue" strokeWidth={1.5} />
               </div>
@@ -211,18 +259,15 @@ export default function CameraScanPage() {
               </div>
             </button>
 
-            {/* QR option */}
-            <button
-              onClick={() => setStep('qr')}
-              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg"
-            >
+            <button onClick={() => setStep('qr')}
+              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-green/10 flex-shrink-0">
                 <QrCode className="h-7 w-7 text-pw-green" strokeWidth={1.5} />
               </div>
               <div className="flex-1">
                 <p className="text-[15px] font-bold text-pw-navy">Scan QR-code</p>
                 <p className="mt-0.5 text-[12px] text-pw-muted leading-relaxed">
-                  Scan de betaal-QR op je factuur of acceptgiro. Direct alle gegevens ingevuld.
+                  Scan de betaal-QR op je factuur. We halen de gegevens automatisch op.
                 </p>
               </div>
               <div className="flex items-center gap-1 rounded-full bg-pw-green/10 px-2 py-1">
@@ -238,10 +283,29 @@ export default function CameraScanPage() {
 
         {/* STEP: QR SCANNER */}
         {step === 'qr' && (
-          <QRScanner
-            onScan={handleQRResult}
-            onClose={() => setStep('choose')}
-          />
+          <QRScanner onScan={handleQRResult} onClose={() => setStep('choose')} />
+        )}
+
+        {/* STEP: FETCHING — Loading state while fetching payment page */}
+        {step === 'fetching' && (
+          <div className="flex flex-col items-center py-16 text-center">
+            <div className="relative mb-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-pw-green/10">
+                <Globe className="h-8 w-8 text-pw-green" strokeWidth={1.5} />
+              </div>
+              <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-pw-blue">
+                <Loader2 className="h-4 w-4 animate-spin text-white" strokeWidth={2} />
+              </div>
+            </div>
+            <h2 className="text-[16px] font-bold text-pw-navy">Betaalpagina ophalen...</h2>
+            <p className="mt-2 max-w-[280px] text-[13px] text-pw-muted leading-relaxed">
+              We openen de link achter de QR-code en lezen de factuurgegevens uit.
+            </p>
+            <div className="mt-4 flex items-center gap-2 rounded-full bg-pw-bg border border-pw-border px-3 py-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-pw-green animate-pulse" />
+              <p className="text-[11px] text-pw-muted font-mono truncate max-w-[240px]">{paymentUrl}</p>
+            </div>
+          </div>
         )}
 
         {/* STEP: CAPTURE (camera photo) */}
@@ -250,7 +314,6 @@ export default function CameraScanPage() {
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-pw-blue/10">
               <Camera className="h-10 w-10 text-pw-blue" strokeWidth={1.5} />
             </div>
-
             <h2 className="text-heading text-pw-navy">{t('captureTitle')}</h2>
             <p className="mt-2 max-w-[300px] text-body text-pw-muted">{t('captureDescription')}</p>
 
@@ -262,7 +325,6 @@ export default function CameraScanPage() {
               <Camera className="h-5 w-5" strokeWidth={1.5} />
               {t('takePhoto')}
             </button>
-
             <button onClick={() => {
               if (fileInputRef.current) {
                 fileInputRef.current.removeAttribute('capture');
@@ -292,7 +354,6 @@ export default function CameraScanPage() {
               <h2 className="text-[16px] font-bold text-pw-navy">{t('confirmTitle')}</h2>
             </div>
 
-            {/* QR success badge */}
             {scanSource === 'qr' && (
               <div className="flex items-center gap-2 rounded-card border border-pw-green/20 bg-green-50/50 px-3 py-2">
                 <QrCode className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
@@ -318,8 +379,11 @@ export default function CameraScanPage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-label text-pw-text">{t('dueDate')} *</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-body text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
+                <input type="date" value={dueDate} onChange={(e) => { setDueDate(e.target.value); setDueDateEstimated(false); }}
+                  className={`w-full rounded-input border bg-pw-surface px-3 py-2.5 text-body text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue ${dueDateEstimated ? 'border-pw-amber' : 'border-pw-border'}`} />
+                {dueDateEstimated && (
+                  <p className="mt-1 text-[10px] text-pw-amber font-medium">Geschat op 14 dagen — controleer je factuur</p>
+                )}
               </div>
             </div>
 
@@ -409,9 +473,7 @@ export default function CameraScanPage() {
 }
 
 async function compressImage(
-  file: File,
-  maxDimension: number = 1600,
-  quality: number = 0.7
+  file: File, maxDimension: number = 1600, quality: number = 0.7
 ): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -420,25 +482,16 @@ async function compressImage(
       img.onload = () => {
         let { width, height } = img;
         if (width > maxDimension || height > maxDimension) {
-          if (width > height) {
-            height = (height / width) * maxDimension;
-            width = maxDimension;
-          } else {
-            width = (width / height) * maxDimension;
-            height = maxDimension;
-          }
+          if (width > height) { height = (height / width) * maxDimension; width = maxDimension; }
+          else { width = (width / height) * maxDimension; height = maxDimension; }
         }
-
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('Canvas not supported')); return; }
         ctx.drawImage(img, 0, 0, width, height);
-
         const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        const base64 = dataUrl.split(',')[1];
-        resolve({ base64, mimeType: 'image/jpeg' });
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
       };
       img.onerror = () => reject(new Error('Failed to load image'));
       img.src = e.target?.result as string;
