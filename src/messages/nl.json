@@ -355,7 +355,15 @@
     "confirmTitle": "Controleer gegevens",
     "confirmDescription": "Klopt dit?",
     "errorExtraction": "Kon geen gegevens ophalen.",
-    "tryAgain": "Opnieuw proberen"
+    "tryAgain": "Opnieuw proberen",
+    "vendor": "Bedrijf / Afzender",
+    "amount": "Bedrag",
+    "dueDate": "Vervaldatum",
+    "category": "Categorie",
+    "reference": "Kenmerk",
+    "save": "Opslaan",
+    "paymentUrl": "Betaallink (optioneel)",
+    "paymentUrlHint": "iDEAL of betaalpagina URL"
   },
   "draftLetter": {
     "title": "Brief opstellen",

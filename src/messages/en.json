@@ -355,7 +355,15 @@
     "confirmTitle": "Review details",
     "confirmDescription": "Does this look right?",
     "errorExtraction": "Could not extract data.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "vendor": "Company / Sender",
+    "amount": "Amount",
+    "dueDate": "Due date",
+    "category": "Category",
+    "reference": "Reference",
+    "save": "Save",
+    "paymentUrl": "Payment link (optional)",
+    "paymentUrlHint": "iDEAL or payment page URL"
   },
   "draftLetter": {
     "title": "Draft letter",
