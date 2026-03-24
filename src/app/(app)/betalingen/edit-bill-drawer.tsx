@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Loader2, Check } from 'lucide-react';
+import { X, Loader2, Check, Link as LinkIcon } from 'lucide-react';
 import { type Bill, BILL_CATEGORIES, parseToCents } from '@/lib/bills';
 
 interface EditBillDrawerProps {
@@ -26,6 +26,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
   const [stage, setStage] = useState(bill.escalation_stage || 'factuur');
   const [reference, setReference] = useState(bill.reference || '');
   const [iban, setIban] = useState(bill.iban || '');
+  const [paymentUrl, setPaymentUrl] = useState(bill.payment_url || '');
   const [notes, setNotes] = useState(bill.notes || '');
 
   const [saving, setSaving] = useState(false);
@@ -56,6 +57,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
           escalation_stage: stage,
           reference: reference.trim() || null,
           iban: iban.trim() || null,
+          payment_url: paymentUrl.trim() || null,
           notes: notes.trim(),
         }),
       });
@@ -154,6 +156,18 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
               <input type="text" value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00ABNA0000000000"
                 className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
             </div>
+          </div>
+
+          {/* Payment URL */}
+          <div>
+            <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-pw-text">
+              <LinkIcon className="h-3 w-3 text-pw-muted" strokeWidth={1.5} />
+              {tAdd('paymentUrl')}
+            </label>
+            <input type="url" value={paymentUrl} onChange={(e) => setPaymentUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
+            <p className="mt-1 text-[10px] text-pw-muted">{tAdd('paymentUrlHint')}</p>
           </div>
 
           {/* Notes */}
