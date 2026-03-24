@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 /**
  * POST /api/scan/qr-url
@@ -31,19 +28,19 @@ export async function POST(req: NextRequest) {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8',
         },
-        signal: AbortSignal.timeout(15000), // 15s timeout
+        signal: AbortSignal.timeout(15000),
       });
 
-      finalUrl = response.url; // The URL after all redirects
+      finalUrl = response.url;
       htmlContent = await response.text();
-    } catch (fetchErr) {
+    } catch {
       return NextResponse.json({
         error: 'Kon de betaalpagina niet ophalen. Probeer de link handmatig te openen.',
         payment_url: url,
       }, { status: 422, headers: NO_CACHE });
     }
 
-    // Step 2: Clean HTML — strip scripts, styles, keep text content
+    // Step 2: Clean HTML
     const cleanedText = cleanHTML(htmlContent);
 
     if (!cleanedText || cleanedText.length < 20) {
@@ -53,7 +50,7 @@ export async function POST(req: NextRequest) {
       }, { status: 422, headers: NO_CACHE });
     }
 
-    // Step 3: Use AI to extract payment data from the page text
+    // Step 3: Use AI to extract payment data
     const extraction = await extractPaymentData(cleanedText, finalUrl);
 
     return NextResponse.json({
@@ -71,27 +68,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Strip HTML tags, scripts, styles — keep only visible text content.
- * Limit to first 8000 chars to keep AI costs low.
- */
 function cleanHTML(html: string): string {
   let text = html;
-
-  // Remove script and style blocks entirely
   text = text.replace(/<script[\s\S]*?<\/script>/gi, '');
   text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
   text = text.replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
-
-  // Replace common block elements with newlines
   text = text.replace(/<\/(div|p|tr|li|h[1-6]|section|article|header|footer)>/gi, '\n');
   text = text.replace(/<(br|hr)\s*\/?>/gi, '\n');
   text = text.replace(/<td[\s>]/gi, ' | ');
-
-  // Remove all remaining tags
   text = text.replace(/<[^>]+>/g, ' ');
-
-  // Decode HTML entities
   text = text.replace(/&amp;/g, '&');
   text = text.replace(/&lt;/g, '<');
   text = text.replace(/&gt;/g, '>');
@@ -99,20 +84,19 @@ function cleanHTML(html: string): string {
   text = text.replace(/&#39;/g, "'");
   text = text.replace(/&euro;/g, '€');
   text = text.replace(/&nbsp;/g, ' ');
-
-  // Clean up whitespace
   text = text.replace(/[ \t]+/g, ' ');
   text = text.replace(/\n\s*\n/g, '\n');
   text = text.trim();
-
-  // Limit length for AI processing
   return text.slice(0, 8000);
 }
 
-/**
- * Use Claude to extract structured payment data from page text.
- */
 async function extractPaymentData(pageText: string, pageUrl: string) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY not set');
+    return fallbackExtraction(pageText);
+  }
+
   const prompt = `Extract payment/invoice information from this Dutch payment page content. This is from a QR code on a Dutch invoice that redirected to a payment page.
 
 URL: ${pageUrl}
@@ -134,15 +118,28 @@ Extract and return a JSON object with these fields (use null if not found):
 Return ONLY the JSON object, no other text.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      messages: [{ role: 'user', content: prompt }],
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+      }),
     });
 
-    const text = message.content[0].type === 'text' ? message.content[0].text : '';
+    if (!res.ok) {
+      console.error('Anthropic API error:', res.status, await res.text());
+      return fallbackExtraction(pageText);
+    }
 
-    // Parse JSON from response
+    const data = await res.json();
+    const text = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
+
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -160,31 +157,24 @@ Return ONLY the JSON object, no other text.`;
     console.error('AI extraction error:', err);
   }
 
-  // Fallback: try basic regex extraction
   return fallbackExtraction(pageText);
 }
 
-/**
- * Fallback: extract common patterns from page text without AI.
- */
 function fallbackExtraction(text: string) {
   let vendor: string | null = null;
   let amount_cents: number | null = null;
   let iban: string | null = null;
   let reference: string | null = null;
 
-  // IBAN: NLxx XXXX xxxx xxxx xx
   const ibanMatch = text.match(/\b(NL\d{2}\s?[A-Z]{4}\s?\d{4}\s?\d{4}\s?\d{2})\b/i);
   if (ibanMatch) iban = ibanMatch[1].replace(/\s/g, '');
 
-  // Amount: €xx,xx or EUR xx,xx
   const amountMatch = text.match(/[€]\s?(\d{1,6}[.,]\d{2})|EUR\s?(\d{1,6}[.,]\d{2})/i);
   if (amountMatch) {
     const numStr = (amountMatch[1] || amountMatch[2]).replace('.', '').replace(',', '.');
     amount_cents = Math.round(parseFloat(numStr) * 100);
   }
 
-  // Reference: common Dutch patterns
   const refMatch = text.match(/(?:kenmerk|referentie|factuurnummer|betalingskenmerk)[:\s]+([A-Z0-9\-\.\/]{4,30})/i);
   if (refMatch) reference = refMatch[1].trim();
 
