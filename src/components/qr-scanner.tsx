@@ -15,7 +15,6 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const animationRef = useRef<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jsQRRef = useRef<any>(null);
 
   // Load jsQR dynamically
@@ -23,7 +22,6 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
     script.onload = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       jsQRRef.current = (window as any).jsQR;
     };
     document.head.appendChild(script);
