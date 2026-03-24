@@ -10,17 +10,22 @@ import {
   Check,
   ChevronLeft,
   RotateCcw,
+  QrCode,
   Link as LinkIcon,
+  Sparkles,
 } from 'lucide-react';
 import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
+import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
+import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
+import QRScanner from '@/components/qr-scanner';
 
-type ScanStep = 'capture' | 'extracting' | 'confirm' | 'saving' | 'error';
+type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr';
 
 export default function CameraScanPage() {
   const t = useTranslations('cameraScan');
   const router = useRouter();
 
-  const [step, setStep] = useState<ScanStep>('capture');
+  const [step, setStep] = useState<ScanStep>('choose');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,6 +38,44 @@ export default function CameraScanPage() {
   const [reference, setReference] = useState('');
   const [paymentUrl, setPaymentUrl] = useState('');
   const [escalationStage, setEscalationStage] = useState('factuur');
+  const [scanSource, setScanSource] = useState<'camera' | 'qr'>('camera');
+
+  // Handle QR code scan result
+  function handleQRResult(data: string) {
+    const payment = parsePaymentQR(data);
+
+    if (payment) {
+      // EPC QR with payment data
+      setVendor(payment.vendor || '');
+      setIban(payment.iban || '');
+      setReference(payment.reference || '');
+      if (payment.amount_cents > 0) {
+        setAmount((payment.amount_cents / 100).toFixed(2).replace('.', ','));
+      }
+      // If it's an iDEAL URL, store as payment URL
+      if (payment.description && payment.description.startsWith('https://')) {
+        setPaymentUrl(payment.description);
+      }
+
+      // Auto-detect category from vendor
+      const govBrand = detectGovBrand(payment.vendor);
+      if (govBrand) {
+        setCategory('overheid');
+      }
+
+      setScanSource('qr');
+      setStep('confirm');
+    } else if (data.startsWith('http')) {
+      // Generic URL — might be a payment link
+      setPaymentUrl(data);
+      setScanSource('qr');
+      setStep('confirm');
+    } else {
+      // Unknown QR format
+      setError('QR-code herkend, maar bevat geen betaalgegevens. Probeer een foto te maken van de factuur.');
+      setStep('error');
+    }
+  }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -68,6 +111,7 @@ export default function CameraScanPage() {
       setReference(extraction.reference || '');
       setPaymentUrl(extraction.payment_url || '');
       setEscalationStage(extraction.escalation_stage || 'factuur');
+      setScanSource('camera');
 
       setStep('confirm');
     } catch (err) {
@@ -75,9 +119,7 @@ export default function CameraScanPage() {
       setStep('error');
     }
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleSave() {
@@ -104,7 +146,7 @@ export default function CameraScanPage() {
           reference: reference || null,
           payment_url: paymentUrl || null,
           escalation_stage: escalationStage,
-          source: 'camera_scan',
+          source: scanSource === 'qr' ? 'camera_scan' : 'camera_scan',
         }),
       });
 
@@ -121,23 +163,88 @@ export default function CameraScanPage() {
   }
 
   function handleRetry() {
-    setStep('capture');
+    setStep('choose');
     setError(null);
+    setVendor(''); setAmount(''); setDueDate(''); setCategory('overig');
+    setIban(''); setReference(''); setPaymentUrl('');
   }
 
   return (
     <div className="flex min-h-dvh flex-col bg-pw-bg">
       {/* Header */}
-      <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-pw-border/50 px-4">
-        <button onClick={() => router.back()}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/30">
-          <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
-        </button>
-        <h1 className="text-[15px] font-bold text-pw-navy">{t('title')}</h1>
-      </header>
+      {step !== 'qr' && (
+        <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-pw-border/50 px-4">
+          <button onClick={() => step === 'choose' ? router.back() : setStep('choose')}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/30">
+            <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+          </button>
+          <h1 className="text-[15px] font-bold text-pw-navy">{t('title')}</h1>
+        </header>
+      )}
 
       <main className="flex-1 px-4 py-6">
-        {/* STEP: CAPTURE */}
+        {/* STEP: CHOOSE — Photo or QR */}
+        {step === 'choose' && (
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              <h2 className="text-[18px] font-bold text-pw-navy">Hoe wil je scannen?</h2>
+              <p className="mt-1 text-[13px] text-pw-muted">Kies een methode om je rekening toe te voegen</p>
+            </div>
+
+            {/* Photo option */}
+            <button
+              onClick={() => setStep('capture')}
+              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-blue/10 flex-shrink-0">
+                <Camera className="h-7 w-7 text-pw-blue" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-pw-navy">Maak een foto</p>
+                <p className="mt-0.5 text-[12px] text-pw-muted leading-relaxed">
+                  Fotografeer je factuur of brief. AI leest de gegevens automatisch.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 rounded-full bg-pw-blue/10 px-2 py-1">
+                <Sparkles className="h-3 w-3 text-pw-blue" strokeWidth={1.5} />
+                <span className="text-[9px] font-bold text-pw-blue">AI</span>
+              </div>
+            </button>
+
+            {/* QR option */}
+            <button
+              onClick={() => setStep('qr')}
+              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left transition-colors hover:bg-pw-bg"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-green/10 flex-shrink-0">
+                <QrCode className="h-7 w-7 text-pw-green" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-pw-navy">Scan QR-code</p>
+                <p className="mt-0.5 text-[12px] text-pw-muted leading-relaxed">
+                  Scan de betaal-QR op je factuur of acceptgiro. Direct alle gegevens ingevuld.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 rounded-full bg-pw-green/10 px-2 py-1">
+                <span className="text-[9px] font-bold text-pw-green">SNEL</span>
+              </div>
+            </button>
+
+            <p className="text-[11px] text-pw-muted text-center pt-2">
+              De meeste Nederlandse facturen hebben een betaal-QR code
+            </p>
+          </div>
+        )}
+
+        {/* STEP: QR SCANNER */}
+        {step === 'qr' && (
+          <QRScanner
+            onScan={handleQRResult}
+            onClose={() => setStep('choose')}
+          />
+        )}
+
+        {/* STEP: CAPTURE (camera photo) */}
         {step === 'capture' && (
           <div className="flex flex-col items-center py-12 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-pw-blue/10">
@@ -184,6 +291,15 @@ export default function CameraScanPage() {
               <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
               <h2 className="text-[16px] font-bold text-pw-navy">{t('confirmTitle')}</h2>
             </div>
+
+            {/* QR success badge */}
+            {scanSource === 'qr' && (
+              <div className="flex items-center gap-2 rounded-card border border-pw-green/20 bg-green-50/50 px-3 py-2">
+                <QrCode className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
+                <p className="text-[12px] text-pw-green font-semibold">QR-code herkend — controleer de gegevens</p>
+              </div>
+            )}
+
             <p className="text-[13px] text-pw-muted">{t('confirmDescription')}</p>
 
             {/* Vendor */}
@@ -238,8 +354,7 @@ export default function CameraScanPage() {
                 <LinkIcon className="h-3 w-3 text-pw-muted" strokeWidth={1.5} />
                 {t('paymentUrl')}
               </label>
-              <input type="url" value={paymentUrl}
-                onChange={(e) => setPaymentUrl(e.target.value)}
+              <input type="url" value={paymentUrl} onChange={(e) => setPaymentUrl(e.target.value)}
                 placeholder="https://..."
                 className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-body text-pw-text placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
               <p className="mt-1 text-[10px] text-pw-muted">{t('paymentUrlHint')}</p>
