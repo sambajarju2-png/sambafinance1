@@ -20,7 +20,7 @@ import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
 import { detectGovBrand } from '@/lib/gov-brands';
 import QRScanner from '@/components/qr-scanner';
 
-type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching';
+type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching' | 'qr-photo-prompt';
 
 export default function CameraScanPage() {
   const t = useTranslations('cameraScan');
@@ -70,10 +70,10 @@ export default function CameraScanPage() {
       return;
     }
 
-    // If it's a URL — fetch the page behind it and extract data
+    // If it's a URL — try to extract data from the payment page
     if (data.startsWith('http')) {
       setStep('fetching');
-      setPaymentUrl(data); // Store the original QR URL as fallback
+      setPaymentUrl(data);
 
       try {
         const res = await fetch('/api/scan/qr-url', {
@@ -83,44 +83,44 @@ export default function CameraScanPage() {
         });
 
         if (res.ok) {
-          const { extraction, final_url } = await res.json();
+          const result = await res.json();
+          const ext = result.extraction;
+          const capturedUrl = result.payment_url || data;
 
-          setVendor(extraction.vendor || '');
-          setIban(extraction.iban || '');
-          setReference(extraction.reference || '');
-          setPaymentUrl(extraction.payment_url || final_url || data);
-          if (extraction.amount_cents) {
-            setAmount((extraction.amount_cents / 100).toFixed(2).replace('.', ','));
-          }
-          if (extraction.due_date) {
-            setDueDate(extraction.due_date);
-            setDueDateEstimated(false);
+          // Always store the payment URL
+          setPaymentUrl(capturedUrl);
+
+          if (result.has_data) {
+            // Got useful data from the page — show confirm form
+            if (ext.vendor) setVendor(ext.vendor);
+            if (ext.iban) setIban(ext.iban);
+            if (ext.reference) setReference(ext.reference);
+            if (ext.amount_cents) setAmount((ext.amount_cents / 100).toFixed(2).replace('.', ','));
+            if (ext.due_date) {
+              setDueDate(ext.due_date);
+              setDueDateEstimated(false);
+            } else {
+              setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+              setDueDateEstimated(true);
+            }
+            if (ext.category_hint && ext.category_hint !== 'overig') setCategory(ext.category_hint);
+            if (ext.vendor) {
+              const govBrand = detectGovBrand(ext.vendor);
+              if (govBrand) setCategory('overheid');
+            }
+            setScanSource('qr');
+            setStep('confirm');
           } else {
-            // No due date extracted — default to 14 days
-            setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
-            setDueDateEstimated(true);
+            // No useful data — offer hybrid: photo scan with payment URL saved
+            setStep('qr-photo-prompt');
           }
-          if (extraction.category_hint && extraction.category_hint !== 'overig') {
-            setCategory(extraction.category_hint);
-          }
-          if (extraction.vendor) {
-            const govBrand = detectGovBrand(extraction.vendor);
-            if (govBrand) setCategory('overheid');
-          }
-
-          setScanSource('qr');
-          setStep('confirm');
         } else {
-          // Fetch failed — still let user fill in manually with payment URL
-          const errData = await res.json();
-          setPaymentUrl(errData.payment_url || data);
-          setScanSource('qr');
-          setStep('confirm');
+          // Fetch failed — offer hybrid
+          setStep('qr-photo-prompt');
         }
       } catch {
-        // Network error — still let user fill in manually
-        setScanSource('qr');
-        setStep('confirm');
+        // Network error — offer hybrid
+        setStep('qr-photo-prompt');
       }
       return;
     }
@@ -159,7 +159,7 @@ export default function CameraScanPage() {
       setCategory(extraction.category_hint || 'overig');
       setIban(extraction.iban || '');
       setReference(extraction.reference || '');
-      setPaymentUrl(extraction.payment_url || '');
+      setPaymentUrl(extraction.payment_url || paymentUrl || ''); // Preserve QR-captured URL
       setEscalationStage(extraction.escalation_stage || 'factuur');
       setScanSource('camera');
 
@@ -225,7 +225,7 @@ export default function CameraScanPage() {
       {/* Header */}
       {step !== 'qr' && (
         <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-pw-border/50 px-4">
-          <button onClick={() => step === 'choose' ? router.back() : setStep('choose')}
+          <button onClick={() => (step === 'choose' || step === 'qr-photo-prompt') ? router.back() : setStep('choose')}
             className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/30">
             <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
           </button>
@@ -305,6 +305,58 @@ export default function CameraScanPage() {
               <div className="h-1.5 w-1.5 rounded-full bg-pw-green animate-pulse" />
               <p className="text-[11px] text-pw-muted font-mono truncate max-w-[240px]">{paymentUrl}</p>
             </div>
+          </div>
+        )}
+
+        {/* STEP: QR PHOTO PROMPT — Payment URL captured, need photo for data */}
+        {step === 'qr-photo-prompt' && (
+          <div className="space-y-5">
+            {/* Success badge */}
+            <div className="flex items-center gap-3 rounded-card border border-pw-green/20 bg-green-50/50 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-green/10 flex-shrink-0">
+                <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
+              </div>
+              <div>
+                <p className="text-[13px] font-bold text-pw-green">Betaallink opgeslagen!</p>
+                <p className="text-[11px] text-pw-muted truncate max-w-[240px]">{paymentUrl}</p>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <div className="text-center">
+              <h2 className="text-[18px] font-bold text-pw-navy">Nog even de details</h2>
+              <p className="mt-2 text-[13px] text-pw-muted leading-relaxed">
+                De betaallink is opgeslagen. Maak nu een foto van de factuur zodat we de rest automatisch invullen.
+              </p>
+            </div>
+
+            {/* Photo scan option */}
+            <button onClick={() => setStep('capture')}
+              className="btn-press flex w-full items-center gap-4 rounded-card border-2 border-pw-blue/30 bg-pw-blue/5 p-5 text-left">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-blue/10 flex-shrink-0">
+                <Camera className="h-7 w-7 text-pw-blue" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-pw-navy">Maak een foto</p>
+                <p className="mt-0.5 text-[12px] text-pw-muted">AI leest bedrag, bedrijf en vervaldatum</p>
+              </div>
+              <div className="flex items-center gap-1 rounded-full bg-pw-blue/10 px-2 py-1">
+                <Sparkles className="h-3 w-3 text-pw-blue" strokeWidth={1.5} />
+                <span className="text-[9px] font-bold text-pw-blue">AI</span>
+              </div>
+            </button>
+
+            {/* Manual option */}
+            <button onClick={() => { setScanSource('qr'); setStep('confirm'); }}
+              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-border/30 flex-shrink-0">
+                <LinkIcon className="h-7 w-7 text-pw-muted" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-pw-navy">Handmatig invullen</p>
+                <p className="mt-0.5 text-[12px] text-pw-muted">Vul de gegevens zelf in met de betaallink bewaard</p>
+              </div>
+            </button>
           </div>
         )}
 
