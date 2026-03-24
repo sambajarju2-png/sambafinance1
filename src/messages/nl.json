@@ -151,8 +151,8 @@
       "abonnementen": "Abonnementen",
       "gezin": "Gezin",
       "zakelijk": "Zakelijk",
-      "incasso_kosten": "Incassokosten",
-      "overig": "Overig"
+      "overig": "Overig",
+      "incasso": "Incasso"
     },
     "paymentUrl": "Betaallink (optioneel)",
     "paymentUrlHint": "iDEAL of betaalpagina URL"

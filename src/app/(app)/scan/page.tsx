@@ -40,8 +40,9 @@ export default function CameraScanPage() {
   const [escalationStage, setEscalationStage] = useState('factuur');
   const [scanSource, setScanSource] = useState<'camera' | 'qr'>('camera');
   const [dueDateEstimated, setDueDateEstimated] = useState(false);
-  // Track if a QR link was captured — shows a pill in the camera capture step
   const [qrLinkCaptured, setQrLinkCaptured] = useState(false);
+  // Store original AI extraction for correction tracking
+  const [aiExtraction, setAiExtraction] = useState<Record<string, unknown> | null>(null);
 
   // Handle QR code scan result
   async function handleQRResult(data: string) {
@@ -162,6 +163,16 @@ export default function CameraScanPage() {
       setEscalationStage(extraction.escalation_stage || 'factuur');
       setScanSource(qrLinkCaptured ? 'qr' : 'camera');
 
+      // Store original AI result for correction tracking
+      setAiExtraction({
+        vendor: extraction.vendor || null,
+        amount_cents: extraction.amount_cents || null,
+        iban: extraction.iban || null,
+        reference: extraction.reference || null,
+        due_date: extraction.due_date || null,
+        category_hint: extraction.category_hint || null,
+      });
+
       setStep('confirm');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errorExtraction'));
@@ -196,6 +207,7 @@ export default function CameraScanPage() {
           payment_url: paymentUrl || null,
           escalation_stage: escalationStage,
           source: 'camera_scan',
+          ai_extraction: aiExtraction || undefined,
         }),
       });
 
@@ -218,6 +230,7 @@ export default function CameraScanPage() {
     setIban(''); setReference(''); setPaymentUrl('');
     setDueDateEstimated(false);
     setQrLinkCaptured(false);
+    setAiExtraction(null);
   }
 
   return (

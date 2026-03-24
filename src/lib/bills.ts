@@ -21,7 +21,7 @@ export const BILL_CATEGORIES = [
   'abonnementen',
   'gezin',
   'zakelijk',
-  'incasso_kosten',
+  'incasso',
   'overig',
 ] as const;
 
