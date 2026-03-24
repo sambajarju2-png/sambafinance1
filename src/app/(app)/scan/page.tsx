@@ -20,7 +20,7 @@ import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
 import { detectGovBrand } from '@/lib/gov-brands';
 import QRScanner from '@/components/qr-scanner';
 
-type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching' | 'qr-photo-prompt';
+type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching';
 
 export default function CameraScanPage() {
   const t = useTranslations('cameraScan');
@@ -40,6 +40,8 @@ export default function CameraScanPage() {
   const [escalationStage, setEscalationStage] = useState('factuur');
   const [scanSource, setScanSource] = useState<'camera' | 'qr'>('camera');
   const [dueDateEstimated, setDueDateEstimated] = useState(false);
+  // Track if a QR link was captured — shows a pill in the camera capture step
+  const [qrLinkCaptured, setQrLinkCaptured] = useState(false);
 
   // Handle QR code scan result
   async function handleQRResult(data: string) {
@@ -47,7 +49,6 @@ export default function CameraScanPage() {
     const payment = parsePaymentQR(data);
 
     if (payment && payment.vendor) {
-      // EPC QR with full payment data — use directly
       setVendor(payment.vendor);
       setIban(payment.iban || '');
       setReference(payment.reference || '');
@@ -60,7 +61,6 @@ export default function CameraScanPage() {
       const govBrand = detectGovBrand(payment.vendor);
       if (govBrand) setCategory('overheid');
 
-      // EPC QR doesn't include due date — default to 14 days from now
       const defaultDue = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
       setDueDate(defaultDue);
       setDueDateEstimated(true);
@@ -74,6 +74,7 @@ export default function CameraScanPage() {
     if (data.startsWith('http')) {
       setStep('fetching');
       setPaymentUrl(data);
+      setQrLinkCaptured(true);
 
       try {
         const res = await fetch('/api/scan/qr-url', {
@@ -86,12 +87,9 @@ export default function CameraScanPage() {
           const result = await res.json();
           const ext = result.extraction;
           const capturedUrl = result.payment_url || data;
-
-          // Always store the payment URL
           setPaymentUrl(capturedUrl);
 
           if (result.has_data) {
-            // Got useful data from the page — show confirm form
             if (ext.vendor) setVendor(ext.vendor);
             if (ext.iban) setIban(ext.iban);
             if (ext.reference) setReference(ext.reference);
@@ -111,16 +109,17 @@ export default function CameraScanPage() {
             setScanSource('qr');
             setStep('confirm');
           } else {
-            // No useful data — offer hybrid: photo scan with payment URL saved
-            setStep('qr-photo-prompt');
+            // No useful data — seamlessly open camera capture
+            // Payment URL is already saved, camera will use it
+            setStep('capture');
           }
         } else {
-          // Fetch failed — offer hybrid
-          setStep('qr-photo-prompt');
+          // Fetch failed — seamlessly open camera capture
+          setStep('capture');
         }
       } catch {
-        // Network error — offer hybrid
-        setStep('qr-photo-prompt');
+        // Network error — seamlessly open camera capture
+        setStep('capture');
       }
       return;
     }
@@ -161,7 +160,7 @@ export default function CameraScanPage() {
       setReference(extraction.reference || '');
       setPaymentUrl(extraction.payment_url || paymentUrl || ''); // Preserve QR-captured URL
       setEscalationStage(extraction.escalation_stage || 'factuur');
-      setScanSource('camera');
+      setScanSource(qrLinkCaptured ? 'qr' : 'camera');
 
       setStep('confirm');
     } catch (err) {
@@ -218,6 +217,7 @@ export default function CameraScanPage() {
     setVendor(''); setAmount(''); setDueDate(''); setCategory('overig');
     setIban(''); setReference(''); setPaymentUrl('');
     setDueDateEstimated(false);
+    setQrLinkCaptured(false);
   }
 
   return (
@@ -225,7 +225,7 @@ export default function CameraScanPage() {
       {/* Header */}
       {step !== 'qr' && (
         <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-pw-border/50 px-4">
-          <button onClick={() => (step === 'choose' || step === 'qr-photo-prompt') ? router.back() : setStep('choose')}
+          <button onClick={() => step === 'choose' ? router.back() : setStep('choose')}
             className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/30">
             <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
           </button>
@@ -308,66 +308,34 @@ export default function CameraScanPage() {
           </div>
         )}
 
-        {/* STEP: QR PHOTO PROMPT — Payment URL captured, need photo for data */}
-        {step === 'qr-photo-prompt' && (
-          <div className="space-y-5">
-            {/* Success badge */}
-            <div className="flex items-center gap-3 rounded-card border border-pw-green/20 bg-green-50/50 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-green/10 flex-shrink-0">
-                <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-pw-green">Betaallink opgeslagen!</p>
-                <p className="text-[11px] text-pw-muted truncate max-w-[240px]">{paymentUrl}</p>
-              </div>
-            </div>
-
-            {/* Explanation */}
-            <div className="text-center">
-              <h2 className="text-[18px] font-bold text-pw-navy">Nog even de details</h2>
-              <p className="mt-2 text-[13px] text-pw-muted leading-relaxed">
-                De betaallink is opgeslagen. Maak nu een foto van de factuur zodat we de rest automatisch invullen.
-              </p>
-            </div>
-
-            {/* Photo scan option */}
-            <button onClick={() => setStep('capture')}
-              className="btn-press flex w-full items-center gap-4 rounded-card border-2 border-pw-blue/30 bg-pw-blue/5 p-5 text-left">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-blue/10 flex-shrink-0">
-                <Camera className="h-7 w-7 text-pw-blue" strokeWidth={1.5} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[15px] font-bold text-pw-navy">Maak een foto</p>
-                <p className="mt-0.5 text-[12px] text-pw-muted">AI leest bedrag, bedrijf en vervaldatum</p>
-              </div>
-              <div className="flex items-center gap-1 rounded-full bg-pw-blue/10 px-2 py-1">
-                <Sparkles className="h-3 w-3 text-pw-blue" strokeWidth={1.5} />
-                <span className="text-[9px] font-bold text-pw-blue">AI</span>
-              </div>
-            </button>
-
-            {/* Manual option */}
-            <button onClick={() => { setScanSource('qr'); setStep('confirm'); }}
-              className="btn-press flex w-full items-center gap-4 rounded-card border border-pw-border bg-pw-surface p-5 text-left">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-border/30 flex-shrink-0">
-                <LinkIcon className="h-7 w-7 text-pw-muted" strokeWidth={1.5} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[15px] font-bold text-pw-navy">Handmatig invullen</p>
-                <p className="mt-0.5 text-[12px] text-pw-muted">Vul de gegevens zelf in met de betaallink bewaard</p>
-              </div>
-            </button>
-          </div>
-        )}
-
         {/* STEP: CAPTURE (camera photo) */}
         {step === 'capture' && (
-          <div className="flex flex-col items-center py-12 text-center">
+          <div className="flex flex-col items-center py-8 text-center">
+            {/* Show success pill if QR link was captured first */}
+            {qrLinkCaptured && paymentUrl && (
+              <div className="mb-6 flex items-center gap-2.5 rounded-card border border-pw-green/20 bg-green-50/50 px-4 py-3 w-full max-w-[340px]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pw-green/10 flex-shrink-0">
+                  <Check className="h-4 w-4 text-pw-green" strokeWidth={2} />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[12px] font-bold text-pw-green">Betaallink opgeslagen</p>
+                  <p className="text-[10px] text-pw-muted truncate">{paymentUrl}</p>
+                </div>
+              </div>
+            )}
+
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-pw-blue/10">
               <Camera className="h-10 w-10 text-pw-blue" strokeWidth={1.5} />
             </div>
-            <h2 className="text-heading text-pw-navy">{t('captureTitle')}</h2>
-            <p className="mt-2 max-w-[300px] text-body text-pw-muted">{t('captureDescription')}</p>
+
+            <h2 className="text-heading text-pw-navy">
+              {qrLinkCaptured ? 'Maak nu een foto' : t('captureTitle')}
+            </h2>
+            <p className="mt-2 max-w-[300px] text-body text-pw-muted">
+              {qrLinkCaptured
+                ? 'De betaallink is bewaard. Fotografeer de factuur zodat we de rest automatisch invullen.'
+                : t('captureDescription')}
+            </p>
 
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
               capture="environment" onChange={handleFileSelect} className="hidden" />
@@ -395,6 +363,12 @@ export default function CameraScanPage() {
             <Loader2 className="mb-4 h-12 w-12 animate-spin text-pw-blue" strokeWidth={1.5} />
             <h2 className="text-heading text-pw-navy">{t('extracting')}</h2>
             <p className="mt-2 text-body text-pw-muted">{t('extractingHint')}</p>
+            {qrLinkCaptured && (
+              <div className="mt-4 flex items-center gap-2 rounded-full bg-green-50 border border-pw-green/20 px-3 py-1.5">
+                <Check className="h-3 w-3 text-pw-green" strokeWidth={2} />
+                <p className="text-[10px] text-pw-green font-semibold">Betaallink bewaard</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -409,7 +383,9 @@ export default function CameraScanPage() {
             {scanSource === 'qr' && (
               <div className="flex items-center gap-2 rounded-card border border-pw-green/20 bg-green-50/50 px-3 py-2">
                 <QrCode className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
-                <p className="text-[12px] text-pw-green font-semibold">QR-code herkend — controleer de gegevens</p>
+                <p className="text-[12px] text-pw-green font-semibold">
+                  {qrLinkCaptured ? 'QR + foto — controleer de gegevens' : 'QR-code herkend — controleer de gegevens'}
+                </p>
               </div>
             )}
 
@@ -472,8 +448,15 @@ export default function CameraScanPage() {
               </label>
               <input type="url" value={paymentUrl} onChange={(e) => setPaymentUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-body text-pw-text placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
-              <p className="mt-1 text-[10px] text-pw-muted">{t('paymentUrlHint')}</p>
+                className={`w-full rounded-input border bg-pw-surface px-3 py-2.5 text-body text-pw-text placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue ${paymentUrl ? 'border-pw-green' : 'border-pw-border'}`} />
+              {paymentUrl && qrLinkCaptured && (
+                <p className="mt-1 flex items-center gap-1 text-[10px] text-pw-green font-medium">
+                  <Check className="h-2.5 w-2.5" strokeWidth={2} /> Via QR-code opgeslagen
+                </p>
+              )}
+              {!paymentUrl && (
+                <p className="mt-1 text-[10px] text-pw-muted">{t('paymentUrlHint')}</p>
+              )}
             </div>
 
             {/* Error */}
