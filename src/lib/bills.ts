@@ -48,6 +48,7 @@ export interface Bill {
   is_favorite: boolean;
   notes: string | null;
   payment_url: string | null;
+  confirmation_image_url: string | null;
   escalation_stage: EscalationStage;
   estimated_extra_costs: number;
   created_at: string;

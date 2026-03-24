@@ -1,28 +1,30 @@
 #!/bin/bash
-# PayWatch AI Corrections — Install Script
-# Run from the sambafinance1 root directory
+# PayWatch Payment Confirmation — Install Script
+# Run from sambafinance1 root
 
-echo "🔧 Installing AI correction system..."
+echo "🔧 Installing payment confirmation feature..."
 
-# 1. Patch bills.ts: rename incasso_kosten → incasso
-if grep -q "incasso_kosten" src/lib/bills.ts; then
-  sed -i '' "s/'incasso_kosten'/'incasso'/" src/lib/bills.ts
-  echo "✅ bills.ts: incasso_kosten → incasso"
+# Add confirmation_image_url to Bill interface if not present
+if grep -q "confirmation_image_url" src/lib/bills.ts; then
+  echo "⏭️  bills.ts: confirmation_image_url already present"
 else
-  echo "⏭️  bills.ts: already updated (no incasso_kosten found)"
-fi
-
-# 2. Verify overheid is present
-if grep -q "'overheid'" src/lib/bills.ts; then
-  echo "✅ bills.ts: overheid category present"
-else
-  # Add overheid after telecom
-  sed -i '' "s/'telecom',/'telecom',\n  'overheid',/" src/lib/bills.ts
-  echo "✅ bills.ts: added overheid category"
+  # Add it after payment_url
+  if grep -q "payment_url" src/lib/bills.ts; then
+    sed -i '' '/payment_url/a\
+  confirmation_image_url: string | null;
+' src/lib/bills.ts
+    echo "✅ bills.ts: added confirmation_image_url to Bill interface"
+  else
+    # Fallback: add after notes
+    sed -i '' '/notes:/a\
+  confirmation_image_url: string | null;
+' src/lib/bills.ts
+    echo "✅ bills.ts: added confirmation_image_url to Bill interface (after notes)"
+  fi
 fi
 
 echo ""
 echo "📦 All files installed. Now run:"
 echo "   git add ."
-echo "   git commit -m 'Feature: AI correction tracking + Dutch extraction rules'"
+echo "   git commit -m 'Feature: payment confirmation image vault'"
 echo "   git push origin main"

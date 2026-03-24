@@ -5,6 +5,7 @@ import { useTranslations, useMessages } from 'next-intl';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
   Check, Star, Trash2, Loader2, Copy, Pencil, ShieldAlert, Landmark, Clock,
+  Image as ImageIcon, Shield,
 } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
@@ -13,6 +14,7 @@ import DraftLetterDrawer from './draft-letter-drawer';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
 import LawyerReferral from '@/components/lawyer-referral';
+import PaymentConfirmationDrawer from '@/components/payment-confirmation-drawer';
 
 type DrawerTab = 'details' | 'escalatie' | 'acties' | 'notitie';
 
@@ -48,6 +50,9 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
   const [draftLetterOpen, setDraftLetterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [gemeente, setGemeente] = useState<string | null>(null);
+  // Confirmation drawer state
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationUrl, setConfirmationUrl] = useState<string | null>(bill?.confirmation_image_url || null);
 
   useEffect(() => {
     async function loadGemeente() {
@@ -61,6 +66,11 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
     }
     loadGemeente();
   }, []);
+
+  // Update confirmation URL when bill changes
+  useEffect(() => {
+    setConfirmationUrl(bill?.confirmation_image_url || null);
+  }, [bill?.confirmation_image_url]);
 
   if (!bill) return null;
 
@@ -82,6 +92,22 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
     return catMap[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
   }
 
+  async function handleMarkAsPaid() {
+    setActionLoading('paid');
+    try {
+      const res = await fetch(`/api/bills/${bill!.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'settled', paid_date: today }),
+      });
+      if (res.ok) {
+        // Update bill list, keep drawer open, show confirmation
+        onUpdate();
+        setActionLoading(null);
+        setConfirmationOpen(true);
+      }
+    } catch { /* silent */ } finally { setActionLoading(null); }
+  }
+
   async function patchBill(body: Record<string, unknown>, loadingKey: string) {
     setActionLoading(loadingKey);
     try {
@@ -90,12 +116,8 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        if (loadingKey === 'paid' && onPaid) {
-          onPaid(bill!.id);
-          return;
-        }
         onUpdate();
-        if (loadingKey === 'paid' || loadingKey === 'delete') onClose();
+        if (loadingKey === 'delete') onClose();
       }
     } catch { /* silent */ } finally { setActionLoading(null); }
   }
@@ -137,7 +159,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
         {/* ── Branded Gov Header (CJIB / Belastingdienst) ── */}
         {brandInfo ? (
           <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${brandInfo.color}, ${brandInfo.color}DD)` }}>
-            {/* Decorative circle */}
             <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
             <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
@@ -146,7 +167,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
             </button>
 
             <div className="px-4 pb-4 pt-3">
-              {/* Brand badge */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
                   {brandInfo.brand === 'cjib' ? (
@@ -166,13 +186,11 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 </div>
               </div>
 
-              {/* Amount */}
               <p className="text-[28px] font-extrabold tracking-tight text-white">
                 {formatCents(bill.amount, bill.currency)}
               </p>
               <p className="mt-0.5 text-[15px] font-semibold text-white/90">{bill.vendor}</p>
 
-              {/* Subtype + stage */}
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 {billSubtype && (
                   <span className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)' }}>
@@ -186,7 +204,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 {isOverdue && <span className="text-[10px] font-semibold text-red-200">Achterstallig</span>}
               </div>
 
-              {/* Deadline warning */}
               {!isPaid && (
                 <div className="mt-3 flex items-center gap-2 rounded-[8px] px-3 py-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
                   <Clock className="h-3.5 w-3.5 text-white/70 flex-shrink-0" strokeWidth={1.5} />
@@ -249,6 +266,34 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
               {bill.paid_date && (
                 <DetailRow icon={Check} label={t('paidOn')} value={new Date(bill.paid_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })} />
               )}
+
+              {/* Confirmation image — show if paid */}
+              {isPaid && (
+                <button onClick={() => setConfirmationOpen(true)}
+                  className="btn-press flex w-full items-center gap-3 rounded-card border border-pw-border bg-pw-surface px-3.5 py-3 text-left">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-input ${confirmationUrl ? 'bg-pw-green/10' : 'bg-pw-bg'}`}>
+                    {confirmationUrl ? (
+                      <Shield className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-pw-text">
+                      {confirmationUrl ? 'Betalingsbewijs opgeslagen' : 'Betalingsbewijs toevoegen'}
+                    </p>
+                    <p className="text-[11px] text-pw-muted">
+                      {confirmationUrl ? 'Tik om te bekijken of te vervangen' : 'Bewaar je betaalbewijs veilig'}
+                    </p>
+                  </div>
+                  {confirmationUrl && (
+                    <div className="flex items-center gap-1 rounded-full bg-pw-green/10 px-2 py-0.5">
+                      <Check className="h-3 w-3 text-pw-green" strokeWidth={2} />
+                      <span className="text-[9px] font-bold text-pw-green">Bewaard</span>
+                    </div>
+                  )}
+                </button>
+              )}
             </div>
           )}
 
@@ -270,7 +315,6 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 </div>
               )}
 
-              {/* Gov-specific deadline info */}
               {brandInfo && !isPaid && (
                 <div className="rounded-card p-4" style={{ background: brandInfo.colorLight, border: `1px solid ${brandInfo.color}20` }}>
                   <div className="flex items-center gap-2 mb-2">
@@ -297,7 +341,14 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 loading={false} onClick={() => setEditOpen(true)} />
               {!isPaid && (
                 <ActionButton icon={Check} label={t('markAsPaid')} desc={t('markAsPaidDesc')} color="text-pw-green"
-                  loading={actionLoading === 'paid'} onClick={() => patchBill({ status: 'settled', paid_date: today }, 'paid')} />
+                  loading={actionLoading === 'paid'} onClick={handleMarkAsPaid} />
+              )}
+              {isPaid && (
+                <ActionButton icon={ImageIcon} 
+                  label={confirmationUrl ? 'Betalingsbewijs bekijken' : 'Betalingsbewijs toevoegen'} 
+                  desc={confirmationUrl ? 'Bekijk, vervang of verwijder je bewijs' : 'Bewaar een screenshot of foto als bewijs'}
+                  color="text-pw-green"
+                  loading={false} onClick={() => setConfirmationOpen(true)} />
               )}
               {!isPaid && (
                 <ActionButton icon={FileText} label={t('draftLetter')} desc={t('draftLetterDesc')} color="text-pw-purple"
@@ -327,6 +378,18 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
 
       <DraftLetterDrawer bill={bill} open={draftLetterOpen} onClose={() => setDraftLetterOpen(false)} />
       <EditBillDrawer bill={bill} open={editOpen} onClose={() => setEditOpen(false)} onSaved={() => { onUpdate(); setEditOpen(false); }} />
+
+      {/* Payment Confirmation Drawer */}
+      <PaymentConfirmationDrawer
+        open={confirmationOpen}
+        billId={bill.id}
+        billVendor={bill.vendor}
+        billAmount={formatCents(bill.amount, bill.currency)}
+        existingImageUrl={confirmationUrl}
+        onClose={() => setConfirmationOpen(false)}
+        onUploaded={(url) => { setConfirmationUrl(url); onUpdate(); }}
+        onRemoved={() => { setConfirmationUrl(null); onUpdate(); }}
+      />
     </>
   );
 }
