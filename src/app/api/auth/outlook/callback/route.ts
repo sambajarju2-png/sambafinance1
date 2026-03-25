@@ -1,8 +1,8 @@
 /**
  * GET /api/auth/outlook/callback
  * 
- * Handles Microsoft OAuth2 callback after user authorizes.
- * Debug version: includes detailed error info in redirect URL.
+ * Debug version: logs EVERY step to outlook_debug_log table.
+ * Check results: SELECT * FROM outlook_debug_log ORDER BY id DESC;
  * 
  * File: src/app/api/auth/outlook/callback/route.ts
  */
@@ -18,6 +18,18 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  // Create supabase client FIRST so we can log everything
+  const supabase = createServiceRoleClient();
+  
+  async function log(step: string, message: string) {
+    try {
+      await supabase.from('outlook_debug_log').insert({ step, message: message.slice(0, 2000) });
+    } catch {
+      console.error(`[Outlook Debug] Could not log: ${step} — ${message}`);
+    }
+    console.log(`[Outlook Callback] ${step}: ${message}`);
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -27,41 +39,26 @@ export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
   const settingsUrl = `${baseUrl}/instellingen`;
 
-  // Helper: redirect with detailed error info
-  function errorRedirect(step: string, msg: string, extra?: string) {
-    console.error(`[Outlook Callback] FAIL at ${step}: ${msg}`, extra || '');
-    const params = new URLSearchParams({
-      tab: 'sync',
-      outlook: 'error',
-      step,
-      msg: msg.slice(0, 200),
-    });
-    return NextResponse.redirect(`${settingsUrl}?${params.toString()}`);
-  }
+  await log('0_callback_hit', `code=${!!code}, state=${!!state}, error=${error || 'none'}, fullUrl=${request.nextUrl.pathname}${request.nextUrl.search}`);
 
-  // Handle Microsoft OAuth errors
+  // Handle Microsoft errors
   if (error) {
-    console.error(`[Outlook Callback] Microsoft error: ${error} — ${errorDescription}`);
+    await log('microsoft_error', `${error}: ${errorDescription || 'no description'}`);
     if (error === 'access_denied') {
       return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=cancelled`);
     }
-    return errorRedirect('microsoft_error', `${error}: ${errorDescription || 'unknown'}`);
+    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
   }
 
   if (!code || !state) {
-    return errorRedirect('missing_params', `code=${!!code}, state=${!!state}`);
-  }
-
-  let supabase: ReturnType<typeof createServiceRoleClient>;
-  try {
-    supabase = createServiceRoleClient();
-  } catch (e: unknown) {
-    return errorRedirect('service_client', e instanceof Error ? e.message : String(e));
+    await log('missing_params', `code=${code}, state=${state}`);
+    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
   }
 
   // Step 1: Validate state
-  let userId: string;
   try {
+    await log('1_validate_state_start', `state=${state.slice(0, 16)}...`);
+    
     const { data: stateRecord, error: stateError } = await supabase
       .from('outlook_oauth_states')
       .select('user_id, expires_at')
@@ -69,81 +66,105 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (stateError || !stateRecord) {
-      return errorRedirect('validate_state', stateError?.message || 'State not found in DB');
+      await log('1_validate_state_fail', `error=${stateError?.message || 'not found'}, code=${stateError?.code}`);
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
     }
 
     if (new Date(stateRecord.expires_at) < new Date()) {
+      await log('1_state_expired', `expired_at=${stateRecord.expires_at}`);
       await supabase.from('outlook_oauth_states').delete().eq('state', state);
-      return errorRedirect('state_expired', `Expired at ${stateRecord.expires_at}`);
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
     }
 
-    userId = stateRecord.user_id;
+    const userId = stateRecord.user_id;
+    await log('1_validate_state_ok', `user_id=${userId}`);
 
-    // Delete used state immediately
+    // Delete used state
     await supabase.from('outlook_oauth_states').delete().eq('state', state);
-  } catch (e: unknown) {
-    return errorRedirect('validate_state_catch', e instanceof Error ? e.message : String(e));
-  }
+    await log('1_state_deleted', 'ok');
 
-  // Step 2: Exchange code for tokens
-  let tokens: Awaited<ReturnType<typeof exchangeCodeForTokens>>;
-  try {
-    tokens = await exchangeCodeForTokens(code);
-  } catch (e: unknown) {
-    return errorRedirect('token_exchange', e instanceof Error ? e.message : String(e));
-  }
+    // Step 2: Exchange code for tokens
+    await log('2_token_exchange_start', 'calling exchangeCodeForTokens...');
+    
+    let tokens;
+    try {
+      tokens = await exchangeCodeForTokens(code);
+      await log('2_token_exchange_ok', `has_access_token=${!!tokens.access_token}, has_refresh_token=${!!tokens.refresh_token}, expires_in=${tokens.expires_in}`);
+    } catch (e: unknown) {
+      await log('2_token_exchange_FAIL', e instanceof Error ? e.message : String(e));
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    }
 
-  // Step 3: Get email
-  let outlookEmail: string;
-  try {
-    outlookEmail = await getUserEmail(tokens.access_token);
+    // Step 3: Get email
+    await log('3_get_email_start', 'calling getUserEmail...');
+    
+    let outlookEmail: string;
+    try {
+      outlookEmail = await getUserEmail(tokens.access_token);
+      await log('3_get_email_ok', `email=${outlookEmail}`);
+    } catch (e: unknown) {
+      await log('3_get_email_FAIL', e instanceof Error ? e.message : String(e));
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    }
+
     if (!outlookEmail) {
-      return errorRedirect('get_email', 'getUserEmail returned empty');
+      await log('3_get_email_empty', 'getUserEmail returned empty');
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
     }
-  } catch (e: unknown) {
-    return errorRedirect('get_email_catch', e instanceof Error ? e.message : String(e));
-  }
 
-  // Step 4: Encrypt tokens
-  let encryptedAccessToken: string;
-  let encryptedRefreshToken: string;
-  try {
-    encryptedAccessToken = encrypt(tokens.access_token);
-    encryptedRefreshToken = encrypt(tokens.refresh_token);
-  } catch (e: unknown) {
-    return errorRedirect('encrypt_tokens', e instanceof Error ? e.message : String(e));
-  }
-
-  const tokenExpiresAt = Date.now() + tokens.expires_in * 1000;
-
-  // Step 5: Upsert
-  try {
-    const { error: upsertError } = await supabase
-      .from('outlook_accounts')
-      .upsert(
-        {
-          user_id: userId,
-          email: outlookEmail,
-          access_token: encryptedAccessToken,
-          refresh_token: encryptedRefreshToken,
-          token_expires_at: tokenExpiresAt,
-          needs_reauth: false,
-          scan_progress: 0,
-          scan_cursor: null,
-        },
-        {
-          onConflict: 'user_id,email',
-        }
-      );
-
-    if (upsertError) {
-      return errorRedirect('upsert', `${upsertError.message} (code: ${upsertError.code})`);
+    // Step 4: Encrypt tokens
+    await log('4_encrypt_start', 'encrypting tokens...');
+    
+    let encryptedAccessToken: string;
+    let encryptedRefreshToken: string;
+    try {
+      encryptedAccessToken = encrypt(tokens.access_token);
+      encryptedRefreshToken = encrypt(tokens.refresh_token);
+      await log('4_encrypt_ok', `access_len=${encryptedAccessToken.length}, refresh_len=${encryptedRefreshToken.length}`);
+    } catch (e: unknown) {
+      await log('4_encrypt_FAIL', e instanceof Error ? e.message : String(e));
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
     }
+
+    const tokenExpiresAt = Date.now() + tokens.expires_in * 1000;
+
+    // Step 5: Upsert
+    await log('5_upsert_start', `email=${outlookEmail}, user_id=${userId}`);
+    
+    try {
+      const { error: upsertError } = await supabase
+        .from('outlook_accounts')
+        .upsert(
+          {
+            user_id: userId,
+            email: outlookEmail,
+            access_token: encryptedAccessToken,
+            refresh_token: encryptedRefreshToken,
+            token_expires_at: tokenExpiresAt,
+            needs_reauth: false,
+            scan_progress: 0,
+            scan_cursor: null,
+          },
+          { onConflict: 'user_id,email' }
+        );
+
+      if (upsertError) {
+        await log('5_upsert_FAIL', `${upsertError.message} (code: ${upsertError.code}, details: ${upsertError.details})`);
+        return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      }
+      
+      await log('5_upsert_ok', 'account saved');
+    } catch (e: unknown) {
+      await log('5_upsert_CATCH', e instanceof Error ? e.message : String(e));
+      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    }
+
+    await log('6_SUCCESS', `${outlookEmail} connected for user ${userId}`);
+    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=connected`);
+
   } catch (e: unknown) {
-    return errorRedirect('upsert_catch', e instanceof Error ? e.message : String(e));
+    // Top-level catch — if ANYTHING uncaught happens
+    await log('TOP_LEVEL_CATCH', e instanceof Error ? `${e.message}\n${e.stack}` : String(e));
+    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
   }
-
-  console.log(`[Outlook Callback] SUCCESS: ${outlookEmail} connected for user ${userId}`);
-
-  return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=connected`);
 }
