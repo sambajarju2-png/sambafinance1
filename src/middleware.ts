@@ -67,6 +67,8 @@ export const config = {
      * - public assets (images, manifest, etc.)
      * - api routes (they handle their own auth)
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/).*)',
+    
+'/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/|loaderio-.*\\.txt).*)',
+    
   ],
 };
