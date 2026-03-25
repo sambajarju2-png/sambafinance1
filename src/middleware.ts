@@ -68,7 +68,7 @@ export const config = {
      * - api routes (they handle their own auth)
      */
     
-'/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/|loaderio-.*\\.txt).*)',
+'/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/|loaderio-.*\\.txt|\\.well-known).*)',
     
   ],
 };
