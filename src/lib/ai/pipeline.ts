@@ -11,11 +11,11 @@ import { lookupVendor, buildVendorContext } from '../vendor-lookup';
  *
  * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
  *
- * Vendor detection flow:
- * 1. AI extracts vendor name from email/photo
- * 2. lookupVendor() checks against 100+ known Dutch billers (instant, free)
- * 3. detectIncassoAgency() checks against 270 Justis-registered agencies (instant, free)
- * 4. Only if no match → AI's category_hint is used
+ * Architecture:
+ * - AI extracts RAW data (vendor, amount, IBAN, reference, due date, payment URL)
+ * - Database handles categorization (561 known vendors + incasso agencies)
+ * - AI does NOT receive vendor lists for camera scans (keeps prompt focused)
+ * - Email extraction gets vendor hints (Haiku handles long context better)
  *
  * SERVER-ONLY — never import in client components.
  */
@@ -219,7 +219,7 @@ export async function extractBillFromEmail(
     ? `PDF attachment content:\n${pdfText.slice(0, 3000)}`
     : 'No PDF attachment.';
 
-  // Build vendor context for AI (known Dutch vendors + categories)
+  // Build vendor context for Haiku (Haiku handles long context well)
   let vendorContext = '';
   try {
     vendorContext = await buildVendorContext();
@@ -237,7 +237,7 @@ export async function extractBillFromEmail(
 
   const extracted = normalizeExtraction(result);
 
-  // Post-AI: Check vendor against known Dutch billers (instant, free, overrides AI category)
+  // Post-AI: DB handles categorization (instant, free, more accurate than AI)
   const vendorMatch = await lookupVendor(extracted.vendor);
   if (vendorMatch.matched && vendorMatch.category) {
     extracted.category_hint = vendorMatch.category;
@@ -247,7 +247,7 @@ export async function extractBillFromEmail(
     }
   }
 
-  // Post-AI: Check against Justis Incasso Register (270 agencies)
+  // Post-AI: Check Justis Incasso Register (270 agencies)
   if (!vendorMatch.is_incasso) {
     const incassoCheck = await detectIncassoAgency(extracted.vendor);
     if (incassoCheck.matched) {
@@ -261,7 +261,12 @@ export async function extractBillFromEmail(
 }
 
 // ============================================================
-// 3. CAMERA BILL EXTRACTION (Gemini Vision + Dutch Rules + Correction Patterns)
+// 3. CAMERA BILL EXTRACTION (Gemini Vision)
+// 
+// NO vendor context here — Gemini Flash has limited context window.
+// Sending 291 vendor names DILUTES extraction quality.
+// Let Gemini focus 100% on reading the image.
+// Category + escalation are handled AFTER by DB lookup.
 // ============================================================
 
 export async function extractBillFromPhoto(
@@ -271,17 +276,15 @@ export async function extractBillFromPhoto(
 ): Promise<CameraExtractionResult> {
   // Fetch active correction patterns from DB (learned from user edits)
   let correctionRules = '';
-  let vendorContext = '';
   try {
     const supabase = await createServerSupabaseClient();
     correctionRules = await buildCorrectionPrompt(supabase);
-    vendorContext = await buildVendorContext();
   } catch {
     // Non-critical — continue without correction patterns
   }
 
-  // Build the full prompt with Dutch rules + correction patterns + vendor context
-  const prompt = buildExtractionPrompt(correctionRules, vendorContext);
+  // Build prompt with Dutch rules + corrections ONLY (no vendor context)
+  const prompt = buildExtractionPrompt(correctionRules);
 
   const result = await callGeminiVision(
     imageBase64,
@@ -312,7 +315,7 @@ export async function extractBillFromPhoto(
         },
   };
 
-  // Post-AI: Check vendor against known Dutch billers
+  // Post-AI: DB handles categorization (instant, free, overrides AI)
   const vendorMatch = await lookupVendor(extracted.vendor);
   if (vendorMatch.matched && vendorMatch.category) {
     extracted.category_hint = vendorMatch.category;
@@ -322,7 +325,7 @@ export async function extractBillFromPhoto(
     }
   }
 
-  // Post-AI: Check against Justis Incasso Register
+  // Post-AI: Check Justis Incasso Register
   if (!vendorMatch.is_incasso) {
     const incassoCheck = await detectIncassoAgency(extracted.vendor);
     if (incassoCheck.matched) {
