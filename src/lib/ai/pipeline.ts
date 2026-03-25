@@ -271,15 +271,17 @@ export async function extractBillFromPhoto(
 ): Promise<CameraExtractionResult> {
   // Fetch active correction patterns from DB (learned from user edits)
   let correctionRules = '';
+  let vendorContext = '';
   try {
     const supabase = await createServerSupabaseClient();
     correctionRules = await buildCorrectionPrompt(supabase);
+    vendorContext = await buildVendorContext();
   } catch {
     // Non-critical — continue without correction patterns
   }
 
-  // Build the full prompt with Dutch rules + correction patterns
-  const prompt = buildExtractionPrompt(correctionRules);
+  // Build the full prompt with Dutch rules + correction patterns + vendor context
+  const prompt = buildExtractionPrompt(correctionRules, vendorContext);
 
   const result = await callGeminiVision(
     imageBase64,
