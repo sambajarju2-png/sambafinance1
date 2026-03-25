@@ -17,6 +17,7 @@ const GRAPH_API_BASE = 'https://graph.microsoft.com/v1.0'
 // offline_access is needed to get a refresh_token
 const OUTLOOK_SCOPES = [
   'https://graph.microsoft.com/Mail.Read',
+  'https://graph.microsoft.com/User.Read',
   'offline_access',
   'openid',
   'email',
