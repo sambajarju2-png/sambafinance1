@@ -4,11 +4,18 @@ import { buildExtractionPrompt } from './prompts';
 import { buildCorrectionPrompt } from '../ai-corrections';
 import { createServerSupabaseClient } from '../supabase/server';
 import { detectIncassoAgency } from '../incasso-detect';
+import { lookupVendor, buildVendorContext } from '../vendor-lookup';
 
 /**
  * PayWatch Dual-AI Pipeline
  *
  * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
+ *
+ * Vendor detection flow:
+ * 1. AI extracts vendor name from email/photo
+ * 2. lookupVendor() checks against 100+ known Dutch billers (instant, free)
+ * 3. detectIncassoAgency() checks against 270 Justis-registered agencies (instant, free)
+ * 4. Only if no match → AI's category_hint is used
  *
  * SERVER-ONLY — never import in client components.
  */
@@ -139,7 +146,16 @@ export async function classifyEmail(
 const EXTRACTION_PROMPT = `You are extracting structured data from a Dutch bill/invoice email.
 Extract all available fields. If a field is not found, set it to null.
 Detect the debt collection stage if applicable.
-All monetary amounts must be in CENTS (integer). €127,43 = 12743. Dutch format: dots are thousands separators, comma is decimal.
+All monetary amounts must be in CENTS (integer). Dutch format: dots are thousands separators, comma is decimal.
+
+AMOUNT PARSING (CRITICAL — Dutch format):
+- € 1.234,56 = 123456 cents (dot = thousands, comma = decimal)
+- € 127,43 = 12743 cents
+- € 15,- = 1500 cents (dash means zero cents)
+- € 15 = 1500 cents (no decimals = whole euros)
+- € 0,75 = 75 cents
+- € 1234 = 123400 cents (no separator = whole euros)
+- WRONG: € 1.234,56 ≠ 1234.56 (that is English format, not Dutch)
 
 CRITICAL RULES:
 - "Te betalen" or "Totaal te betalen" is ALWAYS the correct amount. Not subtotals.
@@ -147,6 +163,24 @@ CRITICAL RULES:
 - If "Opdrachtgever" is listed, vendor = "[Bureau] (namens [Opdrachtgever])"
 - "Betalingskenmerk" > "Dossiernummer" > "Factuurnummer" for reference
 - For betalingsregeling: use "NOG TE BETALEN" (current term) and first future Vervaldatum
+
+CATEGORY RULES (pick the most specific one):
+- wonen: huur, hypotheek, servicekosten, VvE bijdrage, woningcorporatie
+- nutsvoorzieningen: gas, elektriciteit, water, stadsverwarming, energiecontract
+- zorg: huisarts, tandarts, ziekenhuis, apotheek, GGZ, fysiotherapie, eigen risico
+- verzekeringen: zorgverzekering, autoverzekering, inboedel, aansprakelijkheid, WA, opstal
+- telecom: telefoon, internet, TV, mobiel abonnement, glasvezel
+- overheid: CJIB, Belastingdienst, DUO studieschuld, gemeente belasting, waterschap, CAK, SVB
+- vervoer: OV, NS, auto-onderhoud, RDW, parkeerboete, wegenbelasting, ANWB
+- leningen: persoonlijke lening, doorlopend krediet, studiefinanciering, hypotheek aflossing
+- incasso: incassobureau, deurwaarder, collection agency, vordering namens
+- winkels: webshop, Afterpay, Klarna, Billink, buy now pay later
+- abonnementen: streaming, sportschool, software, tijdschrift, lidmaatschap
+- gezin: kinderopvang, school, BSO, sportvereniging
+- zakelijk: zakelijke dienstverlening, boekhouder, KvK
+- overig: anything that does not fit above
+
+{vendor_context}
 
 Email subject: {subject}
 Email body:
@@ -185,21 +219,42 @@ export async function extractBillFromEmail(
     ? `PDF attachment content:\n${pdfText.slice(0, 3000)}`
     : 'No PDF attachment.';
 
+  // Build vendor context for AI (known Dutch vendors + categories)
+  let vendorContext = '';
+  try {
+    vendorContext = await buildVendorContext();
+  } catch {
+    // Non-critical
+  }
+
   const prompt = EXTRACTION_PROMPT
     .replace('{subject}', subject)
     .replace('{body}', body.slice(0, 3000))
-    .replace('{pdf_note}', pdfNote);
+    .replace('{pdf_note}', pdfNote)
+    .replace('{vendor_context}', vendorContext);
 
   const result = await callHaiku(prompt, userId, 'email_extraction', 1024);
 
   const extracted = normalizeExtraction(result);
 
-  // Check vendor against Justis Incasso Register (270 agencies)
-  const incassoCheck = await detectIncassoAgency(extracted.vendor);
-  if (incassoCheck.matched) {
-    extracted.category_hint = 'incasso';
-    extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
-    if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+  // Post-AI: Check vendor against known Dutch billers (instant, free, overrides AI category)
+  const vendorMatch = await lookupVendor(extracted.vendor);
+  if (vendorMatch.matched && vendorMatch.category) {
+    extracted.category_hint = vendorMatch.category;
+    if (vendorMatch.display_name) extracted.vendor = vendorMatch.display_name;
+    if (vendorMatch.suggested_escalation) {
+      extracted.escalation_stage = extracted.escalation_stage || vendorMatch.suggested_escalation;
+    }
+  }
+
+  // Post-AI: Check against Justis Incasso Register (270 agencies)
+  if (!vendorMatch.is_incasso) {
+    const incassoCheck = await detectIncassoAgency(extracted.vendor);
+    if (incassoCheck.matched) {
+      extracted.category_hint = 'incasso';
+      extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+      if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+    }
   }
 
   return extracted;
@@ -255,12 +310,24 @@ export async function extractBillFromPhoto(
         },
   };
 
-  // Check vendor against Justis Incasso Register (270 agencies)
-  const incassoCheck = await detectIncassoAgency(extracted.vendor);
-  if (incassoCheck.matched) {
-    extracted.category_hint = 'incasso';
-    extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
-    if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+  // Post-AI: Check vendor against known Dutch billers
+  const vendorMatch = await lookupVendor(extracted.vendor);
+  if (vendorMatch.matched && vendorMatch.category) {
+    extracted.category_hint = vendorMatch.category;
+    if (vendorMatch.display_name) extracted.vendor = vendorMatch.display_name;
+    if (vendorMatch.suggested_escalation) {
+      extracted.escalation_stage = extracted.escalation_stage || vendorMatch.suggested_escalation;
+    }
+  }
+
+  // Post-AI: Check against Justis Incasso Register
+  if (!vendorMatch.is_incasso) {
+    const incassoCheck = await detectIncassoAgency(extracted.vendor);
+    if (incassoCheck.matched) {
+      extracted.category_hint = 'incasso';
+      extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+      if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+    }
   }
 
   return extracted;
