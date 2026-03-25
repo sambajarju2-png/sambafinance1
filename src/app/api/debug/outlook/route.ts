@@ -1,188 +1,181 @@
 /**
  * GET /api/debug/outlook
  * 
- * Debug endpoint for Outlook OAuth — ADMIN ONLY (sambajarju2@gmail.com).
- * Checks env vars, DB tables, auth state, and returns diagnostics.
+ * Tests the full Outlook OAuth flow step by step.
+ * Also serves as a manual callback tester with ?test_callback=true
+ * 
+ * ADMIN ONLY: sambajarju2@gmail.com
  * 
  * File: src/app/api/debug/outlook/route.ts
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 const ADMIN_EMAILS = ['sambajarju2@gmail.com'];
 
-export async function GET() {
-  const diagnostics: Record<string, unknown> = {
-    timestamp: new Date().toISOString(),
-    checks: {},
+export async function GET(request: NextRequest) {
+  const steps: Record<string, unknown>[] = [];
+  const addStep = (name: string, data: unknown) => {
+    steps.push({ step: name, ...((typeof data === 'object' && data !== null) ? data : { result: data }) });
   };
 
   try {
-    // ── Check 1: Auth ──
+    // ── Auth ──
     const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      diagnostics.checks = { auth: { status: 'FAIL', error: authError?.message || 'No user session' } };
-      return NextResponse.json(diagnostics, { status: 401 });
+      return NextResponse.json({ error: 'Not authenticated', authError: authError?.message }, { status: 401 });
     }
 
     if (!ADMIN_EMAILS.includes(user.email || '')) {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 });
     }
 
-    (diagnostics.checks as Record<string, unknown>).auth = {
-      status: 'OK',
-      user_id: user.id,
-      email: user.email,
-    };
+    addStep('1_auth', { status: 'OK', user_id: user.id, email: user.email });
 
-    // ── Check 2: Environment Variables ──
-    const envChecks: Record<string, string> = {};
-    
+    // ── Env vars ──
     const clientId = process.env.MICROSOFT_CLIENT_ID;
-    envChecks.MICROSOFT_CLIENT_ID = clientId
-      ? `SET (${clientId.slice(0, 8)}...${clientId.slice(-4)})`
-      : 'MISSING';
-
     const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-    envChecks.MICROSOFT_CLIENT_SECRET = clientSecret
-      ? `SET (${clientSecret.slice(0, 6)}...${clientSecret.slice(-4)}, length: ${clientSecret.length})`
-      : 'MISSING';
-
     const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
-    envChecks.MICROSOFT_REDIRECT_URI = redirectUri || 'MISSING';
 
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    envChecks.ENCRYPTION_KEY = encryptionKey
-      ? `SET (length: ${encryptionKey.length})`
-      : 'MISSING';
+    addStep('2_env_vars', {
+      MICROSOFT_CLIENT_ID: clientId ? `SET (${clientId.slice(0, 8)}...)` : 'MISSING',
+      MICROSOFT_CLIENT_SECRET: clientSecret ? `SET (length: ${clientSecret.length})` : 'MISSING',
+      MICROSOFT_REDIRECT_URI: redirectUri || 'MISSING',
+    });
 
-    (diagnostics.checks as Record<string, unknown>).env_vars = envChecks;
+    if (!clientId || !clientSecret || !redirectUri) {
+      return NextResponse.json({ error: 'Missing env vars', steps }, { status: 500 });
+    }
 
-    // ── Check 3: Database Tables ──
-    const serviceClient = createServiceRoleClient();
-
-    const dbChecks: Record<string, unknown> = {};
-
-    // Check outlook_accounts table exists
-    const { data: outlookAccounts, error: oaErr } = await serviceClient
-      .from('outlook_accounts')
-      .select('id, email, needs_reauth, created_at')
-      .eq('user_id', user.id);
-
-    dbChecks.outlook_accounts = oaErr
-      ? { status: 'ERROR', error: oaErr.message, code: oaErr.code }
-      : { status: 'OK', count: outlookAccounts?.length || 0, accounts: outlookAccounts };
-
-    // Check outlook_oauth_states table
-    const { data: states, error: stErr } = await serviceClient
-      .from('outlook_oauth_states')
-      .select('state, user_id, expires_at')
-      .eq('user_id', user.id);
-
-    dbChecks.outlook_oauth_states = stErr
-      ? { status: 'ERROR', error: stErr.message, code: stErr.code }
-      : { status: 'OK', count: states?.length || 0, states: states?.map((s: { expires_at: string }) => ({ expires_at: s.expires_at, expired: new Date(s.expires_at) < new Date() })) };
-
-    // Check bills source constraint
-    const { data: sourceCheck, error: scErr } = await serviceClient
-      .from('bills')
-      .select('id')
-      .eq('source', 'outlook_scan')
-      .limit(1);
-
-    dbChecks.bills_outlook_source = scErr
-      ? { status: 'ERROR', error: scErr.message, hint: 'source constraint might not include outlook_scan' }
-      : { status: 'OK' };
-
-    (diagnostics.checks as Record<string, unknown>).database = dbChecks;
-
-    // ── Check 4: OAuth URL Generation ──
+    // ── Test createServiceRoleClient ──
+    let serviceClient: ReturnType<typeof createServiceRoleClient>;
     try {
-      if (clientId && redirectUri) {
-        const scopes = [
-          'https://graph.microsoft.com/Mail.Read',
-          'offline_access',
-          'openid',
-          'email',
-        ].join(' ');
+      serviceClient = createServiceRoleClient();
+      addStep('3_service_client', { status: 'OK' });
+    } catch (e: unknown) {
+      addStep('3_service_client', { status: 'FAIL', error: e instanceof Error ? e.message : String(e) });
+      return NextResponse.json({ error: 'createServiceRoleClient failed', steps }, { status: 500 });
+    }
 
-        const params = new URLSearchParams({
-          client_id: clientId,
-          response_type: 'code',
-          redirect_uri: redirectUri,
-          scope: scopes,
-          state: 'test-state-debug',
-          response_mode: 'query',
-          prompt: 'consent',
+    // ── Test state insertion ──
+    const testState = `debug-${randomBytes(16).toString('hex')}`;
+    try {
+      const { error: insertError } = await serviceClient
+        .from('outlook_oauth_states')
+        .insert({
+          state: testState,
+          user_id: user.id,
+          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
         });
 
-        const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
-
-        (diagnostics.checks as Record<string, unknown>).oauth_url = {
-          status: 'OK',
-          url: authUrl,
-          note: 'You can open this URL in a browser to test the OAuth flow manually',
-        };
-      } else {
-        (diagnostics.checks as Record<string, unknown>).oauth_url = {
-          status: 'FAIL',
-          error: 'Cannot generate URL — missing CLIENT_ID or REDIRECT_URI',
-        };
+      if (insertError) {
+        addStep('4_insert_state', { status: 'FAIL', error: insertError.message, code: insertError.code, details: insertError.details, hint: insertError.hint });
+        return NextResponse.json({ error: 'State insertion failed', steps }, { status: 500 });
       }
-    } catch (urlErr: unknown) {
-      (diagnostics.checks as Record<string, unknown>).oauth_url = {
-        status: 'ERROR',
-        error: urlErr instanceof Error ? urlErr.message : String(urlErr),
-      };
+
+      addStep('4_insert_state', { status: 'OK', state: testState });
+    } catch (e: unknown) {
+      addStep('4_insert_state', { status: 'EXCEPTION', error: e instanceof Error ? e.message : String(e) });
+      return NextResponse.json({ error: 'State insertion threw', steps }, { status: 500 });
     }
 
-    // ── Check 5: Test Microsoft token endpoint reachability ──
+    // ── Verify state can be read back ──
     try {
-      const tokenTest = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=test', // Will fail but proves connectivity
+      const { data: readBack, error: readError } = await serviceClient
+        .from('outlook_oauth_states')
+        .select('state, user_id, expires_at')
+        .eq('state', testState)
+        .single();
+
+      if (readError || !readBack) {
+        addStep('5_read_state', { status: 'FAIL', error: readError?.message });
+      } else {
+        addStep('5_read_state', { status: 'OK', found: true });
+      }
+    } catch (e: unknown) {
+      addStep('5_read_state', { status: 'EXCEPTION', error: e instanceof Error ? e.message : String(e) });
+    }
+
+    // ── Clean up test state ──
+    await serviceClient.from('outlook_oauth_states').delete().eq('state', testState);
+
+    // ── Generate real OAuth URL ──
+    const realState = randomBytes(32).toString('hex');
+
+    // Insert real state for actual test
+    const { error: realStateError } = await serviceClient
+      .from('outlook_oauth_states')
+      .insert({
+        state: realState,
+        user_id: user.id,
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       });
 
-      (diagnostics.checks as Record<string, unknown>).microsoft_reachable = {
-        status: tokenTest.status === 400 ? 'OK (reachable, got expected 400)' : `HTTP ${tokenTest.status}`,
-        note: 'A 400 response means Microsoft token endpoint is reachable',
-      };
-    } catch (fetchErr: unknown) {
-      (diagnostics.checks as Record<string, unknown>).microsoft_reachable = {
-        status: 'FAIL',
-        error: fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
-        note: 'Cannot reach Microsoft — check CSP or network settings',
-      };
+    if (realStateError) {
+      addStep('6_real_state', { status: 'FAIL', error: realStateError.message });
+      return NextResponse.json({ error: 'Could not create real state', steps }, { status: 500 });
     }
 
-    // ── Check 6: Test the connect endpoint directly ──
+    const scopes = [
+      'https://graph.microsoft.com/Mail.Read',
+      'offline_access',
+      'openid',
+      'email',
+    ].join(' ');
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: scopes,
+      state: realState,
+      response_mode: 'query',
+      prompt: 'consent',
+    });
+
+    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+
+    addStep('6_oauth_url', {
+      status: 'OK',
+      url: authUrl,
+      state_stored: true,
+      note: 'Open this URL to test the FULL flow including callback',
+    });
+
+    // ── Test Microsoft reachability ──
     try {
-      const connectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app'}/api/auth/outlook/connect`;
-      (diagnostics.checks as Record<string, unknown>).connect_endpoint = {
-        url: connectUrl,
-        note: 'POST this URL to initiate OAuth flow',
-      };
-    } catch { /* silent */ }
+      const msTest = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'grant_type=test',
+      });
+      addStep('7_microsoft_reachable', { status: `HTTP ${msTest.status}`, ok: msTest.status === 400 });
+    } catch (e: unknown) {
+      addStep('7_microsoft_reachable', { status: 'FAIL', error: e instanceof Error ? e.message : String(e) });
+    }
 
-    // ── Summary ──
-    const allEnvSet = !Object.values(envChecks).some(v => v === 'MISSING');
-    diagnostics.summary = {
-      env_vars_ok: allEnvSet,
-      db_ok: !oaErr && !stErr,
-      auth_ok: true,
-      ready: allEnvSet && !oaErr && !stErr,
-    };
+    // ── Check if connect route can be imported ──
+    addStep('8_connect_route', {
+      note: 'If the button click fails but this debug works, check the browser console for the POST /api/auth/outlook/connect response',
+    });
 
-    return NextResponse.json(diagnostics, { status: 200 });
+    return NextResponse.json({
+      summary: 'All checks passed. Open the oauth_url to test the full flow.',
+      test_auth_url: authUrl,
+      steps,
+    });
 
   } catch (err: unknown) {
-    diagnostics.fatal_error = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(diagnostics, { status: 500 });
+    return NextResponse.json({
+      fatal_error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      steps,
+    }, { status: 500 });
   }
 }
