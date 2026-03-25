@@ -5,10 +5,16 @@
  * This means ~70% of Dutch bills get instant, free, 100% accurate categorization.
  * 
  * Lookup order:
- * 1. vendor_category_map (100+ known Dutch vendors)
+ * 1. vendor_category_map (291+ known Dutch vendors)
  * 2. incasso_agencies (270 Justis-registered collection agencies)
  * 3. Keywords (incasso, deurwaarder, etc.)
  * 4. Falls through → AI decides
+ * 
+ * MATCHING RULES:
+ * - Patterns ≤ 4 chars (NS, CZ, GVB, DUO): must match as a WHOLE WORD
+ *   → "NS" matches "NS Reizigers" but NOT "Incassons" or "Pensioenfonds"
+ * - Patterns > 4 chars (eneco, ziggo, riverty): substring match is fine
+ *   → "eneco" matches "Eneco Energie B.V."
  * 
  * File: src/lib/vendor-lookup.ts (sambafinance1 repo)
  */
@@ -34,6 +40,32 @@ const NO_MATCH: VendorLookupResult = {
 };
 
 /**
+ * Check if a pattern matches the search string.
+ * Short patterns (≤4 chars) require whole-word matching to prevent false positives.
+ * Long patterns (>4 chars) use substring matching.
+ */
+function patternMatches(search: string, pattern: string): boolean {
+  const cleanPattern = pattern.trim();
+  
+  if (cleanPattern.length <= 4) {
+    // Whole-word match: pattern must be surrounded by word boundaries
+    // "ns" matches "ns reizigers" or "ns" alone, but NOT "incassons" or "pensioenfonds"
+    const regex = new RegExp(`(?:^|[\\s,.()/\\-])${escapeRegex(cleanPattern)}(?:$|[\\s,.()/\\-])`, 'i');
+    return regex.test(` ${search} `); // pad with spaces so start/end patterns work
+  }
+  
+  // Long patterns: simple substring match
+  return search.includes(cleanPattern);
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Look up a vendor name against known Dutch billers.
  * Call this BEFORE sending to AI — if it matches, skip AI category detection.
  */
@@ -49,15 +81,19 @@ export async function lookupVendor(vendorName: string): Promise<VendorLookupResu
 
   const supabase = await createServerSupabaseClient();
 
-  // === Step 1: Check vendor_category_map (exact pattern match) ===
+  // === Step 1: Check vendor_category_map ===
+  // Fetch all patterns, sorted longest first (most specific matches first)
   const { data: vendorMatch } = await supabase
     .from('vendor_category_map')
     .select('vendor_pattern, category, vendor_display_name')
-    .order('vendor_pattern', { ascending: false }); // Longer patterns first
+    .order('vendor_pattern', { ascending: false });
 
   if (vendorMatch) {
-    for (const row of vendorMatch) {
-      if (search.includes(row.vendor_pattern)) {
+    // Sort by pattern length descending — longer (more specific) patterns match first
+    const sorted = vendorMatch.sort((a, b) => b.vendor_pattern.length - a.vendor_pattern.length);
+    
+    for (const row of sorted) {
+      if (patternMatches(search, row.vendor_pattern)) {
         const isGov = row.category === 'overheid';
         return {
           matched: true,
