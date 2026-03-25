@@ -12,7 +12,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHash, randomBytes } from 'crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getAuthUserId } from '@/lib/auth'
-import { encrypt } from '@/lib/encryption'
 import { getValidOutlookToken } from '@/lib/outlook-tokens'
 import {
   fetchEmails,
@@ -20,7 +19,6 @@ import {
   toUnifiedEmail,
 } from '@/lib/microsoft-graph'
 import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
-import { lookupVendor } from '@/lib/vendor-lookup'
 import { detectIncassoAgency } from '@/lib/incasso-detect'
 
 export const dynamic = 'force-dynamic'
@@ -57,14 +55,12 @@ export async function POST(request: NextRequest) {
     const { accessToken } = tokenResult
     const supabase = createServiceRoleClient()
 
-    // Get account scan state
     const { data: account } = await supabase
       .from('outlook_accounts')
       .select('scan_cursor, scan_progress, full_scan_complete, last_scanned')
       .eq('id', accountId)
       .single()
 
-    // Determine date filter
     let sinceDate: string | undefined
     if (!isInitialScan && account?.last_scanned) {
       sinceDate = account.last_scanned
@@ -74,7 +70,6 @@ export async function POST(request: NextRequest) {
       sinceDate = sixMonthsAgo.toISOString()
     }
 
-    // Fetch emails from Microsoft Graph
     const { messages, nextLink } = await fetchEmails(accessToken, {
       sinceDate,
       top: batchSize,
@@ -99,14 +94,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Process batch through AI pipeline
     let billsFound = 0
     let processed = 0
 
     for (const msg of messages) {
       processed++
 
-      // Check if already processed (dedup)
+      // Dedup check
       const { data: existing } = await supabase
         .from('scan_processed')
         .select('gmail_message_id')
@@ -118,14 +112,15 @@ export async function POST(request: NextRequest) {
       if (existing) continue
 
       const unified = toUnifiedEmail(msg)
+      const bodySnippet = (unified.bodyText || unified.bodyHtml || '').slice(0, 500)
 
-      // Step 1: Classify with Gemini
-      const classification = await classifyEmail({
-        subject: unified.subject,
-        from: unified.from,
-        fromEmail: unified.fromEmail,
-        bodySnippet: (unified.bodyText || unified.bodyHtml || '').slice(0, 500),
-      })
+      // Step 1: Classify with Gemini — classifyEmail(subject, sender, body, userId)
+      const classification = await classifyEmail(
+        unified.subject,
+        unified.fromEmail,
+        bodySnippet,
+        userId
+      )
 
       if (!classification.is_bill) {
         await supabase.from('scan_processed').insert({
@@ -144,13 +139,12 @@ export async function POST(request: NextRequest) {
           (a) => a.contentType === 'application/pdf'
         )
         if (pdfAttachment) {
-          // Pass base64 PDF content as text for extraction
           pdfText = Buffer.from(pdfAttachment.contentBytes, 'base64').toString('utf-8')
         }
       }
 
-      // Step 3: Extract bill data with Haiku
-      // extractBillFromEmail already calls lookupVendor internally
+      // Step 3: Extract with Haiku — extractBillFromEmail(subject, body, pdfText, userId)
+      // Note: extractBillFromEmail already calls lookupVendor internally
       const billData = await extractBillFromEmail(
         unified.subject,
         unified.bodyHtml || unified.bodyText,
@@ -167,10 +161,10 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 4: Incasso register check
+      // Step 4: Incasso register check — detectIncassoAgency(vendorName)
       const incassoResult = await detectIncassoAgency(billData.vendor)
 
-      // Step 5: Dedup check (hash-based)
+      // Step 5: Dedup hash
       const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
       const hash = createHash('sha256').update(raw).digest('hex').slice(0, 16)
 
@@ -190,7 +184,7 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 6: Insert the bill
+      // Step 6: Insert bill
       const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
       const idBytes = randomBytes(12)
       const billId = Array.from(idBytes).map((b) => alphabet[b % alphabet.length]).join('')
@@ -201,11 +195,11 @@ export async function POST(request: NextRequest) {
         vendor: billData.vendor,
         amount: billData.amount_cents,
         currency: billData.currency || 'EUR',
-        iban_encrypted: billData.iban ? encrypt(billData.iban) : null,
+        iban: billData.iban || null,
         reference: billData.reference,
         due_date: billData.due_date || new Date().toISOString().split('T')[0],
-        received_date: unified.receivedDate.split('T')[0],
-        category: billData.category || 'overig',
+        received_date: billData.received_date || unified.receivedDate.split('T')[0],
+        category: billData.category_hint || 'overig',
         status: billData.due_date && new Date(billData.due_date) < new Date() ? 'action' : 'outstanding',
         source: 'outlook_scan',
         outlook_message_id: msg.id,
@@ -213,7 +207,7 @@ export async function POST(request: NextRequest) {
         hash,
         payment_url: billData.payment_url,
         requires_review: (billData.confidence?.amount || 0) < 0.7,
-        bill_subtype: incassoResult.matched ? 'incasso' : undefined,
+        escalation_stage: incassoResult.matched ? incassoResult.suggested_escalation : billData.escalation_stage,
       })
 
       if (!insertError) {

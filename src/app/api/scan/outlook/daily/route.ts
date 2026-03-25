@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceRoleClient()
 
-    // Get Outlook accounts not scanned in 20+ hours
     const twentyHoursAgo = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString()
 
     const { data: accounts, error } = await supabase
@@ -80,13 +79,15 @@ export async function POST(request: NextRequest) {
 
           processed++
           const unified = toUnifiedEmail(msg)
+          const bodySnippet = (unified.bodyText || unified.bodyHtml || '').slice(0, 500)
 
-          const classification = await classifyEmail({
-            subject: unified.subject,
-            from: unified.from,
-            fromEmail: unified.fromEmail,
-            bodySnippet: (unified.bodyText || unified.bodyHtml || '').slice(0, 500),
-          })
+          // classifyEmail(subject, sender, body, userId)
+          const classification = await classifyEmail(
+            unified.subject,
+            unified.fromEmail,
+            bodySnippet,
+            account.user_id
+          )
 
           // Mark as processed regardless
           await supabase.from('scan_processed').insert({
@@ -97,16 +98,17 @@ export async function POST(request: NextRequest) {
 
           if (!classification.is_bill) continue
 
-          // extractBillFromEmail already calls lookupVendor internally
+          // extractBillFromEmail(subject, body, pdfText, userId)
           const billData = await extractBillFromEmail(
             unified.subject,
             unified.bodyHtml || unified.bodyText,
-            null, // no PDF extraction in daily scan to save time
+            null,
             account.user_id
           )
 
           if (!billData || !billData.vendor) continue
 
+          // detectIncassoAgency(vendorName) → IncassoMatch
           const incassoResult = await detectIncassoAgency(billData.vendor)
 
           const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
@@ -132,15 +134,15 @@ export async function POST(request: NextRequest) {
               currency: billData.currency || 'EUR',
               reference: billData.reference,
               due_date: billData.due_date || new Date().toISOString().split('T')[0],
-              received_date: unified.receivedDate.split('T')[0],
-              category: billData.category || 'overig',
+              received_date: billData.received_date || unified.receivedDate.split('T')[0],
+              category: billData.category_hint || 'overig',
               status: billData.due_date && new Date(billData.due_date) < new Date() ? 'action' : 'outstanding',
               source: 'outlook_scan',
               outlook_message_id: msg.id,
               outlook_account_id: account.id,
               hash,
               payment_url: billData.payment_url,
-              bill_subtype: incassoResult.matched ? 'incasso' : undefined,
+              escalation_stage: incassoResult.matched ? incassoResult.suggested_escalation : billData.escalation_stage,
             })
             billsFound++
           }
