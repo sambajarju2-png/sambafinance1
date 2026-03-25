@@ -33,12 +33,14 @@ function SettingsContent() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Read ?tab=gmail (or other tabs) from URL
+  // Read ?tab=gmail (or other tabs) from URL — also support ?tab=sync for Outlook callback
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['gmail', 'profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy'].includes(tab)) {
+    if (tab === 'sync' || tab === 'gmail') {
+      setActiveTab('gmail');
+      // Don't clean URL yet — gmail-settings reads ?outlook= params
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
-      // Clean URL
       window.history.replaceState(null, '', '/instellingen');
     }
   }, [searchParams]);
@@ -156,7 +158,7 @@ function SettingsContent() {
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
-        <SettingsLink icon={Mail} label={t('gmailAccounts')} description={t('gmailAccountsDesc')} onClick={() => setActiveTab('gmail')} />
+        <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
