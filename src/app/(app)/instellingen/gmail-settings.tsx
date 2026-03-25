@@ -16,17 +16,7 @@ import {
 } from 'lucide-react';
 import ScanProgress from '@/components/scan-progress';
 
-interface GmailAccount {
-  id: string;
-  email: string;
-  last_scanned: string | null;
-  scan_progress: number;
-  full_scan_complete: boolean;
-  needs_reauth: boolean;
-  created_at: string;
-}
-
-interface OutlookAccount {
+interface EmailAccount {
   id: string;
   email: string;
   last_scanned: string | null;
@@ -40,25 +30,23 @@ export default function GmailSettings() {
   const t = useTranslations('gmail');
   const searchParams = useSearchParams();
 
-  const [gmailAccounts, setGmailAccounts] = useState<GmailAccount[]>([]);
-  const [outlookAccounts, setOutlookAccounts] = useState<OutlookAccount[]>([]);
+  const [gmailAccounts, setGmailAccounts] = useState<EmailAccount[]>([]);
+  const [outlookAccounts, setOutlookAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingGmail, setConnectingGmail] = useState(false);
   const [connectingOutlook, setConnectingOutlook] = useState(false);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
-  const [scanningAccountId, setScanningAccountId] = useState<string | null>(null);
+  const [scanningAccount, setScanningAccount] = useState<{ id: string; provider: 'gmail' | 'outlook' } | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     try {
-      // Fetch Gmail accounts
       const gmailRes = await fetch('/api/gmail/accounts');
       if (gmailRes.ok) {
         const data = await gmailRes.json();
         setGmailAccounts(data.accounts || []);
       }
 
-      // Fetch Outlook accounts
       const outlookRes = await fetch('/api/outlook/accounts');
       if (outlookRes.ok) {
         const data = await outlookRes.json();
@@ -71,11 +59,8 @@ export default function GmailSettings() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
 
-  // Handle URL status params (both Gmail and Outlook callbacks)
   useEffect(() => {
     const status = searchParams.get('status');
     const outlook = searchParams.get('outlook');
@@ -92,7 +77,6 @@ export default function GmailSettings() {
       window.history.replaceState(null, '', '/instellingen');
     }
 
-    // Outlook-specific status
     if (outlook === 'connected') {
       setStatusMessage({ type: 'success', text: 'Outlook succesvol verbonden!' });
       fetchAccounts();
@@ -109,7 +93,6 @@ export default function GmailSettings() {
   async function handleConnectGmail() {
     setConnectingGmail(true);
     setStatusMessage(null);
-
     try {
       const res = await fetch('/api/gmail/connect', { method: 'POST' });
       if (!res.ok) {
@@ -118,7 +101,6 @@ export default function GmailSettings() {
         setConnectingGmail(false);
         return;
       }
-
       const { url } = await res.json();
       window.location.href = url;
     } catch {
@@ -130,7 +112,6 @@ export default function GmailSettings() {
   async function handleConnectOutlook() {
     setConnectingOutlook(true);
     setStatusMessage(null);
-
     try {
       const res = await fetch('/api/auth/outlook/connect', { method: 'POST' });
       if (!res.ok) {
@@ -139,7 +120,6 @@ export default function GmailSettings() {
         setConnectingOutlook(false);
         return;
       }
-
       const { url } = await res.json();
       window.location.href = url;
     } catch {
@@ -150,7 +130,6 @@ export default function GmailSettings() {
 
   async function handleDisconnectGmail(accountId: string) {
     if (!confirm(t('disconnectConfirm'))) return;
-
     setDisconnecting(accountId);
     try {
       const res = await fetch('/api/gmail/disconnect', {
@@ -158,7 +137,6 @@ export default function GmailSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account_id: accountId }),
       });
-
       if (res.ok) {
         setGmailAccounts((prev) => prev.filter((a) => a.id !== accountId));
         setStatusMessage({ type: 'success', text: t('disconnected') });
@@ -174,7 +152,6 @@ export default function GmailSettings() {
 
   async function handleDisconnectOutlook(accountId: string) {
     if (!confirm('Weet je zeker dat je dit Outlook account wilt ontkoppelen?')) return;
-
     setDisconnecting(accountId);
     try {
       const res = await fetch('/api/auth/outlook/disconnect', {
@@ -182,7 +159,6 @@ export default function GmailSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId }),
       });
-
       if (res.ok) {
         setOutlookAccounts((prev) => prev.filter((a) => a.id !== accountId));
         setStatusMessage({ type: 'success', text: 'Outlook account ontkoppeld.' });
@@ -196,21 +172,18 @@ export default function GmailSettings() {
     }
   }
 
-  // If currently scanning, show scan progress
-  if (scanningAccountId) {
+  // If currently scanning, show scan progress with the right provider
+  if (scanningAccount) {
     return (
       <div className="space-y-4">
-        <h2 className="text-heading-sm text-pw-navy">{t('scanTitle')}</h2>
+        <h2 className="text-heading-sm text-pw-navy">
+          {scanningAccount.provider === 'outlook' ? 'Outlook scan' : t('scanTitle')}
+        </h2>
         <ScanProgress
-          accountId={scanningAccountId}
-          onComplete={() => {
-            setScanningAccountId(null);
-            fetchAccounts();
-          }}
-          onCancel={() => {
-            setScanningAccountId(null);
-            fetchAccounts();
-          }}
+          accountId={scanningAccount.id}
+          provider={scanningAccount.provider}
+          onComplete={() => { setScanningAccount(null); fetchAccounts(); }}
+          onCancel={() => { setScanningAccount(null); fetchAccounts(); }}
         />
       </div>
     );
@@ -227,31 +200,21 @@ export default function GmailSettings() {
         </p>
       </div>
 
-      {/* Status message */}
       {statusMessage && (
-        <div
-          className={`flex items-center gap-2 rounded-input px-3 py-2.5 ${
-            statusMessage.type === 'success'
-              ? 'border border-green-200 bg-green-50'
-              : 'border border-red-200 bg-red-50'
-          }`}
-        >
+        <div className={`flex items-center gap-2 rounded-input px-3 py-2.5 ${
+          statusMessage.type === 'success' ? 'border border-green-200 bg-green-50' : 'border border-red-200 bg-red-50'
+        }`}>
           {statusMessage.type === 'success' ? (
             <Check className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
           ) : (
             <AlertTriangle className="h-4 w-4 text-pw-red" strokeWidth={1.5} />
           )}
-          <p
-            className={`text-label ${
-              statusMessage.type === 'success' ? 'text-pw-green' : 'text-pw-red'
-            }`}
-          >
+          <p className={`text-label ${statusMessage.type === 'success' ? 'text-pw-green' : 'text-pw-red'}`}>
             {statusMessage.text}
           </p>
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && !hasAnyAccounts && (
         <div className="flex flex-col items-center rounded-card border border-dashed border-pw-border bg-pw-surface py-8 text-center">
           <Mail className="mb-3 h-10 w-10 text-pw-muted/40" strokeWidth={1.5} />
@@ -262,7 +225,7 @@ export default function GmailSettings() {
         </div>
       )}
 
-      {/* ── Gmail Section ── */}
+      {/* Gmail Section */}
       {(gmailAccounts.length > 0 || loading) && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -271,7 +234,6 @@ export default function GmailSettings() {
             </div>
             <p className="text-[12px] font-bold text-pw-muted uppercase tracking-wide">Gmail</p>
           </div>
-
           {loading ? (
             <div className="skeleton h-[68px] rounded-card" />
           ) : (
@@ -282,17 +244,16 @@ export default function GmailSettings() {
                 provider="gmail"
                 onReauth={handleConnectGmail}
                 onDisconnect={() => handleDisconnectGmail(account.id)}
-                onScan={() => setScanningAccountId(account.id)}
+                onScan={() => setScanningAccount({ id: account.id, provider: 'gmail' })}
                 disconnecting={disconnecting === account.id}
-                t={t}
               />
             ))
           )}
         </div>
       )}
 
-      {/* ── Outlook Section ── */}
-      {(outlookAccounts.length > 0) && (
+      {/* Outlook Section */}
+      {outlookAccounts.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="flex h-5 w-5 items-center justify-center rounded bg-blue-100">
@@ -300,7 +261,6 @@ export default function GmailSettings() {
             </div>
             <p className="text-[12px] font-bold text-pw-muted uppercase tracking-wide">Outlook / Hotmail</p>
           </div>
-
           {outlookAccounts.map((account) => (
             <AccountCard
               key={account.id}
@@ -308,39 +268,29 @@ export default function GmailSettings() {
               provider="outlook"
               onReauth={handleConnectOutlook}
               onDisconnect={() => handleDisconnectOutlook(account.id)}
-              onScan={() => setScanningAccountId(account.id)}
+              onScan={() => setScanningAccount({ id: account.id, provider: 'outlook' })}
               disconnecting={disconnecting === account.id}
-              t={t}
             />
           ))}
         </div>
       )}
 
-      {/* ── Connect Buttons ── */}
+      {/* Connect Buttons */}
       <div className="space-y-2">
         <button
           onClick={handleConnectGmail}
           disabled={connectingGmail}
           className="btn-press flex w-full items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
-          {connectingGmail ? (
-            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-          ) : (
-            <Plus className="h-4 w-4" strokeWidth={1.5} />
-          )}
+          {connectingGmail ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <Plus className="h-4 w-4" strokeWidth={1.5} />}
           Gmail verbinden
         </button>
-
         <button
           onClick={handleConnectOutlook}
           disabled={connectingOutlook}
           className="btn-press flex w-full items-center justify-center gap-2 rounded-button border-2 border-pw-blue px-4 py-3 text-[13px] font-semibold text-pw-blue transition-colors hover:bg-pw-blue/5 disabled:opacity-50"
         >
-          {connectingOutlook ? (
-            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-          ) : (
-            <Plus className="h-4 w-4" strokeWidth={1.5} />
-          )}
+          {connectingOutlook ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <Plus className="h-4 w-4" strokeWidth={1.5} />}
           Outlook / Hotmail verbinden
         </button>
       </div>
@@ -348,18 +298,17 @@ export default function GmailSettings() {
   );
 }
 
-/* ── Shared Account Card ── */
+/* ── Account Card ── */
 interface AccountCardProps {
-  account: GmailAccount | OutlookAccount;
+  account: EmailAccount;
   provider: 'gmail' | 'outlook';
   onReauth: () => void;
   onDisconnect: () => void;
   onScan: () => void;
   disconnecting: boolean;
-  t: ReturnType<typeof useTranslations>;
 }
 
-function AccountCard({ account, provider, onReauth, onDisconnect, onScan, disconnecting, t }: AccountCardProps) {
+function AccountCard({ account, provider, onReauth, onDisconnect, onScan, disconnecting }: AccountCardProps) {
   const iconBg = provider === 'gmail' ? 'bg-red-50' : 'bg-blue-50';
   const iconColor = provider === 'gmail' ? 'text-red-500' : 'text-blue-500';
   const Icon = provider === 'gmail' ? Mail : Cloud;
@@ -374,15 +323,15 @@ function AccountCard({ account, provider, onReauth, onDisconnect, onScan, discon
           <p className="truncate text-[14px] font-semibold text-pw-text">{account.email}</p>
           <p className="text-[11px] text-pw-muted">
             {account.needs_reauth
-              ? t('needsReauth')
+              ? 'Opnieuw verbinden vereist'
               : account.last_scanned
-              ? `${t('lastScanned')}: ${new Date(account.last_scanned).toLocaleDateString('nl-NL', {
+              ? `Laatst gescand: ${new Date(account.last_scanned).toLocaleDateString('nl-NL', {
                   day: 'numeric',
                   month: 'short',
                   hour: '2-digit',
                   minute: '2-digit',
                 })}`
-              : t('neverScanned')}
+              : 'Nog niet gescand'}
           </p>
         </div>
 
@@ -392,7 +341,7 @@ function AccountCard({ account, provider, onReauth, onDisconnect, onScan, discon
             className="flex-shrink-0 rounded-button bg-pw-amber/10 px-2 py-1 text-[11px] font-semibold text-pw-amber"
           >
             <RefreshCw className="mr-1 inline h-3 w-3" strokeWidth={1.5} />
-            {t('reauth')}
+            Opnieuw verbinden
           </button>
         )}
 
@@ -409,14 +358,13 @@ function AccountCard({ account, provider, onReauth, onDisconnect, onScan, discon
         </button>
       </div>
 
-      {/* Scan button — only for Gmail for now (Outlook scan UI can be added later) */}
       {!account.needs_reauth && (
         <button
           onClick={onScan}
           className="btn-press mt-3 flex w-full items-center justify-center gap-2 rounded-button border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-semibold text-pw-blue transition-colors hover:bg-pw-blue/10"
         >
           <Search className="h-4 w-4" strokeWidth={1.5} />
-          {account.full_scan_complete ? t('scanAgain') : t('startScan')}
+          {account.full_scan_complete ? 'Opnieuw scannen' : 'Start scan'}
         </button>
       )}
     </div>

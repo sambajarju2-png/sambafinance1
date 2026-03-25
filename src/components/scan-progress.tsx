@@ -6,6 +6,7 @@ import { Loader2, Check, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface ScanProgressProps {
   accountId: string;
+  provider?: 'gmail' | 'outlook';
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -25,7 +26,7 @@ const QUOTES_NL = [
   { text: 'Een helder overzicht is het halve werk.', emoji: '📋' },
 ];
 
-export default function ScanProgress({ accountId, onComplete, onCancel }: ScanProgressProps) {
+export default function ScanProgress({ accountId, provider = 'gmail', onComplete, onCancel }: ScanProgressProps) {
   const t = useTranslations('scan');
 
   const [status, setStatus] = useState<'scanning' | 'done' | 'error'>('scanning');
@@ -40,6 +41,7 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
   const totalProcessedRef = useRef(0);
   const abortRef = useRef(false);
   const scanningRef = useRef(false);
+  const isFirstBatchRef = useRef(true);
 
   // Rotate quotes with fade animation
   useEffect(() => {
@@ -58,41 +60,98 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
     scanningRef.current = true;
 
     try {
-      const res = await fetch('/api/gmail/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          account_id: accountId,
-          page_token: pageTokenRef.current,
-          total_processed: totalProcessedRef.current,
-        }),
-      });
+      let res: Response;
+
+      if (provider === 'outlook') {
+        // Outlook scan endpoint
+        res = await fetch('/api/scan/outlook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountId,
+            batchSize: 15,
+            isInitialScan: isFirstBatchRef.current,
+          }),
+        });
+      } else {
+        // Gmail scan endpoint (existing behavior)
+        res = await fetch('/api/gmail/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_id: accountId,
+            page_token: pageTokenRef.current,
+            total_processed: totalProcessedRef.current,
+          }),
+        });
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data.needs_reauth) { setStatus('error'); setErrorMessage(t('needsReauth')); scanningRef.current = false; return; }
-        setStatus('error'); setErrorMessage(data.error || `Error (${res.status})`); scanningRef.current = false; return;
+        if (data.needs_reauth) {
+          setStatus('error');
+          setErrorMessage(t('needsReauth'));
+          scanningRef.current = false;
+          return;
+        }
+        setStatus('error');
+        setErrorMessage(data.error || `Error (${res.status})`);
+        scanningRef.current = false;
+        return;
       }
 
       const data = await res.json();
-      if (data.timeout) { scanningRef.current = false; if (!abortRef.current) setTimeout(() => runBatch(), 1000); return; }
 
-      totalProcessedRef.current = data.total_processed || (totalProcessedRef.current + (data.processed || 0));
-      if (data.max_emails) setMaxEmails(data.max_emails);
-      setProcessed(totalProcessedRef.current);
-      setBillsFound((prev) => prev + (data.bills_found || 0));
+      if (provider === 'outlook') {
+        // Handle Outlook response format
+        isFirstBatchRef.current = false;
+        totalProcessedRef.current = data.scan_progress || (totalProcessedRef.current + (data.processed || 0));
+        setProcessed(totalProcessedRef.current);
+        setBillsFound((prev) => prev + (data.bills_found || 0));
 
-      if (data.done) { setStatus('done'); scanningRef.current = false; return; }
+        if (data.complete) {
+          setStatus('done');
+          scanningRef.current = false;
+          return;
+        }
 
-      pageTokenRef.current = data.page_token || null;
-      scanningRef.current = false;
-      if (!abortRef.current) setTimeout(() => runBatch(), 600);
+        // More emails to process
+        scanningRef.current = false;
+        if (!abortRef.current) setTimeout(() => runBatch(), 600);
+      } else {
+        // Handle Gmail response format (existing behavior)
+        if (data.timeout) {
+          scanningRef.current = false;
+          if (!abortRef.current) setTimeout(() => runBatch(), 1000);
+          return;
+        }
+
+        totalProcessedRef.current = data.total_processed || (totalProcessedRef.current + (data.processed || 0));
+        if (data.max_emails) setMaxEmails(data.max_emails);
+        setProcessed(totalProcessedRef.current);
+        setBillsFound((prev) => prev + (data.bills_found || 0));
+
+        if (data.done) {
+          setStatus('done');
+          scanningRef.current = false;
+          return;
+        }
+
+        pageTokenRef.current = data.page_token || null;
+        scanningRef.current = false;
+        if (!abortRef.current) setTimeout(() => runBatch(), 600);
+      }
     } catch {
-      setStatus('error'); setErrorMessage(t('errorNetwork')); scanningRef.current = false;
+      setStatus('error');
+      setErrorMessage(t('errorNetwork'));
+      scanningRef.current = false;
     }
-  }, [accountId, t]);
+  }, [accountId, provider, t]);
 
-  useEffect(() => { runBatch(); return () => { abortRef.current = true; }; }, [runBatch]);
+  useEffect(() => {
+    runBatch();
+    return () => { abortRef.current = true; };
+  }, [runBatch]);
 
   const progressPercent = Math.min((processed / maxEmails) * 100, 98);
   const currentQuote = QUOTES_NL[quoteIdx];
@@ -104,7 +163,7 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
           {/* Progress bar */}
           <div>
             <div className="mb-2 flex items-center justify-between text-[12px] font-semibold">
-              <span className="text-pw-blue">{processed} / {maxEmails} e-mails</span>
+              <span className="text-pw-blue">{processed} e-mails gescand</span>
               <span className="text-pw-green">{billsFound} rekeningen gevonden</span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
@@ -127,7 +186,9 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-pw-blue/50" strokeWidth={2} />
-              <span className="text-[11px] font-medium text-pw-muted">Inbox wordt gescand...</span>
+              <span className="text-[11px] font-medium text-pw-muted">
+                {provider === 'outlook' ? 'Outlook inbox wordt gescand...' : 'Inbox wordt gescand...'}
+              </span>
             </div>
           </div>
 
@@ -135,7 +196,7 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
             onClick={() => { abortRef.current = true; onCancel(); }}
             className="text-[13px] font-semibold text-pw-muted hover:text-pw-text"
           >
-            {t('cancel')}
+            Annuleren
           </button>
         </>
       )}
@@ -144,11 +205,13 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
-            <span className="text-[14px] font-semibold text-pw-green">{t('complete')}</span>
+            <span className="text-[14px] font-semibold text-pw-green">Scan voltooid</span>
           </div>
-          <p className="text-[13px] text-pw-muted">{t('summary', { processed, bills: billsFound })}</p>
+          <p className="text-[13px] text-pw-muted">
+            {processed} e-mails gescand, {billsFound} rekeningen gevonden.
+          </p>
           <button onClick={onComplete} className="btn-press w-full rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-            {t('done')}
+            Klaar
           </button>
         </div>
       )}
@@ -157,13 +220,13 @@ export default function ScanProgress({ accountId, onComplete, onCancel }: ScanPr
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-pw-red" strokeWidth={1.5} />
-            <span className="text-[14px] font-semibold text-pw-red">{t('errorTitle')}</span>
+            <span className="text-[14px] font-semibold text-pw-red">Er ging iets mis</span>
           </div>
-          <p className="text-[13px] text-pw-muted">{errorMessage || t('errorGeneral')}</p>
+          <p className="text-[13px] text-pw-muted">{errorMessage || 'Er ging iets mis bij het scannen.'}</p>
           <div className="flex gap-3">
             <button onClick={() => { setStatus('scanning'); setErrorMessage(null); scanningRef.current = false; runBatch(); }}
-              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">{t('retry')}</button>
-            <button onClick={onCancel} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">{t('cancel')}</button>
+              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">Opnieuw proberen</button>
+            <button onClick={onCancel} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">Annuleren</button>
           </div>
         </div>
       )}
