@@ -1,8 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback', '/buddy/accept', '/.well-known'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/callback', '/buddy/accept'];
 export async function middleware(request: NextRequest) {
+  // Skip auth entirely for .well-known paths (Microsoft domain verification)
+  if (request.nextUrl.pathname.startsWith('/.well-known')) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -59,7 +64,7 @@ export const config = {
      * - api routes (they handle their own auth)
      */
     
-'/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/|loaderio-.*\\.txt|\\.well-known).*)',
+'/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|api/|loaderio-.*\\.txt).*)',
     
   ],
 };
