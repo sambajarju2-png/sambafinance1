@@ -3,6 +3,7 @@ import { callHaiku } from './haiku';
 import { buildExtractionPrompt } from './prompts';
 import { buildCorrectionPrompt } from '../ai-corrections';
 import { createServerSupabaseClient } from '../supabase/server';
+import { detectIncassoAgency } from '../incasso-detect';
 
 /**
  * PayWatch Dual-AI Pipeline
@@ -191,7 +192,17 @@ export async function extractBillFromEmail(
 
   const result = await callHaiku(prompt, userId, 'email_extraction', 1024);
 
-  return normalizeExtraction(result);
+  const extracted = normalizeExtraction(result);
+
+  // Check vendor against Justis Incasso Register (270 agencies)
+  const incassoCheck = await detectIncassoAgency(extracted.vendor);
+  if (incassoCheck.matched) {
+    extracted.category_hint = 'incasso';
+    extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+    if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+  }
+
+  return extracted;
 }
 
 // ============================================================
@@ -225,7 +236,7 @@ export async function extractBillFromPhoto(
 
   const wasPartial = Boolean(result._parse_error);
 
-  return {
+  const extracted: CameraExtractionResult = {
     vendor: String(result.vendor || ''),
     amount_cents: Number(result.amount_cents) || 0,
     currency: String(result.currency || 'EUR'),
@@ -243,6 +254,16 @@ export async function extractBillFromPhoto(
           due_date: Number((result.confidence as Record<string, unknown>)?.due_date) || 0,
         },
   };
+
+  // Check vendor against Justis Incasso Register (270 agencies)
+  const incassoCheck = await detectIncassoAgency(extracted.vendor);
+  if (incassoCheck.matched) {
+    extracted.category_hint = 'incasso';
+    extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+    if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+  }
+
+  return extracted;
 }
 
 // ============================================================
