@@ -11,10 +11,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHash, randomBytes } from 'crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidOutlookToken } from '@/lib/outlook-tokens'
-import { fetchEmails, toUnifiedEmail, fetchAttachments } from '@/lib/microsoft-graph'
-import { classifyEmail, extractBillData } from '@/lib/ai/pipeline'
-import { lookupVendor } from '@/lib/vendor-lookup'
-import { detectIncasso } from '@/lib/incasso-detect'
+import { fetchEmails, toUnifiedEmail } from '@/lib/microsoft-graph'
+import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
+import { detectIncassoAgency } from '@/lib/incasso-detect'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -98,23 +97,17 @@ export async function POST(request: NextRequest) {
 
           if (!classification.is_bill) continue
 
-          const billData = await extractBillData({
-            emailBody: unified.bodyHtml || unified.bodyText,
-            subject: unified.subject,
-            from: unified.fromEmail,
-            source: 'outlook_scan',
-            vendorContext: true,
-          })
+          // extractBillFromEmail already calls lookupVendor internally
+          const billData = await extractBillFromEmail(
+            unified.subject,
+            unified.bodyHtml || unified.bodyText,
+            null, // no PDF extraction in daily scan to save time
+            account.user_id
+          )
 
-          if (!billData) continue
+          if (!billData || !billData.vendor) continue
 
-          const vendorMatch = lookupVendor(billData.vendor)
-          if (vendorMatch) billData.category = vendorMatch.category
-
-          const incassoResult = await detectIncasso(billData.vendor)
-          if (incassoResult.isIncasso) {
-            billData.is_incasso = true
-          }
+          const incassoResult = await detectIncassoAgency(billData.vendor)
 
           const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
           const hash = createHash('sha256').update(raw).digest('hex').slice(0, 16)
@@ -147,6 +140,7 @@ export async function POST(request: NextRequest) {
               outlook_account_id: account.id,
               hash,
               payment_url: billData.payment_url,
+              bill_subtype: incassoResult.matched ? 'incasso' : undefined,
             })
             billsFound++
           }

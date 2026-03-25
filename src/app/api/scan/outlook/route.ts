@@ -19,9 +19,9 @@ import {
   fetchAttachments,
   toUnifiedEmail,
 } from '@/lib/microsoft-graph'
-import { classifyEmail, extractBillData } from '@/lib/ai/pipeline'
+import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
 import { lookupVendor } from '@/lib/vendor-lookup'
-import { detectIncasso } from '@/lib/incasso-detect'
+import { detectIncassoAgency } from '@/lib/incasso-detect'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -136,32 +136,29 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 2: Get PDF attachments if present
-      let pdfBase64: string | undefined
+      // Step 2: Get PDF attachment text if present
+      let pdfText: string | null = null
       if (msg.hasAttachments) {
         const attachments = await fetchAttachments(accessToken, msg.id)
         const pdfAttachment = attachments.find(
           (a) => a.contentType === 'application/pdf'
         )
         if (pdfAttachment) {
-          pdfBase64 = pdfAttachment.contentBytes
+          // Pass base64 PDF content as text for extraction
+          pdfText = Buffer.from(pdfAttachment.contentBytes, 'base64').toString('utf-8')
         }
       }
 
       // Step 3: Extract bill data with Haiku
-      const extractionInput = pdfBase64
-        ? { pdf: pdfBase64, source: 'outlook_scan' as const }
-        : {
-            emailBody: unified.bodyHtml || unified.bodyText,
-            subject: unified.subject,
-            from: unified.fromEmail,
-            source: 'outlook_scan' as const,
-            vendorContext: true,
-          }
+      // extractBillFromEmail already calls lookupVendor internally
+      const billData = await extractBillFromEmail(
+        unified.subject,
+        unified.bodyHtml || unified.bodyText,
+        pdfText,
+        userId
+      )
 
-      const billData = await extractBillData(extractionInput)
-
-      if (!billData) {
+      if (!billData || !billData.vendor) {
         await supabase.from('scan_processed').insert({
           user_id: userId,
           gmail_message_id: msg.id,
@@ -170,20 +167,10 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 4: Post-AI vendor lookup
-      const vendorMatch = lookupVendor(billData.vendor)
-      if (vendorMatch) {
-        billData.category = vendorMatch.category
-      }
+      // Step 4: Incasso register check
+      const incassoResult = await detectIncassoAgency(billData.vendor)
 
-      // Step 5: Incasso register check
-      const incassoResult = await detectIncasso(billData.vendor)
-      if (incassoResult.isIncasso) {
-        billData.is_incasso = true
-        billData.incasso_agency = incassoResult.agencyName
-      }
-
-      // Step 6: Dedup check (hash-based)
+      // Step 5: Dedup check (hash-based)
       const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
       const hash = createHash('sha256').update(raw).digest('hex').slice(0, 16)
 
@@ -203,7 +190,7 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 7: Insert the bill
+      // Step 6: Insert the bill
       const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
       const idBytes = randomBytes(12)
       const billId = Array.from(idBytes).map((b) => alphabet[b % alphabet.length]).join('')
@@ -226,6 +213,7 @@ export async function POST(request: NextRequest) {
         hash,
         payment_url: billData.payment_url,
         requires_review: (billData.confidence?.amount || 0) < 0.7,
+        bill_subtype: incassoResult.matched ? 'incasso' : undefined,
       })
 
       if (!insertError) {
