@@ -86,7 +86,7 @@ export async function GET() {
 
     dbChecks.outlook_oauth_states = stErr
       ? { status: 'ERROR', error: stErr.message, code: stErr.code }
-      : { status: 'OK', count: states?.length || 0, states: states?.map(s => ({ expires_at: s.expires_at, expired: new Date(s.expires_at) < new Date() })) };
+      : { status: 'OK', count: states?.length || 0, states: states?.map((s: { expires_at: string }) => ({ expires_at: s.expires_at, expired: new Date(s.expires_at) < new Date() })) };
 
     // Check bills source constraint
     const { data: sourceCheck, error: scErr } = await serviceClient
