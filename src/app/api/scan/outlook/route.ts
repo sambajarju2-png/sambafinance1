@@ -22,7 +22,7 @@ import {
   fetchAttachments,
   toUnifiedEmail,
 } from '@/lib/microsoft-graph'
-import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
+import { classifyEmail, extractBillFromEmail } from '@/lib/ai'
 import { lookupVendor } from '@/lib/vendor-lookup'
 import { detectIncassoAgency } from '@/lib/incasso-detect'
 import { sendPushToUser } from '@/lib/push'
