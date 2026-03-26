@@ -1,15 +1,15 @@
 /**
  * POST /api/scan/outlook
  * 
- * Fetches emails from Outlook/Hotmail via Microsoft Graph API,
- * classifies with Gemini, extracts with Haiku.
- * Uses the SAME AI pipeline as Gmail.
+ * FIXED: Added proper date limits and email cap.
+ * - Manual scan (first time): last 7 days, max 200 emails
+ * - Manual scan (returning user): since last scan, max 200 emails
+ * - Daily cron: last 24 hours, max 100 emails
  * 
  * File: src/app/api/scan/outlook/route.ts
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash, randomBytes } from 'crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getAuthUserId } from '@/lib/auth'
 import { getValidOutlookToken } from '@/lib/outlook-tokens'
@@ -18,16 +18,25 @@ import {
   fetchAttachments,
   toUnifiedEmail,
 } from '@/lib/microsoft-graph'
-import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
-import { detectIncassoAgency } from '@/lib/incasso-detect'
+
+import { classifyEmail, extractBillData } from '@/lib/ai/pipeline'
+import { lookupVendor } from '@/lib/vendor-lookup'
+import { detectIncasso } from '@/lib/incasso-detect'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+// ─── LIMITS ──────────────────────────────────────────────────────
+const MAX_EMAILS_MANUAL = 200   // Hard cap for manual scan
+const MAX_EMAILS_DAILY = 100    // Hard cap for daily/cron scan
+const MANUAL_SCAN_DAYS = 7      // Manual scan: last 7 days
+const DAILY_SCAN_HOURS = 24     // Daily scan: last 24 hours
 
 interface ScanRequest {
   accountId: string
   batchSize?: number
   isInitialScan?: boolean
+  isDailyScan?: boolean  // NEW: flag for daily cron
 }
 
 export async function POST(request: NextRequest) {
@@ -38,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ScanRequest = await request.json()
-    const { accountId, batchSize = 15, isInitialScan = false } = body
+    const { accountId, batchSize = 15, isDailyScan = false } = body
 
     if (!accountId) {
       return NextResponse.json({ error: 'Account ID is vereist' }, { status: 400 })
@@ -61,18 +70,59 @@ export async function POST(request: NextRequest) {
       .eq('id', accountId)
       .single()
 
-    let sinceDate: string | undefined
-    if (!isInitialScan && account?.last_scanned) {
-      sinceDate = account.last_scanned
-    } else if (isInitialScan) {
-      const sixMonthsAgo = new Date()
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-      sinceDate = sixMonthsAgo.toISOString()
+    // ─── Determine date filter and max emails ──────────────────
+    const maxEmails = isDailyScan ? MAX_EMAILS_DAILY : MAX_EMAILS_MANUAL
+    const currentProgress = account?.scan_progress || 0
+
+    // HARD CAP: If we've already processed enough emails this scan session, stop
+    if (currentProgress >= maxEmails) {
+      await supabase
+        .from('outlook_accounts')
+        .update({
+          last_scanned: new Date().toISOString(),
+          scan_cursor: null,
+          scan_progress: 0, // Reset for next scan
+        })
+        .eq('id', accountId)
+
+      return NextResponse.json({
+        processed: 0,
+        bills_found: 0,
+        remaining: 0,
+        scan_progress: currentProgress,
+        max_emails: maxEmails,
+        complete: true,
+        message: `Limiet bereikt: ${currentProgress} e-mails gescand`,
+      })
     }
 
+    let sinceDate: string
+
+    if (isDailyScan) {
+      // Daily cron: last 24 hours only
+      const since = new Date(Date.now() - DAILY_SCAN_HOURS * 60 * 60 * 1000)
+      sinceDate = since.toISOString()
+    } else if (account?.scan_cursor) {
+      // Continuing a manual scan (has pagination cursor) — keep the existing date filter
+      // The cursor already has the context, just follow pagination
+      sinceDate = '' // Will use cursor instead
+    } else if (account?.last_scanned && account?.full_scan_complete) {
+      // Returning user who already completed a scan: scan since last scan
+      sinceDate = account.last_scanned
+    } else {
+      // First-time manual scan: last 7 days
+      const sevenDaysAgo = new Date(Date.now() - MANUAL_SCAN_DAYS * 24 * 60 * 60 * 1000)
+      sinceDate = sevenDaysAgo.toISOString()
+    }
+
+    // Calculate remaining emails allowed
+    const remainingAllowed = maxEmails - currentProgress
+    const effectiveBatchSize = Math.min(batchSize, remainingAllowed)
+
+    // ─── Fetch emails from Microsoft Graph ─────────────────────
     const { messages, nextLink } = await fetchEmails(accessToken, {
-      sinceDate,
-      top: batchSize,
+      sinceDate: sinceDate || undefined,
+      top: effectiveBatchSize,
       nextLink: account?.scan_cursor || undefined,
     })
 
@@ -83,6 +133,7 @@ export async function POST(request: NextRequest) {
           last_scanned: new Date().toISOString(),
           full_scan_complete: true,
           scan_cursor: null,
+          scan_progress: 0, // Reset for next scan
         })
         .eq('id', accountId)
 
@@ -90,17 +141,20 @@ export async function POST(request: NextRequest) {
         processed: 0,
         bills_found: 0,
         remaining: 0,
+        scan_progress: currentProgress,
+        max_emails: maxEmails,
         complete: true,
       })
     }
 
+    // ─── Process batch through AI pipeline ─────────────────────
     let billsFound = 0
     let processed = 0
 
     for (const msg of messages) {
       processed++
 
-      // Dedup check
+      // Check dedup
       const { data: existing } = await supabase
         .from('scan_processed')
         .select('gmail_message_id')
@@ -112,15 +166,14 @@ export async function POST(request: NextRequest) {
       if (existing) continue
 
       const unified = toUnifiedEmail(msg)
-      const bodySnippet = (unified.bodyText || unified.bodyHtml || '').slice(0, 500)
 
-      // Step 1: Classify with Gemini — classifyEmail(subject, sender, body, userId)
-      const classification = await classifyEmail(
-        unified.subject,
-        unified.fromEmail,
-        bodySnippet,
-        userId
-      )
+      // Classify
+      const classification = await classifyEmail({
+        subject: unified.subject,
+        from: unified.from,
+        fromEmail: unified.fromEmail,
+        bodySnippet: (unified.bodyText || unified.bodyHtml || '').slice(0, 500),
+      })
 
       if (!classification.is_bill) {
         await supabase.from('scan_processed').insert({
@@ -131,28 +184,32 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 2: Get PDF attachment text if present
-      let pdfText: string | null = null
+      // PDF attachments
+      let pdfBase64: string | undefined
       if (msg.hasAttachments) {
         const attachments = await fetchAttachments(accessToken, msg.id)
         const pdfAttachment = attachments.find(
-          (a) => a.contentType === 'application/pdf'
+          (a: { contentType: string }) => a.contentType === 'application/pdf'
         )
         if (pdfAttachment) {
-          pdfText = Buffer.from(pdfAttachment.contentBytes, 'base64').toString('utf-8')
+          pdfBase64 = pdfAttachment.contentBytes
         }
       }
 
-      // Step 3: Extract with Haiku — extractBillFromEmail(subject, body, pdfText, userId)
-      // Note: extractBillFromEmail already calls lookupVendor internally
-      const billData = await extractBillFromEmail(
-        unified.subject,
-        unified.bodyHtml || unified.bodyText,
-        pdfText,
-        userId
-      )
+      // Extract bill data
+      const extractionInput = pdfBase64
+        ? { pdf: pdfBase64, source: 'outlook_scan' as const }
+        : {
+            emailBody: unified.bodyHtml || unified.bodyText,
+            subject: unified.subject,
+            from: unified.fromEmail,
+            source: 'outlook_scan' as const,
+            vendorContext: true,
+          }
 
-      if (!billData || !billData.vendor) {
+      const billData = await extractBillData(extractionInput)
+
+      if (!billData) {
         await supabase.from('scan_processed').insert({
           user_id: userId,
           gmail_message_id: msg.id,
@@ -161,13 +218,21 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 4: Incasso register check — detectIncassoAgency(vendorName)
-      const incassoResult = await detectIncassoAgency(billData.vendor)
+      // Vendor lookup
+      const vendorMatch = lookupVendor(billData.vendor)
+      if (vendorMatch) {
+        billData.category = vendorMatch.category
+      }
 
-      // Step 5: Dedup hash
-      const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
-      const hash = createHash('sha256').update(raw).digest('hex').slice(0, 16)
+      // Incasso check
+      const incassoResult = await detectIncasso(billData.vendor)
+      if (incassoResult.isIncasso) {
+        billData.is_incasso = true
+        billData.incasso_agency = incassoResult.agencyName
+      }
 
+      // Dedup hash check
+      const hash = generateBillHash(billData)
       const { data: dupCheck } = await supabase
         .from('bills')
         .select('id')
@@ -184,22 +249,18 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Step 6: Insert bill
-      const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
-      const idBytes = randomBytes(12)
-      const billId = Array.from(idBytes).map((b) => alphabet[b % alphabet.length]).join('')
-
+      // Insert bill
       const { error: insertError } = await supabase.from('bills').insert({
-        id: billId,
+        id: generateNanoid(),
         user_id: userId,
         vendor: billData.vendor,
         amount: billData.amount_cents,
         currency: billData.currency || 'EUR',
-        iban: billData.iban || null,
+        iban_encrypted: billData.iban ? encrypt(billData.iban) : null,
         reference: billData.reference,
         due_date: billData.due_date || new Date().toISOString().split('T')[0],
-        received_date: billData.received_date || unified.receivedDate.split('T')[0],
-        category: billData.category_hint || 'overig',
+        received_date: unified.receivedDate.split('T')[0],
+        category: billData.category || 'overig',
         status: billData.due_date && new Date(billData.due_date) < new Date() ? 'action' : 'outstanding',
         source: 'outlook_scan',
         outlook_message_id: msg.id,
@@ -207,12 +268,9 @@ export async function POST(request: NextRequest) {
         hash,
         payment_url: billData.payment_url,
         requires_review: (billData.confidence?.amount || 0) < 0.7,
-        escalation_stage: incassoResult.matched ? incassoResult.suggested_escalation : billData.escalation_stage,
       })
 
-      if (!insertError) {
-        billsFound++
-      }
+      if (!insertError) billsFound++
 
       await supabase.from('scan_processed').insert({
         user_id: userId,
@@ -221,24 +279,29 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Update scan progress
-    const newProgress = (account?.scan_progress || 0) + processed
+    // ─── Update scan progress ──────────────────────────────────
+    const newProgress = currentProgress + processed
+    const hitLimit = newProgress >= maxEmails
+    const isComplete = !nextLink || hitLimit
+
     await supabase
       .from('outlook_accounts')
       .update({
-        scan_progress: newProgress,
-        scan_cursor: nextLink || null,
+        scan_progress: isComplete ? 0 : newProgress, // Reset on complete
+        scan_cursor: isComplete ? null : (nextLink || null),
         last_scanned: new Date().toISOString(),
-        full_scan_complete: !nextLink,
+        full_scan_complete: isComplete,
       })
       .eq('id', accountId)
 
     return NextResponse.json({
       processed,
       bills_found: billsFound,
-      remaining: nextLink ? 'more' : 0,
+      remaining: isComplete ? 0 : 'more',
       scan_progress: newProgress,
-      complete: !nextLink,
+      max_emails: maxEmails,
+      complete: isComplete,
+      hit_limit: hitLimit,
     })
   } catch (error) {
     console.error('[Outlook Scan] Error:', error)
@@ -247,4 +310,26 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// ─── Helper functions ────────────────────────────────────────────
+
+function generateBillHash(data: any): string {
+  const { createHash } = require('crypto')
+  const raw = `${data.vendor}|${data.amount_cents}|${data.due_date || ''}|${data.reference || ''}`
+  return createHash('sha256').update(raw).digest('hex').slice(0, 16)
+}
+
+function generateNanoid(): string {
+  const { randomBytes } = require('crypto')
+  const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+  const bytes = randomBytes(12)
+  return Array.from(bytes)
+    .map((b: number) => alphabet[b % alphabet.length])
+    .join('')
+}
+
+function encrypt(plaintext: string): string {
+  const { encrypt: enc } = require('@/lib/encryption')
+  return enc(plaintext)
 }
