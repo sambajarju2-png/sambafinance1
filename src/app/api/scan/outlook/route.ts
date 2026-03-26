@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
       // ✅ lookupVendor is async — must await
       const vendorMatch = await lookupVendor(billData.vendor)
       if (vendorMatch) {
-        billData.category_hint = vendorMatch.category
+        billData.category_hint = vendorMatch.category || billData.category_hint
       }
 
       // ✅ detectIncassoAgency (NOT detectIncasso)
