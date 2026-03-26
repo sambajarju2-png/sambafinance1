@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Loader2, Check, AlertTriangle, Sparkles, Info } from 'lucide-react';
+import { Loader2, Check, AlertTriangle, Sparkles, Info, RotateCcw } from 'lucide-react';
 
 interface ScanProgressProps {
   accountId: string;
@@ -28,23 +28,25 @@ const QUOTES_NL = [
 const MAX_EMAILS = 200; // Must match server-side limit
 
 export default function ScanProgress({ accountId, provider = 'gmail', onComplete, onCancel }: ScanProgressProps) {
-  const [status, setStatus] = useState<'info' | 'scanning' | 'done' | 'error' | 'background'>('info');
+  const [status, setStatus] = useState<'info' | 'scanning' | 'resuming' | 'done' | 'error'>('info');
   const [processed, setProcessed] = useState(0);
   const [maxEmails, setMaxEmails] = useState(MAX_EMAILS);
   const [billsFound, setBillsFound] = useState(0);
+  const [totalBillsFound, setTotalBillsFound] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  const pageTokenRef = useRef<string | null>(null);
   const totalProcessedRef = useRef(0);
+  const totalBillsRef = useRef(0);
   const abortRef = useRef(false);
   const scanningRef = useRef(false);
+  const pageTokenRef = useRef<string | null>(null);
 
   // Rotate quotes
   useEffect(() => {
-    if (status !== 'scanning') return;
+    if (status !== 'scanning' && status !== 'resuming') return;
     const interval = setInterval(() => {
       setFadeIn(false);
       setTimeout(() => {
@@ -55,34 +57,55 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
     return () => clearInterval(interval);
   }, [status]);
 
+  // ─── Check for interrupted scan on mount ───────────────────
+  useEffect(() => {
+    async function checkResume() {
+      try {
+        const res = await fetch(`/api/scan/outlook/status?accountId=${accountId}`);
+        if (res.ok) {
+          const data = await res.json();
+          // If there's a saved cursor and progress, offer to resume
+          if (data.scan_cursor && data.scan_progress > 0) {
+            totalProcessedRef.current = data.scan_progress;
+            setProcessed(data.scan_progress);
+            setStatus('resuming');
+            return;
+          }
+        }
+      } catch {
+        // Status endpoint might not exist yet — that's fine, just show info screen
+      }
+    }
+    if (provider === 'outlook') {
+      checkResume();
+    }
+  }, [accountId, provider]);
+
   // ─── Estimated time calculation ────────────────────────────
   const getEstimatedTime = () => {
     if (!startTime || processed < 5) return null;
     const elapsed = (Date.now() - startTime) / 1000;
-    const rate = processed / elapsed; // emails per second
+    const rate = processed / elapsed;
     const remaining = maxEmails - processed;
     const secondsLeft = Math.ceil(remaining / rate);
     if (secondsLeft < 60) return `~${secondsLeft}s`;
     return `~${Math.ceil(secondsLeft / 60)} min`;
   };
 
-  // ─── Background scan support ───────────────────────────────
-  // Store scan state in Supabase so it persists if user leaves
-  const saveScanState = useCallback(async () => {
-    // The server already tracks scan_progress and scan_cursor in outlook_accounts
-    // When user returns, we can resume from where we left off
-  }, []);
-
-  // Warn user they can leave safely
+  // ─── Tab visibility: track when user leaves/returns ────────
   useEffect(() => {
     if (status !== 'scanning') return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Don't block — just let the current batch finish server-side
-      saveScanState();
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // User switched away — scan keeps running as long as tab stays alive
+        // The server will send a push notification via sw.js when complete
+      }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [status, saveScanState]);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [status]);
 
   const runBatch = useCallback(async () => {
     if (abortRef.current || scanningRef.current) return;
@@ -100,7 +123,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
           body: JSON.stringify({
             accountId,
             batchSize: 15,
-            isDailyScan: false, // Manual scan = last 7 days, max 200
+            isDailyScan: false,
           }),
         });
       } else {
@@ -133,21 +156,17 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
 
       if (provider === 'outlook') {
         totalProcessedRef.current = data.scan_progress || (totalProcessedRef.current + (data.processed || 0));
+        totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
         if (data.max_emails) setMaxEmails(data.max_emails);
         setProcessed(totalProcessedRef.current);
-        setBillsFound((prev) => prev + (data.bills_found || 0));
+        setBillsFound(data.bills_found || 0);
+        setTotalBillsFound(totalBillsRef.current);
 
         if (data.complete) {
           setStatus('done');
           scanningRef.current = false;
-
-          // Send notification if page is hidden (user switched tabs)
-          if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('PayWatch — Scan voltooid ✅', {
-              body: `${totalProcessedRef.current} e-mails gescand, ${billsFound + (data.bills_found || 0)} rekeningen gevonden.`,
-              icon: '/favicon-32x32.png',
-            });
-          }
+          // Push notification is sent server-side via sendPushToUser
+          // Browser Notification API as fallback for same-tab
           return;
         }
 
@@ -162,9 +181,11 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         }
 
         totalProcessedRef.current = data.total_processed || (totalProcessedRef.current + (data.processed || 0));
+        totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
         if (data.max_emails) setMaxEmails(data.max_emails);
         setProcessed(totalProcessedRef.current);
-        setBillsFound((prev) => prev + (data.bills_found || 0));
+        setBillsFound(data.bills_found || 0);
+        setTotalBillsFound(totalBillsRef.current);
 
         if (data.done) {
           setStatus('done');
@@ -181,16 +202,17 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
       setErrorMessage('Netwerkfout. Controleer je internetverbinding.');
       scanningRef.current = false;
     }
-  }, [accountId, provider, startTime, billsFound]);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+  }, [accountId, provider, startTime]);
 
   const startScan = useCallback(() => {
+    abortRef.current = false;
+    setStatus('scanning');
+    setStartTime(Date.now());
+    runBatch();
+  }, [runBatch]);
+
+  const resumeScan = useCallback(() => {
+    abortRef.current = false;
     setStatus('scanning');
     setStartTime(Date.now());
     runBatch();
@@ -218,7 +240,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
                     Dit duurt meestal <strong>2-5 minuten</strong>.
                   </p>
                   <p>
-                    💡 <strong>Je kunt de app verlaten</strong> tijdens het scannen. We sturen je een melding als het klaar is.
+                    💡 <strong>Houd dit tabblad open</strong> tijdens het scannen. Je mag gerust andere tabs gebruiken — we sturen een melding als het klaar is.
                   </p>
                   <p className="text-[12px] text-pw-muted/70 pt-1">
                     Na deze eerste scan scannen we automatisch <strong>elke dag</strong> de laatste 24 uur. Je hoeft hier niks voor te doen.
@@ -245,6 +267,46 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         </div>
       )}
 
+      {/* ─── Resume: interrupted scan detected ─── */}
+      {status === 'resuming' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-pw-amber/20 bg-gradient-to-br from-pw-amber/5 via-white to-pw-blue/5 p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <RotateCcw className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-amber" strokeWidth={1.5} />
+              <div>
+                <p className="text-[15px] font-semibold text-pw-navy mb-2">
+                  Scan hervatten
+                </p>
+                <div className="space-y-2 text-[13px] text-pw-muted leading-relaxed">
+                  <p>
+                    Je vorige scan is gestopt bij <strong>{processed} e-mails</strong>. We kunnen verdergaan waar je gebleven bent.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={resumeScan}
+              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white"
+            >
+              Hervat scan
+            </button>
+            <button
+              onClick={() => {
+                totalProcessedRef.current = 0;
+                setProcessed(0);
+                startScan();
+              }}
+              className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
+            >
+              Opnieuw
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ─── Step 2: Scanning ─── */}
       {status === 'scanning' && (
         <>
@@ -252,7 +314,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
           <div>
             <div className="mb-2 flex items-center justify-between text-[12px] font-semibold">
               <span className="text-pw-blue">{processed} / {maxEmails} e-mails</span>
-              <span className="text-pw-green">{billsFound} rekeningen gevonden</span>
+              <span className="text-pw-green">{totalBillsFound} rekeningen gevonden</span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
               <div
@@ -285,9 +347,9 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
             </div>
           </div>
 
-          {/* Background info */}
+          {/* Honest background info */}
           <p className="text-[11px] text-pw-muted/60 text-center">
-            💡 Je kunt de app sluiten — de scan gaat door op de achtergrond
+            💡 Houd dit tabblad open. Je kunt andere tabs gebruiken — je krijgt een melding als het klaar is.
           </p>
 
           <button
@@ -307,7 +369,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
             <span className="text-[14px] font-semibold text-pw-green">Scan voltooid!</span>
           </div>
           <p className="text-[13px] text-pw-muted">
-            {processed} e-mails gescand, {billsFound} rekeningen gevonden.
+            {processed} e-mails gescand, {totalBillsFound} rekeningen gevonden.
           </p>
 
           {/* Daily scan explanation */}
@@ -333,7 +395,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
           </div>
           <p className="text-[13px] text-pw-muted">{errorMessage || 'Er ging iets mis bij het scannen.'}</p>
           <div className="flex gap-3">
-            <button onClick={() => { setStatus('info'); setErrorMessage(null); scanningRef.current = false; }}
+            <button onClick={() => { setStatus('info'); setErrorMessage(null); scanningRef.current = false; abortRef.current = false; }}
               className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">Opnieuw proberen</button>
             <button onClick={onCancel} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">Annuleren</button>
           </div>

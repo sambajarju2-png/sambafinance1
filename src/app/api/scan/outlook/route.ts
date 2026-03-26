@@ -1,12 +1,21 @@
 /**
  * POST /api/scan/outlook
  * 
- * FIXED: Added proper date limits and email cap.
+ * FIXED: Correct imports + date limits + email cap + push notification on complete.
  * - Manual scan (first time): last 7 days, max 200 emails
  * - Manual scan (returning user): since last scan, max 200 emails
  * - Daily cron: last 24 hours, max 100 emails
+ * - Sends push notification when scan finishes (works even if user switched tabs)
  * 
  * File: src/app/api/scan/outlook/route.ts
+ * 
+ * CHANGES from broken version:
+ *   1. extractBillData → extractBillFromEmail (correct export name)
+ *   2. detectIncasso → detectIncassoAgency (correct export name)
+ *   3. .isIncasso → .matched (correct IncassoMatch property)
+ *   4. .agencyName → .agency_name (correct IncassoMatch property)
+ *   5. Added sendPushToUser on scan completion
+ *   6. lookupVendor now awaited (it's async)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -19,9 +28,11 @@ import {
   toUnifiedEmail,
 } from '@/lib/microsoft-graph'
 
-import { classifyEmail, extractBillData } from '@/lib/ai/pipeline'
+// ✅ FIXED: correct export names
+import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
 import { lookupVendor } from '@/lib/vendor-lookup'
-import { detectIncasso } from '@/lib/incasso-detect'
+import { detectIncassoAgency } from '@/lib/incasso-detect'
+import { sendPushToUser } from '@/lib/push'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -35,8 +46,7 @@ const DAILY_SCAN_HOURS = 24     // Daily scan: last 24 hours
 interface ScanRequest {
   accountId: string
   batchSize?: number
-  isInitialScan?: boolean
-  isDailyScan?: boolean  // NEW: flag for daily cron
+  isDailyScan?: boolean
 }
 
 export async function POST(request: NextRequest) {
@@ -81,7 +91,7 @@ export async function POST(request: NextRequest) {
         .update({
           last_scanned: new Date().toISOString(),
           scan_cursor: null,
-          scan_progress: 0, // Reset for next scan
+          scan_progress: 0,
         })
         .eq('id', accountId)
 
@@ -99,23 +109,17 @@ export async function POST(request: NextRequest) {
     let sinceDate: string
 
     if (isDailyScan) {
-      // Daily cron: last 24 hours only
       const since = new Date(Date.now() - DAILY_SCAN_HOURS * 60 * 60 * 1000)
       sinceDate = since.toISOString()
     } else if (account?.scan_cursor) {
-      // Continuing a manual scan (has pagination cursor) — keep the existing date filter
-      // The cursor already has the context, just follow pagination
       sinceDate = '' // Will use cursor instead
     } else if (account?.last_scanned && account?.full_scan_complete) {
-      // Returning user who already completed a scan: scan since last scan
       sinceDate = account.last_scanned
     } else {
-      // First-time manual scan: last 7 days
       const sevenDaysAgo = new Date(Date.now() - MANUAL_SCAN_DAYS * 24 * 60 * 60 * 1000)
       sinceDate = sevenDaysAgo.toISOString()
     }
 
-    // Calculate remaining emails allowed
     const remainingAllowed = maxEmails - currentProgress
     const effectiveBatchSize = Math.min(batchSize, remainingAllowed)
 
@@ -133,9 +137,17 @@ export async function POST(request: NextRequest) {
           last_scanned: new Date().toISOString(),
           full_scan_complete: true,
           scan_cursor: null,
-          scan_progress: 0, // Reset for next scan
+          scan_progress: 0,
         })
         .eq('id', accountId)
+
+      // Push notification: scan complete (no new emails found)
+      sendPushToUser(userId, {
+        title: 'Scan voltooid ✅',
+        body: `${currentProgress} e-mails gescand. Geen nieuwe e-mails gevonden.`,
+        tag: 'paywatch-scan-complete',
+        url: '/betalingen',
+      }).catch(() => {}) // fire-and-forget
 
       return NextResponse.json({
         processed: 0,
@@ -196,7 +208,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Extract bill data
+      // ✅ FIXED: extractBillData → extractBillFromEmail
       const extractionInput = pdfBase64
         ? { pdf: pdfBase64, source: 'outlook_scan' as const }
         : {
@@ -207,7 +219,7 @@ export async function POST(request: NextRequest) {
             vendorContext: true,
           }
 
-      const billData = await extractBillData(extractionInput)
+      const billData = await extractBillFromEmail(extractionInput)
 
       if (!billData) {
         await supabase.from('scan_processed').insert({
@@ -218,17 +230,18 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // Vendor lookup
-      const vendorMatch = lookupVendor(billData.vendor)
+      // ✅ FIXED: await added (async function)
+      const vendorMatch = await lookupVendor(billData.vendor)
       if (vendorMatch) {
         billData.category = vendorMatch.category
       }
 
-      // Incasso check
-      const incassoResult = await detectIncasso(billData.vendor)
-      if (incassoResult.isIncasso) {
+      // ✅ FIXED: detectIncasso → detectIncassoAgency
+      // ✅ FIXED: .isIncasso → .matched, .agencyName → .agency_name
+      const incassoResult = await detectIncassoAgency(billData.vendor)
+      if (incassoResult.matched) {
         billData.is_incasso = true
-        billData.incasso_agency = incassoResult.agencyName
+        billData.incasso_agency = incassoResult.agency_name
       }
 
       // Dedup hash check
@@ -287,12 +300,22 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('outlook_accounts')
       .update({
-        scan_progress: isComplete ? 0 : newProgress, // Reset on complete
+        scan_progress: isComplete ? 0 : newProgress,
         scan_cursor: isComplete ? null : (nextLink || null),
         last_scanned: new Date().toISOString(),
         full_scan_complete: isComplete,
       })
       .eq('id', accountId)
+
+    // ─── Push notification on scan completion ──────────────────
+    if (isComplete) {
+      sendPushToUser(userId, {
+        title: 'Scan voltooid ✅',
+        body: `${newProgress} e-mails gescand, ${billsFound} rekening${billsFound !== 1 ? 'en' : ''} gevonden.`,
+        tag: 'paywatch-scan-complete',
+        url: '/betalingen',
+      }).catch(() => {}) // fire-and-forget, don't block response
+    }
 
     return NextResponse.json({
       processed,
