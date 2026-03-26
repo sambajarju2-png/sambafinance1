@@ -422,7 +422,7 @@ function generateNanoid(): string {
   const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
   const bytes = randomBytes(12)
   return Array.from(bytes)
-    .map((b: number) => alphabet[b % alphabet.length])
+    .map((b: any) => alphabet[b % alphabet.length])
     .join('')
 }
 
