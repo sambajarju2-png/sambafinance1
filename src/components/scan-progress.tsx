@@ -1,33 +1,50 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Loader2, Check, AlertTriangle, Sparkles, Info, RotateCcw } from 'lucide-react';
+import {
+  Loader2, Check, AlertTriangle, Sparkles, Info, RotateCcw,
+  Bell, Monitor, Clock, ArrowRight, Zap, Heart, Target, Eye,
+  Shield, Lightbulb, Compass, Leaf,
+} from 'lucide-react';
 
 interface ScanProgressProps {
   accountId: string;
   provider?: 'gmail' | 'outlook';
+  language?: 'nl' | 'en';
   onComplete: () => void;
   onCancel: () => void;
 }
 
-const QUOTES_NL = [
-  { text: 'Financiële rust begint met overzicht.', emoji: '🧘' },
-  { text: 'Elke betaalde rekening is een stap vooruit.', emoji: '🚶' },
-  { text: 'Je bent al bezig — dat is het belangrijkste.', emoji: '💪' },
-  { text: 'Schulden voorkomen is beter dan genezen.', emoji: '🛡️' },
-  { text: 'Kleine stappen, groot resultaat.', emoji: '🌱' },
-  { text: 'Je financiën onder controle = rust in je hoofd.', emoji: '☁️' },
-  { text: 'Kennis is macht. Overzicht is rust.', emoji: '📊' },
-  { text: 'Iedere reis begint met een eerste stap.', emoji: '✨' },
-  { text: 'Je toekomstige zelf zal je dankbaar zijn.', emoji: '🙏' },
-  { text: 'Grip op je geld = grip op je leven.', emoji: '🎯' },
-  { text: 'Ademen. Overzicht krijgen. Actie nemen.', emoji: '🌊' },
-  { text: 'Een helder overzicht is het halve werk.', emoji: '📋' },
+interface Quote {
+  text: { nl: string; en: string };
+  Icon: React.ElementType;
+}
+
+const QUOTES: Quote[] = [
+  { text: { nl: 'Financiële rust begint met overzicht.', en: 'Financial peace starts with overview.' }, Icon: Eye },
+  { text: { nl: 'Elke betaalde rekening is een stap vooruit.', en: 'Every paid bill is a step forward.' }, Icon: ArrowRight },
+  { text: { nl: 'Je bent al bezig — dat is het belangrijkste.', en: 'You\'re already on it — that\'s what matters.' }, Icon: Zap },
+  { text: { nl: 'Schulden voorkomen is beter dan genezen.', en: 'Preventing debt is better than curing it.' }, Icon: Shield },
+  { text: { nl: 'Kleine stappen, groot resultaat.', en: 'Small steps, big results.' }, Icon: Leaf },
+  { text: { nl: 'Je financiën onder controle = rust in je hoofd.', en: 'Finances under control = peace of mind.' }, Icon: Compass },
+  { text: { nl: 'Kennis is macht. Overzicht is rust.', en: 'Knowledge is power. Overview is calm.' }, Icon: Lightbulb },
+  { text: { nl: 'Iedere reis begint met een eerste stap.', en: 'Every journey starts with a first step.' }, Icon: Target },
+  { text: { nl: 'Je toekomstige zelf zal je dankbaar zijn.', en: 'Your future self will thank you.' }, Icon: Heart },
+  { text: { nl: 'Grip op je geld = grip op je leven.', en: 'Control your money = control your life.' }, Icon: Target },
 ];
 
 const MAX_EMAILS = 200;
 
-export default function ScanProgress({ accountId, provider = 'gmail', onComplete, onCancel }: ScanProgressProps) {
+function detectLanguage(): 'nl' | 'en' {
+  if (typeof document === 'undefined') return 'nl';
+  const cookie = document.cookie.match(/paywatch-locale=(nl|en)/);
+  return (cookie?.[1] as 'nl' | 'en') || 'nl';
+}
+
+export default function ScanProgress({ accountId, provider = 'gmail', language, onComplete, onCancel }: ScanProgressProps) {
+  const lang = language || detectLanguage();
+  const isNl = lang === 'nl';
+
   const [status, setStatus] = useState<'info' | 'resuming' | 'scanning' | 'done' | 'error'>('info');
   const [processed, setProcessed] = useState(0);
   const [maxEmails, setMaxEmails] = useState(MAX_EMAILS);
@@ -50,7 +67,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
     const interval = setInterval(() => {
       setFadeIn(false);
       setTimeout(() => {
-        setQuoteIdx((prev) => (prev + 1) % QUOTES_NL.length);
+        setQuoteIdx((prev) => (prev + 1) % QUOTES.length);
         setFadeIn(true);
       }, 400);
     }, 5000);
@@ -60,58 +77,43 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
   // ─── Check for interrupted scan on mount ───────────────────
   useEffect(() => {
     if (provider !== 'outlook') return;
-
     async function checkResume() {
       try {
         const res = await fetch(`/api/scan/outlook/status?accountId=${accountId}`);
         if (!res.ok) return;
         const data = await res.json();
-
         if (data.is_active && data.scan_progress > 0) {
           totalProcessedRef.current = data.scan_progress;
           setProcessed(data.scan_progress);
-
           if (data.is_background) {
-            // Background chain is still running — go to scanning view and poll
             setStatus('scanning');
             setBackgroundRunning(true);
           } else {
-            // Scan was interrupted — offer to resume
             setStatus('resuming');
           }
         }
-      } catch {
-        // Status endpoint unavailable — show normal info screen
-      }
+      } catch { /* status endpoint unavailable */ }
     }
-
     checkResume();
   }, [accountId, provider]);
 
   // ─── Poll status when background chain is running ──────────
   useEffect(() => {
     if (!backgroundRunning || status !== 'scanning') return;
-
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/scan/outlook/status?accountId=${accountId}`);
         if (!res.ok) return;
         const data = await res.json();
-
         totalProcessedRef.current = data.scan_progress || totalProcessedRef.current;
         setProcessed(data.scan_progress || 0);
-
-        // Scan finished (no more cursor)
         if (!data.is_active && data.full_scan_complete) {
           setStatus('done');
           setBackgroundRunning(false);
           clearInterval(interval);
         }
-      } catch {
-        // Network error — keep polling
-      }
+      } catch { /* keep polling */ }
     }, 2000);
-
     return () => clearInterval(interval);
   }, [backgroundRunning, status, accountId]);
 
@@ -130,21 +132,15 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
   const runBatch = useCallback(async () => {
     if (abortRef.current || scanningRef.current) return;
     scanningRef.current = true;
-
     if (!startTime) setStartTime(Date.now());
 
     try {
       let res: Response;
-
       if (provider === 'outlook') {
         res = await fetch('/api/scan/outlook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accountId,
-            batchSize: 15,
-            isDailyScan: false,
-          }),
+          body: JSON.stringify({ accountId, batchSize: 15, isDailyScan: false }),
         });
       } else {
         res = await fetch('/api/gmail/scan', {
@@ -162,7 +158,9 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         const data = await res.json().catch(() => ({}));
         if (data.needs_reauth) {
           setStatus('error');
-          setErrorMessage('Je Outlook-account moet opnieuw verbonden worden.');
+          setErrorMessage(isNl
+            ? 'Je account moet opnieuw verbonden worden.'
+            : 'Your account needs to be reconnected.');
           scanningRef.current = false;
           return;
         }
@@ -175,13 +173,11 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
       const data = await res.json();
 
       if (provider === 'outlook') {
-        // If locked (background chain is processing), just poll status
         if (data.locked) {
           setBackgroundRunning(true);
           scanningRef.current = false;
-          return; // Status polling effect will take over
+          return;
         }
-
         totalProcessedRef.current = data.scan_progress || (totalProcessedRef.current + (data.processed || 0));
         totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
         if (data.max_emails) setMaxEmails(data.max_emails);
@@ -191,22 +187,16 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         if (data.complete) {
           setStatus('done');
           scanningRef.current = false;
-          // Push notification sent server-side — no browser Notification needed
           return;
         }
-
-        // The server fires a background self-chain automatically.
-        // We also poll from client for live progress updates.
         scanningRef.current = false;
         if (!abortRef.current) setTimeout(() => runBatch(), 800);
       } else {
-        // Gmail
         if (data.timeout) {
           scanningRef.current = false;
           if (!abortRef.current) setTimeout(() => runBatch(), 1000);
           return;
         }
-
         totalProcessedRef.current = data.total_processed || (totalProcessedRef.current + (data.processed || 0));
         totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
         if (data.max_emails) setMaxEmails(data.max_emails);
@@ -218,17 +208,16 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
           scanningRef.current = false;
           return;
         }
-
         pageTokenRef.current = data.page_token || null;
         scanningRef.current = false;
         if (!abortRef.current) setTimeout(() => runBatch(), 600);
       }
     } catch {
       setStatus('error');
-      setErrorMessage('Netwerkfout. Controleer je internetverbinding.');
+      setErrorMessage(isNl ? 'Netwerkfout. Controleer je internetverbinding.' : 'Network error. Check your connection.');
       scanningRef.current = false;
     }
-  }, [accountId, provider, startTime]);
+  }, [accountId, provider, startTime, isNl]);
 
   const startScan = useCallback(() => {
     abortRef.current = false;
@@ -247,13 +236,14 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
   }, [runBatch]);
 
   const progressPercent = Math.min((processed / maxEmails) * 100, 98);
-  const currentQuote = QUOTES_NL[quoteIdx];
+  const currentQuote = QUOTES[quoteIdx];
   const estimatedTime = getEstimatedTime();
+  const providerName = provider === 'outlook' ? 'Outlook' : 'Gmail';
 
   return (
     <div className="space-y-5">
 
-      {/* ─── Info screen (before scan starts) ─── */}
+      {/* ─── Info screen ─── */}
       {status === 'info' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-pw-blue/20 bg-gradient-to-br from-pw-blue/5 via-white to-pw-green/5 p-5">
@@ -261,36 +251,41 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
               <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-blue" strokeWidth={1.5} />
               <div>
                 <p className="text-[15px] font-semibold text-pw-navy mb-2">
-                  {provider === 'outlook' ? 'Outlook inbox scannen' : 'Gmail inbox scannen'}
+                  {isNl ? `${providerName} inbox scannen` : `Scan ${providerName} inbox`}
                 </p>
-                <div className="space-y-2 text-[13px] text-pw-muted leading-relaxed">
+                <div className="space-y-3 text-[13px] text-pw-muted leading-relaxed">
                   <p>
-                    We scannen je e-mails van de <strong>laatste 7 dagen</strong> (maximaal {MAX_EMAILS} e-mails).
-                    Dit duurt meestal <strong>2-5 minuten</strong>.
+                    {isNl
+                      ? <>We scannen je e-mails van de <strong>laatste 7 dagen</strong> (maximaal {MAX_EMAILS} e-mails). Dit duurt meestal <strong>2-5 minuten</strong>.</>
+                      : <>We'll scan your emails from the <strong>last 7 days</strong> (up to {MAX_EMAILS} emails). This usually takes <strong>2-5 minutes</strong>.</>}
                   </p>
-                  <p>
-                    💡 <strong>Je kunt de app verlaten</strong> tijdens het scannen — de scan gaat door op de server en je krijgt een melding als het klaar is.
-                  </p>
-                  <p className="text-[12px] text-pw-muted/70 pt-1">
-                    Na deze eerste scan scannen we automatisch <strong>elke dag</strong> de laatste 24 uur. Je hoeft hier niks voor te doen.
-                  </p>
+                  <div className="flex items-start gap-2">
+                    <Monitor className="mt-0.5 h-4 w-4 flex-shrink-0 text-pw-blue/60" strokeWidth={1.5} />
+                    <p>
+                      {isNl
+                        ? <><strong>Je kunt de app verlaten</strong> tijdens het scannen. De scan gaat door op de server en je krijgt een melding als het klaar is.</>
+                        : <><strong>You can leave the app</strong> while scanning. The scan continues on the server and you'll get a notification when it's done.</>}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2 text-[12px] text-pw-muted/70">
+                    <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-pw-muted/40" strokeWidth={1.5} />
+                    <p>
+                      {isNl
+                        ? <>Na deze eerste scan scannen we automatisch <strong>elke dag</strong> de laatste 24 uur. Je hoeft hier niks voor te doen.</>
+                        : <>After this first scan, we automatically scan the <strong>last 24 hours every day</strong>. No action needed on your end.</>}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button
-              onClick={startScan}
-              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white"
-            >
-              Start scan
+            <button onClick={startScan} className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
+              {isNl ? 'Start scan' : 'Start scan'}
             </button>
-            <button
-              onClick={onCancel}
-              className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
-            >
-              Annuleren
+            <button onClick={onCancel} className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
+              {isNl ? 'Annuleren' : 'Cancel'}
             </button>
           </div>
         </div>
@@ -304,33 +299,26 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
               <RotateCcw className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-amber" strokeWidth={1.5} />
               <div>
                 <p className="text-[15px] font-semibold text-pw-navy mb-2">
-                  Scan hervatten
+                  {isNl ? 'Scan hervatten' : 'Resume scan'}
                 </p>
                 <p className="text-[13px] text-pw-muted leading-relaxed">
-                  Je vorige scan is gestopt bij <strong>{processed} e-mails</strong>. We gaan verder waar je gebleven bent.
+                  {isNl
+                    ? <>Je vorige scan is gestopt bij <strong>{processed} e-mails</strong>. We gaan verder waar je gebleven bent.</>
+                    : <>Your previous scan stopped at <strong>{processed} emails</strong>. We'll continue where you left off.</>}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button
-              onClick={resumeScan}
-              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white"
-            >
-              Hervat scan
+            <button onClick={resumeScan} className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
+              {isNl ? 'Hervat scan' : 'Resume scan'}
             </button>
             <button
-              onClick={() => {
-                totalProcessedRef.current = 0;
-                totalBillsRef.current = 0;
-                setProcessed(0);
-                setTotalBillsFound(0);
-                startScan();
-              }}
+              onClick={() => { totalProcessedRef.current = 0; totalBillsRef.current = 0; setProcessed(0); setTotalBillsFound(0); startScan(); }}
               className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
             >
-              Opnieuw
+              {isNl ? 'Opnieuw' : 'Restart'}
             </button>
           </div>
         </div>
@@ -339,11 +327,14 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
       {/* ─── Scanning ─── */}
       {status === 'scanning' && (
         <>
-          {/* Progress bar */}
           <div>
             <div className="mb-2 flex items-center justify-between text-[12px] font-semibold">
-              <span className="text-pw-blue">{processed} / {maxEmails} e-mails</span>
-              <span className="text-pw-green">{totalBillsFound} rekeningen gevonden</span>
+              <span className="text-pw-blue">
+                {processed} / {maxEmails} {isNl ? 'e-mails' : 'emails'}
+              </span>
+              <span className="text-pw-green">
+                {totalBillsFound} {isNl ? 'rekeningen gevonden' : 'bills found'}
+              </span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
               <div
@@ -353,7 +344,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
             </div>
             {estimatedTime && !backgroundRunning && (
               <p className="mt-1 text-[11px] text-pw-muted">
-                Geschatte resterende tijd: {estimatedTime}
+                {isNl ? 'Geschatte resterende tijd:' : 'Estimated time remaining:'} {estimatedTime}
               </p>
             )}
           </div>
@@ -363,32 +354,40 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
             <div className="flex items-start gap-3">
               <Sparkles className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-blue/60" strokeWidth={1.5} />
               <div className={`transition-opacity duration-400 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
-                <p className="text-[15px] font-semibold leading-relaxed text-pw-navy">
-                  {currentQuote.emoji} {currentQuote.text}
-                </p>
+                <div className="flex items-center gap-2">
+                  <currentQuote.Icon className="h-4 w-4 text-pw-blue/40" strokeWidth={1.5} />
+                  <p className="text-[15px] font-semibold leading-relaxed text-pw-navy">
+                    {currentQuote.text[lang]}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-pw-blue/50" strokeWidth={2} />
               <span className="text-[11px] font-medium text-pw-muted">
                 {backgroundRunning
-                  ? 'Scan draait op de server — je kunt de app sluiten'
-                  : `${provider === 'outlook' ? 'Outlook' : 'Gmail'} inbox wordt gescand...`
+                  ? (isNl ? 'Scan draait op de server — je kunt de app sluiten' : 'Scan is running on the server — you can close the app')
+                  : (isNl ? `${providerName} inbox wordt gescand...` : `Scanning ${providerName} inbox...`)
                 }
               </span>
             </div>
           </div>
 
           {/* Background info */}
-          <p className="text-[11px] text-pw-muted/60 text-center">
-            💡 Je kunt de app verlaten — de scan gaat door op de server. Je krijgt een melding als het klaar is.
-          </p>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-pw-muted/60">
+            <Bell className="h-3 w-3" strokeWidth={1.5} />
+            <p>
+              {isNl
+                ? 'Je kunt de app verlaten — de scan gaat door op de server. Je krijgt een melding als het klaar is.'
+                : 'You can leave the app — the scan continues on the server. You\'ll get a notification when it\'s done.'}
+            </p>
+          </div>
 
           <button
             onClick={() => { abortRef.current = true; onCancel(); }}
             className="text-[13px] font-semibold text-pw-muted hover:text-pw-text"
           >
-            Annuleren
+            {isNl ? 'Annuleren' : 'Cancel'}
           </button>
         </>
       )}
@@ -398,21 +397,29 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
-            <span className="text-[14px] font-semibold text-pw-green">Scan voltooid!</span>
+            <span className="text-[14px] font-semibold text-pw-green">
+              {isNl ? 'Scan voltooid!' : 'Scan complete!'}
+            </span>
           </div>
           <p className="text-[13px] text-pw-muted">
-            {processed} e-mails gescand, {totalBillsFound} rekeningen gevonden.
+            {isNl
+              ? `${processed} e-mails gescand, ${totalBillsFound} rekeningen gevonden.`
+              : `${processed} emails scanned, ${totalBillsFound} bills found.`}
           </p>
 
           <div className="rounded-xl border border-pw-border bg-pw-bg p-3">
-            <p className="text-[12px] text-pw-muted">
-              ✅ Vanaf nu scannen we automatisch <strong>elke dag</strong> je inbox.
-              Je hoeft dit niet meer handmatig te doen.
-            </p>
+            <div className="flex items-start gap-2">
+              <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-pw-green" strokeWidth={1.5} />
+              <p className="text-[12px] text-pw-muted">
+                {isNl
+                  ? <>Vanaf nu scannen we automatisch <strong>elke dag</strong> je inbox. Je hoeft dit niet meer handmatig te doen.</>
+                  : <>From now on, we automatically scan your inbox <strong>every day</strong>. No need to do this manually anymore.</>}
+              </p>
+            </div>
           </div>
 
           <button onClick={onComplete} className="btn-press w-full rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-            Bekijk je rekeningen
+            {isNl ? 'Bekijk je rekeningen' : 'View your bills'}
           </button>
         </div>
       )}
@@ -422,17 +429,22 @@ export default function ScanProgress({ accountId, provider = 'gmail', onComplete
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-pw-red" strokeWidth={1.5} />
-            <span className="text-[14px] font-semibold text-pw-red">Er ging iets mis</span>
+            <span className="text-[14px] font-semibold text-pw-red">
+              {isNl ? 'Er ging iets mis' : 'Something went wrong'}
+            </span>
           </div>
-          <p className="text-[13px] text-pw-muted">{errorMessage || 'Er ging iets mis bij het scannen.'}</p>
+          <p className="text-[13px] text-pw-muted">
+            {errorMessage || (isNl ? 'Er ging iets mis bij het scannen.' : 'Something went wrong during the scan.')}
+          </p>
           <div className="flex gap-3">
-            <button onClick={() => { setStatus('info'); setErrorMessage(null); scanningRef.current = false; abortRef.current = false; }}
-              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-              Opnieuw proberen
+            <button
+              onClick={() => { setStatus('info'); setErrorMessage(null); scanningRef.current = false; abortRef.current = false; }}
+              className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white"
+            >
+              {isNl ? 'Opnieuw proberen' : 'Try again'}
             </button>
-            <button onClick={onCancel}
-              className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
-              Annuleren
+            <button onClick={onCancel} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
+              {isNl ? 'Annuleren' : 'Cancel'}
             </button>
           </div>
         </div>
