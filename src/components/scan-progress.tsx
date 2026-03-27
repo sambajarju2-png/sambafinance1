@@ -257,14 +257,14 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                   <p>
                     {isNl
                       ? <>We scannen je e-mails van de <strong>laatste 7 dagen</strong> (maximaal {MAX_EMAILS} e-mails). Dit duurt meestal <strong>2-5 minuten</strong>.</>
-                      : <>We'll scan your emails from the <strong>last 7 days</strong> (up to {MAX_EMAILS} emails). This usually takes <strong>2-5 minutes</strong>.</>}
+                      : <>We&apos;ll scan your emails from the <strong>last 7 days</strong> (up to {MAX_EMAILS} emails). This usually takes <strong>2-5 minutes</strong>.</>}
                   </p>
                   <div className="flex items-start gap-2">
                     <Monitor className="mt-0.5 h-4 w-4 flex-shrink-0 text-pw-blue/60" strokeWidth={1.5} />
                     <p>
                       {isNl
                         ? <><strong>Je kunt de app verlaten</strong> tijdens het scannen. De scan gaat door op de server en je krijgt een melding als het klaar is.</>
-                        : <><strong>You can leave the app</strong> while scanning. The scan continues on the server and you'll get a notification when it's done.</>}
+                        : <><strong>You can leave the app</strong> while scanning. The scan continues on the server and you&apos;ll get a notification when it&apos;s done.</>}
                     </p>
                   </div>
                   <div className="flex items-start gap-2 text-[12px] text-pw-muted/70">
@@ -304,7 +304,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                 <p className="text-[13px] text-pw-muted leading-relaxed">
                   {isNl
                     ? <>Je vorige scan is gestopt bij <strong>{processed} e-mails</strong>. We gaan verder waar je gebleven bent.</>
-                    : <>Your previous scan stopped at <strong>{processed} emails</strong>. We'll continue where you left off.</>}
+                    : <>Your previous scan stopped at <strong>{processed} emails</strong>. We&apos;ll continue where you left off.</>}
                 </p>
               </div>
             </div>
