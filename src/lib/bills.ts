@@ -1,12 +1,9 @@
 /** Bill status options */
 export type BillStatus = 'outstanding' | 'action' | 'settled' | 'failed' | 'review';
-
 /** Bill source */
 export type BillSource = 'manual' | 'gmail_scan' | 'camera_scan';
-
 /** Escalation stages (Dutch debt collection) */
 export type EscalationStage = 'factuur' | 'herinnering' | 'aanmaning' | 'incasso' | 'deurwaarder';
-
 /** Bill category defaults — 14 main categories */
 export const BILL_CATEGORIES = [
   'wonen',
@@ -21,12 +18,10 @@ export const BILL_CATEGORIES = [
   'abonnementen',
   'gezin',
   'zakelijk',
-  'incasso_kosten',
+  'incasso',
   'overig',
 ] as const;
-
 export type BillCategory = typeof BILL_CATEGORIES[number];
-
 /** Bill row from database */
 export interface Bill {
   id: string;
@@ -48,12 +43,13 @@ export interface Bill {
   is_favorite: boolean;
   notes: string | null;
   payment_url: string | null;
+  confirmation_image_url: string | null;
   escalation_stage: EscalationStage;
   estimated_extra_costs: number;
+  has_payment_plan: boolean;
   created_at: string;
   updated_at: string;
 }
-
 /**
  * Format cents to currency display string.
  * 12345 → "€ 123,45"
@@ -66,7 +62,6 @@ export function formatCents(cents: number, currency: string = 'EUR'): string {
     minimumFractionDigits: 2,
   }).format(amount);
 }
-
 /**
  * Parse a user-entered amount string to cents.
  * "123,45" → 12345
@@ -76,10 +71,8 @@ export function formatCents(cents: number, currency: string = 'EUR'): string {
 export function parseToCents(input: string): number | null {
   const cleaned = input.replace(/[€$£\s]/g, '').trim();
   if (!cleaned) return null;
-
   const normalized = cleaned.replace(',', '.');
   const parsed = parseFloat(normalized);
   if (isNaN(parsed) || parsed < 0) return null;
-
   return Math.round(parsed * 100);
 }
