@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle, CreditCard, Clock, CalendarDays, CircleCheck } from 'lucide-react';
 import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,7 @@ import MoodTracker from '@/components/mood-tracker';
 import AchievementsDisplay from '@/components/achievements';
 import AiInsightsPanel from '@/components/ai-insights';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
+import MetricCard from '@/components/metric-card';
 
 type OverzichtTab = 'overview' | 'ai';
 
@@ -92,15 +93,39 @@ export default function OverzichtPage() {
           {loading ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="skeleton h-[76px] rounded-card" />
+                <div key={i} className="skeleton h-[90px] rounded-[14px]" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label={t('outstanding')} value={formatCents(outstandingTotal)} color="blue" />
-              <StatCard label={t('overdue')} value={String(overdue.length)} color="red" />
-              <StatCard label={t('upcoming')} value={String(upcoming.length)} color="amber" />
-              <StatCard label={t('paid')} value={formatCents(settledTotal)} color="green" />
+            <div className="grid grid-cols-2 gap-2.5">
+              <MetricCard
+                icon={<CreditCard className="h-[15px] w-[15px] text-pw-blue" strokeWidth={1.8} />}
+                label={t('outstanding')}
+                value={formatCents(outstandingTotal)}
+                sub={`${outstanding.length} ${outstanding.length === 1 ? 'rekening' : 'rekeningen'}`}
+                color="blue"
+              />
+              <MetricCard
+                icon={<Clock className="h-[15px] w-[15px] text-pw-red" strokeWidth={1.8} />}
+                label={t('overdue')}
+                value={String(overdue.length)}
+                sub={overdue.length === 0 ? 'Je ligt op schema' : 'Direct betalen'}
+                color={overdue.length > 0 ? 'red' : 'green'}
+              />
+              <MetricCard
+                icon={<CalendarDays className="h-[15px] w-[15px] text-amber-600" strokeWidth={1.8} />}
+                label={t('upcoming')}
+                value={String(upcoming.length)}
+                sub="binnen 7 dagen"
+                color="amber"
+              />
+              <MetricCard
+                icon={<CircleCheck className="h-[15px] w-[15px] text-pw-green" strokeWidth={1.8} />}
+                label={t('paid')}
+                value={formatCents(settledTotal)}
+                sub="deze maand"
+                color="green"
+              />
             </div>
           )}
 
@@ -202,24 +227,6 @@ export default function OverzichtPage() {
         /* AI Inzicht tab */
         <AiInsightsPanel bills={bills} />
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string; color: 'blue' | 'red' | 'amber' | 'green' }) {
-  const colors = {
-    blue: { accent: 'bg-pw-blue', text: 'text-pw-blue', bg: 'bg-blue-50/30' },
-    red: { accent: 'bg-pw-red', text: 'text-pw-red', bg: 'bg-red-50/30' },
-    amber: { accent: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50/30' },
-    green: { accent: 'bg-pw-green', text: 'text-pw-green', bg: 'bg-green-50/30' },
-  };
-  const c = colors[color];
-
-  return (
-    <div className={`stat-card rounded-card border border-pw-border ${c.bg} p-3.5`}>
-      <div className={`mb-2 h-[3px] w-8 rounded-full ${c.accent}`} />
-      <p className="text-[11px] font-medium text-pw-muted">{label}</p>
-      <p className={`mt-0.5 text-[18px] font-extrabold ${c.text}`}>{value}</p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { type Bill, formatCents } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import CashflowPanel from '@/components/cashflow-panel';
+import MetricCard from '@/components/metric-card';
 
 type SubTab = 'performance' | 'cashflow';
 
@@ -38,7 +39,7 @@ export default function StatsPage() {
       } catch {} finally { setLoading(false); }
     }
     load();
-  }, []);
+  }, [ADMIN_EMAILS]);
 
   const canSeeFullStats = statsUnlocked || isAdmin;
   const tabs: { key: SubTab; label: string }[] = [
@@ -59,7 +60,7 @@ export default function StatsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3"><div className="skeleton h-[180px] rounded-card" /><div className="grid grid-cols-2 gap-2"><div className="skeleton h-[90px] rounded-card" /><div className="skeleton h-[90px] rounded-card" /></div></div>
+        <div className="space-y-3"><div className="skeleton h-[180px] rounded-card" /><div className="grid grid-cols-2 gap-2"><div className="skeleton h-[90px] rounded-[14px]" /><div className="skeleton h-[90px] rounded-[14px]" /></div></div>
       ) : activeTab === 'performance' ? (
         <PerformanceTab bills={bills} t={t} canSeeFullStats={canSeeFullStats} onUnlocked={() => setStatsUnlocked(true)} />
       ) : (
@@ -182,11 +183,11 @@ function ReferralGate({ onUnlocked }: { onUnlocked: () => void }) {
   return (
     <div className="relative">
       <div className="pointer-events-none select-none blur-[6px] opacity-60">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="stat-card bg-gradient-to-br from-green-50 to-white px-3.5 py-3"><p className="text-[24px] font-extrabold text-pw-green">—%</p><p className="text-[10px] text-pw-muted">On-time rate</p></div>
-          <div className="stat-card bg-gradient-to-br from-blue-50 to-white px-3.5 py-3"><p className="text-[24px] font-extrabold text-pw-blue">—</p><p className="text-[10px] text-pw-muted">Streak</p></div>
-          <div className="stat-card bg-gradient-to-br from-green-50 to-white px-3.5 py-3"><p className="text-[20px] font-extrabold text-pw-green">€ —</p><p className="text-[10px] text-pw-muted">Saved</p></div>
-          <div className="stat-card bg-gradient-to-br from-red-50 to-white px-3.5 py-3"><p className="text-[24px] font-extrabold text-pw-red">—</p><p className="text-[10px] text-pw-muted">Overdue</p></div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-[14px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"><p className="text-[24px] font-extrabold text-pw-green">—%</p><p className="text-[10px] text-pw-muted">On-time rate</p></div>
+          <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-[14px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"><p className="text-[24px] font-extrabold text-pw-blue">—</p><p className="text-[10px] text-pw-muted">Streak</p></div>
+          <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-[14px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"><p className="text-[20px] font-extrabold text-pw-green">€ —</p><p className="text-[10px] text-pw-muted">Bespaard</p></div>
+          <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-[14px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"><p className="text-[24px] font-extrabold text-pw-red">—</p><p className="text-[10px] text-pw-muted">Achterstallig</p></div>
         </div>
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
@@ -234,27 +235,39 @@ function FullPerformanceContent({ t, onTimeRate, onTimePaid, settled, streak, sa
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="stat-card before:bg-pw-green bg-gradient-to-br from-green-50 to-white px-3.5 py-3">
-          <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-pw-green" strokeWidth={1.5} /><p className="text-[11px] font-medium text-pw-muted">{t('onTimeRate')}</p></div>
-          <p className="mt-1 text-[24px] font-extrabold text-pw-green">{onTimeRate}%</p>
-          <p className="text-[10px] text-pw-muted">{onTimePaid.length}/{settled.length} {t('onTimeOf')}</p>
-        </div>
-        <div className="stat-card before:bg-pw-blue bg-gradient-to-br from-blue-50 to-white px-3.5 py-3">
-          <div className="flex items-center gap-2"><Flame className="h-4 w-4 text-pw-blue" strokeWidth={1.5} /><p className="text-[11px] font-medium text-pw-muted">{t('streak')}</p></div>
-          <p className="mt-1 text-[24px] font-extrabold text-pw-blue">{streak}</p>
-          <p className="text-[10px] text-pw-muted">{t('streakConsecutive')}</p>
-        </div>
-        <div className="stat-card before:bg-pw-green bg-gradient-to-br from-green-50 to-white px-3.5 py-3">
-          <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-pw-green" strokeWidth={1.5} /><p className="text-[11px] font-medium text-pw-muted">{t('saved')}</p></div>
-          <p className="mt-1 text-[20px] font-extrabold text-pw-green">{formatCents(savedCents)}</p>
-          <p className="text-[10px] text-pw-muted">{t('savedDesc')}</p>
-        </div>
-        <div className={`stat-card ${overdue.length > 0 ? 'before:bg-pw-red' : 'before:bg-pw-border'} bg-gradient-to-br ${overdue.length > 0 ? 'from-red-50' : 'from-gray-50'} to-white px-3.5 py-3`}>
-          <div className="flex items-center gap-2">{overdue.length > 0 ? <XCircle className="h-4 w-4 text-pw-red" strokeWidth={1.5} /> : <Clock className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />}<p className="text-[11px] font-medium text-pw-muted">{t('overdue')}</p></div>
-          <p className={`mt-1 text-[24px] font-extrabold ${overdue.length > 0 ? 'text-pw-red' : 'text-pw-muted'}`}>{overdue.length}</p>
-          <p className="text-[10px] text-pw-muted">{overdue.length === 0 ? t('overdueNone') : t('overdueAction')}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <MetricCard
+          icon={<CheckCircle2 className="h-[15px] w-[15px] text-pw-green" strokeWidth={1.8} />}
+          label={t('onTimeRate')}
+          value={`${onTimeRate}%`}
+          sub={`${onTimePaid.length}/${settled.length} ${t('onTimeOf')}`}
+          color="green"
+          ring={{ value: onTimePaid.length, max: settled.length }}
+        />
+        <MetricCard
+          icon={<Flame className="h-[15px] w-[15px] text-pw-blue" strokeWidth={1.8} />}
+          label={t('streak')}
+          value={String(streak)}
+          sub={t('streakConsecutive')}
+          color="blue"
+        />
+        <MetricCard
+          icon={<Shield className="h-[15px] w-[15px] text-pw-green" strokeWidth={1.8} />}
+          label={t('saved')}
+          value={formatCents(savedCents)}
+          sub={t('savedDesc')}
+          color="green"
+        />
+        <MetricCard
+          icon={overdue.length > 0
+            ? <XCircle className="h-[15px] w-[15px] text-pw-red" strokeWidth={1.8} />
+            : <Clock className="h-[15px] w-[15px] text-pw-muted" strokeWidth={1.8} />
+          }
+          label={t('overdue')}
+          value={String(overdue.length)}
+          sub={overdue.length === 0 ? t('overdueNone') : t('overdueAction')}
+          color={overdue.length > 0 ? 'red' : 'green'}
+        />
       </div>
 
       {categories.length > 0 && (
