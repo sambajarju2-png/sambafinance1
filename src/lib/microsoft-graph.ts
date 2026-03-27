@@ -185,7 +185,7 @@ export async function fetchEmails(
       params.set('$filter', `receivedDateTime ge ${sinceDate}`)
     }
 
-    url = `${GRAPH_API_BASE}/me/messages?${params.toString()}`
+    url = `${GRAPH_API_BASE}/me/mailFolders/inbox/messages?${params.toString()}`
   }
 
   const response = await fetch(url, {

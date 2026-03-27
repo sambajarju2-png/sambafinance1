@@ -12,11 +12,14 @@ const MAX_EMAILS_PER_ACCOUNT = 50;
  * POST /api/gmail/scan/daily
  *
  * Cron job — runs daily at 11:00 AM.
- * Scans only emails from the last 24 hours.
+ * Scans only emails from the last 24 hours (inbox only, no spam/promotions).
  * Max 50 emails per account.
  * Protected by CRON_SECRET.
+ * Logs every scan to scan_logs + errors to error_logs.
  */
 export async function POST(req: NextRequest) {
+  const cronStart = Date.now();
+
   const authHeader = req.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
@@ -37,6 +40,7 @@ export async function POST(req: NextRequest) {
       .eq('needs_reauth', false);
 
     if (!accounts || accounts.length === 0) {
+      console.log('[Gmail Daily] No accounts to scan');
       return NextResponse.json({ message: 'No accounts to scan', scanned: 0 }, { headers: NO_CACHE });
     }
 
@@ -48,15 +52,48 @@ export async function POST(req: NextRequest) {
     let totalBills = 0;
     const errors: string[] = [];
 
+    console.log(`[Gmail Daily] Starting scan for ${accounts.length} accounts`);
+
     for (const account of accounts) {
+      const accountStart = Date.now();
+
+      // Log scan start
+      const { data: scanLog } = await supabase.from('scan_logs').insert({
+        user_id: account.user_id,
+        provider: 'gmail',
+        scan_type: 'daily_cron',
+        account_email: account.email,
+        status: 'started',
+      }).select('id').single();
+
+      const scanLogId = scanLog?.id;
+
       try {
         guard();
-        console.log(`[Daily scan] Scanning ${account.email} (${account.id})`);
+        console.log(`[Gmail Daily] Scanning ${account.email} (${account.id})`);
 
         const tokens = await getValidTokens(account.id, account.user_id);
         if (!tokens) {
-          console.log(`[Daily scan] ${account.email} needs reauth`);
+          console.log(`[Gmail Daily] ${account.email} needs reauth`);
           await supabase.from('gmail_accounts').update({ needs_reauth: true }).eq('id', account.id);
+
+          // Log auth error
+          await supabase.from('error_logs').insert({
+            user_id: account.user_id,
+            error_type: 'token_refresh',
+            provider: 'gmail',
+            error_message: `Token refresh failed for ${account.email}`,
+            metadata: { account_id: account.id },
+          });
+
+          if (scanLogId) {
+            await supabase.from('scan_logs').update({
+              status: 'error',
+              error_message: 'Token refresh failed — needs reauth',
+              duration_ms: Date.now() - accountStart,
+              completed_at: new Date().toISOString(),
+            }).eq('id', scanLogId);
+          }
           continue;
         }
 
@@ -173,7 +210,16 @@ export async function POST(req: NextRequest) {
                   accountBills++;
                 }
               } catch (err) {
-                console.error(`[Daily scan] Extraction error:`, err);
+                console.error(`[Gmail Daily] Extraction error for ${account.email}:`, err);
+
+                // Log extraction error
+                await supabase.from('error_logs').insert({
+                  user_id: account.user_id,
+                  error_type: 'scan_error',
+                  provider: 'gmail',
+                  error_message: err instanceof Error ? err.message : 'Extraction failed',
+                  metadata: { account_id: account.id, message_id: snippet.id },
+                });
               }
             }
 
@@ -190,25 +236,68 @@ export async function POST(req: NextRequest) {
           last_scanned: new Date().toISOString(),
         }).eq('id', account.id);
 
+        // Log scan completion
+        if (scanLogId) {
+          await supabase.from('scan_logs').update({
+            status: 'completed',
+            emails_processed: accountProcessed,
+            bills_found: accountBills,
+            duration_ms: Date.now() - accountStart,
+            completed_at: new Date().toISOString(),
+          }).eq('id', scanLogId);
+        }
+
         totalScanned += accountProcessed;
         totalBills += accountBills;
-        console.log(`[Daily scan] ${account.email}: ${accountProcessed} emails, ${accountBills} bills`);
+        console.log(`[Gmail Daily] ${account.email}: ${accountProcessed} emails, ${accountBills} bills`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown';
-        if (msg === 'TIMEOUT_ABORT') break;
+        if (msg === 'TIMEOUT_ABORT') {
+          if (scanLogId) {
+            await supabase.from('scan_logs').update({
+              status: 'timeout',
+              emails_processed: 0,
+              duration_ms: Date.now() - accountStart,
+              completed_at: new Date().toISOString(),
+              error_message: 'Function timeout reached',
+            }).eq('id', scanLogId);
+          }
+          break;
+        }
+
         errors.push(`${account.email}: ${msg}`);
-        console.error(`[Daily scan] ${account.email} error:`, err);
+        console.error(`[Gmail Daily] ${account.email} error:`, err);
+
+        // Log error
+        await supabase.from('error_logs').insert({
+          user_id: account.user_id,
+          error_type: 'scan_error',
+          provider: 'gmail',
+          error_message: msg,
+          metadata: { account_id: account.id, account_email: account.email },
+        });
+
+        if (scanLogId) {
+          await supabase.from('scan_logs').update({
+            status: 'error',
+            error_message: msg,
+            duration_ms: Date.now() - accountStart,
+            completed_at: new Date().toISOString(),
+          }).eq('id', scanLogId);
+        }
       }
     }
 
+    console.log(`[Gmail Daily] Completed in ${Date.now() - cronStart}ms — ${accounts.length} accounts, ${totalScanned} emails, ${totalBills} bills`);
     return NextResponse.json({
       scanned: totalScanned,
       bills_found: totalBills,
       accounts: accounts.length,
+      duration_ms: Date.now() - cronStart,
       errors: errors.length > 0 ? errors : undefined,
     }, { headers: NO_CACHE });
   } catch (err) {
-    console.error('[Daily scan] Fatal error:', err);
+    console.error('[Gmail Daily] Fatal error:', err);
     return NextResponse.json({ error: 'Daily scan failed' }, { status: 500, headers: NO_CACHE });
   }
 }

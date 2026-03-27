@@ -1,9 +1,10 @@
 /**
  * POST /api/scan/outlook/daily
- * 
- * Daily cron: scans all connected Outlook accounts for new emails.
+ *
+ * Daily cron: scans all connected Outlook accounts for new emails (inbox only).
  * Called by cron-job.org at 11:05 AM (5 min after Gmail scan).
- * 
+ * Logs every scan to scan_logs table + errors to error_logs.
+ *
  * File: src/app/api/scan/outlook/daily/route.ts
  */
 
@@ -12,13 +13,15 @@ import { createHash, randomBytes } from 'crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getValidOutlookToken } from '@/lib/outlook-tokens'
 import { fetchEmails, toUnifiedEmail } from '@/lib/microsoft-graph'
-import { classifyEmail, extractBillFromEmail } from '@/lib/ai/pipeline'
+import { classifyEmail, extractBillFromEmail } from '@/lib/ai'
 import { detectIncassoAgency } from '@/lib/incasso-detect'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
+  const cronStart = Date.now()
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization')
@@ -40,18 +43,53 @@ export async function POST(request: NextRequest) {
       .limit(50)
 
     if (error || !accounts?.length) {
+      console.log('[Outlook Daily] No accounts to scan')
       return NextResponse.json({
         message: 'No Outlook accounts to scan',
         accounts_checked: 0,
       })
     }
 
+    console.log(`[Outlook Daily] Starting scan for ${accounts.length} accounts`)
     const results = []
 
     for (const account of accounts) {
+      const accountStart = Date.now()
+
+      // Log scan start
+      const { data: scanLog } = await supabase.from('scan_logs').insert({
+        user_id: account.user_id,
+        provider: 'outlook',
+        scan_type: 'daily_cron',
+        account_email: account.email,
+        status: 'started',
+      }).select('id').single()
+
+      const scanLogId = scanLog?.id
+
       try {
         const tokenResult = await getValidOutlookToken(account.id, account.user_id)
         if (!tokenResult) {
+          console.log(`[Outlook Daily] ${account.email} needs reauth`)
+
+          // Log auth error
+          await supabase.from('error_logs').insert({
+            user_id: account.user_id,
+            error_type: 'token_refresh',
+            provider: 'outlook',
+            error_message: `Token refresh failed for ${account.email}`,
+            metadata: { account_id: account.id },
+          })
+
+          if (scanLogId) {
+            await supabase.from('scan_logs').update({
+              status: 'error',
+              error_message: 'Token refresh failed — needs reauth',
+              duration_ms: Date.now() - accountStart,
+              completed_at: new Date().toISOString(),
+            }).eq('id', scanLogId)
+          }
+
           results.push({ email: account.email, status: 'needs_reauth' })
           continue
         }
@@ -108,7 +146,6 @@ export async function POST(request: NextRequest) {
 
           if (!billData || !billData.vendor) continue
 
-          // detectIncassoAgency(vendorName) → IncassoMatch
           const incassoResult = await detectIncassoAgency(billData.vendor)
 
           const raw = `${billData.vendor}|${billData.amount_cents}|${billData.due_date || ''}|${billData.reference || ''}`
@@ -153,6 +190,19 @@ export async function POST(request: NextRequest) {
           .update({ last_scanned: new Date().toISOString() })
           .eq('id', account.id)
 
+        // Log scan completion
+        if (scanLogId) {
+          await supabase.from('scan_logs').update({
+            status: 'completed',
+            emails_processed: processed,
+            bills_found: billsFound,
+            duration_ms: Date.now() - accountStart,
+            completed_at: new Date().toISOString(),
+            metadata: { total_messages: messages.length },
+          }).eq('id', scanLogId)
+        }
+
+        console.log(`[Outlook Daily] ${account.email}: ${processed} processed, ${billsFound} bills`)
         results.push({
           email: account.email,
           status: 'scanned',
@@ -160,17 +210,39 @@ export async function POST(request: NextRequest) {
           bills_found: billsFound,
         })
       } catch (accountError) {
+        const errMsg = accountError instanceof Error ? accountError.message : 'Unknown error'
         console.error(`[Outlook Daily] Error scanning ${account.email}:`, accountError)
+
+        // Log scan error
+        await supabase.from('error_logs').insert({
+          user_id: account.user_id,
+          error_type: 'scan_error',
+          provider: 'outlook',
+          error_message: errMsg,
+          metadata: { account_id: account.id, account_email: account.email },
+        })
+
+        if (scanLogId) {
+          await supabase.from('scan_logs').update({
+            status: 'error',
+            error_message: errMsg,
+            duration_ms: Date.now() - accountStart,
+            completed_at: new Date().toISOString(),
+          }).eq('id', scanLogId)
+        }
+
         results.push({ email: account.email, status: 'error' })
       }
     }
 
+    console.log(`[Outlook Daily] Completed in ${Date.now() - cronStart}ms — ${results.length} accounts`)
     return NextResponse.json({
       accounts_scanned: results.length,
+      duration_ms: Date.now() - cronStart,
       results,
     })
   } catch (error) {
-    console.error('[Outlook Daily Scan] Error:', error)
+    console.error('[Outlook Daily Scan] Fatal:', error)
     return NextResponse.json({ error: 'Daily scan failed' }, { status: 500 })
   }
 }
