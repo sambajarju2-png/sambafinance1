@@ -41,7 +41,7 @@ export default function StatsPage() {
     load();
   }, [ADMIN_EMAILS]);
 
-  const canSeeFullStats = statsUnlocked || isAdmin;
+  const canSeeFullStats = true;
   const tabs: { key: SubTab; label: string }[] = [
     { key: 'performance', label: t('performance') },
     { key: 'cashflow', label: 'Cashflow' },
