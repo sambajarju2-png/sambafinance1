@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -43,13 +43,19 @@ interface PaymentPlanTrackerProps {
 
 export function PaymentPlanTracker({
   billId,
-  plan,
+  plan: initialPlan,
   onUpdate,
   onCancel,
 }: PaymentPlanTrackerProps) {
+  const [plan, setPlan] = useState<PaymentPlan>(initialPlan);
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+
+  // Sync with parent if plan changes externally
+  useEffect(() => {
+    setPlan(initialPlan);
+  }, [initialPlan]);
 
   const formatCents = (cents: number) => {
     return new Intl.NumberFormat('nl-NL', {
@@ -67,8 +73,34 @@ export function PaymentPlanTracker({
 
   const toggleInstallment = async (installment: Installment) => {
     const newStatus = installment.status === 'paid' ? 'pending' : 'paid';
-    setLoading(installment.id);
+    const todayStr = new Date().toISOString().split('T')[0];
 
+    // Optimistic update — change UI instantly
+    setPlan((prev) => {
+      const updatedInstallments = prev.plan_installments.map((i) =>
+        i.id === installment.id
+          ? { ...i, status: newStatus as Installment['status'], paid_date: newStatus === 'paid' ? todayStr : null }
+          : i
+      );
+      const paidCount = updatedInstallments.filter((i) => i.status === 'paid').length;
+      const paidAmount = updatedInstallments
+        .filter((i) => i.status === 'paid')
+        .reduce((sum, i) => sum + i.amount, 0);
+      const totalAmount = updatedInstallments.reduce((sum, i) => sum + i.amount, 0);
+
+      return {
+        ...prev,
+        plan_installments: updatedInstallments,
+        summary: {
+          paid_count: paidCount,
+          total_count: updatedInstallments.length,
+          paid_amount: paidAmount,
+          remaining_amount: totalAmount - paidAmount,
+        },
+      };
+    });
+
+    // API call in background
     try {
       const res = await fetch(
         `/api/bills/${billId}/payment-plan/${installment.id}`,
@@ -77,21 +109,21 @@ export function PaymentPlanTracker({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             status: newStatus,
-            paid_date:
-              newStatus === 'paid'
-                ? new Date().toISOString().split('T')[0]
-                : undefined,
+            paid_date: newStatus === 'paid' ? todayStr : undefined,
           }),
         }
       );
 
-      if (res.ok) {
+      if (!res.ok) {
+        // Revert on error
+        onUpdate();
+      } else {
+        // Silently sync parent in background (for header + bill list)
         onUpdate();
       }
     } catch (err) {
       console.error('Failed to update installment:', err);
-    } finally {
-      setLoading(null);
+      onUpdate();
     }
   };
 
