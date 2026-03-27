@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
       .neq('status', 'settled');
 
     const totalOutstanding = allBills?.length || 0;
-    const inIncasso = allBills?.filter((b) => b.escalation_stage === 'incasso').length || 0;
-    const inDeurwaarder = allBills?.filter((b) => b.escalation_stage === 'deurwaarder').length || 0;
+    const inIncasso = allBills?.filter((b: any) => b.escalation_stage === 'incasso').length || 0;
+    const inDeurwaarder = allBills?.filter((b: any) => b.escalation_stage === 'deurwaarder').length || 0;
     const hasAlerts = inIncasso > 0 || inDeurwaarder > 0;
 
     return NextResponse.json({
