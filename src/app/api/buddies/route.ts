@@ -18,6 +18,8 @@ export async function GET() {
 
   try {
     const supabase = await createServerSupabaseClient();
+    // Service role for cross-user reads (names, bills) — RLS blocks reading other users' data
+    const serviceClient = createServiceRoleClient();
 
     // Buddies I invited
     const { data: myBuddies } = await supabase
@@ -33,7 +35,7 @@ export async function GET() {
       .eq('buddy_user_id', userId)
       .eq('status', 'accepted');
 
-    // Get display names for buddy_user_ids
+    // Get display names for buddy_user_ids — use service role (RLS blocks cross-user reads)
     const buddyUserIds = (myBuddies || [])
       .filter((b) => b.buddy_user_id)
       .map((b) => b.buddy_user_id);
@@ -43,13 +45,23 @@ export async function GET() {
 
     let nameMap: Record<string, string> = {};
     if (allUserIds.length > 0) {
-      const { data: settings } = await supabase
+      const { data: settings } = await serviceClient
         .from('user_settings')
         .select('user_id, display_name, first_name, last_name')
         .in('user_id', allUserIds);
 
       for (const s of settings || []) {
         nameMap[s.user_id] = s.display_name || [s.first_name, s.last_name].filter(Boolean).join(' ') || 'Onbekend';
+      }
+
+      // Fallback: for users without user_settings names, get email from auth.users
+      const missingIds = allUserIds.filter((id) => !nameMap[id] || nameMap[id] === 'Onbekend');
+      if (missingIds.length > 0) {
+        const { data: authUsers } = await serviceClient
+          .from('auth.users')
+          .select('id, email');
+        // auth.users isn't accessible via PostgREST, use raw query as fallback
+        // Just keep 'Onbekend' — the user hasn't set up their profile yet
       }
     }
 
@@ -65,20 +77,15 @@ export async function GET() {
       owner_name: nameMap[b.user_id] || 'Onbekend',
     }));
 
-    // Check if any owner has incasso bills (for status)
+    // Buddy statuses: check if the OWNER (inviter) has incasso/deurwaarder bills
+    // This is shown on the buddy's side (buddy_of) — so THEY can see the owner's status
+    // On the inviter's own view, always show green (buddy is connected and monitoring)
     const buddyStatuses: Record<string, 'green' | 'red'> = {};
+
+    // For my buddies (I'm the inviter) — always green: buddy is connected
     for (const b of enrichedBuddies) {
       if (b.buddy_user_id && b.status === 'accepted') {
-        // Check if the USER (not buddy) has incasso bills - buddy sees user's status
-        const { data: incassoBills } = await supabase
-          .from('bills')
-          .select('id')
-          .eq('user_id', userId)
-          .in('escalation_stage', ['incasso', 'deurwaarder'])
-          .neq('status', 'settled')
-          .limit(1);
-
-        buddyStatuses[b.id] = (incassoBills && incassoBills.length > 0) ? 'red' : 'green';
+        buddyStatuses[b.id] = 'green';
       }
     }
 

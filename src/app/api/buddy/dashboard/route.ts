@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/buddy/dashboard?user_id=xxx
  * Returns read-only view of a user's critical bills (incasso/deurwaarder only).
  * Only accessible by accepted buddies.
+ *
+ * Uses service role for ALL queries because RLS blocks cross-user reads.
+ * Authorization is enforced by verifying the buddy relationship first.
  */
 export async function GET(req: NextRequest) {
   const buddyUserId = await getAuthUserId();
@@ -15,7 +18,8 @@ export async function GET(req: NextRequest) {
   if (!targetUserId) return NextResponse.json({ error: 'user_id required' }, { status: 400, headers: NO_CACHE });
 
   try {
-    const supabase = await createServerSupabaseClient();
+    // Use service role — RLS blocks cross-user reads on bills, user_settings, user_buddies
+    const supabase = createServiceRoleClient();
 
     // Verify buddy relationship exists and is accepted
     const { data: buddyRelation } = await supabase
