@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Shield, Check, Loader2, AlertTriangle, Eye, Bell, Lock } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -11,8 +11,9 @@ const ROLE_LABELS: Record<string, string> = {
   anders: 'Buddy',
 };
 
-export default function BuddyAcceptPage({ params }: { params: { code: string } }) {
+export default function BuddyAcceptPage() {
   const router = useRouter();
+  const { code } = useParams<{ code: string }>();
   const [status, setStatus] = useState<'loading' | 'invite' | 'accepting' | 'accepted' | 'error' | 'expired'>('loading');
   const [error, setError] = useState('');
   const [inviterName, setInviterName] = useState('');
@@ -23,7 +24,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
 
   const fetchInviteInfo = useCallback(async () => {
     try {
-      const res = await fetch(`/api/buddy/invite?code=${encodeURIComponent(params.code)}`);
+      const res = await fetch(`/api/buddy/invite?code=${encodeURIComponent(code)}`);
       if (res.ok) {
         const data = await res.json();
         setInviterName(data.inviter_name || '');
@@ -39,7 +40,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
     } catch {
       return 'error';
     }
-  }, [params.code]);
+  }, [code]);
 
   useEffect(() => {
     async function load() {
@@ -66,7 +67,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
 
       // 3. Check if returning from login with pending accept
       const pending = sessionStorage.getItem('buddy-invite-code');
-      if (pending === params.code) {
+      if (pending === code) {
         sessionStorage.removeItem('buddy-invite-code');
         setStatus('invite');
         setAutoAccepting(true);
@@ -76,7 +77,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
       setStatus('invite');
     }
     load();
-  }, [params.code, fetchInviteInfo]);
+  }, [code, fetchInviteInfo]);
 
   // Auto-accept after returning from login
   useEffect(() => {
@@ -94,7 +95,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
       const res = await fetch('/api/buddies', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_code: params.code }),
+        body: JSON.stringify({ invite_code: code }),
       });
       if (res.ok) {
         setStatus('accepted');
@@ -112,7 +113,7 @@ export default function BuddyAcceptPage({ params }: { params: { code: string } }
   function handleAccept() {
     if (!isLoggedIn) {
       // Save code and redirect to login
-      sessionStorage.setItem('buddy-invite-code', params.code);
+      sessionStorage.setItem('buddy-invite-code', code);
       router.push('/auth/login');
       return;
     }
