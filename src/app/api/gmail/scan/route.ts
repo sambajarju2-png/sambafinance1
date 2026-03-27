@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getValidTokens } from '@/lib/gmail/tokens';
-import { listMessages, getMessageSnippets, getMessageDetail } from '@/lib/gmail/api';
+import { listMessages, getMessageSnippets, getMessageDetail, findPdfAttachments, fetchAttachmentData } from '@/lib/gmail/api';
 import { classifyEmail, extractBillFromEmail } from '@/lib/ai';
 import { computeBillHash, generateBillId } from '@/lib/bills-server';
+import { extractPdfText } from '@/lib/pdf-extract';
 
 const BATCH_SIZE = 10;
 const MAX_EMAILS_FIRST_SCAN = 100;
@@ -16,6 +17,7 @@ const MAX_EMAILS_RESCAN = 40;
  * Manual scan triggered by user.
  * First scan: up to 100 emails (inbox only, no promotions).
  * Re-scan: up to 40 emails.
+ * Now with PDF attachment extraction for accurate bill data.
  * 
  * Body: { account_id, page_token?, total_processed?, is_first_scan? }
  */
@@ -125,8 +127,42 @@ export async function POST(req: NextRequest) {
         try {
           guard();
           const detail = await getMessageDetail(tokens.accessToken, snippet.id);
+
+          // ── PDF attachment extraction ──
+          let pdfText: string | null = null;
+          if (detail.hasAttachments && detail.rawPayload) {
+            try {
+              guard();
+              const pdfParts = findPdfAttachments(detail.rawPayload);
+
+              if (pdfParts.length > 0) {
+                // Take only the first PDF (usually the bill/invoice)
+                const firstPdf = pdfParts[0];
+                console.log(`[Gmail scan] Found PDF: ${firstPdf.filename} (${(firstPdf.size / 1024).toFixed(0)}KB)`);
+
+                guard();
+                const pdfBuffer = await fetchAttachmentData(
+                  tokens.accessToken,
+                  snippet.id,
+                  firstPdf.attachmentId
+                );
+
+                if (pdfBuffer) {
+                  pdfText = await extractPdfText(pdfBuffer);
+                  if (pdfText) {
+                    console.log(`[Gmail scan] Extracted ${pdfText.length} chars from PDF`);
+                  }
+                }
+              }
+            } catch (pdfErr) {
+              // PDF extraction is best-effort — don't fail the whole email
+              console.error(`[Gmail scan] PDF extraction failed for ${snippet.id}:`, pdfErr);
+            }
+          }
+
           guard();
-          const extracted = await extractBillFromEmail(detail.subject, detail.body, null, userId);
+          // ✅ extractBillFromEmail(subject, body, pdfText, userId) — now with actual PDF text
+          const extracted = await extractBillFromEmail(detail.subject, detail.body, pdfText, userId);
 
           const hash = computeBillHash(
             extracted.vendor,
@@ -206,7 +242,7 @@ export async function POST(req: NextRequest) {
             });
             if (!insertErr) {
               billsFound++;
-              console.log(`[Gmail scan] New: ${extracted.vendor} - ${extracted.amount_cents}c`);
+              console.log(`[Gmail scan] New: ${extracted.vendor} - ${extracted.amount_cents}c${pdfText ? ' (with PDF)' : ''}`);
             } else {
               console.error(`[Gmail scan] Insert error:`, insertErr);
             }

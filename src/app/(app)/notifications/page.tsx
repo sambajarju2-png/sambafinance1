@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check } from 'lucide-react';
+import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check, Users } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 
 interface NotifItem {
-  type: 'overdue' | 'upcoming' | 'achievement';
+  type: 'overdue' | 'upcoming' | 'achievement' | 'mention';
   data: Record<string, unknown>;
 }
 
@@ -49,19 +49,41 @@ export default function NotificationsPage() {
     sessionStorage.setItem('pw-notif-cleared', 'true');
     // Dispatch event so topbar resets badge to 0
     window.dispatchEvent(new CustomEvent('pw-notif-cleared'));
+    // Mark all community notifications as read
+    fetch('/api/community/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    }).catch(() => {});
     setTimeout(() => setCleared(false), 2000);
+  }
+
+  async function handleMentionClick(notif: Record<string, unknown>) {
+    // Mark this notification as read
+    if (notif.id) {
+      fetch('/api/community/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: notif.id }),
+      }).catch(() => {});
+    }
+    // Remove from local list
+    setItems((prev) => prev.filter((i) => i.type !== 'mention' || (i.data as Record<string, unknown>).id !== notif.id));
+    // Navigate to feed with post open
+    router.push(`/feed?post=${notif.post_id}`);
   }
 
   const overdue = items.filter((i) => i.type === 'overdue');
   const upcoming = items.filter((i) => i.type === 'upcoming');
   const achievements = items.filter((i) => i.type === 'achievement');
+  const mentions = items.filter((i) => i.type === 'mention');
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-pw-navy" strokeWidth={1.5} />
-          <h1 className="text-heading text-pw-navy">Meldingen</h1>
+          <h1 className="text-heading text-pw-navy">{t('title')}</h1>
         </div>
         {items.length > 0 && (
           <button onClick={handleClearAll} className="flex items-center gap-1 text-[12px] font-semibold text-pw-muted hover:text-pw-red transition-colors">
@@ -81,6 +103,27 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <>
+          {/* Community mentions */}
+          {mentions.length > 0 && (
+            <Section title={t('mentionSection')} count={mentions.length} color="text-pw-blue">
+              {mentions.map((item, i) => {
+                const d = item.data as { id: string; from_display_name: string; content_preview: string; post_id: string; created_at: string };
+                return (
+                  <NotifCard
+                    key={i}
+                    icon={Users}
+                    iconColor="text-pw-blue"
+                    bgColor="bg-blue-50/50"
+                    borderColor="border-pw-blue/20"
+                    title={d.from_display_name || 'Iemand'}
+                    subtitle={d.content_preview || ''}
+                    onClick={() => handleMentionClick(d)}
+                  />
+                );
+              })}
+            </Section>
+          )}
+
           {overdue.length > 0 && (
             <Section title={t('overdueSection')} count={overdue.length} color="text-pw-red">
               {overdue.map((item, i) => {
@@ -126,7 +169,7 @@ function NotifCard({ icon: Icon, iconColor, bgColor, borderColor, title, subtitl
 }) {
   return (<button onClick={onClick} className={`btn-press flex w-full items-center gap-3 rounded-card border ${borderColor} ${bgColor} px-3.5 py-3 text-left`}>
     <Icon className={`h-4 w-4 flex-shrink-0 ${iconColor}`} strokeWidth={1.5} />
-    <div className="flex-1 min-w-0"><p className="text-[13px] font-semibold text-pw-text truncate">{title}</p><p className="text-[10px] text-pw-muted">{subtitle}</p></div>
+    <div className="flex-1 min-w-0"><p className="text-[13px] font-semibold text-pw-text truncate">{title}</p><p className="text-[10px] text-pw-muted truncate">{subtitle}</p></div>
     {right && <p className="text-[13px] font-bold text-pw-text">{right}</p>}
     <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-pw-muted" strokeWidth={1.5} />
   </button>);

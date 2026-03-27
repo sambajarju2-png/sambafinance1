@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield } from 'lucide-react';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
@@ -19,8 +19,9 @@ import HelpResources from '@/components/help-resources';
 import TrustBadges from '@/components/trust-badges';
 import AdminTestPanel from '@/components/admin-test-panel';
 import ReferralSettings from '@/components/referral-settings';
+import BuddySettings from '@/components/buddy-settings';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -32,12 +33,14 @@ function SettingsContent() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Read ?tab=gmail (or other tabs) from URL
+  // Read ?tab=gmail (or other tabs) from URL — also support ?tab=sync for Outlook callback
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['gmail', 'profile', 'notifications', 'achievements', 'budget', 'help', 'referral'].includes(tab)) {
+    if (tab === 'sync' || tab === 'gmail') {
+      setActiveTab('gmail');
+      // Don't clean URL yet — gmail-settings reads ?outlook= params
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
-      // Clean URL
       window.history.replaceState(null, '', '/instellingen');
     }
   }, [searchParams]);
@@ -140,12 +143,22 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'buddy') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <BuddySettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
-        <SettingsLink icon={Mail} label={t('gmailAccounts')} description={t('gmailAccountsDesc')} onClick={() => setActiveTab('gmail')} />
+        <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
+        <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />

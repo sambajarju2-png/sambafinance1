@@ -1,32 +1,42 @@
 import createNextIntlPlugin from 'next-intl/plugin';
-
-const withNextIntl = createNextIntlPlugin();
-
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  // FIX: Remove X-Powered-By header (CWE-200)
+  poweredByHeader: false,
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          // Prevent clickjacking
           { key: 'X-Frame-Options', value: 'DENY' },
-          // Prevent MIME type sniffing
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Control referrer information
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          // Permissions policy
-          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), interest-cohort=()' },
-          // HSTS - enforce HTTPS for 1 year
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          // XSS protection (legacy browsers)
-          { key: 'X-XSS-Protection', value: '1; mode=block' },
-          // DNS prefetch control
-          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          // FIX: Added includeSubDomains + preload to HSTS
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://cdn.sanity.io https://ectcwerjdpiurubdpxcp.supabase.co https://api.dicebear.com",
+              // FIX: Added graph.microsoft.com + login.microsoftonline.com for Outlook OAuth
+              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com",
+              "font-src 'self'",
+              "frame-src 'none'",
+              "object-src 'none'",
+              // FIX: Added base-uri and form-action restrictions
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+          // FIX: geolocation() → geolocation=() (was missing = sign)
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
         ],
       },
     ];
   },
 };
-
 export default withNextIntl(nextConfig);

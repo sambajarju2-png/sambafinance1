@@ -1,10 +1,21 @@
 import { callGeminiText, callGeminiVision } from './gemini';
 import { callHaiku } from './haiku';
+import { buildExtractionPrompt } from './prompts';
+import { buildCorrectionPrompt } from '../ai-corrections';
+import { createServerSupabaseClient } from '../supabase/server';
+import { detectIncassoAgency } from '../incasso-detect';
+import { lookupVendor, buildVendorContext } from '../vendor-lookup';
 
 /**
  * PayWatch Dual-AI Pipeline
  *
  * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
+ *
+ * Architecture:
+ * - AI extracts RAW data (vendor, amount, IBAN, reference, due date, payment URL)
+ * - Database handles categorization (561 known vendors + incasso agencies)
+ * - AI does NOT receive vendor lists for camera scans (keeps prompt focused)
+ * - Email extraction gets vendor hints (Haiku handles long context better)
  *
  * SERVER-ONLY — never import in client components.
  */
@@ -78,7 +89,7 @@ export interface InsightResult {
 }
 
 // Category list for AI prompts
-const CATEGORY_HINT_LIST = 'wonen|nutsvoorzieningen|zorg|verzekeringen|telecom|overheid|vervoer|leningen|winkels|abonnementen|gezin|zakelijk|incasso_kosten|overig';
+const CATEGORY_HINT_LIST = 'wonen|nutsvoorzieningen|zorg|verzekeringen|telecom|overheid|vervoer|leningen|winkels|abonnementen|gezin|zakelijk|incasso|overig';
 
 // ============================================================
 // 1. EMAIL CLASSIFICATION (Gemini)
@@ -116,7 +127,6 @@ export async function classifyEmail(
 
   const result = await callGeminiText(prompt, userId, 'email_classification');
 
-  // If parsing failed completely, default to not-a-bill (safe default)
   if (result._parse_error && result.is_bill === undefined) {
     console.warn('Classification parse error, defaulting to not-a-bill for:', subject.slice(0, 60));
     return { is_bill: false, confidence: 0, reason: 'Parse error — skipped' };
@@ -136,7 +146,41 @@ export async function classifyEmail(
 const EXTRACTION_PROMPT = `You are extracting structured data from a Dutch bill/invoice email.
 Extract all available fields. If a field is not found, set it to null.
 Detect the debt collection stage if applicable.
-All monetary amounts must be in CENTS (integer). €127.43 = 12743.
+All monetary amounts must be in CENTS (integer). Dutch format: dots are thousands separators, comma is decimal.
+
+AMOUNT PARSING (CRITICAL — Dutch format):
+- € 1.234,56 = 123456 cents (dot = thousands, comma = decimal)
+- € 127,43 = 12743 cents
+- € 15,- = 1500 cents (dash means zero cents)
+- € 15 = 1500 cents (no decimals = whole euros)
+- € 0,75 = 75 cents
+- € 1234 = 123400 cents (no separator = whole euros)
+- WRONG: € 1.234,56 ≠ 1234.56 (that is English format, not Dutch)
+
+CRITICAL RULES:
+- "Te betalen" or "Totaal te betalen" is ALWAYS the correct amount. Not subtotals.
+- Use the IBAN under "Betaalinformatie" or "Overmaken naar", not header/footer IBANs.
+- If "Opdrachtgever" is listed, vendor = "[Bureau] (namens [Opdrachtgever])"
+- "Betalingskenmerk" > "Dossiernummer" > "Factuurnummer" for reference
+- For betalingsregeling: use "NOG TE BETALEN" (current term) and first future Vervaldatum
+
+CATEGORY RULES (pick the most specific one):
+- wonen: huur, hypotheek, servicekosten, VvE bijdrage, woningcorporatie
+- nutsvoorzieningen: gas, elektriciteit, water, stadsverwarming, energiecontract
+- zorg: huisarts, tandarts, ziekenhuis, apotheek, GGZ, fysiotherapie, eigen risico
+- verzekeringen: zorgverzekering, autoverzekering, inboedel, aansprakelijkheid, WA, opstal
+- telecom: telefoon, internet, TV, mobiel abonnement, glasvezel
+- overheid: CJIB, Belastingdienst, DUO studieschuld, gemeente belasting, waterschap, CAK, SVB
+- vervoer: OV, NS, auto-onderhoud, RDW, parkeerboete, wegenbelasting, ANWB
+- leningen: persoonlijke lening, doorlopend krediet, studiefinanciering, hypotheek aflossing
+- incasso: incassobureau, deurwaarder, collection agency, vordering namens
+- winkels: webshop, Afterpay, Klarna, Billink, buy now pay later
+- abonnementen: streaming, sportschool, software, tijdschrift, lidmaatschap
+- gezin: kinderopvang, school, BSO, sportvereniging
+- zakelijk: zakelijke dienstverlening, boekhouder, KvK
+- overig: anything that does not fit above
+
+{vendor_context}
 
 Email subject: {subject}
 Email body:
@@ -175,68 +219,84 @@ export async function extractBillFromEmail(
     ? `PDF attachment content:\n${pdfText.slice(0, 3000)}`
     : 'No PDF attachment.';
 
+  // Build vendor context for Haiku (Haiku handles long context well)
+  let vendorContext = '';
+  try {
+    vendorContext = await buildVendorContext();
+  } catch {
+    // Non-critical
+  }
+
   const prompt = EXTRACTION_PROMPT
     .replace('{subject}', subject)
     .replace('{body}', body.slice(0, 3000))
-    .replace('{pdf_note}', pdfNote);
+    .replace('{pdf_note}', pdfNote)
+    .replace('{vendor_context}', vendorContext);
 
   const result = await callHaiku(prompt, userId, 'email_extraction', 1024);
 
-  return normalizeExtraction(result);
+  const extracted = normalizeExtraction(result);
+
+  // Post-AI: DB handles categorization (instant, free, more accurate than AI)
+  const vendorMatch = await lookupVendor(extracted.vendor);
+  if (vendorMatch.matched && vendorMatch.category) {
+    extracted.category_hint = vendorMatch.category;
+    if (vendorMatch.display_name) extracted.vendor = vendorMatch.display_name;
+    if (vendorMatch.suggested_escalation) {
+      extracted.escalation_stage = extracted.escalation_stage || vendorMatch.suggested_escalation;
+    }
+  }
+
+  // Post-AI: Check Justis Incasso Register (270 agencies)
+  if (!vendorMatch.is_incasso) {
+    const incassoCheck = await detectIncassoAgency(extracted.vendor);
+    if (incassoCheck.matched) {
+      extracted.category_hint = 'incasso';
+      extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+      if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+    }
+  }
+
+  return extracted;
 }
 
 // ============================================================
 // 3. CAMERA BILL EXTRACTION (Gemini Vision)
+// 
+// NO vendor context here — Gemini Flash has limited context window.
+// Sending 291 vendor names DILUTES extraction quality.
+// Let Gemini focus 100% on reading the image.
+// Category + escalation are handled AFTER by DB lookup.
 // ============================================================
-
-const CAMERA_PROMPT = `You are analyzing a photo of a Dutch bill, invoice, or collection letter.
-Extract all visible fields. If a field is not clearly visible, set to null.
-All monetary amounts must be in CENTS (integer). €127.43 = 12743.
-
-Detect the type:
-- Regular invoice (factuur)
-- Payment reminder (herinnering)
-- Formal notice (aanmaning)
-- Collection agency letter (incasso)
-- Bailiff notice (deurwaarder)
-
-Output format:
-{
-  "vendor": "string",
-  "amount_cents": integer,
-  "currency": "EUR",
-  "iban": "string | null",
-  "reference": "string | null",
-  "due_date": "YYYY-MM-DD | null",
-  "category_hint": "string (${CATEGORY_HINT_LIST})",
-  "escalation_stage": "factuur|herinnering|aanmaning|incasso|deurwaarder|null",
-  "payment_url": "string | null",
-  "confidence": {"vendor": 0.0-1.0, "amount": 0.0-1.0, "due_date": 0.0-1.0}
-}
-
-IMPORTANT: Respond ONLY with valid JSON. No markdown. No code fences. No explanation.
-Start with { and end with }.`;
 
 export async function extractBillFromPhoto(
   imageBase64: string,
   mimeType: string,
   userId: string
 ): Promise<CameraExtractionResult> {
-  // callGeminiVision now uses lenient parsing — it returns partial results
-  // instead of throwing when JSON is incomplete. So we always get something.
+  // Fetch active correction patterns from DB (learned from user edits)
+  let correctionRules = '';
+  try {
+    const supabase = await createServerSupabaseClient();
+    correctionRules = await buildCorrectionPrompt(supabase);
+  } catch {
+    // Non-critical — continue without correction patterns
+  }
+
+  // Build prompt with Dutch rules + corrections ONLY (no vendor context)
+  const prompt = buildExtractionPrompt(correctionRules);
+
   const result = await callGeminiVision(
     imageBase64,
     mimeType,
-    CAMERA_PROMPT,
+    prompt,
     userId,
     'camera_extraction'
   );
 
-  // If _parse_error is set, we got a partial extraction from raw text.
-  // That's fine — fill in what we have, leave the rest for the user.
   const wasPartial = Boolean(result._parse_error);
 
-  return {
+  const extracted: CameraExtractionResult = {
     vendor: String(result.vendor || ''),
     amount_cents: Number(result.amount_cents) || 0,
     currency: String(result.currency || 'EUR'),
@@ -254,6 +314,28 @@ export async function extractBillFromPhoto(
           due_date: Number((result.confidence as Record<string, unknown>)?.due_date) || 0,
         },
   };
+
+  // Post-AI: DB handles categorization (instant, free, overrides AI)
+  const vendorMatch = await lookupVendor(extracted.vendor);
+  if (vendorMatch.matched && vendorMatch.category) {
+    extracted.category_hint = vendorMatch.category;
+    if (vendorMatch.display_name) extracted.vendor = vendorMatch.display_name;
+    if (vendorMatch.suggested_escalation) {
+      extracted.escalation_stage = extracted.escalation_stage || vendorMatch.suggested_escalation;
+    }
+  }
+
+  // Post-AI: Check Justis Incasso Register
+  if (!vendorMatch.is_incasso) {
+    const incassoCheck = await detectIncassoAgency(extracted.vendor);
+    if (incassoCheck.matched) {
+      extracted.category_hint = 'incasso';
+      extracted.escalation_stage = extracted.escalation_stage || incassoCheck.suggested_escalation;
+      if (incassoCheck.agency_name) extracted.vendor = incassoCheck.agency_name;
+    }
+  }
+
+  return extracted;
 }
 
 // ============================================================
@@ -382,7 +464,6 @@ export async function generateDraftLetter(
     .replace('{sender_name}', senderName || 'N/A')
     .replace('{sender_dob}', senderDob || 'N/A');
 
-  // Use 1024 tokens — 384 was too small and caused truncated JSON
   const result = await callHaiku(prompt, userId, 'draft_letter', 1024);
 
   return {

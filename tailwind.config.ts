@@ -4,15 +4,14 @@ const config: Config = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class', // <--- This enables the switch
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
         sans: ['var(--font-plus-jakarta)', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // This maps your Tailwind classes (like 'bg-pw-surface') 
-        // to your CSS variables (like '--surface')
+        // PayWatch Design System — uses CSS variables for dark mode support
         pw: {
           bg: 'var(--bg)',
           surface: 'var(--surface)',

@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Bell, Loader2 } from 'lucide-react';
+import { Mail, Bell, Users, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export default function NotificationPreferences() {
   const t = useTranslations('notifications');
-  const [prefs, setPrefs] = useState({ notify_email_welcome: true, notify_email_features: true, notify_email_digest: true, notify_push_enabled: false });
+  const [prefs, setPrefs] = useState({
+    notify_email_welcome: true,
+    notify_email_features: true,
+    notify_email_digest: true,
+    notify_push_enabled: false,
+    notify_community_enabled: true,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -21,6 +27,7 @@ export default function NotificationPreferences() {
             notify_email_features: profile.notify_email_features ?? true,
             notify_email_digest: profile.notify_email_digest ?? true,
             notify_push_enabled: profile.notify_push_enabled ?? false,
+            notify_community_enabled: profile.notify_community_enabled ?? true,
           });
         }
       } catch { /* silent */ }
@@ -44,9 +51,10 @@ export default function NotificationPreferences() {
     } finally { setSaving(null); }
   }
 
-  if (loading) return <div className="skeleton h-[180px] rounded-card" />;
+  if (loading) return <div className="skeleton h-[220px] rounded-card" />;
 
   const toggleItems: { key: keyof typeof prefs; icon: typeof Mail; label: string; desc: string }[] = [
+    { key: 'notify_community_enabled', icon: Users, label: t('community_label'), desc: t('community_desc') },
     { key: 'notify_email_digest', icon: Mail, label: t('digest_label'), desc: t('digest_desc') },
     { key: 'notify_email_welcome', icon: Mail, label: t('welcome_label'), desc: t('welcome_desc') },
     { key: 'notify_email_features', icon: Mail, label: t('features_label'), desc: t('features_desc') },

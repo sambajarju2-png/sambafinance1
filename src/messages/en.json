@@ -1,6 +1,9 @@
 {
   "home": {
-    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late."
+    "tagline": "Never be surprised by a collection agency again. PayWatch scans your email, tracks your bills, and alerts you before it's too late.",
+    "status": "Scaffold ready",
+    "authenticated": "Logged in — Auth works!",
+    "nextStep": "Dashboard and onboarding will be built in the next step."
   },
   "common": {
     "loading": "Loading...",
@@ -23,8 +26,8 @@
     "payments": "Payments",
     "stats": "Stats",
     "cashflow": "Cashflow",
-    "settings": "More",
-    "notifications": "Notifications"
+    "feed": "Feed",
+    "settings": "Settings"
   },
   "auth": {
     "signIn": "Sign in",
@@ -46,46 +49,22 @@
     "errorInvalidCredentials": "Invalid email or password.",
     "errorAlreadyRegistered": "This email is already registered. Try signing in."
   },
-  "onboarding": {
-    "back": "Back",
-    "next": "Next",
-    "startUsing": "Start PayWatch",
-    "welcomeTitle": "Welcome to PayWatch",
-    "welcomeSubtitle": "Let's set up your account. This takes less than a minute.",
-    "yourName": "What should we call you?",
-    "namePlaceholder": "E.g. Samba",
-    "languageTitle": "Choose your language",
-    "languageSubtitle": "You can always change this later in settings.",
-    "scanTitle": "How do you receive your bills?",
-    "scanSubtitle": "We'll use this to show you the right scan options.",
-    "scanGmail": "Via email (Gmail)",
-    "scanGmailDesc": "We'll automatically scan your Gmail inbox for invoices",
-    "scanCamera": "Via post (letters)",
-    "scanCameraDesc": "Take photos of paper bills with your camera",
-    "scanBoth": "Both",
-    "scanBothDesc": "Scan emails and take photos of paper bills",
-    "readyTitle": "You're all set!",
-    "readySubtitle": "Your PayWatch account is ready. Connect Gmail or scan your first bill next.",
-    "readyScanMethod": "Scan method",
-    "readyGmailHint": "After starting, you can connect Gmail in settings to automatically find invoices.",
-    "readyCameraHint": "After starting, you can take a photo of your first bill right away."
-  },
   "dashboard": {
     "title": "Overview",
     "outstanding": "Outstanding",
     "overdue": "Overdue",
     "upcoming": "Upcoming",
     "paid": "Paid",
-    "addBill": "Add bill",
-    "scanBill": "Scan",
-    "scanEmail": "Scan email",
-    "overdueSection": "Overdue",
-    "noBillsTitle": "No bills yet",
-    "noBillsDescription": "Scan your first bill via camera or connect Gmail to automatically find invoices.",
     "debtCard": "My debts",
     "inEscalation": "in escalation",
-    "saved": "saved on collection costs",
-    "savedZero": "Pay on time to save on collection costs"
+    "overdueSection": "Overdue",
+    "upcomingSection": "Upcoming",
+    "scanBill": "Scan bill",
+    "scanEmail": "Scan email",
+    "noBillsTitle": "No bills",
+    "noBillsDescription": "Add your first bill via scan or manually.",
+    "categoryBreakdown": "By category",
+    "overBudgetWarning": "You're over your monthly budget"
   },
   "bills": {
     "pageTitle": "Payments",
@@ -96,57 +75,24 @@
     "markAsPaid": "Paid",
     "addBill": "Add",
     "noBills": "No bills",
-    "noBillsHint": "Add your first bill using the button above.",
+    "noBillsHint": "Add your first bill.",
     "dueDate": "Due date",
     "amount": "Amount",
     "vendor": "Vendor",
     "category": "Category",
-    "status": "Status"
-  },
-  "addBill": {
-    "title": "Add bill",
-    "vendor": "Vendor",
-    "vendorPlaceholder": "E.g. Vattenfall, KPN, Municipality...",
-    "amount": "Amount (€)",
-    "dueDate": "Due date",
-    "category": "Category",
-    "reference": "Reference / invoice number",
-    "referencePlaceholder": "E.g. F2024-001234",
-    "notes": "Notes",
-    "notesPlaceholder": "Optional notes about this bill...",
-    "save": "Save bill",
-    "errorVendor": "Please enter a vendor.",
-    "errorAmount": "Please enter a valid amount.",
-    "errorDueDate": "Please select a due date.",
-    "errorGeneral": "Something went wrong. Please try again.",
-    "categories": {
-      "wonen": "Housing",
-      "nutsvoorzieningen": "Utilities",
-      "zorg": "Healthcare",
-      "verzekeringen": "Insurance",
-      "telecom": "Telecom & Internet",
-      "overheid": "Government & Tax",
-      "vervoer": "Transport",
-      "leningen": "Loans & Credit",
-      "winkels": "Shopping & Purchases",
-      "abonnementen": "Subscriptions",
-      "gezin": "Family & Children",
-      "zakelijk": "Business",
-      "incasso_kosten": "Collection & Legal Costs",
-      "overig": "Other"
-    },
-    "stage": "Stage",
-    "stagePlaceholder": "Select escalation stage"
+    "status": "Status",
+    "filter": "Filter"
   },
   "billDetail": {
     "tabDetails": "Details",
+    "tabEscalation": "Escalation",
     "tabActions": "Actions",
     "tabNotes": "Notes",
     "dueDate": "Due date",
-    "receivedDate": "Received on",
+    "receivedDate": "Received date",
     "category": "Category",
     "source": "Source",
-    "source_manual": "Manually added",
+    "source_manual": "Manual",
     "source_gmail_scan": "Gmail scan",
     "source_camera_scan": "Camera scan",
     "reference": "Reference",
@@ -154,83 +100,89 @@
     "paidOn": "Paid on",
     "paid": "Paid",
     "overdue": "Overdue",
-    "extraCosts": "estimated extra costs (WIK)",
+    "currentStage": "Current stage",
+    "extraCosts": "estimated extra costs",
+    "editBill": "Edit",
+    "editBillDesc": "Change the details of this bill",
     "markAsPaid": "Mark as paid",
-    "markAsPaidDesc": "Set the payment date to today",
+    "markAsPaidDesc": "Mark this bill as paid",
+    "draftLetter": "Draft letter",
+    "draftLetterDesc": "Let AI draft a letter",
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
-    "favoriteDesc": "Favorite bills appear at the top of the list",
-    "deleteBill": "Delete bill",
-    "deleteBillDesc": "This action cannot be undone",
+    "favoriteDesc": "Mark as important",
+    "deleteBill": "Delete",
+    "deleteBillDesc": "Delete this bill permanently",
     "deleteConfirm": "Are you sure you want to delete this bill?",
-    "notesPlaceholder": "Write your notes here...",
-    "saveNotes": "Save notes",
+    "notesPlaceholder": "Add a note...",
     "notesSaved": "Saved",
-    "draftLetter": "Draft letter",
-    "draftLetterDesc": "Generate a letter or dispute",
-    "tabEscalation": "Escalation",
-    "editBill": "Edit",
-    "editBillDesc": "Change details of this bill",
-    "saveChanges": "Save changes",
+    "saveNotes": "Save note",
+    "saveChanges": "Save changes"
+  },
+  "addBill": {
+    "title": "Add bill",
+    "vendor": "Vendor",
+    "vendorPlaceholder": "e.g. Ziggo, KPN, Eneco...",
+    "amount": "Amount (€)",
+    "dueDate": "Due date",
+    "category": "Category",
+    "reference": "Reference",
+    "referencePlaceholder": "Invoice number (optional)",
+    "notes": "Notes",
+    "notesPlaceholder": "Remarks (optional)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "errorVendor": "Enter a vendor name",
+    "errorAmount": "Enter an amount",
+    "errorDueDate": "Choose a due date",
+    "errorGeneral": "Failed to save. Try again.",
+    "errorSave": "Failed to save",
     "editSaved": "Changes saved",
-    "currentStage": "Current stage"
+    "categories": {
+      "wonen": "Housing",
+      "nutsvoorzieningen": "Utilities",
+      "zorg": "Healthcare",
+      "verzekeringen": "Insurance",
+      "telecom": "Telecom",
+      "overheid": "Government",
+      "vervoer": "Transport",
+      "leningen": "Loans",
+      "winkels": "Shops",
+      "abonnementen": "Subscriptions",
+      "gezin": "Family",
+      "zakelijk": "Business",
+      "overig": "Other",
+      "incasso": "Collection"
+    },
+    "paymentUrl": "Payment link (optional)",
+    "paymentUrlHint": "iDEAL or payment page URL"
   },
-  "gmail": {
-    "title": "Gmail Accounts",
-    "description": "Connect your Gmail account to automatically find invoices in your inbox. PayWatch only reads emails — we can never modify or delete anything.",
-    "connectGmail": "Connect Gmail",
-    "connected": "Gmail account connected successfully!",
-    "disconnected": "Gmail account disconnected.",
-    "denied": "You denied access. Please try again.",
-    "errorGeneral": "Something went wrong. Please try again.",
-    "disconnectConfirm": "Are you sure you want to disconnect this Gmail account? Existing bills will not be deleted.",
-    "noAccounts": "No Gmail connected",
-    "noAccountsHint": "Connect your Gmail to automatically find invoices in your inbox.",
-    "lastScanned": "Last scanned",
-    "neverScanned": "Never scanned",
-    "needsReauth": "Re-authentication required",
-    "reauth": "Refresh",
-    "startScan": "Start scan",
-    "scanAgain": "Scan again",
-    "scanTitle": "Scanning Gmail..."
-  },
-  "pwa": {
-    "installTitle": "Install PayWatch",
-    "installDesc": "Add PayWatch to your home screen",
-    "install": "Install",
-    "maybeLater": "Maybe later",
-    "iosStep1Title": "Tap the Share icon",
-    "iosStep1Desc": "Tap the share icon at the bottom of the screen (square with arrow up).",
-    "iosStep2Title": "'Add to Home Screen'",
-    "iosStep2Desc": "Scroll down in the menu and tap 'Add to Home Screen'.",
-    "iosStep3Title": "Tap 'Add'",
-    "iosStep3Desc": "Tap 'Add' in the top right corner. PayWatch is now on your home screen.",
-    "androidStep1Title": "Open the menu",
-    "androidStep1Desc": "Tap the three dots in the top right of your browser.",
-    "androidStep2Title": "'Install' or 'Add to home screen'",
-    "androidStep2Desc": "Tap 'Install app' or 'Add to home screen'.",
-    "androidStep3Title": "Done!",
-    "androidStep3Desc": "PayWatch is now on your home screen like a real app."
+  "escalation": {
+    "factuur": "Invoice",
+    "herinnering": "Reminder",
+    "aanmaning": "Final notice",
+    "incasso": "Collection",
+    "deurwaarder": "Bailiff"
   },
   "stats": {
     "title": "Statistics",
     "performance": "Performance",
     "aiInsight": "AI Insight",
     "noData": "No data yet",
-    "noDataHint": "Once you have bills, your performance and trends will appear here.",
-    "healthScore": "Financial health",
-    "healthGood": "Doing great!",
+    "noDataHint": "Add bills to see your statistics.",
+    "healthScore": "Health",
+    "healthGood": "Looking good!",
     "healthOk": "Could be better",
     "healthBad": "Action needed",
-    "healthDescription": "Score based on payment behavior, overdue bills and escalations.",
+    "healthDescription": "Based on payment behavior and escalations",
     "onTimeRate": "On-time rate",
-    "onTimeOf": "bills",
+    "onTimeOf": "on time",
     "streak": "Streak",
     "streakConsecutive": "paid on time in a row",
     "saved": "Saved",
     "savedDesc": "in collection costs avoided",
     "overdue": "Overdue",
-    "overdueNone": "All on time!",
+    "overdueNone": "No overdue bills",
     "overdueAction": "Pay as soon as possible",
     "byCategory": "By category",
     "bill": "bill",
@@ -241,373 +193,454 @@
     "totalOpen": "Outstanding",
     "totalPaid": "Paid",
     "aiTitle": "AI Analysis",
-    "aiDescription": "Let AI analyze your bills for priorities, warnings and patterns.",
+    "aiDescription": "Let AI analyze your bills for smart insights.",
     "analyze": "Analyze",
     "analyzing": "Analyzing...",
-    "reAnalyze": "Analyze again",
-    "errorGeneral": "Something went wrong during analysis."
+    "reAnalyze": "Re-analyze"
   },
   "cashflow": {
     "title": "Cashflow",
-    "noData": "No data yet",
-    "noDataHint": "Add bills to see your cashflow overview with predictions.",
     "thisMonth": "This month",
     "paid": "Paid",
     "remaining": "Remaining",
-    "upcoming": "Expected expenses",
-    "noUpcoming": "No outstanding bills in this period.",
-    "dueNext": "Due within {days} days",
+    "upcoming": "Expected payments",
+    "noUpcoming": "No expected payments",
+    "dueNext": "Expected in {days} days",
     "more": "more",
     "monthlyHistory": "Monthly overview",
     "paidLegend": "Paid",
     "openLegend": "Outstanding",
     "topVendors": "Top vendors",
     "bill": "bill",
-    "bills": "bills"
+    "bills": "bills",
+    "noData": "No data yet",
+    "noDataHint": "Add bills to see your cashflow."
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to PayWatch",
+    "welcomeSubtitle": "Protect yourself from collection costs",
+    "yourName": "Your name",
+    "namePlaceholder": "What should we call you?",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "gemeente": "Municipality",
+    "language": "Language",
+    "scanTitle": "How do you want to add bills?",
+    "scanSubtitle": "You can change this later in settings.",
+    "scanGmail": "Scan Gmail",
+    "scanGmailDesc": "We'll scan your email for bills",
+    "scanCamera": "Take photos",
+    "scanCameraDesc": "Take photos of your paper bills",
+    "scanBoth": "Both",
+    "scanBothDesc": "Scan Gmail + take photos",
+    "connectGmail": "Connect Gmail",
+    "skip": "Skip",
+    "complete": "Done!",
+    "getStarted": "Get started",
+    "next": "Next",
+    "back": "Back"
   },
   "settings": {
     "title": "Settings",
     "back": "Back",
+    "tab": "Settings",
     "profile": "Profile",
-    "profileDesc": "Name, language, PIN and dark mode",
-    "gmailAccounts": "Gmail accounts",
-    "gmailAccountsDesc": "Connect or disconnect Gmail for scanning",
+    "profileDesc": "Name, municipality and language",
     "notifications": "Notifications",
-    "notificationsDesc": "Push, email and reminders",
-    "budget": "Budget",
-    "budgetDesc": "Set budget limits per category",
-    "debtHelp": "Debt help",
-    "debtHelpDesc": "Legal aid, Nibud, Schuldhulpverlening",
-    "deleteAccount": "Delete account",
-    "deleteAccountDesc": "Permanently delete your account and all data",
-    "deleteAccountConfirm": "Are you sure you want to delete your account? This cannot be undone. All your bills, scans and data will be permanently deleted.",
-    "deleteAccountButton": "Yes, delete my account",
-    "achievements": "Achievements",
-    "achievementsDesc": "View your achievements and badges",
+    "notificationsDesc": "Push and email notifications",
+    "gmailAccounts": "Gmail accounts",
+    "gmailAccountsDesc": "Connected email accounts",
+    "budget": "Monthly budget",
+    "budgetDesc": "Set your monthly budget",
     "monthlyBudget": "Monthly budget",
-    "monthlyBudgetDesc": "Set a budget and get a warning when you exceed it.",
+    "monthlyBudgetDesc": "How much can you spend on bills per month?",
+    "maxOpenBills": "Maximum outstanding",
+    "maxOpenBillsDesc": "Warning when too many bills are outstanding",
+    "overBudgetWarning": "You're over your monthly budget",
+    "overBudgetDesc": "Try to reduce your spending or adjust your budget.",
+    "categoryBreakdown": "Spending by category",
+    "achievements": "Achievements",
+    "achievementsDesc": "View your earned badges",
+    "debtHelp": "Debt help",
+    "debtHelpDesc": "Help organizations and municipality info",
+    "deleteAccount": "Delete account",
+    "deleteAccountButton": "Delete account",
+    "deleteAccountConfirm": "Are you sure you want to delete your account? This cannot be undone.",
+    "signOut": "Sign out",
+    "triggerTour": "Restart tour",
+    "triggerFeedback": "Give feedback",
+    "triggerPwa": "Install app",
+    "tourReset": "Tour will restart",
+    "feedbackReset": "Feedback popup will be shown",
+    "pwaReset": "Install prompt will be shown",
     "save": "Save",
     "saved": "Saved",
-    "maxOpenBills": "Max. open bills",
-    "maxOpenBillsDesc": "Warning when you have more open bills than this number.",
-    "overBudgetWarning": "Budget exceeded",
-    "overBudgetDesc": "Your outstanding bills ({total}) exceed your budget ({budget}).",
-    "categoryBreakdown": "Breakdown by category"
-  },
-  "escalation": {
-    "factuur": "Invoice",
-    "herinnering": "Reminder",
-    "aanmaning": "Final notice",
-    "incasso": "Collection",
-    "deurwaarder": "Bailiff"
-  },
-  "scan": {
-    "scanning": "{count} emails scanned...",
-    "billsFound": "{count} bills found",
-    "complete": "Scan complete!",
-    "summary": "{processed} emails scanned, {bills} bills found.",
-    "partialSummary": "{processed} emails scanned before error, {bills} bills found.",
-    "done": "View bills",
-    "cancel": "Cancel",
-    "errorTitle": "Scan failed",
-    "errorGeneral": "Something went wrong during scanning.",
-    "errorNetwork": "Network error. Check your internet connection.",
-    "needsReauth": "Gmail access expired. Please reconnect.",
-    "close": "Close"
-  },
-  "cameraScan": {
-    "title": "Scan bill",
-    "captureTitle": "Take a photo",
-    "captureDescription": "Take a clear photo of your bill, invoice or letter. AI will automatically recognize the details.",
-    "takePhoto": "Take photo",
-    "chooseFromGallery": "Choose from gallery",
-    "extracting": "Recognizing details...",
-    "extractingHint": "AI is analyzing your photo. This takes a few seconds.",
-    "confirmTitle": "Check the details",
-    "confirmDescription": "AI recognized these details. Review and adjust where needed.",
-    "vendor": "Vendor",
-    "amount": "Amount (€)",
-    "dueDate": "Due date",
-    "category": "Category",
-    "reference": "Reference",
-    "save": "Save",
-    "retake": "Retake",
-    "errorTitle": "Recognition failed",
-    "errorGeneral": "We could not recognize the details. Try a clearer photo.",
-    "errorExtraction": "Error recognizing details.",
-    "errorRequired": "Please fill in vendor, amount and due date.",
-    "errorSave": "Error saving the bill.",
-    "tryAgain": "Try again"
-  },
-  "draftLetter": {
-    "title": "Draft Letter",
-    "intentQuestion": "What do you want to achieve?",
-    "intentPaymentPlan": "Request payment plan",
-    "intentPaymentPlanDesc": "Ask to pay the amount in installments",
-    "intentPostpone": "Request postponement",
-    "intentPostponeDesc": "Ask for more time to pay",
-    "intentDispute": "File a dispute",
-    "intentDisputeDesc": "Dispute the bill",
-    "intentConfirmPaid": "Confirm payment",
-    "intentConfirmPaidDesc": "Confirm that you have already paid",
-    "detailsQuestion_betalingsregeling": "How many installments do you want?",
-    "detailsQuestion_uitstel": "How many days of postponement do you need?",
-    "detailsQuestion_bezwaar": "What is the reason for your dispute?",
-    "detailsQuestion_bevestiging": "When did you pay?",
-    "months": "months",
-    "days": "days",
-    "disputeAmountWrong": "Amount is incorrect",
-    "disputeNotReceived": "Service not received",
-    "disputeAlreadyPaid": "Already paid",
-    "disputeExpired": "Statute of limitations expired",
-    "paidDate": "Payment date",
-    "back": "Back",
-    "generate": "Generate draft",
-    "generating": "Writing letter...",
-    "subject": "Subject",
-    "letterBody": "Letter",
-    "disclaimer": "Note: this is an AI-generated draft. Review the content before sending. This is not legal advice.",
-    "copy": "Copy",
-    "copied": "Copied",
-    "openEmail": "Open in email",
-    "newLetter": "Write new letter",
-    "errorTitle": "Letter generation failed",
-    "errorGeneral": "Something went wrong. Please try again.",
-    "tryAgain": "Try again"
-  },
-  "incasso": {
-    "stageTimeline": "Escalation timeline",
-    "recommendedAction": "Recommended action",
-    "wikTitle": "Estimated collection costs (WIK)",
-    "wikDescription": "Under the Dutch Wet Incassokosten, a collection agency may charge up to the amount below on top of the original bill.",
-    "wikExtra": "extra on top of original amount",
-    "wikDisclaimer": "Note: this is an estimate based on the WIK scale. Actual costs may vary.",
-    "savingsTitle": "Save on collection costs",
-    "savingsDescription": "Pay this bill on time and avoid up to {amount} in extra collection costs.",
-    "helpTitle": "Need help?",
-    "juridischLoket": "Free legal advice (0900-8020)",
-    "nibud": "Financial advice and budgeting",
-    "schuldhulp": "Municipal debt assistance",
-    "legalDisclaimer": "Note: PayWatch provides general information about the collection process. This is not legal advice.",
-    "overdueWarning": "This bill is overdue. Pay as soon as possible to avoid extra costs.",
-    "daysOverdue": "{days} days overdue"
-  },
-  "achievements": {
-    "title": "Achievements",
-    "categories": {
-      "betalingen": "Payments",
-      "streak": "Streak",
-      "gezondheid": "Financial Health",
-      "gebruik": "App Usage"
-    },
-    "howToTitle": "How to earn achievements?",
-    "moreToUnlock": "more to unlock",
-    "unlockedOn": "Unlocked on",
-    "locked": "Not yet unlocked",
-    "howToUnlock": "How to unlock this?",
-    "items": {
-      "eerste_betaling": {
-        "name": "First Step",
-        "desc": "Paid your first bill",
-        "howTo": "Mark your first bill as paid."
-      },
-      "vijf_betaald": {
-        "name": "Rolling",
-        "desc": "5 bills paid",
-        "howTo": "Pay a total of 5 bills."
-      },
-      "tien_betaald": {
-        "name": "Persistent",
-        "desc": "10 bills paid",
-        "howTo": "Pay a total of 10 bills."
-      },
-      "twintig_betaald": {
-        "name": "Master Payer",
-        "desc": "20 bills paid",
-        "howTo": "Pay a total of 20 bills."
-      },
-      "vijftig_betaald": {
-        "name": "Legend",
-        "desc": "50 bills paid",
-        "howTo": "Pay a total of 50 bills."
-      },
-      "streak_3": {
-        "name": "Three-peat",
-        "desc": "3 on time in a row",
-        "howTo": "Pay 3 bills on time consecutively."
-      },
-      "streak_5": {
-        "name": "High Five",
-        "desc": "5 on time in a row",
-        "howTo": "Pay 5 bills on time consecutively."
-      },
-      "streak_10": {
-        "name": "Champion",
-        "desc": "10 on time in a row",
-        "howTo": "Pay 10 bills on time consecutively."
-      },
-      "streak_20": {
-        "name": "Unstoppable",
-        "desc": "20 on time in a row",
-        "howTo": "Pay 20 bills on time consecutively."
-      },
-      "nul_achterstallig": {
-        "name": "Clean Slate",
-        "desc": "No overdue bills",
-        "howTo": "Make sure you have no overdue bills."
-      },
-      "alle_betaald": {
-        "name": "Debt Free",
-        "desc": "All bills paid",
-        "howTo": "Pay all your outstanding bills."
-      },
-      "bespaard_100": {
-        "name": "Piggy Bank",
-        "desc": "€100 collection costs saved",
-        "howTo": "Save €100 by paying on time."
-      },
-      "bespaard_500": {
-        "name": "Money Wise",
-        "desc": "€500 collection costs saved",
-        "howTo": "Save €500 by paying on time."
-      },
-      "scanner": {
-        "name": "Scanner",
-        "desc": "First photo scan",
-        "howTo": "Scan a bill with your camera."
-      },
-      "gmail_koppeling": {
-        "name": "Connected",
-        "desc": "Gmail linked",
-        "howTo": "Link your Gmail in Settings."
-      },
-      "brief_geschreven": {
-        "name": "Spokesperson",
-        "desc": "First draft letter",
-        "howTo": "Write a draft letter for a bill."
-      },
-      "gemeente_ingesteld": {
-        "name": "Local Hero",
-        "desc": "Municipality set",
-        "howTo": "Set your municipality in Profile."
-      },
-      "donkere_modus": {
-        "name": "Night Owl",
-        "desc": "Dark mode enabled",
-        "howTo": "Enable dark mode."
-      },
-      "meldingen_aan": {
-        "name": "Informed",
-        "desc": "Notifications enabled",
-        "howTo": "Enable push notifications."
-      },
-      "mood_gelogd": {
-        "name": "In Touch",
-        "desc": "Mood logged",
-        "howTo": "Log your mood on the dashboard."
-      }
-    }
-  },
-  "mood": {
-    "title": "How are you feeling today?",
-    "logged": "Thanks! Your mood has been logged."
+    "saveChanges": "Save changes"
   },
   "profile": {
     "title": "Profile",
     "firstName": "First name",
     "lastName": "Last name",
     "dateOfBirth": "Date of birth",
+    "gemeente": "Municipality",
+    "language": "Language",
+    "saveChanges": "Save",
+    "saved": "Saved",
     "email": "Email address",
-    "emailHint": "Email cannot be changed in the app.",
-    "save": "Save",
-    "saved": "Saved"
-  },
-  "lawyer": {
-    "bailiffTitle": "Bailiff involved",
-    "collectionTitle": "Collection agency involved",
-    "description": "At this stage it is wise to seek legal advice. Below are law firms near you.",
-    "noGemeente": "Set your municipality in Settings to see lawyers near you.",
-    "noResults": "No law firms found. Call the Legal Desk: 0900-8020.",
-    "juridischLoket": "Legal Desk",
-    "juridischDesc": "0900-8020 (free) — for free legal advice",
-    "nibudDesc": "nibud.nl — for financial advice and debt help"
-  },
-  "helpResources": {
-    "title": "Help Resources",
-    "desc": "Free help with financial problems and debts.",
-    "juridisch_desc": "Free legal advice",
-    "nibud_desc": "Information about budgeting",
-    "schuldhulp_desc": "Voluntary help with debts",
-    "geldfit_desc": "Check if your finances are in order",
-    "ombudsman_desc": "Complaints about government agencies"
+    "emailHint": "Your email address cannot be changed.",
+    "save": "Save"
   },
   "notifications": {
-    "title": "Email & notifications",
-    "digest_label": "Weekly digest",
-    "digest_desc": "Receive a weekly summary by email",
-    "welcome_label": "Welcome emails",
-    "welcome_desc": "Receive onboarding emails after registration",
-    "features_label": "Feature updates",
-    "features_desc": "Emails about new features and tips",
+    "title": "Notifications",
     "push_label": "Push notifications",
-    "push_desc": "Receive reminders on your device",
+    "push_desc": "Receive notifications about deadlines and escalations",
+    "welcome_label": "Welcome email",
+    "welcome_desc": "Email when creating your account",
+    "features_label": "Feature updates",
+    "features_desc": "Email about new features",
+    "digest_label": "Weekly digest",
+    "digest_desc": "Weekly overview of your bills",
+    "noNotifications": "No notifications",
+    "clearAll": "Clear all",
+    "cleared": "Notifications cleared",
+    "community_label": "Community notifications",
+    "community_desc": "Notifications for @mentions in the feed",
+    "mentionSection": "Mentions",
+    "allGood": "All caught up. Nice work!",
     "overdueSection": "Overdue",
     "upcomingSection": "Upcoming",
-    "achievementsSection": "Achievements",
-    "noNotifications": "No notifications",
-    "allGood": "Everything is on track!",
-    "clearAll": "Clear all",
-    "cleared": "Cleared"
+    "achievementsSection": "Achievements"
   },
-  "tour": {
-    "skip": "Skip",
-    "next": "Next",
-    "getStarted": "Let's go",
-    "overview": {
-      "title": "Overview",
-      "desc": "Your dashboard. See all your outstanding bills, overdue payments and saved collection costs at a glance."
+  "gmail": {
+    "title": "Gmail accounts",
+    "description": "Connect your Gmail to automatically detect invoices from your inbox.",
+    "noAccounts": "No accounts connected",
+    "noAccountsHint": "Connect your Gmail to automatically scan for bills.",
+    "connected": "Connected",
+    "connectGmail": "Connect Gmail",
+    "lastScanned": "Last scanned",
+    "neverScanned": "Never scanned",
+    "needsReauth": "Reconnection required",
+    "startScan": "Start scan",
+    "scanAgain": "Scan again",
+    "reauth": "Reconnect",
+    "disconnectConfirm": "Are you sure you want to disconnect this Gmail account?",
+    "disconnected": "Account disconnected",
+    "add": "Add Gmail"
+  },
+  "scan": {
+    "title": "Scan",
+    "captureTitle": "Take a photo",
+    "captureDescription": "Take a photo of your bill",
+    "takePhoto": "Take photo",
+    "chooseFromGallery": "Choose from gallery",
+    "retake": "Retake",
+    "extracting": "Extracting data...",
+    "extractingHint": "AI is analyzing your bill",
+    "confirmTitle": "Review details",
+    "confirmDescription": "Review the extracted data",
+    "errorExtraction": "Could not extract data. Try again.",
+    "errorTitle": "Something went wrong",
+    "errorNetwork": "Check your internet connection",
+    "errorGeneral": "Please try again",
+    "tryAgain": "Try again"
+  },
+  "cameraScan": {
+    "title": "Camera scan",
+    "captureTitle": "Take a photo",
+    "captureDescription": "Take a photo of your bill",
+    "takePhoto": "Take photo",
+    "chooseFromGallery": "Choose from gallery",
+    "retake": "Retake",
+    "extracting": "Extracting data...",
+    "extractingHint": "AI is analyzing your bill",
+    "confirmTitle": "Review details",
+    "confirmDescription": "Does this look right?",
+    "errorExtraction": "Could not extract data.",
+    "tryAgain": "Try again",
+    "vendor": "Company / Sender",
+    "amount": "Amount",
+    "dueDate": "Due date",
+    "category": "Category",
+    "reference": "Reference",
+    "save": "Save",
+    "paymentUrl": "Payment link (optional)",
+    "paymentUrlHint": "iDEAL or payment page URL"
+  },
+  "draftLetter": {
+    "title": "Draft letter",
+    "intentPaymentPlan": "Payment plan",
+    "intentPaymentPlanDesc": "Request to pay in installments",
+    "intentPostpone": "Request postponement",
+    "intentPostponeDesc": "Ask for extra payment time",
+    "intentDispute": "Dispute",
+    "intentDisputeDesc": "Dispute the bill",
+    "intentConfirmPaid": "Confirm payment",
+    "intentConfirmPaidDesc": "Confirm that you already paid",
+    "disputeNotReceived": "Product/service not received",
+    "disputeAmountWrong": "Amount is incorrect",
+    "disputeAlreadyPaid": "Already paid",
+    "disputeExpired": "Statute of limitations",
+    "detailsQuestion_betalingsregeling": "How much can you pay per month?",
+    "detailsQuestion_uitstel": "Until when do you need postponement?",
+    "detailsQuestion_bezwaar": "Why are you disputing?",
+    "detailsQuestion_bevestiging": "When and how did you pay?",
+    "generate": "Generate letter",
+    "generating": "Generating letter...",
+    "letterBody": "Letter",
+    "newLetter": "New letter",
+    "copy": "Copy",
+    "copied": "Copied",
+    "openEmail": "Open in email",
+    "subject": "Subject",
+    "disclaimer": "This letter was generated by AI. Review the content before sending.",
+    "legalDisclaimer": "PayWatch is not a legal advisor. Consult a professional for legal advice.",
+    "days": "days",
+    "months": "months",
+    "back": "Back"
+  },
+  "incasso": {
+    "wikTitle": "WIK Collection Costs",
+    "wikDescription": "Calculation based on Dutch collection cost regulations",
+    "wikDisclaimer": "This is an estimate. Actual costs may vary.",
+    "wikExtra": "Estimated extra costs",
+    "recommendedAction": "Recommended action",
+    "savingsTitle": "Savings by paying on time",
+    "collectionTitle": "Collection agency",
+    "bailiffTitle": "Bailiff",
+    "howToTitle": "What can you do?",
+    "helpTitle": "Need help?",
+    "juridischLoket": "Juridisch Loket",
+    "nibud": "Nibud",
+    "schuldhulp": "Debt counseling",
+    "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
+  },
+  "achievements": {
+    "title": "Achievements",
+    "locked": "Locked",
+    "unlockedOn": "Unlocked on",
+    "achievementsSection": "Badges",
+    "moreToUnlock": "more to unlock",
+    "howToTitle": "How to earn badges?",
+    "howToUnlock": "Keep paying bills on time and use all features to unlock badges.",
+    "categories": {
+      "betalingen": "Payments",
+      "streak": "Streaks",
+      "gezondheid": "Health",
+      "gebruik": "Usage"
     },
-    "payments": {
-      "title": "Payments",
-      "desc": "All your bills in one place. Filter by outstanding, upcoming, overdue or paid. Tap a bill for details and actions."
-    },
-    "stats": {
-      "title": "Statistics",
-      "desc": "Charts and AI insights. View your spending patterns and receive personalized financial advice."
-    },
-    "cashflow": {
-      "title": "Cashflow",
-      "desc": "Monthly overview of your income and expenses. See at a glance if you are on track."
-    },
-    "settings": {
-      "title": "Settings",
-      "desc": "Profile, Gmail connection, notifications, achievements, budget and help resources. All in one place."
+    "items": {
+      "eerste_betaling": {
+        "name": "First payment",
+        "desc": "Paid your first bill!",
+        "howTo": "Mark your first bill as paid"
+      },
+      "vijf_betaald": {
+        "name": "Five paid",
+        "desc": "5 bills paid",
+        "howTo": "Pay 5 bills"
+      },
+      "tien_betaald": {
+        "name": "Ten paid",
+        "desc": "10 bills paid",
+        "howTo": "Pay 10 bills"
+      },
+      "twintig_betaald": {
+        "name": "Twenty paid",
+        "desc": "20 bills paid!",
+        "howTo": "Pay 20 bills"
+      },
+      "vijftig_betaald": {
+        "name": "Fifty paid",
+        "desc": "50 bills paid — champion!",
+        "howTo": "Pay 50 bills"
+      },
+      "streak_3": {
+        "name": "Streak 3",
+        "desc": "3 paid on time in a row",
+        "howTo": "Pay 3 bills on time consecutively"
+      },
+      "streak_5": {
+        "name": "Streak 5",
+        "desc": "5 paid on time in a row",
+        "howTo": "Pay 5 bills on time consecutively"
+      },
+      "streak_10": {
+        "name": "Streak 10",
+        "desc": "10 paid on time in a row!",
+        "howTo": "Pay 10 bills on time consecutively"
+      },
+      "streak_20": {
+        "name": "Streak 20",
+        "desc": "20 in a row — unstoppable!",
+        "howTo": "Pay 20 bills on time consecutively"
+      },
+      "nul_achterstallig": {
+        "name": "Clean slate",
+        "desc": "No overdue bills",
+        "howTo": "Have no overdue bills"
+      },
+      "alle_betaald": {
+        "name": "All paid",
+        "desc": "All bills are paid!",
+        "howTo": "Pay all your outstanding bills"
+      },
+      "bespaard_100": {
+        "name": "€100 saved",
+        "desc": "€100 in collection costs saved",
+        "howTo": "Save €100 by paying on time"
+      },
+      "bespaard_500": {
+        "name": "€500 saved",
+        "desc": "€500 in collection costs saved!",
+        "howTo": "Save €500 by paying on time"
+      },
+      "scanner": {
+        "name": "Scanner",
+        "desc": "First bill scanned with camera",
+        "howTo": "Scan a bill with your camera"
+      },
+      "gmail_koppeling": {
+        "name": "Gmail connected",
+        "desc": "Gmail account connected",
+        "howTo": "Connect your Gmail account"
+      },
+      "brief_geschreven": {
+        "name": "Letter writer",
+        "desc": "First AI letter drafted",
+        "howTo": "Let AI draft a letter for you"
+      },
+      "gemeente_ingesteld": {
+        "name": "Municipality set",
+        "desc": "Your municipality is set",
+        "howTo": "Set your municipality in your profile"
+      },
+      "donkere_modus": {
+        "name": "Night mode",
+        "desc": "Dark theme activated",
+        "howTo": "Enable the dark theme"
+      },
+      "meldingen_aan": {
+        "name": "Notifications on",
+        "desc": "Push notifications activated",
+        "howTo": "Turn on push notifications"
+      },
+      "mood_gelogd": {
+        "name": "Mood logged",
+        "desc": "First mood check done",
+        "howTo": "Log your mood via the mood tracker"
+      }
     }
+  },
+  "helpResources": {
+    "helpTitle": "Debt help",
+    "juridischLoket": "Juridisch Loket",
+    "juridischDesc": "Free legal advice",
+    "juridisch_desc": "Call for free legal advice",
+    "nibud": "Nibud",
+    "nibudDesc": "Budget advice and debt help",
+    "nibud_desc": "Tips for your household budget",
+    "schuldhulp": "Debt counseling",
+    "schuldhulp_desc": "Help through your municipality",
+    "geldfit_desc": "Check if you're financially fit",
+    "ombudsman_desc": "Complaints about collection agencies"
+  },
+  "lawyer": {
+    "title": "Lawyers in your area",
+    "collectionTitle": "Collection case? Get a lawyer",
+    "description": "These law firms specialize in collection and debt cases.",
+    "noGemeente": "Set your municipality to find lawyers near you.",
+    "noResults": "No lawyers found in your area.",
+    "stad": "City",
+    "juridischLoket": "Juridisch Loket",
+    "juridischDesc": "Call for free legal advice: 0900-8020",
+    "nibudDesc": "Budget coach and debt help: nibud.nl"
+  },
+  "referral": {
+    "title": "Share PayWatch",
+    "shareLink": "Your share link",
+    "shareButton": "Share with a friend",
+    "copied": "Copied!",
+    "friendsReferred": "Friends invited",
+    "howToUnlock": "How to unlock?",
+    "tier1": "1 friend = all features + 10 insights",
+    "tier2": "2 friends = 20 insights",
+    "tier3": "3+ friends = unlimited",
+    "statusPending": "Pending",
+    "statusCompleted": "Completed"
   },
   "feedback": {
     "title": "How do you like PayWatch?",
-    "desc": "You've been using the app for a few days. We'd love to hear what you think.",
-    "placeholder": "Tell us what you think... (optional)",
+    "placeholder": "Tell us what you think...",
     "submit": "Submit",
-    "later": "Later",
     "thankYouTitle": "Thank you!",
-    "thankYouDesc": "Your feedback helps us make PayWatch better for everyone."
+    "thankYouDesc": "Your feedback helps us improve PayWatch."
   },
-  "referral": {
-    "title": "Invite friends",
-    "desc": "Share PayWatch with friends. The more you share, the more features you unlock.",
-    "shareLink": "Your invite link",
-    "copied": "Copied!",
-    "shareButton": "Share with a friend",
-    "friendsReferred": "Friends invited",
-    "statusPending": "Pending",
-    "statusCompleted": "Completed",
-    "unlockTitle": "Invite a friend",
-    "unlockDesc": "Share PayWatch with a friend. When they create an account, you both unlock all features.",
-    "tier1": "1 friend = all features + 10 extra letters & insights",
-    "tier2": "2 friends = 20 extra letters & insights",
-    "tier3": "3+ friends = unlimited access",
-    "letterLimit": "You've used all your free letters. Invite a friend for more.",
-    "insightLimit": "You've used all your free AI insights. Invite a friend for more."
+  "pwa": {
+    "installTitle": "Install PayWatch",
+    "installDesc": "Add PayWatch to your home screen for quick access.",
+    "install": "Install",
+    "later": "Later",
+    "maybeLater": "Maybe later",
+    "iosStep1Title": "Tap Share",
+    "iosStep1Desc": "Tap the share icon in Safari",
+    "iosStep2Title": "Add to Home Screen",
+    "iosStep2Desc": "Scroll down and tap 'Add to Home Screen'",
+    "iosStep3Title": "Add",
+    "iosStep3Desc": "Tap 'Add' in the top right",
+    "androidStep1Title": "Tap menu",
+    "androidStep1Desc": "Tap the three dots in the top right",
+    "androidStep2Title": "Install app",
+    "androidStep2Desc": "Choose 'Install app' or 'Add to Home screen'",
+    "androidStep3Title": "Confirm",
+    "androidStep3Desc": "Tap 'Install' to confirm"
+  },
+  "tour": {
+    "title": "Tour",
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Done",
+    "getStarted": "Get started",
+    "overview": {
+      "title": "Overview",
+      "desc": "See your outstanding bills, savings and debts in one place."
+    },
+    "payments": {
+      "title": "Payments",
+      "desc": "Manage all your bills, mark them as paid and check the calendar."
+    },
+    "feed": {
+      "title": "Community Feed",
+      "desc": "Share experiences, tips and success stories with other users."
+    },
+    "stats": {
+      "title": "Statistics",
+      "desc": "View your payment performance, health score and cashflow."
+    },
+    "cashflow": {
+      "title": "Cashflow",
+      "desc": "See your monthly spending and expected costs."
+    },
+    "settings": {
+      "title": "Settings",
+      "desc": "Customize your profile, notifications and Gmail connection."
+    },
+    "previous": "Previous"
+  },
+  "adminTest": {
+    "title": "Admin test panel",
+    "description": "Test features for developers"
+  },
+  "buddy": {
+    "title": "Buddy / Safety net",
+    "description": "Invite someone you trust as a safety net",
+    "acceptTitle": "Buddy invitation",
+    "acceptDesc": "You have been invited as a buddy",
+    "acceptButton": "Accept invitation",
+    "accepted": "Accepted!",
+    "acceptedDesc": "You are now a buddy. You can view the dashboard.",
+    "goToDashboard": "View dashboard",
+    "invalidCode": "Invitation not found or expired",
+    "loginFirst": "Please sign in first to accept the invitation"
   }
 }

@@ -4,6 +4,7 @@ import Topbar from '@/components/app-shell/topbar';
 import BottomNav from '@/components/app-shell/bottom-nav';
 import AppTour from '@/components/app-tour';
 import FeedbackPopup from '@/components/feedback-popup';
+import PushPermissionPrompt from '@/components/push-permission-prompt';
 import PwaInstallDrawer from '@/components/pwa/install-prompt';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppTour />
       <FeedbackPopup />
       <PwaInstallDrawer />
+      <PushPermissionPrompt />
     </div>
   );
 }

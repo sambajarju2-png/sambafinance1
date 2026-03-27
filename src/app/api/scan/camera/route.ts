@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit: 30 scans per hour
     guard();
-    const allowed = await checkRateLimit(userId, 'camera-scan', 30, 3600000);
+    const allowed = await checkRateLimit(userId, 'camera-scan', 30, 60);
     if (!allowed) {
       return NextResponse.json(
         { error: 'Te veel scans. Probeer het later opnieuw.' },

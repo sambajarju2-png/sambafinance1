@@ -3,10 +3,11 @@ import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { computeBillHash, generateBillId, smartDedup } from '@/lib/bills-server';
 import { BILL_CATEGORIES } from '@/lib/bills';
+import { logCorrection } from '@/lib/ai-corrections';
 
 /**
  * GET /api/bills — List all bills
- * POST /api/bills — Create a new bill (with smart dedup)
+ * POST /api/bills — Create a new bill (with smart dedup + correction tracking)
  */
 export async function GET(req: NextRequest) {
   const DEADLINE = Date.now() + 55000;
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     const hash = computeBillHash(vendor, amount_cents, reference || '', due_date);
     const supabase = await createServerSupabaseClient();
 
-    // Smart dedup — works for manual, photo scan, and Gmail
+    // Smart dedup
     guard();
     const dedup = await smartDedup(supabase, userId, vendor, amount_cents, reference, hash);
 
@@ -114,6 +115,37 @@ export async function POST(req: NextRequest) {
     if (insertError) {
       console.error('Bill insert error:', insertError);
       return NextResponse.json({ error: 'Failed to create bill' }, { status: 500, headers: NO_CACHE });
+    }
+
+    // ── AI Correction Tracking ──
+    // If this bill came from a scan and includes the original AI extraction,
+    // compare what AI extracted vs what the user submitted and log differences.
+    if (body.ai_extraction && (source === 'camera_scan' || source === 'gmail_scan')) {
+      const aiEx = body.ai_extraction;
+      // Fire-and-forget — don't block the response
+      logCorrection(
+        supabase,
+        userId,
+        source as 'camera_scan' | 'gmail_scan',
+        {
+          vendor: aiEx.vendor || null,
+          amount_cents: aiEx.amount_cents || null,
+          iban: aiEx.iban || null,
+          reference: aiEx.reference || null,
+          due_date: aiEx.due_date || null,
+          category_hint: aiEx.category_hint || null,
+        },
+        {
+          vendor,
+          amount_cents,
+          iban,
+          reference,
+          due_date,
+          category,
+        }
+      ).catch((err) => {
+        console.error('Correction tracking error (non-blocking):', err);
+      });
     }
 
     return NextResponse.json({ bill }, { status: 201, headers: NO_CACHE });
