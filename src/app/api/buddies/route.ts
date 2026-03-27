@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -155,8 +155,11 @@ export async function PATCH(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
 
     if (body.invite_code) {
-      // Accept invite
-      const { data: invite } = await supabase
+      // Accept invite — use service role because RLS blocks the accepting user:
+      // they are neither user_id (inviter) nor buddy_user_id (still null)
+      const serviceClient = createServiceRoleClient();
+
+      const { data: invite } = await serviceClient
         .from('user_buddies')
         .select('*')
         .eq('invite_code', body.invite_code)
@@ -166,7 +169,7 @@ export async function PATCH(req: NextRequest) {
       if (!invite) return NextResponse.json({ error: 'Uitnodiging niet gevonden of verlopen' }, { status: 404, headers: NO_CACHE });
       if (invite.user_id === userId) return NextResponse.json({ error: 'Je kunt jezelf niet als buddy toevoegen' }, { status: 400, headers: NO_CACHE });
 
-      const { error } = await supabase
+      const { error } = await serviceClient
         .from('user_buddies')
         .update({ buddy_user_id: userId, status: 'accepted', accepted_at: new Date().toISOString() })
         .eq('id', invite.id);
