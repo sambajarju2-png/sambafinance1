@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/service';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 const NO_CACHE = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
