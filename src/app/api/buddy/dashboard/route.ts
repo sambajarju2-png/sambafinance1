@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       .order('due_date', { ascending: true });
 
     // Optionally hide amounts based on share_amounts setting
-    const safeBills = (bills || []).map((bill) => ({
+    const safeBills = (bills || []).map((bill: any) => ({
       id: bill.id,
       vendor: bill.vendor,
       amount: buddyRelation.share_amounts ? bill.amount : null,
