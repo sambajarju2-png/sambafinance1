@@ -39,6 +39,7 @@ interface PaymentPlanTrackerProps {
   plan: PaymentPlan;
   onUpdate: () => void;
   onCancel: () => void;
+  onInstallmentPaid?: () => void;
 }
 
 export function PaymentPlanTracker({
@@ -46,6 +47,7 @@ export function PaymentPlanTracker({
   plan: initialPlan,
   onUpdate,
   onCancel,
+  onInstallmentPaid,
 }: PaymentPlanTrackerProps) {
   const [plan, setPlan] = useState<PaymentPlan>(initialPlan);
   const [loading, setLoading] = useState<string | null>(null);
@@ -120,6 +122,10 @@ export function PaymentPlanTracker({
       } else {
         // Silently sync parent in background (for header + bill list)
         onUpdate();
+        // Open proof of payment drawer when marking as paid
+        if (newStatus === 'paid' && onInstallmentPaid) {
+          onInstallmentPaid();
+        }
       }
     } catch (err) {
       console.error('Failed to update installment:', err);

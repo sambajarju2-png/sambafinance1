@@ -457,6 +457,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                   plan={plan}
                   onUpdate={() => { fetchPlan(); onUpdate(); }}
                   onCancel={() => { setPlan(null); onUpdate(); }}
+                  onInstallmentPaid={() => setConfirmationOpen(true)}
                 />
               ) : (
                 <div className="flex flex-col items-center py-8 text-center">
