@@ -285,9 +285,10 @@ export async function POST(request: NextRequest) {
             try {
               const { extractText } = await import('unpdf')
               const pdfBuffer = Buffer.from(pdf.contentBytes, 'base64')
-              const { text } = await extractText(new Uint8Array(pdfBuffer))
-              if (text && text.trim().length > 10) {
-                pdfText = text.slice(0, 3000)
+              const { text: pages } = await extractText(new Uint8Array(pdfBuffer))
+              const fullText = Array.isArray(pages) ? pages.join('\n') : String(pages || '')
+              if (fullText && fullText.trim().length > 10) {
+                pdfText = fullText.slice(0, 3000)
               }
             } catch (pdfErr) {
               console.warn('[Outlook Scan] PDF extraction failed:', pdfErr)
