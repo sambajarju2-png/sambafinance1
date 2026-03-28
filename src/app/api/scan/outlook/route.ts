@@ -36,10 +36,11 @@ const DAILY_SCAN_HOURS = 24
 const LOCK_DURATION_MS = 90_000 // 90s lock per batch
 
 // ─── KEYWORD PRE-FILTER ─────────────────────────────────────────
-// Check if email MIGHT be a bill before sending to AI.
-// This saves ~80% of AI calls and makes scans much faster.
-// If NO keyword matches → skip. If ANY matches → send to Gemini.
-const BILL_KEYWORDS = [
+// Two layers:
+// 1. Static keywords: bill-related LANGUAGE (factuur, betaling, etc.)
+// 2. Dynamic keywords: loaded from DB at scan start (561 vendor + incasso names)
+// Combined check takes <1ms even with 700+ keywords.
+const BILL_LANGUAGE_KEYWORDS = [
   // Dutch bill/invoice terms
   'factuur', 'rekening', 'nota', 'invoice', 'betaling', 'payment',
   'te betalen', 'openstaand', 'verschuldigd', 'totaalbedrag',
@@ -48,29 +49,62 @@ const BILL_KEYWORDS = [
   'laatste waarschuwing', 'betalingsachterstand',
   // Collection & legal
   'incasso', 'deurwaarder', 'vordering', 'gerechtsdeurwaarder',
-  'dagvaarding', 'beslag', 'executie',
+  'dagvaarding', 'beslag', 'executie', 'automatische incasso',
   // Payment arrangement
   'betalingsregeling', 'termijnbetaling', 'aflossing', 'schuld',
   // Payment details
   'iban', 'bankrekeningnummer', 'overmaken naar', 'betaalinformatie',
   'vervaldatum', 'uiterlijk betalen', 'due date', 'betaal voor',
   'betalingskenmerk', 'kenmerk', 'factuurnummer', 'dossiernummer',
-  // Amount indicators
-  '€', 'eur', 'euro', 'bedrag',
-  // Common bill senders
+  // Amount indicators (no € or euro — too many false positives from ads)
+  'bedrag', 'te voldoen',
+  // Common bill sender patterns
   'no-reply', 'noreply', 'billing', 'finance', 'administratie',
-  'boekhouding', 'debiteuren', 'klantenservice',
+  'boekhouding', 'debiteuren',
   // Utilities & services
   'energienota', 'jaarnota', 'maandnota', 'termijnbedrag',
-  'zorgverzekering', 'premie', 'polis',
+  'zorgverzekering', 'premie', 'polis', 'voorschotbedrag',
   // Government
   'belastingdienst', 'cjib', 'duo', 'toeslagen', 'gemeente',
-  'waterschapsbelasting', 'motorrijtuigenbelasting',
+  'waterschapsbelasting', 'motorrijtuigenbelasting', 'svb', 'uwv', 'cak',
 ];
 
-function mightBeBill(subject: string, sender: string, bodySnippet: string): boolean {
+/**
+ * Load all 561 vendor + incasso names from DB (runs once per scan batch).
+ * Query takes ~50ms. Results cached for the batch duration.
+ */
+async function loadVendorKeywords(supabase: ReturnType<typeof createServiceRoleClient>): Promise<string[]> {
+  try {
+    const [vendorResult, incassoResult] = await Promise.all([
+      supabase.from('vendor_category_map').select('vendor_pattern'),
+      supabase.from('incasso_agencies').select('search_name'),
+    ]);
+
+    const vendorNames = (vendorResult.data || [])
+      .map((v: { vendor_pattern: string }) => v.vendor_pattern.toLowerCase())
+      .filter((n: string) => n.length > 3); // Skip short patterns (NS, CZ etc.) — too many false positives in email text
+
+    const incassoNames = (incassoResult.data || [])
+      .map((a: { search_name: string }) => a.search_name.toLowerCase())
+      .filter((n: string) => n.length > 3);
+
+    return [...vendorNames, ...incassoNames];
+  } catch {
+    console.warn('[Outlook Scan] Failed to load vendor keywords from DB, using language keywords only');
+    return [];
+  }
+}
+
+function mightBeBill(subject: string, sender: string, bodySnippet: string, vendorKeywords: string[]): boolean {
   const combined = `${subject} ${sender} ${bodySnippet}`.toLowerCase();
-  return BILL_KEYWORDS.some(keyword => combined.includes(keyword));
+
+  // Check bill language keywords
+  if (BILL_LANGUAGE_KEYWORDS.some(keyword => combined.includes(keyword))) return true;
+
+  // Check vendor + incasso names from DB
+  if (vendorKeywords.some(name => combined.includes(name))) return true;
+
+  return false;
 }
 
 interface ScanRequest {
@@ -130,12 +164,16 @@ export async function POST(request: NextRequest) {
     const { accessToken } = tokenResult
     const supabase = createServiceRoleClient()
 
-    // ─── Load account state ────────────────────────────────────
-    const { data: account } = await supabase
-      .from('outlook_accounts')
-      .select('scan_cursor, scan_progress, full_scan_complete, last_scanned, scan_locked_until')
-      .eq('id', accountId)
-      .single()
+    // ─── Load account state + vendor keywords in parallel ──────
+    const [accountResult, vendorKeywords] = await Promise.all([
+      supabase
+        .from('outlook_accounts')
+        .select('scan_cursor, scan_progress, full_scan_complete, last_scanned, scan_locked_until')
+        .eq('id', accountId)
+        .single(),
+      loadVendorKeywords(supabase),
+    ])
+    const account = accountResult.data
 
     // ─── Lock check ────────────────────────────────────────────
     const lockExpiry = account?.scan_locked_until ? new Date(account.scan_locked_until) : null
@@ -247,7 +285,7 @@ export async function POST(request: NextRequest) {
 
       // ─── Keyword pre-filter (free, instant) ──────────────────
       // Skip emails that clearly aren't bills — saves AI cost + time
-      if (!mightBeBill(unified.subject, unified.fromEmail, bodySnippet)) {
+      if (!mightBeBill(unified.subject, unified.fromEmail, bodySnippet, vendorKeywords)) {
         skippedByKeyword++
         await supabase.from('scan_processed').insert({
           user_id: userId, gmail_message_id: msg.id, provider: 'outlook',
