@@ -5,7 +5,7 @@ const GEMINI_MODEL = 'gemini-2.5-flash';
 
 /**
  * Call Gemini 2.5 Flash with a text prompt.
- * Uses lenient parsing — truncated JSON defaults to safe values.
+ * Uses JSON output mode + lenient parsing for maximum reliability.
  * SERVER-ONLY.
  */
 export async function callGeminiText(
@@ -25,7 +25,12 @@ export async function callGeminiText(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+          // Force JSON output — no markdown fences, no truncation
+          responseMimeType: 'application/json',
+        },
       }),
     }
   );
@@ -48,13 +53,13 @@ export async function callGeminiText(
     costCents: (tokensIn + tokensOut) * 0.00001, durationMs,
   });
 
-  // Use lenient parsing — handles truncated JSON from Gemini
+  // Use lenient parsing as safety net
   return parseJsonResponseLenient(text);
 }
 
 /**
  * Call Gemini 2.5 Flash with an image for camera scan.
- * Uses lenient parsing — returns partial results instead of throwing.
+ * Uses JSON output mode + lenient parsing for maximum reliability.
  * SERVER-ONLY.
  */
 export async function callGeminiVision(
@@ -81,7 +86,12 @@ export async function callGeminiVision(
             { text: prompt },
           ],
         }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+          // Force JSON output — no markdown fences, no truncation
+          responseMimeType: 'application/json',
+        },
       }),
     }
   );
@@ -121,11 +131,11 @@ export async function callGeminiVision(
 
 /**
  * Lenient JSON parse — handles truncated responses, broken JSON, markdown fences.
- * For classification: truncated `{"is_bill": false, "confidence": 0.9,` → extracts what it can.
- * For vision: extracts fields from raw text if JSON fails completely.
+ * With responseMimeType: 'application/json', most issues should be gone,
+ * but we keep this as a safety net.
  */
 function parseJsonResponseLenient(text: string): Record<string, unknown> {
-  // Step 1: Clean markdown fences
+  // Step 1: Clean markdown fences (shouldn't appear with JSON mode, but just in case)
   let cleaned = text.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
@@ -190,6 +200,9 @@ function repairTruncatedJson(partial: string): string | null {
 
     // Close open string
     if (inString) fixed += '"';
+
+    // Handle truncated key:value — if ends with ":" or ": " add null
+    fixed = fixed.replace(/:\s*$/, ': null');
 
     // Remove trailing comma
     fixed = fixed.replace(/,\s*$/, '');
