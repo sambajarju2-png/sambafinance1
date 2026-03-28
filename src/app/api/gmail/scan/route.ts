@@ -11,6 +11,74 @@ const BATCH_SIZE = 10;
 const MAX_EMAILS_FIRST_SCAN = 100;
 const MAX_EMAILS_RESCAN = 40;
 
+// ─── KEYWORD PRE-FILTER (Session 5) ────────────────────────────
+// Same keyword list used by Outlook scan. Skips obvious non-bills
+// BEFORE calling Gemini classification — saves AI cost + time.
+const BILL_LANGUAGE_KEYWORDS = [
+  // Dutch bill/invoice terms
+  'factuur', 'rekening', 'nota', 'invoice', 'betaling', 'payment',
+  'te betalen', 'openstaand', 'verschuldigd', 'totaalbedrag',
+  // Reminders & escalation
+  'herinnering', 'aanmaning', 'reminder', 'sommatie', 'ingebrekestelling',
+  'laatste waarschuwing', 'betalingsachterstand',
+  // Collection & legal
+  'incasso', 'deurwaarder', 'vordering', 'gerechtsdeurwaarder',
+  'dagvaarding', 'beslag', 'executie', 'automatische incasso',
+  // Payment arrangement
+  'betalingsregeling', 'termijnbetaling', 'aflossing', 'schuld',
+  // Payment details
+  'iban', 'bankrekeningnummer', 'overmaken naar', 'betaalinformatie',
+  'vervaldatum', 'uiterlijk betalen', 'due date', 'betaal voor',
+  'betalingskenmerk', 'kenmerk', 'factuurnummer', 'dossiernummer',
+  // Amount indicators
+  'bedrag', 'te voldoen',
+  // Common bill sender patterns
+  'no-reply', 'noreply', 'billing', 'finance', 'administratie',
+  'boekhouding', 'debiteuren',
+  // Utilities & services
+  'energienota', 'jaarnota', 'maandnota', 'termijnbedrag',
+  'zorgverzekering', 'premie', 'polis', 'voorschotbedrag',
+  // Government
+  'belastingdienst', 'cjib', 'duo', 'toeslagen', 'gemeente',
+  'waterschapsbelasting', 'motorrijtuigenbelasting', 'svb', 'uwv', 'cak',
+];
+
+/**
+ * Load vendor + incasso names from DB for keyword matching.
+ * Uses the user-scoped supabase client (these are public reference tables).
+ */
+async function loadVendorKeywords(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+): Promise<string[]> {
+  try {
+    const [vendorResult, incassoResult] = await Promise.all([
+      supabase.from('vendor_category_map').select('vendor_pattern'),
+      supabase.from('incasso_agencies').select('search_name'),
+    ]);
+
+    const vendorNames = (vendorResult.data || [])
+      .map((v: { vendor_pattern: string }) => v.vendor_pattern.toLowerCase())
+      .filter((n: string) => n.length > 3);
+
+    const incassoNames = (incassoResult.data || [])
+      .map((a: { search_name: string }) => a.search_name.toLowerCase())
+      .filter((n: string) => n.length > 3);
+
+    console.log(`[Gmail scan] Loaded ${vendorNames.length + incassoNames.length} vendor keywords from DB`);
+    return [...vendorNames, ...incassoNames];
+  } catch {
+    console.warn('[Gmail scan] Failed to load vendor keywords, using language keywords only');
+    return [];
+  }
+}
+
+function mightBeBill(subject: string, sender: string, bodySnippet: string, vendorKeywords: string[]): boolean {
+  const combined = `${subject} ${sender} ${bodySnippet}`.toLowerCase();
+  if (BILL_LANGUAGE_KEYWORDS.some(keyword => combined.includes(keyword))) return true;
+  if (vendorKeywords.some(name => combined.includes(name))) return true;
+  return false;
+}
+
 /**
  * POST /api/gmail/scan
  *
@@ -18,6 +86,7 @@ const MAX_EMAILS_RESCAN = 40;
  * First scan: up to 100 emails (inbox only, no promotions).
  * Re-scan: up to 40 emails.
  * Now with PDF attachment extraction for accurate bill data.
+ * Session 5: Added keyword pre-filter (same as Outlook pipeline).
  * 
  * Body: { account_id, page_token?, total_processed?, is_first_scan? }
  */
@@ -43,15 +112,18 @@ export async function POST(req: NextRequest) {
     guard();
     const supabase = await createServerSupabaseClient();
 
-    // Check if this is first scan
-    const { data: account } = await supabase
-      .from('gmail_accounts')
-      .select('full_scan_complete')
-      .eq('id', account_id)
-      .eq('user_id', userId)
-      .single();
+    // Check if this is first scan + load vendor keywords in parallel
+    const [accountResult, vendorKeywords] = await Promise.all([
+      supabase
+        .from('gmail_accounts')
+        .select('full_scan_complete')
+        .eq('id', account_id)
+        .eq('user_id', userId)
+        .single(),
+      loadVendorKeywords(supabase),
+    ]);
 
-    const isFirstScan = !account?.full_scan_complete;
+    const isFirstScan = !accountResult.data?.full_scan_complete;
     const maxEmails = isFirstScan ? MAX_EMAILS_FIRST_SCAN : MAX_EMAILS_RESCAN;
 
     if (total_processed >= maxEmails) {
@@ -97,6 +169,7 @@ export async function POST(req: NextRequest) {
     console.log(`[Gmail scan] Got ${snippets.length} snippets`);
 
     let billsFound = 0;
+    let skippedByKeyword = 0;
 
     for (const snippet of snippets) {
       guard();
@@ -110,6 +183,14 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (alreadyDone) continue;
+
+      // ─── Keyword pre-filter (free, <1ms) ─────────────────────
+      // Skip emails that clearly aren't bills before calling Gemini
+      if (!mightBeBill(snippet.subject || '', snippet.from || '', snippet.snippet || '', vendorKeywords)) {
+        skippedByKeyword++;
+        await markProcessed(supabase, userId, snippet.id);
+        continue;
+      }
 
       // Classify
       let isBill = false;
@@ -266,7 +347,7 @@ export async function POST(req: NextRequest) {
       }).eq('id', account_id).eq('user_id', userId);
     }
 
-    console.log(`[Gmail scan] Batch: ${snippets.length} processed, ${billsFound} bills, total: ${newTotal}/${maxEmails}`);
+    console.log(`[Gmail scan] Batch: ${snippets.length} processed, ${skippedByKeyword} skipped by keyword, ${billsFound} bills, total: ${newTotal}/${maxEmails}`);
 
     return NextResponse.json({
       processed: snippets.length,

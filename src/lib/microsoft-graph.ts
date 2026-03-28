@@ -234,6 +234,45 @@ export async function fetchAttachments(
   )
 }
 
+// ─── HTML → Plain Text Stripper ───────────────────────────────────────────────
+// Strips HTML tags, decodes entities, preserves line breaks.
+// This is critical for AI extraction — Sonnet can't parse amounts from raw HTML
+// like <span style="font-family:Arial">€&nbsp;220,00</span>.
+
+function stripHtml(html: string): string {
+  return html
+    // Remove style/script blocks entirely
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    // Convert block elements to newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/td>/gi, '\t')
+    // Strip all remaining tags
+    .replace(/<[^>]+>/g, '')
+    // Decode HTML entities (most common ones in Dutch bill emails)
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&euro;/gi, '€')
+    .replace(/&#8364;/gi, '€')
+    .replace(/&laquo;/gi, '«')
+    .replace(/&raquo;/gi, '»')
+    .replace(/&#\d+;/gi, '') // remove remaining numeric entities
+    .replace(/&\w+;/gi, '')  // remove remaining named entities
+    // Collapse excessive whitespace
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 // ─── Unified Email Format ─────────────────────────────────────────────────────
 
 export interface UnifiedEmail {
@@ -248,15 +287,26 @@ export interface UnifiedEmail {
   source: 'gmail_scan' | 'outlook_scan'
 }
 
+/**
+ * Convert an Outlook message to our unified email format.
+ *
+ * FIX (Session 5): When contentType is 'html' (most Outlook emails),
+ * we now strip HTML tags to produce bodyText. Previously bodyText was
+ * empty for HTML emails, causing Sonnet to receive raw HTML and fail
+ * to parse amounts like "€ 220,00" buried in <span> tags.
+ */
 export function toUnifiedEmail(msg: OutlookMessage): UnifiedEmail {
+  const isHtml = msg.body?.contentType === 'html'
+  const rawContent = msg.body?.content || ''
+
   return {
     messageId: msg.id,
     subject: msg.subject || '',
     from: msg.from?.emailAddress?.name || '',
     fromEmail: msg.from?.emailAddress?.address || '',
     receivedDate: msg.receivedDateTime,
-    bodyHtml: msg.body?.contentType === 'html' ? msg.body.content : '',
-    bodyText: msg.body?.contentType === 'text' ? msg.body.content : '',
+    bodyHtml: isHtml ? rawContent : '',
+    bodyText: isHtml ? stripHtml(rawContent) : rawContent,
     hasAttachments: msg.hasAttachments,
     source: 'outlook_scan',
   }

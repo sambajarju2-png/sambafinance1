@@ -9,6 +9,10 @@
  * - Push notification on completion via sw.js
  *
  * File: src/app/api/scan/outlook/route.ts
+ *
+ * Session 5 fix: fullBody now uses bodyText (HTML-stripped plain text)
+ * instead of raw bodyHtml. This fixes Sonnet extracting €0.00 from
+ * emails where amounts are inside HTML tags like <span>€ 220,00</span>.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -344,7 +348,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const fullBody = unified.bodyHtml || unified.bodyText || ''
+      // ─── FIX (Session 5): Use bodyText (stripped plain text) instead of bodyHtml ───
+      // Previously: `unified.bodyHtml || unified.bodyText` sent raw HTML to Sonnet.
+      // Sonnet couldn't parse "€ 220,00" from <span style="...">€&nbsp;220,00</span>.
+      // Now toUnifiedEmail() always populates bodyText with HTML-stripped text,
+      // so bodyText is the clean version and bodyHtml is only kept as a fallback.
+      const fullBody = unified.bodyText || unified.bodyHtml || ''
 
       // ─── AI Extraction (Sonnet) ──────────────────────────────
       const billData = await extractBillFromEmail(
