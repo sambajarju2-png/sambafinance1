@@ -7,7 +7,6 @@ import {
   Trash2,
   AlertCircle,
   TrendingDown,
-  Undo2,
   Camera,
   Image as ImageIcon,
 } from 'lucide-react';
@@ -43,9 +42,9 @@ interface PaymentPlanTrackerProps {
   plan: PaymentPlan;
   onUpdate: () => void;
   onCancel: () => void;
-  /** Called when an installment is marked as paid — parent opens proof drawer */
+  /** Called when an installment is newly marked as paid — parent can open proof drawer */
   onInstallmentPaid?: (installmentId: string) => void;
-  /** Called when user taps a paid installment to view its proof */
+  /** Called when user taps the proof icon on a paid installment */
   onViewProof?: (installmentId: string, proofUrl: string | null) => void;
 }
 
@@ -61,7 +60,6 @@ export function PaymentPlanTracker({
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [undoConfirm, setUndoConfirm] = useState<string | null>(null);
 
   // Sync with parent if plan changes externally
   useEffect(() => {
@@ -82,15 +80,16 @@ export function PaymentPlanTracker({
     });
   };
 
-  // ─── Mark unpaid → paid ────────────────────────────────────
-  const markAsPaid = async (installment: Installment) => {
+  // ─── Toggle installment: paid ↔ unpaid ─────────────────────
+  const toggleInstallment = async (installment: Installment) => {
+    const newStatus = installment.status === 'paid' ? 'pending' : 'paid';
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Optimistic update
+    // Optimistic update — change UI instantly
     setPlan((prev) => {
       const updatedInstallments = prev.plan_installments.map((i) =>
         i.id === installment.id
-          ? { ...i, status: 'paid' as Installment['status'], paid_date: todayStr }
+          ? { ...i, status: newStatus as Installment['status'], paid_date: newStatus === 'paid' ? todayStr : null }
           : i
       );
       const paidCount = updatedInstallments.filter((i) => i.status === 'paid').length;
@@ -111,7 +110,7 @@ export function PaymentPlanTracker({
       };
     });
 
-    // API call
+    // API call in background
     try {
       const res = await fetch(
         `/api/bills/${billId}/payment-plan/${installment.id}`,
@@ -119,88 +118,37 @@ export function PaymentPlanTracker({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: 'paid',
-            paid_date: todayStr,
+            status: newStatus,
+            paid_date: newStatus === 'paid' ? todayStr : undefined,
           }),
         }
       );
 
       if (!res.ok) {
-        onUpdate(); // revert from server
-      } else {
+        // Revert on error
         onUpdate();
-        // Open proof drawer for this specific installment
-        if (onInstallmentPaid) {
+      } else {
+        // Silently sync parent in background (for header + bill list)
+        onUpdate();
+        // When newly marking as paid, open proof drawer for this installment
+        if (newStatus === 'paid' && onInstallmentPaid) {
           onInstallmentPaid(installment.id);
         }
       }
     } catch (err) {
-      console.error('Failed to mark installment as paid:', err);
+      console.error('Failed to update installment:', err);
       onUpdate();
     }
   };
 
-  // ─── Undo: paid → pending ──────────────────────────────────
-  const markAsUnpaid = async (installment: Installment) => {
-    setUndoConfirm(null);
-
-    // Optimistic update
-    setPlan((prev) => {
-      const updatedInstallments = prev.plan_installments.map((i) =>
-        i.id === installment.id
-          ? { ...i, status: 'pending' as Installment['status'], paid_date: null }
-          : i
-      );
-      const paidCount = updatedInstallments.filter((i) => i.status === 'paid').length;
-      const paidAmount = updatedInstallments
-        .filter((i) => i.status === 'paid')
-        .reduce((sum, i) => sum + i.amount, 0);
-      const totalAmount = updatedInstallments.reduce((sum, i) => sum + i.amount, 0);
-
-      return {
-        ...prev,
-        plan_installments: updatedInstallments,
-        summary: {
-          paid_count: paidCount,
-          total_count: updatedInstallments.length,
-          paid_amount: paidAmount,
-          remaining_amount: totalAmount - paidAmount,
-        },
-      };
-    });
-
-    // API call
-    try {
-      const res = await fetch(
-        `/api/bills/${billId}/payment-plan/${installment.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'pending' }),
-        }
-      );
-
-      if (!res.ok) {
-        onUpdate();
-      } else {
-        onUpdate();
-      }
-    } catch (err) {
-      console.error('Failed to undo installment:', err);
-      onUpdate();
-    }
-  };
-
-  // ─── Handle installment tap ────────────────────────────────
-  const handleInstallmentTap = (installment: Installment) => {
-    if (installment.status === 'paid') {
-      // Tapping a paid installment → view proof (NOT toggle to unpaid)
-      if (onViewProof) {
-        onViewProof(installment.id, installment.proof_image_url || null);
-      }
-    } else {
-      // Tapping an unpaid installment → mark as paid
-      markAsPaid(installment);
+  // ─── Proof icon tap ────────────────────────────────────────
+  const handleProofTap = (e: React.MouseEvent, installment: Installment) => {
+    e.stopPropagation(); // Don't trigger the row toggle
+    if (onViewProof) {
+      onViewProof(installment.id, installment.proof_image_url || null);
+    } else if (onInstallmentPaid) {
+      // Fallback: if no onViewProof handler, use onInstallmentPaid to open drawer
+      onInstallmentPaid(installment.id);
     }
   };
 
@@ -269,17 +217,21 @@ export function PaymentPlanTracker({
       <div className="space-y-1">
         {plan.plan_installments.map((installment) => {
           const isPaid = installment.status === 'paid';
-          const isLate = !isPaid && isOverdue(installment.due_date);
+          const isLate =
+            !isPaid && isOverdue(installment.due_date);
           const isLoading = loading === installment.id;
-          const showUndo = undoConfirm === installment.id;
           const hasProof = !!installment.proof_image_url;
 
           return (
-            <div key={installment.id} className="relative">
+            <div
+              key={installment.id}
+              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] transition-all"
+            >
+              {/* Row tap area: toggles paid/unpaid */}
               <button
-                onClick={() => handleInstallmentTap(installment)}
+                onClick={() => toggleInstallment(installment)}
                 disabled={isLoading}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all disabled:opacity-60"
+                className="flex flex-1 items-center gap-3 active:scale-[0.98] transition-all disabled:opacity-60"
               >
                 {/* Check icon */}
                 {isPaid ? (
@@ -303,7 +255,7 @@ export function PaymentPlanTracker({
 
                 {/* Term info */}
                 <div className="flex-1 text-left">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <span
                       className={`text-[13px] font-medium ${
                         isPaid
@@ -317,12 +269,6 @@ export function PaymentPlanTracker({
                       <span className="text-[10px] font-semibold text-[var(--red)] bg-red-50 dark:bg-red-950 px-1.5 py-0.5 rounded">
                         Te laat
                       </span>
-                    )}
-                    {isPaid && hasProof && (
-                      <ImageIcon size={12} className="text-[var(--blue)]" />
-                    )}
-                    {isPaid && !hasProof && (
-                      <Camera size={12} className="text-[var(--muted)]" />
                     )}
                   </div>
                   <span className="text-[11px] text-[var(--muted)]">
@@ -340,37 +286,25 @@ export function PaymentPlanTracker({
                 >
                   {formatCents(installment.amount)}
                 </span>
-
-                {/* Undo button for paid installments */}
-                {isPaid && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (showUndo) {
-                        markAsUnpaid(installment);
-                      } else {
-                        setUndoConfirm(installment.id);
-                        // Auto-dismiss after 3 seconds
-                        setTimeout(() => setUndoConfirm((prev) => prev === installment.id ? null : prev), 3000);
-                      }
-                    }}
-                    className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
-                      showUndo
-                        ? 'bg-red-50 dark:bg-red-950 text-[var(--red)]'
-                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/50'
-                    }`}
-                    title={showUndo ? 'Bevestig: markeer als onbetaald' : 'Ongedaan maken'}
-                  >
-                    <Undo2 size={14} />
-                  </button>
-                )}
               </button>
 
-              {/* Undo confirmation tooltip */}
-              {showUndo && (
-                <div className="absolute right-2 -top-6 bg-[var(--text)] text-white text-[10px] font-medium px-2 py-1 rounded-md shadow-lg z-10 whitespace-nowrap">
-                  Nogmaals tikken om ongedaan te maken
-                </div>
+              {/* Proof icon — separate from row toggle */}
+              {isPaid && (
+                <button
+                  onClick={(e) => handleProofTap(e, installment)}
+                  className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                    hasProof
+                      ? 'bg-blue-50 dark:bg-blue-950 text-[var(--blue)]'
+                      : 'bg-[var(--border)]/30 text-[var(--muted)] hover:text-[var(--blue)] hover:bg-blue-50'
+                  }`}
+                  title={hasProof ? 'Bekijk bewijs' : 'Voeg bewijs toe'}
+                >
+                  {hasProof ? (
+                    <ImageIcon size={15} strokeWidth={1.8} />
+                  ) : (
+                    <Camera size={15} strokeWidth={1.8} />
+                  )}
+                </button>
               )}
             </div>
           );

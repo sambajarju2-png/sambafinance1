@@ -64,7 +64,17 @@
     "noBillsTitle": "No bills",
     "noBillsDescription": "Add your first bill via scan or manually.",
     "categoryBreakdown": "By category",
-    "overBudgetWarning": "You're over your monthly budget"
+    "overBudgetWarning": "You're over your monthly budget",
+    "tabOverview": "Overview",
+    "tabAiInsight": "AI Insight",
+    "billSingular": "bill",
+    "billPlural": "bills",
+    "onTrack": "You're on track",
+    "payNow": "Pay now",
+    "withinSevenDays": "within 7 days",
+    "thisMonth": "this month",
+    "savedOnCollection": "saved on collection costs",
+    "payOnTimeToSave": "Pay on time to save on collection costs"
   },
   "bills": {
     "pageTitle": "Payments",

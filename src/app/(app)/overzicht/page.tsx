@@ -62,8 +62,8 @@ export default function OverzichtPage() {
     .reduce((sum, b) => sum + calculateWIKCosts(b.amount), 0);
 
   const tabs: { key: OverzichtTab; label: string }[] = [
-    { key: 'overview', label: 'Overzicht' },
-    { key: 'ai', label: 'AI Inzicht' },
+    { key: 'overview', label: t('tabOverview') },
+    { key: 'ai', label: t('tabAiInsight') },
   ];
 
   return (
@@ -102,28 +102,28 @@ export default function OverzichtPage() {
                 icon={<CreditCard className="h-[15px] w-[15px] text-pw-blue" strokeWidth={1.8} />}
                 label={t('outstanding')}
                 value={formatCents(outstandingTotal)}
-                sub={`${outstanding.length} ${outstanding.length === 1 ? 'rekening' : 'rekeningen'}`}
+                sub={`${outstanding.length} ${outstanding.length === 1 ? t('billSingular') : t('billPlural')}`}
                 color="blue"
               />
               <MetricCard
                 icon={<Clock className="h-[15px] w-[15px] text-pw-red" strokeWidth={1.8} />}
                 label={t('overdue')}
                 value={String(overdue.length)}
-                sub={overdue.length === 0 ? 'Je ligt op schema' : 'Direct betalen'}
+                sub={overdue.length === 0 ? t('onTrack') : t('payNow')}
                 color={overdue.length > 0 ? 'red' : 'green'}
               />
               <MetricCard
                 icon={<CalendarDays className="h-[15px] w-[15px] text-amber-600" strokeWidth={1.8} />}
                 label={t('upcoming')}
                 value={String(upcoming.length)}
-                sub="binnen 7 dagen"
+                sub={t('withinSevenDays')}
                 color="amber"
               />
               <MetricCard
                 icon={<CircleCheck className="h-[15px] w-[15px] text-pw-green" strokeWidth={1.8} />}
                 label={t('paid')}
                 value={formatCents(settledTotal)}
-                sub="deze maand"
+                sub={t('thisMonth')}
                 color="green"
               />
             </div>
@@ -134,7 +134,7 @@ export default function OverzichtPage() {
             <div className="rounded-card border border-pw-border bg-pw-surface p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-medium text-pw-muted">{t('debtCard') || 'Mijn schulden'}</p>
+                  <p className="text-[11px] font-medium text-pw-muted">{t('debtCard')}</p>
                   <p className="mt-0.5 text-[24px] font-extrabold text-pw-navy">
                     {formatCents(outstandingTotal)}
                   </p>
@@ -143,7 +143,7 @@ export default function OverzichtPage() {
                   <div className="flex items-center gap-1.5 rounded-[4px] bg-red-50 px-2 py-1">
                     <AlertTriangle className="h-3 w-3 text-pw-red" strokeWidth={2} />
                     <span className="text-[11px] font-semibold text-pw-red">
-                      {escalated.length} {t('inEscalation') || 'in escalatie'}
+                      {escalated.length} {t('inEscalation')}
                     </span>
                   </div>
                 )}
@@ -152,8 +152,8 @@ export default function OverzichtPage() {
                 <Shield className="h-4 w-4 text-pw-green" strokeWidth={1.5} />
                 <span className="text-[13px] font-semibold text-pw-green">
                   {savedCents > 0
-                    ? `${formatCents(savedCents)} bespaard aan incassokosten`
-                    : 'Betaal op tijd om incassokosten te besparen'}
+                    ? `${formatCents(savedCents)} ${t('savedOnCollection')}`
+                    : t('payOnTimeToSave')}
                 </span>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function OverzichtPage() {
           {/* Overdue bills */}
           {overdue.length > 0 && (
             <div>
-              <h2 className="mb-2 text-[16px] font-bold text-pw-navy">{t('overdueSection') || 'Achterstallig'}</h2>
+              <h2 className="mb-2 text-[16px] font-bold text-pw-navy">{t('overdueSection')}</h2>
               <div className="space-y-2">
                 {overdue.slice(0, 3).map((bill) => (
                   <div

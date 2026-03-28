@@ -64,7 +64,17 @@
     "noBillsTitle": "Geen rekeningen",
     "noBillsDescription": "Voeg je eerste rekening toe via scan of handmatig.",
     "categoryBreakdown": "Per categorie",
-    "overBudgetWarning": "Je zit boven je maandbudget"
+    "overBudgetWarning": "Je zit boven je maandbudget",
+    "tabOverview": "Overzicht",
+    "tabAiInsight": "AI Inzicht",
+    "billSingular": "rekening",
+    "billPlural": "rekeningen",
+    "onTrack": "Je ligt op schema",
+    "payNow": "Direct betalen",
+    "withinSevenDays": "binnen 7 dagen",
+    "thisMonth": "deze maand",
+    "savedOnCollection": "bespaard aan incassokosten",
+    "payOnTimeToSave": "Betaal op tijd om incassokosten te besparen"
   },
   "bills": {
     "pageTitle": "Betalingen",
