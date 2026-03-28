@@ -7,6 +7,9 @@ import {
   Trash2,
   AlertCircle,
   TrendingDown,
+  Undo2,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface Installment {
@@ -16,6 +19,7 @@ interface Installment {
   amount: number;
   status: 'pending' | 'paid' | 'overdue';
   paid_date: string | null;
+  proof_image_url?: string | null;
 }
 
 interface PaymentPlan {
@@ -39,7 +43,10 @@ interface PaymentPlanTrackerProps {
   plan: PaymentPlan;
   onUpdate: () => void;
   onCancel: () => void;
-  onInstallmentPaid?: () => void;
+  /** Called when an installment is marked as paid — parent opens proof drawer */
+  onInstallmentPaid?: (installmentId: string) => void;
+  /** Called when user taps a paid installment to view its proof */
+  onViewProof?: (installmentId: string, proofUrl: string | null) => void;
 }
 
 export function PaymentPlanTracker({
@@ -48,11 +55,13 @@ export function PaymentPlanTracker({
   onUpdate,
   onCancel,
   onInstallmentPaid,
+  onViewProof,
 }: PaymentPlanTrackerProps) {
   const [plan, setPlan] = useState<PaymentPlan>(initialPlan);
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [undoConfirm, setUndoConfirm] = useState<string | null>(null);
 
   // Sync with parent if plan changes externally
   useEffect(() => {
@@ -73,15 +82,15 @@ export function PaymentPlanTracker({
     });
   };
 
-  const toggleInstallment = async (installment: Installment) => {
-    const newStatus = installment.status === 'paid' ? 'pending' : 'paid';
+  // ─── Mark unpaid → paid ────────────────────────────────────
+  const markAsPaid = async (installment: Installment) => {
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Optimistic update — change UI instantly
+    // Optimistic update
     setPlan((prev) => {
       const updatedInstallments = prev.plan_installments.map((i) =>
         i.id === installment.id
-          ? { ...i, status: newStatus as Installment['status'], paid_date: newStatus === 'paid' ? todayStr : null }
+          ? { ...i, status: 'paid' as Installment['status'], paid_date: todayStr }
           : i
       );
       const paidCount = updatedInstallments.filter((i) => i.status === 'paid').length;
@@ -102,7 +111,7 @@ export function PaymentPlanTracker({
       };
     });
 
-    // API call in background
+    // API call
     try {
       const res = await fetch(
         `/api/bills/${billId}/payment-plan/${installment.id}`,
@@ -110,26 +119,88 @@ export function PaymentPlanTracker({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: newStatus,
-            paid_date: newStatus === 'paid' ? todayStr : undefined,
+            status: 'paid',
+            paid_date: todayStr,
           }),
         }
       );
 
       if (!res.ok) {
-        // Revert on error
-        onUpdate();
+        onUpdate(); // revert from server
       } else {
-        // Silently sync parent in background (for header + bill list)
         onUpdate();
-        // Open proof of payment drawer when marking as paid
-        if (newStatus === 'paid' && onInstallmentPaid) {
-          onInstallmentPaid();
+        // Open proof drawer for this specific installment
+        if (onInstallmentPaid) {
+          onInstallmentPaid(installment.id);
         }
       }
     } catch (err) {
-      console.error('Failed to update installment:', err);
+      console.error('Failed to mark installment as paid:', err);
       onUpdate();
+    }
+  };
+
+  // ─── Undo: paid → pending ──────────────────────────────────
+  const markAsUnpaid = async (installment: Installment) => {
+    setUndoConfirm(null);
+
+    // Optimistic update
+    setPlan((prev) => {
+      const updatedInstallments = prev.plan_installments.map((i) =>
+        i.id === installment.id
+          ? { ...i, status: 'pending' as Installment['status'], paid_date: null }
+          : i
+      );
+      const paidCount = updatedInstallments.filter((i) => i.status === 'paid').length;
+      const paidAmount = updatedInstallments
+        .filter((i) => i.status === 'paid')
+        .reduce((sum, i) => sum + i.amount, 0);
+      const totalAmount = updatedInstallments.reduce((sum, i) => sum + i.amount, 0);
+
+      return {
+        ...prev,
+        plan_installments: updatedInstallments,
+        summary: {
+          paid_count: paidCount,
+          total_count: updatedInstallments.length,
+          paid_amount: paidAmount,
+          remaining_amount: totalAmount - paidAmount,
+        },
+      };
+    });
+
+    // API call
+    try {
+      const res = await fetch(
+        `/api/bills/${billId}/payment-plan/${installment.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'pending' }),
+        }
+      );
+
+      if (!res.ok) {
+        onUpdate();
+      } else {
+        onUpdate();
+      }
+    } catch (err) {
+      console.error('Failed to undo installment:', err);
+      onUpdate();
+    }
+  };
+
+  // ─── Handle installment tap ────────────────────────────────
+  const handleInstallmentTap = (installment: Installment) => {
+    if (installment.status === 'paid') {
+      // Tapping a paid installment → view proof (NOT toggle to unpaid)
+      if (onViewProof) {
+        onViewProof(installment.id, installment.proof_image_url || null);
+      }
+    } else {
+      // Tapping an unpaid installment → mark as paid
+      markAsPaid(installment);
     }
   };
 
@@ -198,71 +269,110 @@ export function PaymentPlanTracker({
       <div className="space-y-1">
         {plan.plan_installments.map((installment) => {
           const isPaid = installment.status === 'paid';
-          const isLate =
-            !isPaid && isOverdue(installment.due_date);
+          const isLate = !isPaid && isOverdue(installment.due_date);
           const isLoading = loading === installment.id;
+          const showUndo = undoConfirm === installment.id;
+          const hasProof = !!installment.proof_image_url;
 
           return (
-            <button
-              key={installment.id}
-              onClick={() => toggleInstallment(installment)}
-              disabled={isLoading}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all disabled:opacity-60"
-            >
-              {/* Check icon */}
-              {isPaid ? (
-                <CheckCircle2
-                  size={22}
-                  className="text-[var(--green)] flex-shrink-0"
-                  fill="var(--green)"
-                  stroke="white"
-                />
-              ) : isLate ? (
-                <AlertCircle
-                  size={22}
-                  className="text-[var(--red)] flex-shrink-0"
-                />
-              ) : (
-                <Circle
-                  size={22}
-                  className="text-[var(--border)] flex-shrink-0"
-                />
-              )}
-
-              {/* Term info */}
-              <div className="flex-1 text-left">
-                <div className="flex items-center gap-1">
-                  <span
-                    className={`text-[13px] font-medium ${
-                      isPaid
-                        ? 'text-[var(--muted)] line-through'
-                        : 'text-[var(--text)]'
-                    }`}
-                  >
-                    Termijn {installment.term_number}
-                  </span>
-                  {isLate && (
-                    <span className="text-[10px] font-semibold text-[var(--red)] bg-red-50 dark:bg-red-950 px-1.5 py-0.5 rounded">
-                      Te laat
-                    </span>
-                  )}
-                </div>
-                <span className="text-[11px] text-[var(--muted)]">
-                  {isPaid && installment.paid_date
-                    ? `Betaald op ${formatDate(installment.paid_date)}`
-                    : `Vervalt ${formatDate(installment.due_date)}`}
-                </span>
-              </div>
-
-              {/* Amount */}
-              <span
-                className={`text-[14px] font-semibold flex-shrink-0 ${
-                  isPaid ? 'text-[var(--green)]' : 'text-[var(--text)]'
-                }`}
+            <div key={installment.id} className="relative">
+              <button
+                onClick={() => handleInstallmentTap(installment)}
+                disabled={isLoading}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] active:scale-[0.98] transition-all disabled:opacity-60"
               >
-                {formatCents(installment.amount)}
-              </span>
-            </button>
+                {/* Check icon */}
+                {isPaid ? (
+                  <CheckCircle2
+                    size={22}
+                    className="text-[var(--green)] flex-shrink-0"
+                    fill="var(--green)"
+                    stroke="white"
+                  />
+                ) : isLate ? (
+                  <AlertCircle
+                    size={22}
+                    className="text-[var(--red)] flex-shrink-0"
+                  />
+                ) : (
+                  <Circle
+                    size={22}
+                    className="text-[var(--border)] flex-shrink-0"
+                  />
+                )}
+
+                {/* Term info */}
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[13px] font-medium ${
+                        isPaid
+                          ? 'text-[var(--muted)] line-through'
+                          : 'text-[var(--text)]'
+                      }`}
+                    >
+                      Termijn {installment.term_number}
+                    </span>
+                    {isLate && (
+                      <span className="text-[10px] font-semibold text-[var(--red)] bg-red-50 dark:bg-red-950 px-1.5 py-0.5 rounded">
+                        Te laat
+                      </span>
+                    )}
+                    {isPaid && hasProof && (
+                      <ImageIcon size={12} className="text-[var(--blue)]" />
+                    )}
+                    {isPaid && !hasProof && (
+                      <Camera size={12} className="text-[var(--muted)]" />
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[var(--muted)]">
+                    {isPaid && installment.paid_date
+                      ? `Betaald op ${formatDate(installment.paid_date)}`
+                      : `Vervalt ${formatDate(installment.due_date)}`}
+                  </span>
+                </div>
+
+                {/* Amount */}
+                <span
+                  className={`text-[14px] font-semibold flex-shrink-0 ${
+                    isPaid ? 'text-[var(--green)]' : 'text-[var(--text)]'
+                  }`}
+                >
+                  {formatCents(installment.amount)}
+                </span>
+
+                {/* Undo button for paid installments */}
+                {isPaid && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (showUndo) {
+                        markAsUnpaid(installment);
+                      } else {
+                        setUndoConfirm(installment.id);
+                        // Auto-dismiss after 3 seconds
+                        setTimeout(() => setUndoConfirm((prev) => prev === installment.id ? null : prev), 3000);
+                      }
+                    }}
+                    className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
+                      showUndo
+                        ? 'bg-red-50 dark:bg-red-950 text-[var(--red)]'
+                        : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/50'
+                    }`}
+                    title={showUndo ? 'Bevestig: markeer als onbetaald' : 'Ongedaan maken'}
+                  >
+                    <Undo2 size={14} />
+                  </button>
+                )}
+              </button>
+
+              {/* Undo confirmation tooltip */}
+              {showUndo && (
+                <div className="absolute right-2 -top-6 bg-[var(--text)] text-white text-[10px] font-medium px-2 py-1 rounded-md shadow-lg z-10 whitespace-nowrap">
+                  Nogmaals tikken om ongedaan te maken
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

@@ -54,12 +54,21 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
   const [fadeIn, setFadeIn] = useState(true);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [backgroundRunning, setBackgroundRunning] = useState(false);
+  const [displayEstimate, setDisplayEstimate] = useState<string | null>(null);
 
   const totalProcessedRef = useRef(0);
   const totalBillsRef = useRef(0);
   const abortRef = useRef(false);
   const scanningRef = useRef(false);
   const pageTokenRef = useRef<string | null>(null);
+
+  // ─── Smoothed rate tracking ────────────────────────────────
+  // Instead of recalculating from overall elapsed/processed (which jumps
+  // wildly when fast keyword-filtered batches alternate with slow AI batches),
+  // we track a smoothed rate using exponential moving average.
+  const smoothedRateRef = useRef<number | null>(null); // emails per second
+  const lastBatchTimeRef = useRef<number>(Date.now());
+  const lastBatchProcessedRef = useRef<number>(0);
 
   // ─── Rotate quotes ─────────────────────────────────────────
   useEffect(() => {
@@ -117,16 +126,51 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
     return () => clearInterval(interval);
   }, [backgroundRunning, status, accountId]);
 
-  // ─── Estimated time ────────────────────────────────────────
-  const getEstimatedTime = () => {
-    if (!startTime || processed < 5) return null;
-    const elapsed = (Date.now() - startTime) / 1000;
-    const rate = processed / elapsed;
-    const remaining = maxEmails - processed;
-    const secondsLeft = Math.ceil(remaining / rate);
-    if (secondsLeft < 60) return `~${secondsLeft}s`;
-    return `~${Math.ceil(secondsLeft / 60)} min`;
-  };
+  // ─── Smoothed time estimate ────────────────────────────────
+  // Called after each batch completes. Uses exponential moving average
+  // so the displayed time changes gradually instead of jumping 2s → 3min → 5s.
+  const updateEstimate = useCallback((currentProcessed: number, currentMax: number) => {
+    const now = Date.now();
+    const batchElapsed = (now - lastBatchTimeRef.current) / 1000;
+    const batchEmails = currentProcessed - lastBatchProcessedRef.current;
+
+    // Update tracking refs
+    lastBatchTimeRef.current = now;
+    lastBatchProcessedRef.current = currentProcessed;
+
+    // Need at least 1 email in batch and reasonable time to calculate rate
+    if (batchEmails <= 0 || batchElapsed < 0.1) return;
+
+    const batchRate = batchEmails / batchElapsed; // emails per second
+
+    // Exponential moving average: blend 70% previous + 30% new
+    // This prevents the estimate from swinging wildly between fast (keyword-filtered)
+    // and slow (AI-processed) batches.
+    const SMOOTHING = 0.3;
+    if (smoothedRateRef.current === null) {
+      smoothedRateRef.current = batchRate;
+    } else {
+      smoothedRateRef.current = smoothedRateRef.current * (1 - SMOOTHING) + batchRate * SMOOTHING;
+    }
+
+    const remaining = currentMax - currentProcessed;
+    if (remaining <= 0 || currentProcessed < 3) {
+      setDisplayEstimate(null);
+      return;
+    }
+
+    const secondsLeft = Math.ceil(remaining / smoothedRateRef.current);
+
+    // Clamp to reasonable range (5s to 10min)
+    const clamped = Math.max(5, Math.min(600, secondsLeft));
+
+    if (clamped < 60) {
+      setDisplayEstimate(`~${Math.round(clamped / 5) * 5}s`); // Round to nearest 5s
+    } else {
+      const mins = Math.ceil(clamped / 60);
+      setDisplayEstimate(`~${mins} min`);
+    }
+  }, []);
 
   // ─── Run a scan batch ──────────────────────────────────────
   const runBatch = useCallback(async () => {
@@ -180,9 +224,13 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
         }
         totalProcessedRef.current = data.scan_progress || (totalProcessedRef.current + (data.processed || 0));
         totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
+        const currentMax = data.max_emails || maxEmails;
         if (data.max_emails) setMaxEmails(data.max_emails);
         setProcessed(totalProcessedRef.current);
         setTotalBillsFound(totalBillsRef.current);
+
+        // Update smoothed estimate
+        updateEstimate(totalProcessedRef.current, currentMax);
 
         if (data.complete) {
           setStatus('done');
@@ -199,9 +247,13 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
         }
         totalProcessedRef.current = data.total_processed || (totalProcessedRef.current + (data.processed || 0));
         totalBillsRef.current = totalBillsRef.current + (data.bills_found || 0);
+        const currentMax = data.max_emails || maxEmails;
         if (data.max_emails) setMaxEmails(data.max_emails);
         setProcessed(totalProcessedRef.current);
         setTotalBillsFound(totalBillsRef.current);
+
+        // Update smoothed estimate
+        updateEstimate(totalProcessedRef.current, currentMax);
 
         if (data.done) {
           setStatus('done');
@@ -217,11 +269,15 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
       setErrorMessage(isNl ? 'Netwerkfout. Controleer je internetverbinding.' : 'Network error. Check your connection.');
       scanningRef.current = false;
     }
-  }, [accountId, provider, startTime, isNl]);
+  }, [accountId, provider, startTime, isNl, maxEmails, updateEstimate]);
 
   const startScan = useCallback(() => {
     abortRef.current = false;
     scanningRef.current = false;
+    smoothedRateRef.current = null;
+    lastBatchTimeRef.current = Date.now();
+    lastBatchProcessedRef.current = 0;
+    setDisplayEstimate(null);
     setStatus('scanning');
     setStartTime(Date.now());
     runBatch();
@@ -230,6 +286,10 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
   const resumeScan = useCallback(() => {
     abortRef.current = false;
     scanningRef.current = false;
+    smoothedRateRef.current = null;
+    lastBatchTimeRef.current = Date.now();
+    lastBatchProcessedRef.current = totalProcessedRef.current;
+    setDisplayEstimate(null);
     setStatus('scanning');
     setStartTime(Date.now());
     runBatch();
@@ -237,7 +297,6 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
 
   const progressPercent = Math.min((processed / maxEmails) * 100, 98);
   const currentQuote = QUOTES[quoteIdx];
-  const estimatedTime = getEstimatedTime();
   const providerName = provider === 'outlook' ? 'Outlook' : 'Gmail';
 
   return (
@@ -342,9 +401,9 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                 style={{ width: `${processed > 0 ? progressPercent : 2}%` }}
               />
             </div>
-            {estimatedTime && !backgroundRunning && (
+            {displayEstimate && !backgroundRunning && (
               <p className="mt-1 text-[11px] text-pw-muted">
-                {isNl ? 'Geschatte resterende tijd:' : 'Estimated time remaining:'} {estimatedTime}
+                {isNl ? 'Geschatte resterende tijd:' : 'Estimated time remaining:'} {displayEstimate}
               </p>
             )}
           </div>
