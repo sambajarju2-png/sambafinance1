@@ -1,10 +1,11 @@
 import { logAiUsage } from './usage-log';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+const SONNET_MODEL = 'claude-sonnet-4-5-20250514';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 /**
- * Call Claude Haiku for deep extraction, insights, or draft letters.
+ * Call Claude Haiku for insights and draft letters (cheaper tasks).
  * Returns the parsed JSON response.
  *
  * SERVER-ONLY — never import in client components.
@@ -14,6 +15,41 @@ export async function callHaiku(
   userId: string,
   operation: string,
   maxTokens: number = 1024
+): Promise<Record<string, unknown>> {
+  return callAnthropic(HAIKU_MODEL, prompt, userId, operation, maxTokens, {
+    inputCostPerMTok: 80,
+    outputCostPerMTok: 400,
+  });
+}
+
+/**
+ * Call Claude Sonnet for deep extraction (more reliable JSON, better Dutch understanding).
+ * Used for email bill extraction where JSON parse failures were causing missed bills.
+ *
+ * SERVER-ONLY — never import in client components.
+ */
+export async function callSonnet(
+  prompt: string,
+  userId: string,
+  operation: string,
+  maxTokens: number = 1024
+): Promise<Record<string, unknown>> {
+  return callAnthropic(SONNET_MODEL, prompt, userId, operation, maxTokens, {
+    inputCostPerMTok: 300,
+    outputCostPerMTok: 1500,
+  });
+}
+
+/**
+ * Shared Anthropic API caller for both Haiku and Sonnet.
+ */
+async function callAnthropic(
+  model: string,
+  prompt: string,
+  userId: string,
+  operation: string,
+  maxTokens: number,
+  pricing: { inputCostPerMTok: number; outputCostPerMTok: number }
 ): Promise<Record<string, unknown>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -30,7 +66,7 @@ export async function callHaiku(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: HAIKU_MODEL,
+      model,
       max_tokens: maxTokens,
       messages: [
         {
@@ -45,24 +81,24 @@ export async function callHaiku(
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error('Haiku API error:', response.status, errText);
-    throw new Error(`Haiku API error: ${response.status}`);
+    console.error(`${model} API error:`, response.status, errText);
+    throw new Error(`${model} API error: ${response.status}`);
   }
 
   const data = await response.json();
 
-  // Extract text from Haiku response
+  // Extract text from response
   const text = data.content?.[0]?.text || '';
   const tokensIn = data.usage?.input_tokens || 0;
   const tokensOut = data.usage?.output_tokens || 0;
 
-  // Haiku pricing: $0.80/MTok input, $4/MTok output (approx)
   const costCents =
-    (tokensIn / 1_000_000) * 80 + (tokensOut / 1_000_000) * 400;
+    (tokensIn / 1_000_000) * pricing.inputCostPerMTok +
+    (tokensOut / 1_000_000) * pricing.outputCostPerMTok;
 
   await logAiUsage({
     userId,
-    model: HAIKU_MODEL,
+    model,
     operation,
     tokensIn,
     tokensOut,
@@ -79,6 +115,7 @@ export async function callHaiku(
  */
 function parseJsonResponse(text: string): Record<string, unknown> {
   let cleaned = text.trim();
+
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
@@ -88,9 +125,9 @@ function parseJsonResponse(text: string): Record<string, unknown> {
   const end = cleaned.lastIndexOf('}');
 
   if (start === -1 || end === -1 || end <= start) {
-    console.error('No valid JSON found in Haiku response:', text.slice(0, 300));
+    console.error('No valid JSON found in AI response:', text.slice(0, 300));
     // For draft letters, try to return the raw text as the body
-    return { subject: '', body: text.trim(), error: 'No JSON wrapper' };
+    return { subject: '', body: text.trim(), error: 'No JSON wrapper', _parse_error: true };
   }
 
   const jsonStr = cleaned.slice(start, end + 1);
@@ -98,12 +135,15 @@ function parseJsonResponse(text: string): Record<string, unknown> {
   try {
     return JSON.parse(jsonStr);
   } catch {
-    console.error('Failed to parse Haiku JSON:', jsonStr.slice(0, 300));
+    console.error('Failed to parse AI JSON:', jsonStr.slice(0, 300));
     try {
-      const fixed = jsonStr.replace(/'/g, '"').replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      const fixed = jsonStr
+        .replace(/'/g, '"')
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']');
       return JSON.parse(fixed);
     } catch {
-      return { subject: '', body: text.trim(), error: 'Invalid JSON' };
+      return { subject: '', body: text.trim(), error: 'Invalid JSON', _parse_error: true };
     }
   }
 }

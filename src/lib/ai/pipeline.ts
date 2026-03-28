@@ -1,5 +1,5 @@
 import { callGeminiText, callGeminiVision } from './gemini';
-import { callHaiku } from './haiku';
+import { callHaiku, callSonnet } from './haiku';
 import { buildExtractionPrompt } from './prompts';
 import { buildCorrectionPrompt } from '../ai-corrections';
 import { createServerSupabaseClient } from '../supabase/server';
@@ -12,10 +12,11 @@ import { lookupVendor, buildVendorContext } from '../vendor-lookup';
  * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
  *
  * Architecture:
- * - AI extracts RAW data (vendor, amount, IBAN, reference, due date, payment URL)
+ * - Gemini Flash: email classification (is this a bill? yes/no)
+ * - Claude Sonnet: email extraction (reliable JSON, deep Dutch understanding)
+ * - Claude Haiku: insights + draft letters (cheaper, good enough)
+ * - Gemini Vision: camera scan extraction
  * - Database handles categorization (561 known vendors + incasso agencies)
- * - AI does NOT receive vendor lists for camera scans (keeps prompt focused)
- * - Email extraction gets vendor hints (Haiku handles long context better)
  *
  * SERVER-ONLY — never import in client components.
  */
@@ -140,7 +141,11 @@ export async function classifyEmail(
 }
 
 // ============================================================
-// 2. EMAIL BILL EXTRACTION (Haiku)
+// 2. EMAIL BILL EXTRACTION (Sonnet — upgraded from Haiku)
+//
+// Sonnet produces far more reliable JSON and understands complex
+// Dutch bill formats better. Costs ~6x more per call but prevents
+// the "JSON parse failed" errors that were causing missed bills.
 // ============================================================
 
 const EXTRACTION_PROMPT = `You are extracting structured data from a Dutch bill/invoice email.
@@ -219,7 +224,7 @@ export async function extractBillFromEmail(
     ? `PDF attachment content:\n${pdfText.slice(0, 3000)}`
     : 'No PDF attachment.';
 
-  // Build vendor context for Haiku (Haiku handles long context well)
+  // Build vendor context for Sonnet (handles long context well)
   let vendorContext = '';
   try {
     vendorContext = await buildVendorContext();
@@ -233,7 +238,8 @@ export async function extractBillFromEmail(
     .replace('{pdf_note}', pdfNote)
     .replace('{vendor_context}', vendorContext);
 
-  const result = await callHaiku(prompt, userId, 'email_extraction', 1024);
+  // Use Sonnet for extraction — far more reliable JSON than Haiku
+  const result = await callSonnet(prompt, userId, 'email_extraction', 1500);
 
   const extracted = normalizeExtraction(result);
 
@@ -339,7 +345,7 @@ export async function extractBillFromPhoto(
 }
 
 // ============================================================
-// 4. AI INSIGHTS (Haiku)
+// 4. AI INSIGHTS (Haiku — cheaper, good enough for analysis)
 // ============================================================
 
 const INSIGHT_PROMPT = `You are a Dutch financial assistant analyzing a user's bills.
@@ -407,7 +413,7 @@ export async function generateInsight(
 }
 
 // ============================================================
-// 5. DRAFT LETTER (Haiku)
+// 5. DRAFT LETTER (Haiku — cheaper, good enough for text gen)
 // ============================================================
 
 const LETTER_PROMPT = `Draft a formal {language_name} letter from a consumer to {vendor}.
