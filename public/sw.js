@@ -1,7 +1,7 @@
 /// PayWatch Service Worker
 /// Handles: caching, offline fallback, push notifications (future)
 
-const CACHE_NAME = 'paywatch-v2-cache-v1';
+const CACHE_NAME = 'paywatch-v2-cache-v2';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [
@@ -59,6 +59,10 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Supabase requests
   if (url.hostname.includes('supabase')) return;
+
+  // Skip ALL external requests (DiceBear, CDNs, etc.)
+  // Only cache our own app's pages and assets
+  if (url.origin !== self.location.origin) return;
 
   // Network-first strategy for pages
   event.respondWith(
