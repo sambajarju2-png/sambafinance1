@@ -198,6 +198,10 @@ export default function GmailSettings() {
         <p className="text-[13px] text-pw-muted mt-1">
           Verbind je e-mail om automatisch rekeningen te detecteren uit je inbox.
         </p>
+        <p className="text-[11px] text-pw-muted/70 mt-1.5">
+          We gebruiken je inbox alleen om rekeningen te herkennen. We lezen, bewaren of delen geen andere e-mails.{' '}
+          <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a>
+        </p>
       </div>
 
       {statusMessage && (

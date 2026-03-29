@@ -289,7 +289,7 @@ export default function CameraScanPage() {
             </button>
 
             <p className="text-[11px] text-pw-muted text-center pt-2">
-              De meeste Nederlandse facturen hebben een betaal-QR code
+              We gebruiken je foto of QR-code alleen om betaalgegevens te lezen. De afbeelding wordt daarna verwijderd. <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a>
             </p>
           </div>
         )}
