@@ -81,7 +81,7 @@ export function extractIban(text: string): string | null {
     ...(upperText.match(IBAN_STRICT) || []),
     ...(upperText.match(IBAN_REGEX) || []).map((m) => m.replace(/\s/g, '')),
   ];
-  for (const raw of [...new Set(all)]) {
+  for (const raw of Array.from(new Set(all))) {
     if (validateIbanMod97(raw)) return raw;
   }
   return null;
