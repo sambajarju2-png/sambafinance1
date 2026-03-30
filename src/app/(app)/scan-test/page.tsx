@@ -21,6 +21,7 @@ interface ExtractionResult {
   ocr_confidence: number;
   method: string;
   fields_found: string[];
+  match_sources: string[];
   extraction_confidence: number;
   timing: { ocr_ms: number; regex_ms: number; total_ms: number };
 }
@@ -78,7 +79,7 @@ export default function ScanTestPage() {
         <button onClick={() => router.back()} className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/30">
           <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
         </button>
-        <h1 className="text-[15px] font-bold text-pw-navy">Scan Test (Regex v2)</h1>
+        <h1 className="text-[15px] font-bold text-pw-navy">Scan Test (Regex v3)</h1>
         <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">EXPERIMENT</span>
       </header>
 
@@ -90,9 +91,9 @@ export default function ScanTestPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100">
                 <Zap className="h-8 w-8 text-amber-600" strokeWidth={1.5} />
               </div>
-              <h2 className="text-[18px] font-bold text-pw-navy">Regex Scanner v2</h2>
+              <h2 className="text-[18px] font-bold text-pw-navy">Regex Scanner v3</h2>
               <p className="mt-1 text-[13px] text-pw-muted">
-                OCR + regex + escalatie-detectie + categorie. Geen AI.
+                OCR + regex + DB vendor lookup (291) + incasso register (270) + learned corrections. Geen AI.
               </p>
             </div>
 
@@ -113,15 +114,15 @@ export default function ScanTestPage() {
             </button>
 
             <div className="mt-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-left">
-              <p className="text-[12px] font-semibold text-amber-800">v2 verbeteringen:</p>
+              <p className="text-[12px] font-semibold text-amber-800">v3 — DB-powered:</p>
               <p className="mt-1 text-[11px] text-amber-700 leading-relaxed">
-                1. Escalatiefase detectie (factuur → deurwaarder) via 50+ Nederlandse trefwoorden<br />
-                2. Automatische categorie (nutsvoorzieningen, telecom, overheid, etc.)<br />
-                3. 100+ Nederlandse vendor domeinen<br />
-                4. Fuzzy matching voor spelfouten in bedrijfsnamen<br />
-                5. KvK-nummer extractie<br />
-                6. Betere anker-gebaseerde bedrag extractie (zoekt bij &quot;te betalen&quot;)<br />
-                7. Timing info (OCR ms + regex ms)
+                1. vendor_category_map (291 patronen) — bedrijf → categorie<br />
+                2. incasso_agencies (270 bureaus) — Justis register<br />
+                3. vendor_corrections — leert van je correcties<br />
+                4. 150+ hardcoded domeinen voor instant email lookup<br />
+                5. Escalatiefase detectie (50+ trefwoorden)<br />
+                6. IBAN met MOD-97 validatie<br />
+                7. Match sources: zien waar het resultaat vandaan komt
               </p>
             </div>
           </div>
@@ -183,6 +184,18 @@ export default function ScanTestPage() {
                 OCR: {result.timing.ocr_ms}ms · Regex: {result.timing.regex_ms}ms · Confidence: {Math.round(result.extraction_confidence * 100)}%
               </span>
             </div>
+
+            {/* Match sources */}
+            {result.match_sources && result.match_sources.length > 0 && (
+              <div className="flex items-center gap-1.5 px-1 flex-wrap">
+                <span className="text-[10px] text-pw-muted">Matched via:</span>
+                {result.match_sources.map((src) => (
+                  <span key={src} className="rounded-full bg-pw-blue/10 px-2 py-0.5 text-[9px] font-semibold text-pw-blue">
+                    {src.replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Extracted fields */}
             <div className="rounded-card border border-pw-border bg-pw-surface overflow-hidden">

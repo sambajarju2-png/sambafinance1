@@ -6,10 +6,8 @@ import { getAuthUserId } from '@/lib/auth';
 /**
  * POST /api/scan/camera-regex
  *
- * Camera scan using Tesseract OCR + regex extraction v2.
- * ZERO AI calls. Fully deterministic.
- *
- * v2: now returns escalation_stage, category_hint, kvk_number
+ * Camera scan: Tesseract OCR → DB-powered regex extraction v3.
+ * Zero AI. Uses vendor_category_map (291) + incasso_agencies (270) + learned corrections.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -18,36 +16,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { image, mime_type } = await req.json();
+    const { image } = await req.json();
     if (!image) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
 
     const startTime = Date.now();
 
-    // 1. OCR with Tesseract.js (Dutch + English)
+    // 1. OCR
     const buffer = Buffer.from(image, 'base64');
     const worker = await createWorker('nld+eng');
     const { data } = await worker.recognize(buffer);
     await worker.terminate();
-
     const ocrMs = Date.now() - startTime;
-    const ocrText = data.text;
-    const ocrConfidence = data.confidence;
 
-    if (!ocrText || ocrText.trim().length < 10) {
-      return NextResponse.json({
-        error: 'Could not read text from image. Try a clearer photo.',
-        ocr_confidence: ocrConfidence,
-      }, { status: 422 });
+    if (!data.text || data.text.trim().length < 10) {
+      return NextResponse.json({ error: 'Could not read text from image.' }, { status: 422 });
     }
 
-    // 2. Regex extraction
+    // 2. DB-powered regex extraction (async — queries Supabase)
     const regexStart = Date.now();
-    const extraction = extractFromText(ocrText);
+    const extraction = await extractFromText(data.text);
     const regexMs = Date.now() - regexStart;
 
-    // 3. Return result
     return NextResponse.json({
       extraction: {
         vendor: extraction.vendor || '',
@@ -59,27 +50,25 @@ export async function POST(req: NextRequest) {
         category_hint: extraction.category_hint,
         escalation_stage: extraction.escalation_stage,
         payment_url: extraction.payment_url,
+        is_incasso: extraction.is_incasso,
         confidence: {
           vendor: extraction.vendor ? 0.8 : 0,
           amount: extraction.amount_cents ? 0.95 : 0,
           due_date: extraction.due_date ? 0.8 : 0,
         },
       },
-      ocr_text: ocrText.slice(0, 1000),
-      ocr_confidence: ocrConfidence,
+      ocr_text: data.text.slice(0, 1000),
+      ocr_confidence: data.confidence,
       method: 'regex',
       fields_found: extraction.fields_found,
+      match_sources: extraction.match_sources,
       extraction_confidence: extraction.confidence,
-      timing: {
-        ocr_ms: ocrMs,
-        regex_ms: regexMs,
-        total_ms: Date.now() - startTime,
-      },
+      timing: { ocr_ms: ocrMs, regex_ms: regexMs, total_ms: Date.now() - startTime },
     });
   } catch (err) {
     console.error('[Camera Regex Scan]', err);
     return NextResponse.json(
-      { error: 'Extraction failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Extraction failed', detail: err instanceof Error ? err.message : 'Unknown' },
       { status: 500 }
     );
   }
