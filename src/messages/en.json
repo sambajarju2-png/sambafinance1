@@ -74,7 +74,19 @@
     "withinSevenDays": "within 7 days",
     "thisMonth": "this month",
     "savedOnCollection": "saved on collection costs",
-    "payOnTimeToSave": "Pay on time to save on collection costs"
+    "payOnTimeToSave": "Pay on time to save on collection costs",
+    "debtFreeCountdown": "Debt-free countdown",
+    "debtFreeWeeks": "weeks",
+    "debtFreeMonths": "months",
+    "howItWorks": "How does this work?",
+    "countdownExplainer": "The countdown calculates how many weeks you need to become debt-free.",
+    "countdownDescription": "We take your total outstanding amount and divide it by what you can pay monthly. So you know exactly when you're done.",
+    "yourCalculation": "Your calculation:",
+    "outstandingAmount": "Outstanding amount",
+    "monthlyBudget": "Monthly budget",
+    "estimatedTime": "Estimated time",
+    "adjustBudget": "Adjust budget",
+    "countdownTip": "The more you pay per month, the faster the countdown drops. Pay on time? Then you also avoid extra collection costs."
   },
   "bills": {
     "pageTitle": "Payments",
@@ -91,13 +103,29 @@
     "vendor": "Vendor",
     "category": "Category",
     "status": "Status",
-    "filter": "Filter"
+    "filter": "Filter",
+    "calendarTitle": "Calendar",
+    "listView": "List",
+    "calendarView": "Calendar",
+    "soonSection": "Coming up",
+    "billCount": "{count} bills",
+    "regeling": "Payment plan",
+    "regelingTab": "Plan",
+    "progress": "Progress",
+    "betaald": "Paid",
+    "resterend": "Remaining",
+    "termijn": "Installment",
+    "termijnen": "Installments",
+    "vervalt": "Due",
+    "betaaldOp": "Paid on",
+    "regelingAnnuleren": "Cancel plan"
   },
   "billDetail": {
     "tabDetails": "Details",
     "tabEscalation": "Escalation",
     "tabActions": "Actions",
     "tabNotes": "Notes",
+    "tabRegeling": "Plan",
     "dueDate": "Due date",
     "receivedDate": "Received date",
     "category": "Category",
@@ -105,6 +133,8 @@
     "source_manual": "Manual",
     "source_gmail_scan": "Gmail scan",
     "source_camera_scan": "Camera scan",
+    "source_outlook_scan": "Outlook scan",
+    "source_qr_scan": "QR scan",
     "reference": "Reference",
     "openPaymentLink": "Open payment link",
     "paidOn": "Paid on",
@@ -127,7 +157,14 @@
     "notesPlaceholder": "Add a note...",
     "notesSaved": "Saved",
     "saveNotes": "Save note",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "paymentPlan": "Payment plan",
+    "paymentPlanDesc": "Set up a payment plan",
+    "setupPlan": "Set up plan",
+    "installments": "installments",
+    "perMonth": "per month",
+    "planActive": "Plan active",
+    "planCompleted": "Plan completed"
   },
   "addBill": {
     "title": "Add bill",
@@ -258,7 +295,7 @@
     "profileDesc": "Name, municipality and language",
     "notifications": "Notifications",
     "notificationsDesc": "Push and email notifications",
-    "gmailAccounts": "Gmail accounts",
+    "gmailAccounts": "Email accounts",
     "gmailAccountsDesc": "Connected email accounts",
     "budget": "Monthly budget",
     "budgetDesc": "Set your monthly budget",
@@ -285,7 +322,11 @@
     "pwaReset": "Install prompt will be shown",
     "save": "Save",
     "saved": "Saved",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "buddy": "Buddy / Safety net",
+    "buddyDesc": "Set up a safety network",
+    "referral": "Share PayWatch",
+    "referralDesc": "Invite friends and unlock features"
   },
   "profile": {
     "title": "Profile",
@@ -319,13 +360,20 @@
     "allGood": "All caught up. Nice work!",
     "overdueSection": "Overdue",
     "upcomingSection": "Upcoming",
-    "achievementsSection": "Achievements"
+    "achievementsSection": "Achievements",
+    "pushSection": "Push notifications",
+    "pushDesc": "You'll receive reminders for due dates",
+    "disable": "Disable",
+    "enable": "Enable",
+    "testNotification": "Test notification",
+    "testNotificationDesc": "Send a test notification to this device to see how notifications look.",
+    "sendTest": "Send test notification"
   },
   "gmail": {
-    "title": "Gmail accounts",
-    "description": "Connect your Gmail to automatically detect invoices from your inbox.",
+    "title": "Email accounts",
+    "description": "Connect your email to automatically detect invoices from your inbox.",
     "noAccounts": "No accounts connected",
-    "noAccountsHint": "Connect your Gmail to automatically scan for bills.",
+    "noAccountsHint": "Connect your Gmail or Outlook to automatically scan for bills.",
     "connected": "Connected",
     "connectGmail": "Connect Gmail",
     "lastScanned": "Last scanned",
@@ -334,9 +382,17 @@
     "startScan": "Start scan",
     "scanAgain": "Scan again",
     "reauth": "Reconnect",
-    "disconnectConfirm": "Are you sure you want to disconnect this Gmail account?",
+    "disconnectConfirm": "Are you sure you want to disconnect this account?",
     "disconnected": "Account disconnected",
-    "add": "Add Gmail"
+    "add": "Add Gmail",
+    "scanTitle": "Scan inbox",
+    "scanDescription": "Scan your inbox for bills",
+    "scanInfo": "We'll scan your emails from the last 7 days (up to 200 emails). This usually takes 2–5 minutes.",
+    "scanLeave": "You can leave the app while scanning. The scan continues on the server and you'll get a notification when it's done.",
+    "scanDaily": "After this first scan, we automatically scan the last 24 hours every day. No action needed on your end.",
+    "startScanButton": "Start scan",
+    "denied": "Permission denied. Please try again.",
+    "errorGeneral": "Something went wrong. Please try again."
   },
   "scan": {
     "title": "Scan",
@@ -346,7 +402,7 @@
     "chooseFromGallery": "Choose from gallery",
     "retake": "Retake",
     "extracting": "Extracting data...",
-    "extractingHint": "AI is analyzing your bill",
+    "extractingHint": "Analyzing your bill",
     "confirmTitle": "Review details",
     "confirmDescription": "Review the extracted data",
     "errorExtraction": "Could not extract data. Try again.",
@@ -363,7 +419,7 @@
     "chooseFromGallery": "Choose from gallery",
     "retake": "Retake",
     "extracting": "Extracting data...",
-    "extractingHint": "AI is analyzing your bill",
+    "extractingHint": "Analyzing your bill",
     "confirmTitle": "Review details",
     "confirmDescription": "Does this look right?",
     "errorExtraction": "Could not extract data.",
@@ -375,7 +431,15 @@
     "reference": "Reference",
     "save": "Save",
     "paymentUrl": "Payment link (optional)",
-    "paymentUrlHint": "iDEAL or payment page URL"
+    "paymentUrlHint": "iDEAL or payment page URL",
+    "howToScan": "How do you want to scan?",
+    "chooseMethod": "Choose a method to add your bill",
+    "takePhotoOption": "Take a photo",
+    "takePhotoDesc": "Photograph your invoice or letter. We'll read the details automatically.",
+    "scanQrOption": "Scan QR code",
+    "scanQrDesc": "Scan the payment QR on your invoice. We'll fetch the details automatically.",
+    "mostBillsQr": "Most Dutch invoices have a payment QR code",
+    "fast": "FAST"
   },
   "draftLetter": {
     "title": "Draft letter",
@@ -440,106 +504,26 @@
       "gebruik": "Usage"
     },
     "items": {
-      "eerste_betaling": {
-        "name": "First payment",
-        "desc": "Paid your first bill!",
-        "howTo": "Mark your first bill as paid"
-      },
-      "vijf_betaald": {
-        "name": "Five paid",
-        "desc": "5 bills paid",
-        "howTo": "Pay 5 bills"
-      },
-      "tien_betaald": {
-        "name": "Ten paid",
-        "desc": "10 bills paid",
-        "howTo": "Pay 10 bills"
-      },
-      "twintig_betaald": {
-        "name": "Twenty paid",
-        "desc": "20 bills paid!",
-        "howTo": "Pay 20 bills"
-      },
-      "vijftig_betaald": {
-        "name": "Fifty paid",
-        "desc": "50 bills paid — champion!",
-        "howTo": "Pay 50 bills"
-      },
-      "streak_3": {
-        "name": "Streak 3",
-        "desc": "3 paid on time in a row",
-        "howTo": "Pay 3 bills on time consecutively"
-      },
-      "streak_5": {
-        "name": "Streak 5",
-        "desc": "5 paid on time in a row",
-        "howTo": "Pay 5 bills on time consecutively"
-      },
-      "streak_10": {
-        "name": "Streak 10",
-        "desc": "10 paid on time in a row!",
-        "howTo": "Pay 10 bills on time consecutively"
-      },
-      "streak_20": {
-        "name": "Streak 20",
-        "desc": "20 in a row — unstoppable!",
-        "howTo": "Pay 20 bills on time consecutively"
-      },
-      "nul_achterstallig": {
-        "name": "Clean slate",
-        "desc": "No overdue bills",
-        "howTo": "Have no overdue bills"
-      },
-      "alle_betaald": {
-        "name": "All paid",
-        "desc": "All bills are paid!",
-        "howTo": "Pay all your outstanding bills"
-      },
-      "bespaard_100": {
-        "name": "€100 saved",
-        "desc": "€100 in collection costs saved",
-        "howTo": "Save €100 by paying on time"
-      },
-      "bespaard_500": {
-        "name": "€500 saved",
-        "desc": "€500 in collection costs saved!",
-        "howTo": "Save €500 by paying on time"
-      },
-      "scanner": {
-        "name": "Scanner",
-        "desc": "First bill scanned with camera",
-        "howTo": "Scan a bill with your camera"
-      },
-      "gmail_koppeling": {
-        "name": "Gmail connected",
-        "desc": "Gmail account connected",
-        "howTo": "Connect your Gmail account"
-      },
-      "brief_geschreven": {
-        "name": "Letter writer",
-        "desc": "First AI letter drafted",
-        "howTo": "Let AI draft a letter for you"
-      },
-      "gemeente_ingesteld": {
-        "name": "Municipality set",
-        "desc": "Your municipality is set",
-        "howTo": "Set your municipality in your profile"
-      },
-      "donkere_modus": {
-        "name": "Night mode",
-        "desc": "Dark theme activated",
-        "howTo": "Enable the dark theme"
-      },
-      "meldingen_aan": {
-        "name": "Notifications on",
-        "desc": "Push notifications activated",
-        "howTo": "Turn on push notifications"
-      },
-      "mood_gelogd": {
-        "name": "Mood logged",
-        "desc": "First mood check done",
-        "howTo": "Log your mood via the mood tracker"
-      }
+      "eerste_betaling": { "name": "First payment", "desc": "Paid your first bill!", "howTo": "Mark your first bill as paid" },
+      "vijf_betaald": { "name": "Five paid", "desc": "5 bills paid", "howTo": "Pay 5 bills" },
+      "tien_betaald": { "name": "Ten paid", "desc": "10 bills paid", "howTo": "Pay 10 bills" },
+      "twintig_betaald": { "name": "Twenty paid", "desc": "20 bills paid!", "howTo": "Pay 20 bills" },
+      "vijftig_betaald": { "name": "Fifty paid", "desc": "50 bills paid — champion!", "howTo": "Pay 50 bills" },
+      "streak_3": { "name": "Streak 3", "desc": "3 paid on time in a row", "howTo": "Pay 3 bills on time consecutively" },
+      "streak_5": { "name": "Streak 5", "desc": "5 paid on time in a row", "howTo": "Pay 5 bills on time consecutively" },
+      "streak_10": { "name": "Streak 10", "desc": "10 paid on time in a row!", "howTo": "Pay 10 bills on time consecutively" },
+      "streak_20": { "name": "Streak 20", "desc": "20 in a row — unstoppable!", "howTo": "Pay 20 bills on time consecutively" },
+      "nul_achterstallig": { "name": "Clean slate", "desc": "No overdue bills", "howTo": "Have no overdue bills" },
+      "alle_betaald": { "name": "All paid", "desc": "All bills are paid!", "howTo": "Pay all your outstanding bills" },
+      "bespaard_100": { "name": "€100 saved", "desc": "€100 in collection costs saved", "howTo": "Save €100 by paying on time" },
+      "bespaard_500": { "name": "€500 saved", "desc": "€500 in collection costs saved!", "howTo": "Save €500 by paying on time" },
+      "scanner": { "name": "Scanner", "desc": "First bill scanned with camera", "howTo": "Scan a bill with your camera" },
+      "gmail_koppeling": { "name": "Gmail connected", "desc": "Gmail account connected", "howTo": "Connect your Gmail account" },
+      "brief_geschreven": { "name": "Letter writer", "desc": "First AI letter drafted", "howTo": "Let AI draft a letter for you" },
+      "gemeente_ingesteld": { "name": "Municipality set", "desc": "Your municipality is set", "howTo": "Set your municipality in your profile" },
+      "donkere_modus": { "name": "Night mode", "desc": "Dark theme activated", "howTo": "Enable the dark theme" },
+      "meldingen_aan": { "name": "Notifications on", "desc": "Push notifications activated", "howTo": "Turn on push notifications" },
+      "mood_gelogd": { "name": "Mood logged", "desc": "First mood check done", "howTo": "Log your mood via the mood tracker" }
     }
   },
   "helpResources": {
@@ -568,6 +552,7 @@
   },
   "referral": {
     "title": "Share PayWatch",
+    "desc": "Invite friends and unlock extra features",
     "shareLink": "Your share link",
     "shareButton": "Share with a friend",
     "copied": "Copied!",
@@ -611,30 +596,12 @@
     "next": "Next",
     "done": "Done",
     "getStarted": "Get started",
-    "overview": {
-      "title": "Overview",
-      "desc": "See your outstanding bills, savings and debts in one place."
-    },
-    "payments": {
-      "title": "Payments",
-      "desc": "Manage all your bills, mark them as paid and check the calendar."
-    },
-    "feed": {
-      "title": "Community Feed",
-      "desc": "Share experiences, tips and success stories with other users."
-    },
-    "stats": {
-      "title": "Statistics",
-      "desc": "View your payment performance, health score and cashflow."
-    },
-    "cashflow": {
-      "title": "Cashflow",
-      "desc": "See your monthly spending and expected costs."
-    },
-    "settings": {
-      "title": "Settings",
-      "desc": "Customize your profile, notifications and Gmail connection."
-    },
+    "overview": { "title": "Overview", "desc": "See your outstanding bills, savings and debts in one place." },
+    "payments": { "title": "Payments", "desc": "Manage all your bills, mark them as paid and check the calendar." },
+    "feed": { "title": "Community Feed", "desc": "Share experiences, tips and success stories with other users." },
+    "stats": { "title": "Statistics", "desc": "View your payment performance, health score and cashflow." },
+    "cashflow": { "title": "Cashflow", "desc": "See your monthly spending and expected costs." },
+    "settings": { "title": "Settings", "desc": "Customize your profile, notifications and email connection." },
     "previous": "Previous"
   },
   "adminTest": {
@@ -644,6 +611,23 @@
   "buddy": {
     "title": "Buddy / Safety net",
     "description": "Invite someone you trust as a safety net",
+    "networkTitle": "Safety network",
+    "networkDesc": "Give someone you trust a safety net",
+    "codeTitle": "Enter code",
+    "codeDesc": "Received a buddy code? Enter it below.",
+    "codePlaceholder": "PW-B-XXXXXX",
+    "accept": "Accept",
+    "yourBuddies": "Your buddies",
+    "amountsVisible": "Amounts visible",
+    "incassoAlert": "Collection alert",
+    "on": "on",
+    "off": "off",
+    "allGood": "All good",
+    "actionNeeded": "Action needed",
+    "generateCode": "Generate buddy code",
+    "shareCode": "Share this code with your buddy",
+    "maxBuddies": "Maximum 3 buddies",
+    "removeBuddy": "Remove buddy",
     "acceptTitle": "Buddy invitation",
     "acceptDesc": "You have been invited as a buddy",
     "acceptButton": "Accept invitation",
@@ -652,5 +636,65 @@
     "goToDashboard": "View dashboard",
     "invalidCode": "Invitation not found or expired",
     "loginFirst": "Please sign in first to accept the invitation"
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Share experiences, support each other",
+    "placeholder": "Share your story...",
+    "post": "Post",
+    "all": "All",
+    "popular": "Popular",
+    "successStories": "Success stories",
+    "tips": "Tips",
+    "anonymous": "Anonymous",
+    "debtFree": "Debt-free!",
+    "tip": "Tip",
+    "question": "Question",
+    "story": "Story",
+    "comments": "comments",
+    "reply": "Reply",
+    "report": "Report",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this post?",
+    "reported": "Reported",
+    "noPostsYet": "No posts yet. Be the first to share!",
+    "loadMore": "Load more",
+    "postSuccess": "Posted!",
+    "postError": "Could not post. Try again.",
+    "chooseCategory": "Choose a category",
+    "rulesTitle": "Community rules",
+    "rule1": "Be respectful and supportive",
+    "rule2": "No personal financial details",
+    "rule3": "No spam or advertising"
+  },
+  "mood": {
+    "title": "How are you feeling?",
+    "great": "Great",
+    "good": "Good",
+    "okay": "Okay",
+    "stressed": "Stressed",
+    "overwhelmed": "Overwhelmed",
+    "logged": "Mood logged!",
+    "history": "Mood history",
+    "trend": "Trend"
+  },
+  "paymentPlan": {
+    "title": "Payment plan",
+    "setupTitle": "Set up payment plan",
+    "amount": "Total amount",
+    "installments": "Number of installments",
+    "perInstallment": "Per installment",
+    "startDate": "Start date",
+    "create": "Create plan",
+    "active": "Active plan",
+    "progress": "Progress",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "nextPayment": "Next payment",
+    "markPaid": "Mark as paid",
+    "cancelPlan": "Cancel plan",
+    "cancelConfirm": "Are you sure you want to cancel this payment plan?",
+    "completed": "Plan completed!",
+    "uploadProof": "Upload proof of payment"
   }
 }
