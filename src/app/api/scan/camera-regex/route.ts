@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       extraction: {
         vendor: extraction.vendor || '',
+        secondary_vendor: extraction.secondary_vendor || null,
         amount_cents: extraction.amount_cents || 0,
         currency: 'EUR',
         iban: extraction.iban,
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
         escalation_stage: extraction.escalation_stage,
         payment_url: extraction.payment_url,
         is_incasso: extraction.is_incasso,
+        kvk_number: extraction.kvk_number || null,
+        btw_id: extraction.btw_id || null,
         confidence: {
           vendor: extraction.vendor ? 0.8 : 0,
           amount: extraction.amount_cents ? 0.95 : 0,

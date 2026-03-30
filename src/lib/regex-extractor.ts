@@ -1,15 +1,17 @@
 /**
- * PayWatch Regex Extraction Engine v3 — DB-Powered
+ * PayWatch Regex Extraction Engine v4 — Multi-AI Optimized
  *
- * Uses 3 Supabase tables for vendor intelligence:
- * - vendor_category_map (291 patterns) — vendor name → category + display name
- * - incasso_agencies (270 agencies) — Justis register with search names
- * - vendor_corrections (learned) — user corrections that grow over time
+ * Merged improvements from Claude, Gemini, and ChatGPT analysis:
+ * - IBAN OCR fuzzy repair (character substitution + MOD-97 re-validation)
+ * - Amount sum validation (A + B = C → C is total)
+ * - Relative date calculation ("binnen 14 dagen")
+ * - Soft escalation keywords (sociale incasso, storno)
+ * - BTW-id + KVK extraction for vendor identification
+ * - Secondary vendor detection ("namens", "opdrachtgever")
+ * - Proximity-scored amount extraction
  *
- * Plus hardcoded domain map for email sender → vendor (instant, no DB call).
- * Plus deterministic regex for IBAN, amounts, dates, references, escalation.
- *
- * SERVER-ONLY — never import in client components.
+ * DB-powered: vendor_category_map (454) + incasso_agencies (270) + vendor_corrections
+ * SERVER-ONLY
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/server';
@@ -20,6 +22,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export interface RegexExtractionResult {
   vendor: string | null;
+  secondary_vendor: string | null; // "namens [opdrachtgever]"
   amount_cents: number | null;
   iban: string | null;
   reference: string | null;
@@ -28,14 +31,16 @@ export interface RegexExtractionResult {
   escalation_stage: string | null;
   category_hint: string;
   is_incasso: boolean;
+  kvk_number: string | null;
+  btw_id: string | null;
   method: 'regex';
   fields_found: string[];
   confidence: number;
-  match_sources: string[]; // e.g. ['domain_map', 'vendor_db', 'incasso_db', 'regex']
+  match_sources: string[];
 }
 
 // ============================================================
-// 1. IBAN EXTRACTION + MOD-97 VALIDATION
+// 1. IBAN — REGEX + MOD-97 + OCR REPAIR
 // ============================================================
 
 const IBAN_REGEX = /\b([A-Z]{2}\d{2}\s?[A-Z]{4}\s?\d{4}\s?\d{4}\s?\d{2})\b/g;
@@ -57,13 +62,42 @@ function validateIbanMod97(iban: string): boolean {
   return remainder === 1;
 }
 
+/** OCR confusion map — try these substitutions when MOD-97 fails */
+const OCR_CONFUSIONS: Record<string, string[]> = {
+  '0': ['O', 'D'], 'O': ['0'], 'D': ['0'],
+  '1': ['I', 'l'], 'I': ['1'], 'l': ['1'],
+  '5': ['S'], 'S': ['5'],
+  '8': ['B'], 'B': ['8'],
+  '2': ['Z'], 'Z': ['2'],
+};
+
+function repairIban(raw: string): string | null {
+  const cleaned = raw.replace(/\s/g, '').toUpperCase();
+  if (validateIbanMod97(cleaned)) return cleaned;
+
+  // Try single-character substitutions
+  const chars = cleaned.split('');
+  for (let i = 4; i < chars.length; i++) { // skip country+check digits
+    const alternatives = OCR_CONFUSIONS[chars[i]] || [];
+    for (const alt of alternatives) {
+      const candidate = [...chars];
+      candidate[i] = alt;
+      const attempt = candidate.join('');
+      if (validateIbanMod97(attempt)) return attempt;
+    }
+  }
+  return null;
+}
+
 export function extractIban(text: string): string | null {
   const upperText = text.toUpperCase();
   const paymentKeywords = [
     'BETAALINFORMATIE', 'OVERMAKEN NAAR', 'BETALEN AAN', 'IBAN',
     'REKENINGNUMMER', 'BANKREKENING', 'CREDITEUR', 'BEGUNSTIGDE',
+    'DERDENGELDEN', // incasso trust accounts
   ];
 
+  // Priority: near payment keywords
   for (const keyword of paymentKeywords) {
     const idx = upperText.indexOf(keyword);
     if (idx === -1) continue;
@@ -73,22 +107,25 @@ export function extractIban(text: string): string | null {
       ...(window.match(IBAN_REGEX) || []).map((m) => m.replace(/\s/g, '')),
     ];
     for (const raw of matches) {
-      if (validateIbanMod97(raw)) return raw;
+      const valid = repairIban(raw);
+      if (valid) return valid;
     }
   }
 
+  // Fallback: any valid IBAN
   const all = [
     ...(upperText.match(IBAN_STRICT) || []),
     ...(upperText.match(IBAN_REGEX) || []).map((m) => m.replace(/\s/g, '')),
   ];
   for (const raw of Array.from(new Set(all))) {
-    if (validateIbanMod97(raw)) return raw;
+    const valid = repairIban(raw);
+    if (valid) return valid;
   }
   return null;
 }
 
 // ============================================================
-// 2. AMOUNT EXTRACTION (Dutch format)
+// 2. AMOUNT — ANCHOR SCORING + SUM VALIDATION
 // ============================================================
 
 function parseDutchAmount(raw: string): number | null {
@@ -105,54 +142,74 @@ function parseDutchAmount(raw: string): number | null {
   return Math.round(num * 100);
 }
 
+interface ScoredAmount { cents: number; score: number; line: string }
+
 export function extractAmount(text: string): number | null {
   const lines = text.split('\n').map((l) => l.trim());
+  const scored: ScoredAmount[] = [];
 
-  const anchorPatterns = [
-    /(?:totaal\s+)?te\s+betalen[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /nog\s+te\s+betalen[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /(?:totaal|total|totaalbedrag)[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /openstaand\s*(?:bedrag|saldo)[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /verschuldigd[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /factuurbedrag[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /hoofdsom[:\s]*(?:€|EUR)\s?([\d.,]+[-]?)/i,
-    /(?:€|EUR)\s?([\d.,]+[-]?)\s*(?:te\s+betalen|verschuldigd|openstaand)/i,
-  ];
+  const amountRegex = /(?:€|EUR)\s?([\d]{1,3}(?:\.?\d{3})*(?:,\d{2})?[-]?)/g;
 
-  for (const pattern of anchorPatterns) {
-    for (const line of lines) {
-      const match = line.match(pattern);
-      if (match) {
-        const cents = parseDutchAmount(match[1]);
-        if (cents && cents >= 50) return cents;
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
+    const lower = line.toLowerCase();
+    let match;
+
+    while ((match = amountRegex.exec(line)) !== null) {
+      const cents = parseDutchAmount(match[1]);
+      if (!cents || cents < 50) continue;
+
+      let score = 0;
+
+      // Anchor scoring (proximity to keywords)
+      if (/totaal\s+te\s+betalen|nog\s+te\s+betalen/i.test(lower)) score += 15;
+      else if (/totaal(?:bedrag)?|total/i.test(lower)) score += 12;
+      else if (/te\s+betalen|verschuldigd|openstaand/i.test(lower)) score += 10;
+      else if (/factuurbedrag|hoofdsom/i.test(lower)) score += 8;
+
+      // Exclusion scoring
+      if (/btw|subtotaal|exclusief|korting|credit/i.test(lower)) score -= 20;
+      if (/vorig\s+(openstaand|saldo)/i.test(lower)) score -= 10;
+
+      // Bottom-of-page bias (Dutch bills put total near the end)
+      const positionBonus = Math.floor((lineIdx / lines.length) * 5);
+      score += positionBonus;
+
+      scored.push({ cents, score, line });
+    }
+  }
+
+  if (scored.length === 0) {
+    // Try bare amounts (no € symbol)
+    const bare = /\b(\d{1,6},\d{2})\b/g;
+    let bm;
+    while ((bm = bare.exec(text)) !== null) {
+      const cents = parseDutchAmount(bm[1]);
+      if (cents && cents >= 500) scored.push({ cents, score: 0, line: '' });
+    }
+  }
+
+  if (scored.length === 0) return null;
+
+  // Sum validation: if A + B = C, C is the total (high confidence)
+  const allCents = scored.map((s) => s.cents);
+  for (const a of allCents) {
+    for (const b of allCents) {
+      if (a === b) continue;
+      const sum = a + b;
+      if (allCents.includes(sum)) {
+        return sum; // A + B = C → C is total
       }
     }
   }
 
-  const amountRegex = /(?:€|EUR)\s?([\d]{1,3}(?:\.?\d{3})*(?:,\d{2})?[-]?)/g;
-  const amounts: number[] = [];
-  for (const line of lines) {
-    let match;
-    while ((match = amountRegex.exec(line)) !== null) {
-      const cents = parseDutchAmount(match[1]);
-      if (cents && cents >= 50) amounts.push(cents);
-    }
-  }
-  if (amounts.length > 0) return Math.max(...amounts);
-
-  const bare = /\b(\d{1,6},\d{2})\b/g;
-  const bareAmounts: number[] = [];
-  let bm;
-  while ((bm = bare.exec(text)) !== null) {
-    const cents = parseDutchAmount(bm[1]);
-    if (cents && cents >= 500) bareAmounts.push(cents);
-  }
-  if (bareAmounts.length > 0) return Math.max(...bareAmounts);
-  return null;
+  // Otherwise pick highest-scored amount
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].cents;
 }
 
 // ============================================================
-// 3. DATE EXTRACTION
+// 3. DATE — ABSOLUTE + RELATIVE ("binnen 14 dagen")
 // ============================================================
 
 const DUTCH_MONTHS: Record<string, string> = {
@@ -162,23 +219,66 @@ const DUTCH_MONTHS: Record<string, string> = {
   aug: '08', sep: '09', okt: '10', nov: '11', dec: '12',
 };
 
+const DUTCH_NUMBER_WORDS: Record<string, number> = {
+  vijf: 5, zeven: 7, acht: 8, tien: 10, veertien: 14, dertig: 30, negentig: 90,
+};
+
 function parseDate(raw: string): string | null {
   const dmy = raw.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
   if (dmy) {
     const [, d, m, y] = dmy;
-    const di = parseInt(d), mi = parseInt(m), yi = parseInt(y);
+    const mi = parseInt(m), di = parseInt(d), yi = parseInt(y);
     if (mi >= 1 && mi <= 12 && di >= 1 && di <= 31 && yi >= 2020 && yi <= 2030) {
       return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
   }
-  const dutchDate = raw.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|okt|nov|dec)\.?\s+(\d{4})/i);
-  if (dutchDate) {
-    const [, d, monthStr, y] = dutchDate;
+  const dutch = raw.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sep|okt|nov|dec)\.?\s+(\d{4})/i);
+  if (dutch) {
+    const [, d, monthStr, y] = dutch;
     const m = DUTCH_MONTHS[monthStr.toLowerCase().replace('.', '')];
     if (m) return `${y}-${m}-${d.padStart(2, '0')}`;
   }
   const iso = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (iso) return iso[0];
+  return null;
+}
+
+/** Calculate relative dates like "binnen 14 dagen" from a base date */
+function calculateRelativeDate(text: string, baseDate?: string): string | null {
+  const patterns = [
+    /binnen\s+(\d+)\s+dagen/i,
+    /binnen\s+(vijf|zeven|acht|tien|veertien|dertig)\s+dagen/i,
+    /termijn\s+van\s+(\d+)\s+dagen/i,
+    /uiterlijk\s+over\s+(\d+)\s+dagen/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const daysStr = match[1].toLowerCase();
+      const days = DUTCH_NUMBER_WORDS[daysStr] || parseInt(daysStr);
+      if (isNaN(days)) continue;
+
+      const base = baseDate ? new Date(baseDate) : new Date();
+      base.setDate(base.getDate() + days);
+      return base.toISOString().split('T')[0];
+    }
+  }
+  return null;
+}
+
+/** Extract document/invoice date as base for relative calculations */
+function extractDocumentDate(text: string): string | null {
+  const lines = text.split('\n').map((l) => l.trim());
+  const keywords = ['factuurdatum', 'datum', 'briefdatum', 'verzonden op'];
+  for (const kw of keywords) {
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(kw)) {
+        const date = parseDate(lines[i]) || (i < lines.length - 1 ? parseDate(lines[i + 1]) : null);
+        if (date) return date;
+      }
+    }
+  }
   return null;
 }
 
@@ -189,6 +289,7 @@ export function extractDueDate(text: string): string | null {
     'vóór', 'betaaldatum', 'te voldoen voor', 'te betalen voor',
   ];
 
+  // Priority 1: absolute date near keyword
   for (const kw of keywords) {
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].toLowerCase().includes(kw)) {
@@ -198,6 +299,12 @@ export function extractDueDate(text: string): string | null {
     }
   }
 
+  // Priority 2: relative date ("binnen X dagen")
+  const docDate = extractDocumentDate(text);
+  const relative = calculateRelativeDate(text, docDate || undefined);
+  if (relative) return relative;
+
+  // Priority 3: earliest future date
   const allDates: string[] = [];
   const dateRegex = /\d{1,2}[-/.]\d{1,2}[-/.]\d{4}/g;
   let match;
@@ -220,7 +327,7 @@ export function extractDueDate(text: string): string | null {
 }
 
 // ============================================================
-// 4. REFERENCE + PAYMENT URL + ESCALATION (same as v2)
+// 4. REFERENCE + PAYMENT URL
 // ============================================================
 
 export function extractReference(text: string): string | null {
@@ -231,9 +338,11 @@ export function extractReference(text: string): string | null {
     { r: /(?:ons\s+)?kenmerk[:\s]*([\w\d\s.-]+)/i, p: 2 },
     { r: /dossiernummer[:\s]*([\w\d.-]+)/i, p: 3 },
     { r: /factuurnummer[:\s]*([\w\d.-]+)/i, p: 4 },
+    { r: /studentnummer[:\s]*([\w\d.-]+)/i, p: 4 }, // education
     { r: /referentie(?:nummer)?[:\s]*([\w\d.-]+)/i, p: 5 },
     { r: /factuur(?:nr)?\.?[:\s]*([\w\d.-]+)/i, p: 6 },
     { r: /zaak(?:nummer)?[:\s]*([\w\d.-]+)/i, p: 7 },
+    { r: /polisnummer[:\s]*([\w\d.-]+)/i, p: 7 }, // insurance
   ];
   let best: { v: string; p: number } | null = null;
   for (const line of lines) {
@@ -250,8 +359,8 @@ export function extractReference(text: string): string | null {
 
 export function extractPaymentUrl(text: string): string | null {
   const urls = text.match(/https?:\/\/[^\s<>"'\])+]+/g) || [];
-  const pay = ['betaal', 'pay', 'invoice', 'factuur', 'ideal', 'tikkie', 'mollie'];
-  const skip = ['unsubscribe', 'afmelden', 'uitschrijven', 'privacy', 'cookie'];
+  const pay = ['betaal', 'pay', 'invoice', 'factuur', 'ideal', 'tikkie', 'mollie', 'buckaroo'];
+  const skip = ['unsubscribe', 'afmelden', 'uitschrijven', 'privacy', 'cookie', 'mailto'];
   for (const url of urls) {
     const l = url.toLowerCase();
     if (skip.some((s) => l.includes(s))) continue;
@@ -264,109 +373,114 @@ export function extractPaymentUrl(text: string): string | null {
   return null;
 }
 
+// ============================================================
+// 5. ESCALATION — EXPANDED WITH SOFT INCASSO + STORNO
+// ============================================================
+
 const ESCALATION_KEYWORDS: { stage: string; keywords: string[]; weight: number }[] = [
-  { stage: 'deurwaarder', keywords: ['deurwaarder', 'gerechtsdeurwaarder', 'exploot', 'dagvaarding', 'beslag', 'executoriaal', 'dwangbevel', 'vonnis', 'rechtbank', 'beslagvrije voet', 'loonbeslag'], weight: 5 },
-  { stage: 'incasso', keywords: ['incasso', 'incassobureau', 'vordering', 'namens onze opdrachtgever', 'buitengerechtelijke kosten', 'buitengerechtelijke incassokosten', 'wettelijke rente', 'ingebrekestelling', 'wik-kosten', 'overdracht aan', 'collection'], weight: 4 },
-  { stage: 'aanmaning', keywords: ['aanmaning', 'laatste waarschuwing', 'sommatie', 'dringend verzoek', 'wanbetaling', 'in gebreke', 'verzuim', 'onbetaald gebleven', 'tweede herinnering', '2e herinnering', 'finale herinnering'], weight: 3 },
-  { stage: 'herinnering', keywords: ['herinnering', 'betalingsherinnering', 'reminder', 'eerste herinnering', '1e herinnering', 'nog niet ontvangen', 'vriendelijk verzoek'], weight: 2 },
-  { stage: 'factuur', keywords: ['factuur', 'nota', 'rekening', 'invoice', 'termijnbedrag', 'maandbedrag', 'voorschotnota'], weight: 1 },
+  { stage: 'deurwaarder', keywords: [
+    'deurwaarder', 'gerechtsdeurwaarder', 'exploot', 'dagvaarding', 'beslag',
+    'executoriaal', 'dwangbevel', 'vonnis', 'rechtbank', 'beslagvrije voet',
+    'loonbeslag', 'ambtelijk schrijven', 'betekening', 'ontruiming', 'rechter',
+  ], weight: 5 },
+  { stage: 'incasso', keywords: [
+    'incasso', 'incassobureau', 'vordering', 'namens onze opdrachtgever',
+    'buitengerechtelijke kosten', 'buitengerechtelijke incassokosten',
+    'wettelijke rente', 'ingebrekestelling', 'wik-kosten', 'overdracht aan',
+    // Soft incasso (sociale incasso)
+    'voorkom extra kosten', 'achterstand', 'niet tijdig voldaan',
+    'hulp bij schulden', 'openstaande vordering', 'boven op uw openstaande',
+  ], weight: 4 },
+  { stage: 'aanmaning', keywords: [
+    'aanmaning', 'laatste waarschuwing', 'sommatie', 'dringend verzoek',
+    'wanbetaling', 'in gebreke', 'verzuim', 'onbetaald gebleven',
+    'tweede herinnering', '2e herinnering', 'finale herinnering',
+    // Storno
+    'gestorneerd', 'storno', 'niet gelukt', 'over te maken',
+    'mislukte incasso', 'automatische incasso mislukt',
+  ], weight: 3 },
+  { stage: 'herinnering', keywords: [
+    'herinnering', 'betalingsherinnering', 'reminder', 'eerste herinnering',
+    '1e herinnering', 'nog niet ontvangen', 'vriendelijk verzoek',
+    'vergeten te betalen', 'herhaald verzoek',
+  ], weight: 2 },
+  { stage: 'factuur', keywords: [
+    'factuur', 'nota', 'rekening', 'invoice', 'termijnbedrag',
+    'maandbedrag', 'voorschotnota', 'jaarnota', 'energienota',
+  ], weight: 1 },
 ];
 
 export function detectEscalationStage(text: string): string | null {
   const lower = text.toLowerCase();
   let bestStage: string | null = null;
   let bestWeight = 0;
+  let bestCount = 0;
+
   for (const { stage, keywords, weight } of ESCALATION_KEYWORDS) {
     let count = 0;
     for (const kw of keywords) {
       if (lower.includes(kw)) count++;
     }
-    if (count > 0 && weight > bestWeight) { bestStage = stage; bestWeight = weight; }
+    if (count > 0 && (weight > bestWeight || (weight === bestWeight && count > bestCount))) {
+      bestStage = stage;
+      bestWeight = weight;
+      bestCount = count;
+    }
   }
   return bestStage;
 }
 
 // ============================================================
-// 5. DOMAIN MAP (hardcoded for instant email sender lookup)
+// 6. KVK + BTW-ID EXTRACTION
 // ============================================================
 
+export function extractKvkNumber(text: string): string | null {
+  const patterns = [
+    /(?:KvK|KVK|Kamer\s+van\s+Koophandel|Handelsregister)[:\s-]*(\d{8})/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+export function extractBtwId(text: string): string | null {
+  const m = text.match(/\bNL\d{9}B\d{2}\b/);
+  return m ? m[0] : null;
+}
+
+// ============================================================
+// 7. VENDOR EXTRACTION
+// ============================================================
+
+// 7a. Domain map (hardcoded, instant)
 const DOMAIN_VENDOR_MAP: Record<string, { name: string; category: string }> = {
-  // Telecom
-  'kpn.com': { name: 'KPN', category: 'telecom' }, 'info.nl.kpn.com': { name: 'KPN', category: 'telecom' },
-  'ziggo.nl': { name: 'Ziggo', category: 'telecom' }, 'vodafoneziggo.nl': { name: 'VodafoneZiggo', category: 'telecom' },
+  'kpn.com': { name: 'KPN', category: 'telecom' }, 'ziggo.nl': { name: 'Ziggo', category: 'telecom' },
   'odido.nl': { name: 'Odido', category: 'telecom' }, 'tele2.nl': { name: 'Tele2', category: 'telecom' },
-  'tmobile.nl': { name: 'T-Mobile', category: 'telecom' }, 'simyo.nl': { name: 'Simyo', category: 'telecom' },
-  'youfone.nl': { name: 'Youfone', category: 'telecom' },
-  // Energy
-  'vattenfall.nl': { name: 'Vattenfall', category: 'nutsvoorzieningen' }, 'vattenfall.com': { name: 'Vattenfall', category: 'nutsvoorzieningen' },
+  'vattenfall.nl': { name: 'Vattenfall', category: 'nutsvoorzieningen' },
   'eneco.nl': { name: 'Eneco', category: 'nutsvoorzieningen' }, 'essent.nl': { name: 'Essent', category: 'nutsvoorzieningen' },
-  'greenchoice.nl': { name: 'Greenchoice', category: 'nutsvoorzieningen' }, 'budgetenergie.nl': { name: 'Budget Energie', category: 'nutsvoorzieningen' },
-  'engie.nl': { name: 'ENGIE', category: 'nutsvoorzieningen' }, 'energiedirect.nl': { name: 'Energiedirect', category: 'nutsvoorzieningen' },
-  'vandebron.nl': { name: 'Vandebron', category: 'nutsvoorzieningen' }, 'tibber.com': { name: 'Tibber', category: 'nutsvoorzieningen' },
-  // Water
-  'waternet.nl': { name: 'Waternet', category: 'nutsvoorzieningen' }, 'evides.nl': { name: 'Evides', category: 'nutsvoorzieningen' },
-  'vitens.nl': { name: 'Vitens', category: 'nutsvoorzieningen' }, 'dunea.nl': { name: 'Dunea', category: 'nutsvoorzieningen' },
-  'brabantwater.nl': { name: 'Brabant Water', category: 'nutsvoorzieningen' }, 'pwn.nl': { name: 'PWN', category: 'nutsvoorzieningen' },
-  // Insurance
-  'zilverenkruis.nl': { name: 'Zilveren Kruis', category: 'verzekeringen' }, 'cz.nl': { name: 'CZ', category: 'verzekeringen' },
-  'menzis.nl': { name: 'Menzis', category: 'verzekeringen' }, 'vgz.nl': { name: 'VGZ', category: 'verzekeringen' },
-  'ohra.nl': { name: 'OHRA', category: 'verzekeringen' }, 'interpolis.nl': { name: 'Interpolis', category: 'verzekeringen' },
-  'centraal-beheer.nl': { name: 'Centraal Beheer', category: 'verzekeringen' }, 'achmea.nl': { name: 'Achmea', category: 'verzekeringen' },
-  'nn.nl': { name: 'Nationale-Nederlanden', category: 'verzekeringen' }, 'aegon.nl': { name: 'Aegon', category: 'verzekeringen' },
-  'unive.nl': { name: 'Univé', category: 'verzekeringen' },
-  // Government
-  'belastingdienst.nl': { name: 'Belastingdienst', category: 'overheid' }, 'cjib.nl': { name: 'CJIB', category: 'overheid' },
-  'noreply.cjib.nl': { name: 'CJIB', category: 'overheid' }, 'duo.nl': { name: 'DUO', category: 'overheid' },
-  'svb.nl': { name: 'SVB', category: 'overheid' }, 'cak.nl': { name: 'CAK', category: 'overheid' },
-  'uwv.nl': { name: 'UWV', category: 'overheid' }, 'rdw.nl': { name: 'RDW', category: 'overheid' },
-  // Gemeentes (top 60)
-  'amsterdam.nl': { name: 'Gemeente Amsterdam', category: 'overheid' }, 'rotterdam.nl': { name: 'Gemeente Rotterdam', category: 'overheid' },
-  'utrecht.nl': { name: 'Gemeente Utrecht', category: 'overheid' }, 'denhaag.nl': { name: 'Gemeente Den Haag', category: 'overheid' },
-  'eindhoven.nl': { name: 'Gemeente Eindhoven', category: 'overheid' }, 'groningen.nl': { name: 'Gemeente Groningen', category: 'overheid' },
-  'tilburg.nl': { name: 'Gemeente Tilburg', category: 'overheid' }, 'almere.nl': { name: 'Gemeente Almere', category: 'overheid' },
-  'breda.nl': { name: 'Gemeente Breda', category: 'overheid' }, 'nijmegen.nl': { name: 'Gemeente Nijmegen', category: 'overheid' },
-  'apeldoorn.nl': { name: 'Gemeente Apeldoorn', category: 'overheid' }, 'haarlem.nl': { name: 'Gemeente Haarlem', category: 'overheid' },
-  'enschede.nl': { name: 'Gemeente Enschede', category: 'overheid' }, 'arnhem.nl': { name: 'Gemeente Arnhem', category: 'overheid' },
-  'amersfoort.nl': { name: 'Gemeente Amersfoort', category: 'overheid' }, 'zwolle.nl': { name: 'Gemeente Zwolle', category: 'overheid' },
-  'leiden.nl': { name: 'Gemeente Leiden', category: 'overheid' }, 'dordrecht.nl': { name: 'Gemeente Dordrecht', category: 'overheid' },
-  'deventer.nl': { name: 'Gemeente Deventer', category: 'overheid' }, 'leeuwarden.nl': { name: 'Gemeente Leeuwarden', category: 'overheid' },
-  'alkmaar.nl': { name: 'Gemeente Alkmaar', category: 'overheid' }, 'delft.nl': { name: 'Gemeente Delft', category: 'overheid' },
-  'hilversum.nl': { name: 'Gemeente Hilversum', category: 'overheid' }, 'gouda.nl': { name: 'Gemeente Gouda', category: 'overheid' },
-  // Housing
-  'vestia.nl': { name: 'Vestia', category: 'wonen' }, 'woonstad.nl': { name: 'Woonstad Rotterdam', category: 'wonen' },
-  'havensteder.nl': { name: 'Havensteder', category: 'wonen' }, 'woonbron.nl': { name: 'Woonbron', category: 'wonen' },
-  'staedion.nl': { name: 'Staedion', category: 'wonen' }, 'ymere.nl': { name: 'Ymere', category: 'wonen' },
-  'eigenhaard.nl': { name: 'Eigen Haard', category: 'wonen' }, 'portaal.nl': { name: 'Portaal', category: 'wonen' },
-  'rochdale.nl': { name: 'Rochdale', category: 'wonen' }, 'stadgenoot.nl': { name: 'Stadgenoot', category: 'wonen' },
-  // Incasso (major ones)
+  'greenchoice.nl': { name: 'Greenchoice', category: 'nutsvoorzieningen' },
+  'waternet.nl': { name: 'Waternet', category: 'nutsvoorzieningen' },
+  'zilverenkruis.nl': { name: 'Zilveren Kruis', category: 'verzekeringen' },
+  'cz.nl': { name: 'CZ', category: 'verzekeringen' }, 'menzis.nl': { name: 'Menzis', category: 'verzekeringen' },
+  'belastingdienst.nl': { name: 'Belastingdienst', category: 'overheid' },
+  'cjib.nl': { name: 'CJIB', category: 'overheid' }, 'duo.nl': { name: 'DUO', category: 'overheid' },
+  'svb.nl': { name: 'SVB', category: 'overheid' }, 'uwv.nl': { name: 'UWV', category: 'overheid' },
   'syncasso.nl': { name: 'Syncasso', category: 'incasso' }, 'ggn.nl': { name: 'GGN', category: 'incasso' },
-  'flanderijn.nl': { name: 'Flanderijn', category: 'incasso' }, 'cannock.nl': { name: 'Cannock', category: 'incasso' },
-  'coeo-incasso.nl': { name: 'Coeo', category: 'incasso' }, 'intrum.nl': { name: 'Intrum', category: 'incasso' },
-  'straetus.nl': { name: 'Straetus', category: 'incasso' }, 'yards.nl': { name: 'Yards', category: 'incasso' },
-  // BNPL
+  'flanderijn.nl': { name: 'Flanderijn', category: 'incasso' }, 'intrum.nl': { name: 'Intrum', category: 'incasso' },
   'klarna.com': { name: 'Klarna', category: 'winkels' }, 'afterpay.nl': { name: 'Afterpay', category: 'winkels' },
-  'billink.nl': { name: 'Billink', category: 'winkels' }, 'riverty.com': { name: 'Riverty', category: 'winkels' },
-  // Transport
-  'ns.nl': { name: 'NS', category: 'vervoer' }, 'translink.nl': { name: 'OV-chipkaart', category: 'vervoer' },
-  // Healthcare
-  'erasmusmc.nl': { name: 'Erasmus MC', category: 'zorg' }, 'amsterdamumc.nl': { name: 'Amsterdam UMC', category: 'zorg' },
-  // Shops + Subscriptions
-  'bol.com': { name: 'Bol.com', category: 'winkels' }, 'coolblue.nl': { name: 'Coolblue', category: 'winkels' },
+  'ns.nl': { name: 'NS', category: 'vervoer' },
+  'basic-fit.com': { name: 'Basic-Fit', category: 'abonnementen' },
   'spotify.com': { name: 'Spotify', category: 'abonnementen' }, 'netflix.com': { name: 'Netflix', category: 'abonnementen' },
-  // Fitness
-  'basic-fit.com': { name: 'Basic-Fit', category: 'abonnementen' }, 'trainmore.nl': { name: 'TrainMore', category: 'abonnementen' },
-  // Parking
-  'q-park.nl': { name: 'Q-Park', category: 'vervoer' }, 'parkmobile.nl': { name: 'Parkmobile', category: 'vervoer' },
-  // Banks (for statements)
   'ing.nl': { name: 'ING', category: 'leningen' }, 'rabobank.nl': { name: 'Rabobank', category: 'leningen' },
   'abnamro.nl': { name: 'ABN AMRO', category: 'leningen' },
-  // PostNL
-  'postnl.nl': { name: 'PostNL', category: 'winkels' },
 };
+// NOTE: This is a subset for instant domain lookups. The full 454 vendors are in Supabase vendor_category_map.
 
-function lookupDomain(senderEmail: string): { name: string; category: string } | null {
-  if (!senderEmail) return null;
-  const domain = senderEmail.split('@')[1]?.toLowerCase();
+function lookupDomain(email: string): { name: string; category: string } | null {
+  if (!email) return null;
+  const domain = email.split('@')[1]?.toLowerCase();
   if (!domain) return null;
   if (DOMAIN_VENDOR_MAP[domain]) return DOMAIN_VENDOR_MAP[domain];
   const parts = domain.split('.');
@@ -377,128 +491,121 @@ function lookupDomain(senderEmail: string): { name: string; category: string } |
   return null;
 }
 
-// ============================================================
-// 6. DB-POWERED VENDOR + INCASSO MATCHING
-// ============================================================
-
-/**
- * Search vendor_category_map (291 patterns) for a match.
- * Uses ILIKE for case-insensitive partial matching.
- */
-async function matchVendorFromDB(vendorText: string): Promise<{ display_name: string; category: string } | null> {
-  if (!vendorText || vendorText.length < 2) return null;
-  const supabase = createServiceRoleClient();
-  const search = vendorText.toLowerCase().trim();
-
-  const { data } = await supabase
-    .from('vendor_category_map')
-    .select('vendor_display_name, category, vendor_pattern')
-    .or(`vendor_pattern.ilike.%${search}%,vendor_display_name.ilike.%${search}%`)
-    .limit(1);
-
-  if (data && data.length > 0) {
-    return { display_name: data[0].vendor_display_name, category: data[0].category };
+// 7b. Vendor from "From" display name (for generic domains)
+export function extractVendorFromSenderName(fromHeader: string): string | null {
+  // "KPN via Exact" <no-reply@exact-online.nl> → "KPN via Exact"
+  const nameMatch = fromHeader.match(/^"?([^"<]+)"?\s*</);
+  if (nameMatch) {
+    const name = nameMatch[1].trim();
+    if (name.length >= 2 && name.length <= 60) return name;
   }
   return null;
 }
 
-/**
- * Check if vendor matches any of the 270 Justis-registered incasso agencies.
- */
-async function matchIncassoFromDB(vendorText: string): Promise<{ name: string; matched: boolean } | null> {
-  if (!vendorText || vendorText.length < 3) return null;
-  const supabase = createServiceRoleClient();
-  const search = vendorText.toLowerCase().trim();
-
-  const { data } = await supabase
-    .from('incasso_agencies')
-    .select('name, search_name')
-    .or(`search_name.ilike.%${search}%,name.ilike.%${search}%`)
-    .limit(1);
-
-  if (data && data.length > 0) {
-    return { name: data[0].name, matched: true };
-  }
-  return null;
-}
-
-/**
- * Check vendor_corrections table for learned corrections.
- */
-async function matchLearnedCorrection(vendorText: string, senderDomain?: string): Promise<{ vendor: string; category: string | null } | null> {
-  if (!vendorText && !senderDomain) return null;
-  const supabase = createServiceRoleClient();
-
-  // Try domain first
-  if (senderDomain) {
-    const { data } = await supabase
-      .from('vendor_corrections')
-      .select('corrected_vendor, corrected_category')
-      .eq('sender_domain', senderDomain.toLowerCase())
-      .order('times_seen', { ascending: false })
-      .limit(1);
-    if (data?.[0]) return { vendor: data[0].corrected_vendor, category: data[0].corrected_category };
-  }
-
-  // Try OCR text
-  if (vendorText) {
-    const { data } = await supabase
-      .from('vendor_corrections')
-      .select('corrected_vendor, corrected_category')
-      .eq('ocr_text', vendorText.toLowerCase().trim())
-      .order('times_seen', { ascending: false })
-      .limit(1);
-    if (data?.[0]) return { vendor: data[0].corrected_vendor, category: data[0].corrected_category };
-  }
-
-  return null;
-}
-
-// ============================================================
-// 7. VENDOR FROM TEXT (regex patterns)
-// ============================================================
-
+// 7c. Vendor from text
 function extractVendorFromText(text: string): string | null {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-
   const labelPatterns = [
     /(?:afzender|van|from|crediteur|begunstigde)[:\s]+(.+)/i,
     /(?:namens|opdrachtgever|in opdracht van)[:\s]+(.+)/i,
   ];
   for (const line of lines.slice(0, 20)) {
-    for (const pattern of labelPatterns) {
-      const match = line.match(pattern);
-      if (match?.[1]) {
-        const name = match[1].trim().replace(/[,;].*$/, '').trim();
+    for (const p of labelPatterns) {
+      const m = line.match(p);
+      if (m?.[1]) {
+        const name = m[1].trim().replace(/[,;].*$/, '').trim();
         if (name.length >= 2 && name.length <= 80) return name;
       }
     }
   }
-
   for (const line of lines.slice(0, 15)) {
     if (/\b(B\.?V\.?|N\.?V\.?|Stichting|Gemeente|Coöperatie|Vereniging)\b/i.test(line)) {
       const cleaned = line.replace(/^[^a-zA-Z]+/, '').replace(/\s{2,}.*$/, '').trim();
       if (cleaned.length >= 3 && cleaned.length <= 80) return cleaned;
     }
   }
-
   for (const line of lines.slice(0, 10)) {
     if (/^[A-Z][a-z]/.test(line) && line.split(/\s+/).length <= 5 && line.length <= 50) {
       if (/^(Factuur|Rekening|Herinnering|Aanmaning|Geachte|Datum|Pagina|Betreft)/i.test(line)) continue;
       return line;
     }
   }
+  return null;
+}
 
+// 7d. Secondary vendor ("opdrachtgever", "namens")
+function extractSecondaryVendor(text: string): string | null {
+  const patterns = [
+    /(?:onze\s+)?opdrachtgever[:\s]+([A-Z][\w\s.&-]+)/i,
+    /namens[:\s]+([A-Z][\w\s.&-]+)/i,
+    /inzake[:\s]+([A-Z][\w\s.&-]+)/i,
+    /ten\s+behoeve\s+van[:\s]+([A-Z][\w\s.&-]+)/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m?.[1]) {
+      const name = m[1].trim().replace(/[,;.]$/, '').trim();
+      if (name.length >= 2 && name.length <= 80) return name;
+    }
+  }
   return null;
 }
 
 // ============================================================
-// 8. MAIN EXTRACTION (async — queries DB)
+// 8. DB LOOKUPS
+// ============================================================
+
+async function matchVendorFromDB(vendorText: string): Promise<{ display_name: string; category: string } | null> {
+  if (!vendorText || vendorText.length < 2) return null;
+  const supabase = createServiceRoleClient();
+  const search = vendorText.toLowerCase().trim();
+  const { data } = await supabase
+    .from('vendor_category_map')
+    .select('vendor_display_name, category')
+    .or(`vendor_pattern.ilike.%${search}%,vendor_display_name.ilike.%${search}%`)
+    .limit(1);
+  if (data?.[0]) return { display_name: data[0].vendor_display_name, category: data[0].category };
+  return null;
+}
+
+async function matchIncassoFromDB(vendorText: string): Promise<{ name: string } | null> {
+  if (!vendorText || vendorText.length < 3) return null;
+  const supabase = createServiceRoleClient();
+  const search = vendorText.toLowerCase().trim();
+  const { data } = await supabase
+    .from('incasso_agencies')
+    .select('name')
+    .or(`search_name.ilike.%${search}%,name.ilike.%${search}%`)
+    .limit(1);
+  if (data?.[0]) return { name: data[0].name };
+  return null;
+}
+
+async function matchLearnedCorrection(vendorText: string, senderDomain?: string): Promise<{ vendor: string; category: string | null } | null> {
+  const supabase = createServiceRoleClient();
+  if (senderDomain) {
+    const { data } = await supabase.from('vendor_corrections')
+      .select('corrected_vendor, corrected_category')
+      .eq('sender_domain', senderDomain.toLowerCase()).order('times_seen', { ascending: false }).limit(1);
+    if (data?.[0]) return { vendor: data[0].corrected_vendor, category: data[0].corrected_category };
+  }
+  if (vendorText) {
+    const { data } = await supabase.from('vendor_corrections')
+      .select('corrected_vendor, corrected_category')
+      .eq('ocr_text', vendorText.toLowerCase().trim()).order('times_seen', { ascending: false }).limit(1);
+    if (data?.[0]) return { vendor: data[0].corrected_vendor, category: data[0].corrected_category };
+  }
+  return null;
+}
+
+// ============================================================
+// 9. MAIN EXTRACTION (async)
 // ============================================================
 
 export async function extractFromText(
   text: string,
-  senderEmail?: string
+  senderEmail?: string,
+  senderName?: string
 ): Promise<RegexExtractionResult> {
   const fieldsFound: string[] = [];
   const matchSources: string[] = [];
@@ -508,63 +615,68 @@ export async function extractFromText(
   let category = 'overig';
   let isIncasso = false;
 
-  // Layer 1: Domain lookup (instant, no DB)
+  // Layer 1: Domain map
   if (senderEmail) {
-    const domainResult = lookupDomain(senderEmail);
-    if (domainResult) {
-      vendor = domainResult.name;
-      category = domainResult.category;
-      isIncasso = category === 'incasso';
-      fieldsFound.push('vendor');
-      matchSources.push('domain_map');
+    const dm = lookupDomain(senderEmail);
+    if (dm) {
+      vendor = dm.name; category = dm.category; isIncasso = category === 'incasso';
+      fieldsFound.push('vendor'); matchSources.push('domain_map');
     }
   }
 
-  // Layer 2: Learned corrections (DB)
+  // Layer 1b: Sender display name (for generic domains)
+  if (!vendor && senderName) {
+    const fromName = extractVendorFromSenderName(senderName);
+    if (fromName) {
+      const dbMatch = await matchVendorFromDB(fromName);
+      if (dbMatch) {
+        vendor = dbMatch.display_name; category = dbMatch.category;
+        fieldsFound.push('vendor'); matchSources.push('sender_name');
+      }
+    }
+  }
+
+  // Layer 2: Learned corrections
   if (!vendor) {
     const rawVendor = extractVendorFromText(text);
     const domain = senderEmail?.split('@')[1];
     const learned = await matchLearnedCorrection(rawVendor || '', domain);
     if (learned) {
-      vendor = learned.vendor;
-      if (learned.category) category = learned.category;
-      fieldsFound.push('vendor');
-      matchSources.push('learned_correction');
+      vendor = learned.vendor; if (learned.category) category = learned.category;
+      fieldsFound.push('vendor'); matchSources.push('learned');
     } else if (rawVendor) {
       vendor = rawVendor;
     }
   }
 
-  // Layer 3: vendor_category_map DB (291 patterns)
-  if (vendor) {
+  // Layer 3: vendor_category_map (454)
+  if (vendor && !matchSources.includes('domain_map')) {
     const dbMatch = await matchVendorFromDB(vendor);
     if (dbMatch) {
-      vendor = dbMatch.display_name;
-      category = dbMatch.category;
+      vendor = dbMatch.display_name; category = dbMatch.category;
       if (!fieldsFound.includes('vendor')) fieldsFound.push('vendor');
       matchSources.push('vendor_db');
     }
   }
 
-  // Layer 4: incasso_agencies DB (270 agencies)
+  // Layer 4: incasso_agencies (270)
   if (vendor) {
     const incassoMatch = await matchIncassoFromDB(vendor);
     if (incassoMatch) {
-      vendor = incassoMatch.name;
-      category = 'incasso';
-      isIncasso = true;
+      vendor = incassoMatch.name; category = 'incasso'; isIncasso = true;
       if (!fieldsFound.includes('vendor')) fieldsFound.push('vendor');
       matchSources.push('incasso_db');
     }
   }
 
-  // If still no vendor match source, add generic
   if (vendor && !fieldsFound.includes('vendor')) {
-    fieldsFound.push('vendor');
-    matchSources.push('regex');
+    fieldsFound.push('vendor'); matchSources.push('regex');
   }
 
-  // --- Structured fields (deterministic regex) ---
+  // Secondary vendor
+  const secondary_vendor = extractSecondaryVendor(text);
+
+  // --- Structured fields ---
   const iban = extractIban(text);
   if (iban) fieldsFound.push('iban');
 
@@ -586,6 +698,12 @@ export async function extractFromText(
     if (escalation_stage === 'incasso' || escalation_stage === 'deurwaarder') isIncasso = true;
   }
 
+  const kvk_number = extractKvkNumber(text);
+  if (kvk_number) fieldsFound.push('kvk');
+
+  const btw_id = extractBtwId(text);
+  if (btw_id) fieldsFound.push('btw');
+
   if (category !== 'overig') fieldsFound.push('category');
 
   // Confidence
@@ -596,18 +714,36 @@ export async function extractFromText(
   }
 
   return {
-    vendor,
-    amount_cents,
-    iban,
-    reference,
-    due_date,
-    payment_url,
-    escalation_stage,
-    category_hint: category,
-    is_incasso: isIncasso,
-    method: 'regex',
-    fields_found: fieldsFound,
-    confidence: Math.round(confidence * 100) / 100,
-    match_sources: matchSources,
+    vendor, secondary_vendor, amount_cents, iban, reference, due_date, payment_url,
+    escalation_stage, category_hint: category, is_incasso: isIncasso,
+    kvk_number, btw_id, method: 'regex', fields_found: fieldsFound,
+    confidence: Math.round(confidence * 100) / 100, match_sources: matchSources,
   };
+}
+
+// ============================================================
+// 10. EMAIL HTML STRIPPING (for email pipeline)
+// ============================================================
+
+/**
+ * Strip HTML tags and decode entities for clean text extraction.
+ * Used before running regex on email bodies.
+ */
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // remove style blocks
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // remove scripts
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|tr|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ') // remove all remaining tags
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&euro;/gi, '€')
+    .replace(/&#8364;/gi, '€')
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
 }
