@@ -281,7 +281,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         </p>
 
         {/* Legal links */}
-        <p className="mt-4 text-center text-[11px] text-pw-muted leading-relaxed">
+        <p className="mt-4 text-center text-[12px] text-pw-muted/80 leading-relaxed">
           Door {mode === 'signup' ? 'een account aan te maken' : 'in te loggen'} ga je akkoord met onze{' '}
           <a href="https://paywatch.app/terms" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">voorwaarden</a>
           {' '}en{' '}
