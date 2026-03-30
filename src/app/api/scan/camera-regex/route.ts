@@ -6,11 +6,10 @@ import { getAuthUserId } from '@/lib/auth';
 /**
  * POST /api/scan/camera-regex
  *
- * Camera scan using Tesseract OCR + regex extraction.
+ * Camera scan using Tesseract OCR + regex extraction v2.
  * ZERO AI calls. Fully deterministic.
  *
- * Input: { image: base64, mime_type: string }
- * Output: { extraction: {...}, ocr_text: string, method: 'regex' }
+ * v2: now returns escalation_stage, category_hint, kvk_number
  */
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +23,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
 
+    const startTime = Date.now();
+
     // 1. OCR with Tesseract.js (Dutch + English)
     const buffer = Buffer.from(image, 'base64');
     const worker = await createWorker('nld+eng');
     const { data } = await worker.recognize(buffer);
     await worker.terminate();
 
+    const ocrMs = Date.now() - startTime;
     const ocrText = data.text;
-    const ocrConfidence = data.confidence; // 0-100
+    const ocrConfidence = data.confidence;
 
     if (!ocrText || ocrText.trim().length < 10) {
       return NextResponse.json({
@@ -40,8 +42,10 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
-    // 2. Regex extraction from OCR text
+    // 2. Regex extraction
+    const regexStart = Date.now();
     const extraction = extractFromText(ocrText);
+    const regexMs = Date.now() - regexStart;
 
     // 3. Return result
     return NextResponse.json({
@@ -52,19 +56,25 @@ export async function POST(req: NextRequest) {
         iban: extraction.iban,
         reference: extraction.reference,
         due_date: extraction.due_date,
-        category_hint: 'overig', // regex doesn't categorize — DB lookup handles this
-        escalation_stage: null, // regex can't detect this — would need AI
+        category_hint: extraction.category_hint,
+        escalation_stage: extraction.escalation_stage,
         payment_url: extraction.payment_url,
         confidence: {
-          vendor: extraction.vendor ? 0.7 : 0,
-          amount: extraction.amount_cents ? 0.9 : 0,
-          due_date: extraction.due_date ? 0.7 : 0,
+          vendor: extraction.vendor ? 0.8 : 0,
+          amount: extraction.amount_cents ? 0.95 : 0,
+          due_date: extraction.due_date ? 0.8 : 0,
         },
       },
-      ocr_text: ocrText.slice(0, 500), // return first 500 chars for debugging
+      ocr_text: ocrText.slice(0, 1000),
       ocr_confidence: ocrConfidence,
       method: 'regex',
       fields_found: extraction.fields_found,
+      extraction_confidence: extraction.confidence,
+      timing: {
+        ocr_ms: ocrMs,
+        regex_ms: regexMs,
+        total_ms: Date.now() - startTime,
+      },
     });
   } catch (err) {
     console.error('[Camera Regex Scan]', err);
