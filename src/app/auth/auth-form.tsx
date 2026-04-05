@@ -19,6 +19,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const supabase = createClient();
 
@@ -26,6 +27,13 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    // Require terms agreement for signup
+    if (mode === 'signup' && !agreedToTerms) {
+      setError(t('mustAgree'));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -241,6 +249,38 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                 {t('forgotPassword')}
               </button>
             </div>
+          )}
+
+          {/* Terms & Privacy checkbox (signup only) */}
+          {mode === 'signup' && (
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-pw-border accent-pw-blue flex-shrink-0"
+              />
+              <span className="text-label leading-relaxed text-pw-muted">
+                {t('agreeTerms')}{' '}
+                <a
+                  href="https://paywatch.app/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-pw-blue hover:underline"
+                >
+                  {t('termsLink')}
+                </a>{' '}
+                {t('andThe')}{' '}
+                <a
+                  href="https://paywatch.app/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-pw-blue hover:underline"
+                >
+                  {t('privacyLink')}
+                </a>
+              </span>
+            </label>
           )}
 
           {/* Error message */}

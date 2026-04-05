@@ -47,7 +47,12 @@
     "resetEmailSent": "Er is een e-mail verstuurd om je wachtwoord te resetten.",
     "enterEmailFirst": "Vul eerst je e-mailadres in.",
     "errorInvalidCredentials": "Ongeldig e-mailadres of wachtwoord.",
-    "errorAlreadyRegistered": "Dit e-mailadres is al geregistreerd. Probeer in te loggen."
+    "errorAlreadyRegistered": "Dit e-mailadres is al geregistreerd. Probeer in te loggen.",
+    "agreeTerms": "Ik ga akkoord met de",
+    "termsLink": "algemene voorwaarden",
+    "andThe": "en het",
+    "privacyLink": "privacybeleid",
+    "mustAgree": "Je moet akkoord gaan met de voorwaarden om je te registreren."
   },
   "dashboard": {
     "title": "Overzicht",
