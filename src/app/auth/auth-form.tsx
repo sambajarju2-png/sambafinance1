@@ -40,20 +40,9 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   async function switchLang(newLang: 'nl' | 'en') {
     if (newLang === lang || isPending) return;
     setLang(newLang);
-    try {
-      const res = await fetch('/api/settings/language', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: newLang }),
-      });
-      if (res.ok) {
-        startTransition(() => router.refresh());
-      } else {
-        setLang(lang);
-      }
-    } catch {
-      setLang(lang);
-    }
+    // Set cookie directly (no auth needed on login page)
+    document.cookie = `paywatch-locale=${newLang};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+    startTransition(() => router.refresh());
   }
 
   async function handleEmailAuth(e: React.FormEvent) {
