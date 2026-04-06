@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import { Shield, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 type AuthMode = 'login' | 'signup';
@@ -22,6 +24,37 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const supabase = createClient();
+  const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [mounted, setMounted] = useState(false);
+  const [lang, setLang] = useState<'nl' | 'en'>(() => {
+    if (typeof document !== 'undefined') {
+      return document.documentElement.lang === 'en' ? 'en' : 'nl';
+    }
+    return 'nl';
+  });
+
+  useEffect(() => setMounted(true), []);
+
+  async function switchLang(newLang: 'nl' | 'en') {
+    if (newLang === lang || isPending) return;
+    setLang(newLang);
+    try {
+      const res = await fetch('/api/settings/language', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: newLang }),
+      });
+      if (res.ok) {
+        startTransition(() => router.refresh());
+      } else {
+        setLang(lang);
+      }
+    } catch {
+      setLang(lang);
+    }
+  }
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -109,7 +142,37 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-pw-bg px-6 py-12">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center bg-pw-bg px-6 py-12">
+      {/* Language + Theme toggle */}
+      {mounted && (
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button
+            onClick={() => switchLang('nl')}
+            disabled={isPending}
+            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              lang === 'nl' ? 'bg-pw-blue/10 text-pw-blue ring-1 ring-pw-blue/30' : 'text-pw-muted hover:text-pw-text'
+            }`}
+          >
+            NL
+          </button>
+          <button
+            onClick={() => switchLang('en')}
+            disabled={isPending}
+            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              lang === 'en' ? 'bg-pw-blue/10 text-pw-blue ring-1 ring-pw-blue/30' : 'text-pw-muted hover:text-pw-text'
+            }`}
+          >
+            EN
+          </button>
+          <div className="w-px h-4 bg-pw-border mx-1" />
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="rounded-full p-1.5 text-pw-muted hover:text-pw-text transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+        </div>
+      )}
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
