@@ -72,7 +72,8 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
   return (
     <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center justify-between border-b border-pw-border/50 px-4">
       <div className="flex items-center gap-3">
-        <span className="text-[15px] font-bold tracking-tight text-pw-navy">PayWatch</span>
+        <img src="/logo.svg" alt="PayWatch" className="h-5 dark:hidden" />
+        <img src="/logo-dark.svg" alt="PayWatch" className="h-5 hidden dark:block" />
         {firstName && <span className="hidden text-body text-pw-muted sm:inline">Hoi, {firstName}</span>}
       </div>
 

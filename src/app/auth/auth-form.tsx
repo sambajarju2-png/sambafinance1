@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import { Shield, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Moon, Sun } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -165,8 +165,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pw-blue">
-            <Shield className="h-7 w-7 text-white" strokeWidth={1.5} />
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl overflow-hidden">
+            <img src="/icon-192.png" alt="PayWatch" className="h-14 w-14" />
           </div>
           <h1 className="text-heading text-pw-navy">
             {mode === 'login' ? t('signIn') : t('signUp')}
