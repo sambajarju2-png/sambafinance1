@@ -5,6 +5,7 @@ import { buildCorrectionPrompt } from '../ai-corrections';
 import { createServerSupabaseClient } from '../supabase/server';
 import { detectIncassoAgency } from '../incasso-detect';
 import { lookupVendor, buildVendorContext } from '../vendor-lookup';
+import { regexExtract, needsAiFallback } from '../regex-extractor';
 
 /**
  * PayWatch Dual-AI Pipeline
@@ -220,6 +221,18 @@ export async function extractBillFromEmail(
   pdfText: string | null,
   userId: string
 ): Promise<BillExtractionResult> {
+  // ── LAYER 0: Regex pre-extraction (free, <5ms) ──
+  // Try deterministic extraction first. If high confidence → skip AI.
+  const fullText = [subject, body, pdfText || ''].join('\n');
+  const regexResult = regexExtract(fullText);
+
+  console.log(
+    `[Regex] ${regexResult.fields_extracted.length} fields extracted (${regexResult.fields_extracted.join(', ')}), ` +
+    `${regexResult.fields_missing.length} missing, overall: ${regexResult.overall_confidence}, ` +
+    `needs AI: ${needsAiFallback(regexResult)}`
+  );
+
+  // ── AI EXTRACTION (Sonnet — only when regex can't handle it) ──
   const pdfNote = pdfText
     ? `PDF attachment content:\n${pdfText.slice(0, 3000)}`
     : 'No PDF attachment.';
@@ -242,6 +255,28 @@ export async function extractBillFromEmail(
   const result = await callSonnet(prompt, userId, 'email_extraction', 1500);
 
   const extracted = normalizeExtraction(result);
+
+  // ── MERGE: Use regex results to validate/override AI where regex is confident ──
+  if (regexResult.amount_cents && regexResult.amount_confidence >= 0.7) {
+    // Trust regex amount over AI (regex handles Dutch format perfectly)
+    extracted.amount_cents = regexResult.amount_cents;
+  }
+  if (regexResult.iban && regexResult.iban_confidence >= 0.7) {
+    // Trust regex IBAN (MOD-97 validated)
+    extracted.iban = regexResult.iban;
+  }
+  if (regexResult.due_date && regexResult.due_date_confidence >= 0.7) {
+    extracted.due_date = regexResult.due_date;
+  }
+  if (regexResult.reference && regexResult.reference_confidence >= 0.7) {
+    extracted.reference = regexResult.reference;
+  }
+  if (regexResult.escalation_stage && regexResult.escalation_confidence >= 0.7) {
+    extracted.escalation_stage = regexResult.escalation_stage;
+  }
+  if (regexResult.payment_url && !extracted.payment_url) {
+    extracted.payment_url = regexResult.payment_url;
+  }
 
   // Post-AI: DB handles categorization (instant, free, more accurate than AI)
   const vendorMatch = await lookupVendor(extracted.vendor);
