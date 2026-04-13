@@ -109,6 +109,9 @@ body {
   font-size: 14px;
   line-height: 1.5;
   min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: none;
 }
 
 /* =============================================================================

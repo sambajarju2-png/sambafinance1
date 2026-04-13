@@ -32,8 +32,14 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-pw-border bg-pw-surface"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)', paddingTop: '6px' }}
+      className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-pw-border/60"
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+        paddingTop: '6px',
+        background: 'color-mix(in srgb, var(--surface) 80%, transparent)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }}
     >
       {NAV_ITEMS.map((item) => {
         const active = isActive(item.href);
