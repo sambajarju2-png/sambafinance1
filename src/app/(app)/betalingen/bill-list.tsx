@@ -6,10 +6,16 @@ import { useSearchParams } from 'next/navigation';
 import { Plus, Star, Check, CreditCard, List, CalendarDays, ShieldAlert, Landmark } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
+import dynamic from 'next/dynamic';
 import AddBillDrawer from './add-bill-drawer';
-import BillDetailDrawer from './bill-detail-drawer';
-import CalendarView from '@/components/calendar-view';
 import PaidToast from '@/components/paid-toast';
+
+const BillDetailDrawer = dynamic(() => import('./bill-detail-drawer'), {
+  loading: () => <div className="fixed inset-0 z-50 bg-black/20" />,
+});
+const CalendarView = dynamic(() => import('@/components/calendar-view'), {
+  loading: () => <div className="skeleton h-64 rounded-card" />,
+});
 
 type TabFilter = 'outstanding' | 'upcoming' | 'overdue' | 'settled';
 type ViewMode = 'list' | 'calendar';

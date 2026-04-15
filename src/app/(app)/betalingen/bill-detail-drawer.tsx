@@ -10,13 +10,17 @@ import {
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import { detectGovBrand, getGovBrandInfo, detectCjibSubtype, detectBelastingSubtype } from '@/lib/gov-brands';
-import DraftLetterDrawer from './draft-letter-drawer';
+import dynamic from 'next/dynamic';
 import EditBillDrawer from './edit-bill-drawer';
 import EscalationInfo from '@/components/escalation-info';
 import LawyerReferral from '@/components/lawyer-referral';
 import PaymentConfirmationDrawer from '@/components/payment-confirmation-drawer';
 import { PaymentPlanSetup } from '@/components/payment-plan-setup';
 import { PaymentPlanTracker, PaymentPlanHeaderInfo } from '@/components/payment-plan-tracker';
+
+const DraftLetterDrawer = dynamic(() => import('./draft-letter-drawer'), {
+  loading: () => <div className="skeleton h-48 rounded-card" />,
+});
 
 type DrawerTab = 'details' | 'escalatie' | 'acties' | 'regeling';
 

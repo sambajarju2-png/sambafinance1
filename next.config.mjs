@@ -5,6 +5,13 @@ const nextConfig = {
   reactStrictMode: true,
   // FIX: Remove X-Powered-By header (CWE-200)
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'ectcwerjdpiurubdpxcp.supabase.co', pathname: '/storage/v1/object/public/**' },
+      { protocol: 'https', hostname: 'api.dicebear.com' },
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
   async headers() {
     return [
       {

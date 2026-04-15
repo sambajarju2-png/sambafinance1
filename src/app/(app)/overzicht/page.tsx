@@ -6,11 +6,15 @@ import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle, CreditCard,
 import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import MoodTracker from '@/components/mood-tracker';
 import AchievementsDisplay from '@/components/achievements';
-import AiInsightsPanel from '@/components/ai-insights';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
 import MetricCard from '@/components/metric-card';
+
+const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
+  loading: () => <div className="skeleton h-48 rounded-card" />,
+});
 
 type OverzichtTab = 'overview' | 'ai';
 

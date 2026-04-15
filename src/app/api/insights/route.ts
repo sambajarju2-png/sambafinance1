@@ -24,14 +24,21 @@ export async function POST(req: NextRequest) {
     guard();
     const supabase = await createServerSupabaseClient();
 
-    // Check insight limit based on referrals
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('language, insight_count')
-      .eq('user_id', userId)
-      .single();
+    // Parallel fetch: settings + auth + bills (independent queries)
+    const [settingsResult, authResult, billsResult] = await Promise.all([
+      supabase.from('user_settings').select('language, insight_count').eq('user_id', userId).single(),
+      supabase.auth.getUser(),
+      supabase.from('bills')
+        .select('id, vendor, amount, due_date, status, escalation_stage, category, paid_date, is_recurring')
+        .eq('user_id', userId)
+        .order('due_date', { ascending: true })
+        .limit(50),
+    ]);
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const settings = settingsResult.data;
+    const authUser = authResult.data?.user;
+    const bills = billsResult.data;
+    const billsError = billsResult.error;
     const isAdmin = authUser?.email && ADMIN_EMAILS.includes(authUser.email.toLowerCase());
 
     if (!isAdmin) {
@@ -59,12 +66,6 @@ export async function POST(req: NextRequest) {
     const language = settings?.language || 'nl';
 
     guard();
-    const { data: bills, error: billsError } = await supabase
-      .from('bills')
-      .select('id, vendor, amount, due_date, status, escalation_stage, category, paid_date, is_recurring')
-      .eq('user_id', userId)
-      .order('due_date', { ascending: true })
-      .limit(50);
 
     if (billsError) return NextResponse.json({ error: 'Failed to fetch bills' }, { status: 500, headers: NO_CACHE });
 
