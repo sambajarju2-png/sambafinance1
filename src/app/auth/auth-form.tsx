@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Moon, Sun } from 'lucide-react';
@@ -22,6 +22,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const formLoadedAt = useRef(Date.now());
 
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
@@ -60,6 +62,16 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
     try {
       if (mode === 'signup') {
+        // ── Anti-bot checks ──
+        // Honeypot filled = bot
+        if (honeypot) { setSuccess(t('checkEmail')); setLoading(false); return; }
+        // Form submitted in under 3 seconds = bot
+        if (Date.now() - formLoadedAt.current < 3000) { setSuccess(t('checkEmail')); setLoading(false); return; }
+        // Dotted Gmail pattern: "a.b.c.d.e.f@gmail.com" (3+ dots before @)
+        const localPart = email.split('@')[0] || '';
+        const dotCount = (localPart.match(/\./g) || []).length;
+        if (email.includes('@gmail.com') && dotCount >= 3) { setSuccess(t('checkEmail')); setLoading(false); return; }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -216,6 +228,16 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
         {/* Email/Password Form */}
         <form onSubmit={handleEmailAuth} className="space-y-4">
+          {/* Honeypot - hidden from users, bots fill it */}
+          <input
+            type="text"
+            name="website"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            autoComplete="off"
+            tabIndex={-1}
+            style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }}
+          />
           {/* Email */}
           <div>
             <label htmlFor="email" className="mb-1.5 block text-label text-pw-text">
