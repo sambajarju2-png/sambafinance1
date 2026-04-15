@@ -747,3 +747,53 @@ export function stripHtml(html: string): string {
     .replace(/\n\s*\n/g, '\n')
     .trim();
 }
+
+// ============================================================
+// PIPELINE COMPATIBILITY WRAPPERS
+// ============================================================
+
+/** Quick sync extraction for pipeline integration */
+export function regexExtract(text: string): RegexExtractionResult {
+  const iban = extractIban(text);
+  const amount = extractAmount(text);
+  const dueDate = extractDueDate(text);
+  const reference = extractReference(text);
+  const paymentUrl = extractPaymentUrl(text);
+  const escalation = detectEscalationStage(text);
+  const kvk = extractKvkNumber(text);
+  const btw = extractBtwId(text);
+
+  const fieldsFound: string[] = [];
+  if (iban) fieldsFound.push('iban');
+  if (amount) fieldsFound.push('amount');
+  if (dueDate) fieldsFound.push('due_date');
+  if (reference) fieldsFound.push('reference');
+  if (paymentUrl) fieldsFound.push('payment_url');
+  if (escalation) fieldsFound.push('escalation_stage');
+
+  return {
+    vendor: null,
+    secondary_vendor: null,
+    amount_cents: amount,
+    iban,
+    reference,
+    due_date: dueDate,
+    payment_url: paymentUrl,
+    escalation_stage: escalation,
+    category_hint: 'overig',
+    is_incasso: false,
+    kvk_number: kvk,
+    btw_id: btw,
+    method: 'regex',
+    fields_found: fieldsFound,
+    confidence: fieldsFound.length / 6,
+    match_sources: ['sync_regex'],
+  };
+}
+
+/** Check if regex result is insufficient and needs AI fallback */
+export function needsAiFallback(result: RegexExtractionResult): boolean {
+  // Need AI if we're missing critical fields
+  const hasCritical = result.vendor && result.amount_cents && result.due_date;
+  return !hasCritical || result.confidence < 0.5;
+}

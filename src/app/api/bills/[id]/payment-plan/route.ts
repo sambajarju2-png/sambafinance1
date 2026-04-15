@@ -10,7 +10,7 @@ const NO_CACHE = {
 // POST — Create a payment plan for a bill
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId(req);
   if (!userId)
@@ -22,7 +22,7 @@ export async function POST(
   };
 
   try {
-    const billId = params.id;
+    const { id: billId } = await params;
     const body = await req.json();
     const { total_terms, payment_day, start_date } = body as {
       total_terms: number;
@@ -183,14 +183,14 @@ export async function POST(
 // GET — Fetch payment plan + installments for a bill
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId(req);
   if (!userId)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    const billId = params.id;
+    const { id: billId } = await params;
     const supabase = createServiceRoleClient();
 
     // Verify bill belongs to user
@@ -261,14 +261,14 @@ export async function GET(
 // DELETE — Cancel a payment plan
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId(req);
   if (!userId)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    const billId = params.id;
+    const { id: billId } = await params;
     const supabase = createServiceRoleClient();
 
     // Verify bill belongs to user

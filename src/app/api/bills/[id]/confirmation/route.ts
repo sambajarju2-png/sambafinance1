@@ -13,9 +13,10 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId();
+  const { id: billId } = await params;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
@@ -25,7 +26,7 @@ export async function POST(
     const { data: bill, error: billError } = await supabase
       .from('bills')
       .select('id, user_id')
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId)
       .single();
 
@@ -54,16 +55,16 @@ export async function POST(
       'application/pdf': 'pdf',
     };
     const ext = mimeToExt[file.type] || 'jpg';
-    const filePath = `${userId}/${params.id}.${ext}`;
+    const filePath = `${userId}/${billId}.${ext}`;
 
     // Delete any existing file first (might have different extension)
     const { data: existingFiles } = await supabase.storage
       .from(BUCKET)
-      .list(userId, { search: params.id });
+      .list(userId, { search: billId });
 
     if (existingFiles && existingFiles.length > 0) {
       const toDelete = existingFiles
-        .filter(f => f.name.startsWith(params.id))
+        .filter(f => f.name.startsWith(billId))
         .map(f => `${userId}/${f.name}`);
       if (toDelete.length > 0) {
         await supabase.storage.from(BUCKET).remove(toDelete);
@@ -95,7 +96,7 @@ export async function POST(
     await supabase
       .from('bills')
       .update({ confirmation_image_url: url })
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId);
 
     return NextResponse.json({ url }, { status: 200, headers: NO_CACHE });
@@ -107,9 +108,10 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId();
+  const { id: billId } = await params;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
@@ -119,7 +121,7 @@ export async function DELETE(
     const { data: bill } = await supabase
       .from('bills')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId)
       .single();
 
@@ -130,11 +132,11 @@ export async function DELETE(
     // Delete all files for this bill
     const { data: files } = await supabase.storage
       .from(BUCKET)
-      .list(userId, { search: params.id });
+      .list(userId, { search: billId });
 
     if (files && files.length > 0) {
       const toDelete = files
-        .filter(f => f.name.startsWith(params.id))
+        .filter(f => f.name.startsWith(billId))
         .map(f => `${userId}/${f.name}`);
       await supabase.storage.from(BUCKET).remove(toDelete);
     }
@@ -143,7 +145,7 @@ export async function DELETE(
     await supabase
       .from('bills')
       .update({ confirmation_image_url: null })
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId);
 
     return NextResponse.json({ success: true }, { headers: NO_CACHE });
@@ -155,9 +157,10 @@ export async function DELETE(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId();
+  const { id: billId } = await params;
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
@@ -166,7 +169,7 @@ export async function GET(
     const { data: bill } = await supabase
       .from('bills')
       .select('confirmation_image_url')
-      .eq('id', params.id)
+      .eq('id', billId)
       .eq('user_id', userId)
       .single();
 

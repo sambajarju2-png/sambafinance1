@@ -10,7 +10,7 @@ import { checkAndUnlockAchievements } from '@/lib/achievements';
  */
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const DEADLINE = Date.now() + 55000;
   const guard = () => { if (Date.now() > DEADLINE) throw new Error('TIMEOUT_ABORT'); };
@@ -20,7 +20,7 @@ export async function PATCH(
 
   try {
     guard();
-    const billId = context.params.id;
+    const { id: billId } = await context.params;
     const body = await req.json();
     const supabase = await createServerSupabaseClient();
 
@@ -105,13 +105,13 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    const billId = context.params.id;
+    const { id: billId } = await context.params;
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.from('bills').delete().eq('id', billId).eq('user_id', userId);
     if (error) return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });

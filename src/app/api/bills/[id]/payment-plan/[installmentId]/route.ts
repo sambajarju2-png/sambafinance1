@@ -10,7 +10,7 @@ const NO_CACHE = {
 // PATCH — Mark an installment as paid (or undo)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; installmentId: string } }
+  { params }: { params: Promise<{ id: string; installmentId: string }> }
 ) {
   const userId = await getAuthUserId(req);
   if (!userId)
@@ -22,8 +22,7 @@ export async function PATCH(
   };
 
   try {
-    const billId = params.id;
-    const installmentId = params.installmentId;
+    const { id: billId, installmentId } = await params;
     const body = await req.json();
     const { status, paid_date } = body as {
       status: 'paid' | 'pending';

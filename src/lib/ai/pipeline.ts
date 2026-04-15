@@ -227,8 +227,8 @@ export async function extractBillFromEmail(
   const regexResult = regexExtract(fullText);
 
   console.log(
-    `[Regex] ${regexResult.fields_extracted.length} fields extracted (${regexResult.fields_extracted.join(', ')}), ` +
-    `${regexResult.fields_missing.length} missing, overall: ${regexResult.overall_confidence}, ` +
+    `[Regex] ${regexResult.fields_found.length} fields extracted (${regexResult.fields_found.join(', ')}), ` +
+    `${6 - regexResult.fields_found.length} missing, confidence: ${regexResult.confidence}, ` +
     `needs AI: ${needsAiFallback(regexResult)}`
   );
 
@@ -257,21 +257,21 @@ export async function extractBillFromEmail(
   const extracted = normalizeExtraction(result);
 
   // ── MERGE: Use regex results to validate/override AI where regex is confident ──
-  if (regexResult.amount_cents && regexResult.amount_confidence >= 0.7) {
+  if (regexResult.amount_cents) {
     // Trust regex amount over AI (regex handles Dutch format perfectly)
     extracted.amount_cents = regexResult.amount_cents;
   }
-  if (regexResult.iban && regexResult.iban_confidence >= 0.7) {
+  if (regexResult.iban) {
     // Trust regex IBAN (MOD-97 validated)
     extracted.iban = regexResult.iban;
   }
-  if (regexResult.due_date && regexResult.due_date_confidence >= 0.7) {
+  if (regexResult.due_date) {
     extracted.due_date = regexResult.due_date;
   }
-  if (regexResult.reference && regexResult.reference_confidence >= 0.7) {
+  if (regexResult.reference) {
     extracted.reference = regexResult.reference;
   }
-  if (regexResult.escalation_stage && regexResult.escalation_confidence >= 0.7) {
+  if (regexResult.escalation_stage) {
     extracted.escalation_stage = regexResult.escalation_stage;
   }
   if (regexResult.payment_url && !extracted.payment_url) {
