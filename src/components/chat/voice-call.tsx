@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useConversation } from '@elevenlabs/react';
+import { useState, useCallback, useEffect } from 'react';
+import { ConversationProvider, useConversation } from '@elevenlabs/react';
 import { Phone, PhoneOff, Loader2 } from 'lucide-react';
 
 interface VoiceCallProps {
@@ -9,30 +9,26 @@ interface VoiceCallProps {
   lang: string;
 }
 
-export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
-  const [isConnecting, setIsConnecting] = useState(true);
+function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [error, setError] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
-    onConnect: () => setIsConnecting(false),
+    onConnect: () => setError(null),
     onDisconnect: () => onClose(),
-    onError: (err: Error) => {
-      console.error('Voice error:', err);
+    onError: (message: string) => {
+      console.error('Voice error:', message);
       setError(nl ? 'Verbinding mislukt. Probeer opnieuw.' : 'Connection failed. Try again.');
-      setIsConnecting(false);
     },
   });
 
   const startCall = useCallback(async () => {
-    setIsConnecting(true);
     setError(null);
 
     try {
-      // Request mic access first
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Get signed URL + overrides from our API
       const res = await fetch('/api/voice/token');
       if (!res.ok) {
         const data = await res.json();
@@ -41,7 +37,7 @@ export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
 
       const { signedUrl, overrides } = await res.json();
 
-      await conversation.startSession({
+      conversation.startSession({
         signedUrl,
         overrides,
       });
@@ -52,36 +48,36 @@ export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
           ? (nl ? 'Microfoon nodig. Geef toegang in je browser.' : 'Microphone needed. Grant access in your browser.')
           : (nl ? 'Kan gesprek niet starten. Probeer opnieuw.' : "Can't start call. Try again.")
       );
-      setIsConnecting(false);
     }
   }, [conversation, nl]);
 
-  const endCall = useCallback(async () => {
-    await conversation.endSession();
+  const endCall = useCallback(() => {
+    conversation.endSession();
     onClose();
   }, [conversation, onClose]);
 
-  // Auto-start call on mount
-  useState(() => {
-    startCall();
-  });
+  useEffect(() => {
+    if (!started) {
+      setStarted(true);
+      startCall();
+    }
+  }, [started, startCall]);
 
-  const isActive = conversation.status === 'connected';
+  const status = conversation.status;
+  const isConnecting = status === 'connecting';
+  const isActive = status === 'connected';
   const isSpeaking = conversation.isSpeaking;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
-      {/* Pulsing circle */}
       <div className="relative mb-10">
-        {/* Outer pulse */}
         {isActive && (
           <>
-            <div className={`absolute inset-0 rounded-full ${isSpeaking ? 'bg-pw-green/20' : 'bg-pw-blue/20'} animate-ping`} style={{ width: 160, height: 160, top: -40, left: -40 }} />
-            <div className={`absolute inset-0 rounded-full ${isSpeaking ? 'bg-pw-green/10' : 'bg-pw-blue/10'}`} style={{ width: 140, height: 140, top: -30, left: -30, animation: 'pulse 2s ease-in-out infinite' }} />
+            <div className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/20' : 'bg-pw-blue/20'} animate-ping`} style={{ width: 160, height: 160, top: -40, left: -40 }} />
+            <div className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/10' : 'bg-pw-blue/10'}`} style={{ width: 140, height: 140, top: -30, left: -30, animation: 'pulse 2s ease-in-out infinite' }} />
           </>
         )}
 
-        {/* Main circle */}
         <div className={`flex h-20 w-20 items-center justify-center rounded-full transition-all duration-500 ${
           isConnecting ? 'bg-pw-blue/30' :
           isSpeaking ? 'bg-pw-green/40 scale-110' :
@@ -96,12 +92,11 @@ export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
         </div>
       </div>
 
-      {/* Status text */}
       <p className="mb-2 text-lg font-semibold text-white">
         {isConnecting && (nl ? 'Verbinden...' : 'Connecting...')}
         {isActive && isSpeaking && 'PayBuddy'}
         {isActive && !isSpeaking && (nl ? 'Luistert...' : 'Listening...')}
-        {error && 'PayBuddy'}
+        {!isConnecting && !isActive && 'PayBuddy'}
       </p>
 
       <p className="mb-12 text-sm text-white/50">
@@ -111,7 +106,6 @@ export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
         {error && error}
       </p>
 
-      {/* Action buttons */}
       <div className="flex items-center gap-6">
         {error && (
           <button
@@ -123,15 +117,22 @@ export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
         )}
 
         <button
-          onClick={error ? onClose : endCall}
+          onClick={error && !isActive ? onClose : endCall}
           className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white transition-all active:scale-95"
         >
           <PhoneOff className="h-7 w-7" strokeWidth={1.5} />
         </button>
       </div>
 
-      {/* Subtle branding */}
       <p className="absolute bottom-10 text-[11px] text-white/20">PayWatch Voice</p>
     </div>
+  );
+}
+
+export default function VoiceCall(props: VoiceCallProps) {
+  return (
+    <ConversationProvider>
+      <VoiceCallInner {...props} />
+    </ConversationProvider>
   );
 }
