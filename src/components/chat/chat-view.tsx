@@ -32,7 +32,7 @@ export default function ChatView() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef</* SpeechRecognition */ unknown>(null);
 
   // Load existing messages + user settings on mount
   useEffect(() => {
@@ -167,23 +167,26 @@ export default function ChatView() {
 
   function toggleVoice() {
     if (isRecording) {
-      recognitionRef.current?.stop();
+      (recognitionRef.current as any)?.stop();
       setIsRecording(false);
       return;
     }
 
     try {
-      const SpeechRecognition = (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition || window.SpeechRecognition;
-      if (!SpeechRecognition) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      if (!SR) return;
 
-      const recognition = new SpeechRecognition();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const recognition = new SR() as any;
       recognition.lang = lang === 'nl' ? 'nl-NL' : 'en-US';
       recognition.continuous = false;
       recognition.interimResults = true;
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = Array.from(event.results)
-          .map(r => r[0].transcript)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results as ArrayLike<{ 0: { transcript: string } }>)
+          .map((r: { 0: { transcript: string } }) => r[0].transcript)
           .join('');
         setInput(transcript);
       };
