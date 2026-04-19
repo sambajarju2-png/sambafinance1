@@ -85,11 +85,26 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         return;
       }
 
-      const convId = await conversation.startSession({
-        agentId: data.agentId,
-        overrides: data.overrides,
-      });
-      setDebugInfo(`Session started: ${convId}`);
+      // Try 1: Connect with overrides
+      // Try 2: If fails, retry without overrides (to isolate the issue)
+      try {
+        const convId = await conversation.startSession({
+          agentId: data.agentId,
+          overrides: data.overrides,
+        });
+        setDebugInfo(`Session started: ${convId}`);
+      } catch (sessionErr) {
+        // Retry without overrides to test if overrides cause the failure
+        setDebugInfo('Retrying without overrides...');
+        try {
+          const convId2 = await conversation.startSession({
+            agentId: data.agentId,
+          });
+          setDebugInfo(`Session (no overrides): ${convId2}`);
+        } catch (retryErr) {
+          throw retryErr;
+        }
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       const errStack = err instanceof Error ? err.stack?.slice(0, 200) : '';
