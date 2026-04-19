@@ -4,20 +4,17 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Bell, Flame, Loader2, Sun, Moon } from 'lucide-react';
+import { Bell, Loader2, Sun, Moon, Settings } from 'lucide-react';
 
 interface TopbarProps {
-  displayName: string;
-  streakCurrent: number;
   notificationCount: number;
 }
 
-export default function Topbar({ displayName, streakCurrent, notificationCount: initialCount }: TopbarProps) {
+export default function Topbar({ notificationCount: initialCount }: TopbarProps) {
   const t = useTranslations('nav');
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const firstName = displayName?.split(' ')[0] || '';
   const [notifCount, setNotifCount] = useState(initialCount);
   const [currentLang, setCurrentLang] = useState<'nl' | 'en'>('nl');
   const [switching, setSwitching] = useState(false);
@@ -74,7 +71,6 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
       <div className="flex items-center gap-3">
         <img src="/logo.svg" alt="PayWatch" className="h-5 dark:hidden" />
         <img src="/logo-dark.svg" alt="PayWatch" className="h-5 hidden dark:block" />
-        {firstName && <span className="hidden text-body text-pw-muted sm:inline">Hoi, {firstName}</span>}
       </div>
 
       <div className="flex items-center gap-2">
@@ -98,13 +94,13 @@ export default function Topbar({ displayName, streakCurrent, notificationCount: 
           </button>
         )}
 
-        {/* Streak */}
-        {streakCurrent > 0 && (
-          <div className="flex items-center gap-1">
-            <Flame className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
-            <span className="text-[14px] font-bold text-pw-blue">{streakCurrent}</span>
-          </div>
-        )}
+        {/* Settings */}
+        <button onClick={() => router.push('/instellingen')}
+          className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            pathname === '/instellingen' ? 'bg-pw-blue/10 text-pw-blue' : 'border border-pw-border/50 text-pw-muted hover:bg-pw-border/30'}`}
+          aria-label="Settings">
+          <Settings className="h-4 w-4" strokeWidth={1.5} />
+        </button>
 
         {/* Bell */}
         <button onClick={handleBellClick}

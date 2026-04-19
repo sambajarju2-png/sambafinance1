@@ -27,7 +27,8 @@
     "stats": "Stats",
     "cashflow": "Cashflow",
     "feed": "Feed",
-    "settings": "Settings"
+    "settings": "Settings",
+    "buddy": "Buddy"
   },
   "auth": {
     "signIn": "Sign in",

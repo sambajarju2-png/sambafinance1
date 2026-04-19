@@ -8,7 +8,7 @@ import {
   CreditCard,
   Users,
   TrendingUp,
-  MoreHorizontal,
+  MessageCircle,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { href: '/betalingen', icon: CreditCard, labelKey: 'payments' as const, isFeed: false },
   { href: '/feed', icon: Users, labelKey: 'feed' as const, isFeed: true },
   { href: '/stats', icon: TrendingUp, labelKey: 'stats' as const, isFeed: false },
-  { href: '/instellingen', icon: MoreHorizontal, labelKey: 'settings' as const, isFeed: false },
+  { href: '/buddy', icon: MessageCircle, labelKey: 'buddy' as const, isFeed: false },
 ] as const;
 
 export default function BottomNav() {

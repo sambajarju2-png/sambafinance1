@@ -1,0 +1,370 @@
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { Send, Paperclip, Mic, MicOff, Loader2, Camera } from 'lucide-react';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: Date;
+}
+
+function renderMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="list-disc pl-4 my-1 space-y-0.5">$&</ul>')
+    .replace(/\n/g, '<br/>');
+}
+
+export default function ChatView() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [chips, setChips] = useState<string[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lang, setLang] = useState('nl');
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  // Load existing messages + user settings on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        // Load settings for name + lang
+        const settingsRes = await fetch('/api/settings');
+        if (settingsRes.ok) {
+          const s = await settingsRes.json();
+          setFirstName(s.first_name || '');
+          setLang(s.language || 'nl');
+        }
+
+        // Load recent messages
+        const histRes = await fetch('/api/chat/history');
+        if (histRes.ok) {
+          const data = await histRes.json();
+          setMessages(data.messages?.map((m: { id: string; role: string; content: string; created_at: string }) => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            createdAt: new Date(m.created_at),
+          })) || []);
+          setChips(data.chips || []);
+        }
+      } catch {}
+    }
+    load();
+  }, []);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = '24px';
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + 'px';
+    }
+  }, [input]);
+
+  const sendMessage = useCallback(async (text: string, file?: File) => {
+    if ((!text.trim() && !file) || isStreaming) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text || (file ? `📎 ${file.name}` : ''),
+      createdAt: new Date(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsStreaming(true);
+
+    const assistantId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', createdAt: new Date() }]);
+
+    try {
+      let response: Response;
+
+      if (file) {
+        const formData = new FormData();
+        formData.append('message', text);
+        formData.append('file', file);
+        response = await fetch('/api/chat', { method: 'POST', body: formData });
+      } else {
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+      }
+
+      // Read chips from header
+      const chipsHeader = response.headers.get('X-Chat-Chips');
+      if (chipsHeader) {
+        try { setChips(JSON.parse(chipsHeader)); } catch {}
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Fout' }));
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId ? { ...m, content: `Fout: ${err.error || 'Er ging iets mis'}` } : m
+        ));
+        setIsStreaming(false);
+        return;
+      }
+
+      // Stream the response
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            if (parsed.type === 'text') {
+              setMessages(prev => prev.map(m =>
+                m.id === assistantId ? { ...m, content: m.content + parsed.text } : m
+              ));
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId ? { ...m, content: 'Er ging iets mis. Probeer het opnieuw.' } : m
+      ));
+    }
+
+    setIsStreaming(false);
+  }, [isStreaming]);
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = input.trim();
+    sendMessage(text || '', file);
+    e.target.value = '';
+  }
+
+  function toggleVoice() {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      const SpeechRecognition = (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition || window.SpeechRecognition;
+      if (!SpeechRecognition) return;
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang === 'nl' ? 'nl-NL' : 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map(r => r[0].transcript)
+          .join('');
+        setInput(transcript);
+      };
+
+      recognition.onend = () => setIsRecording(false);
+      recognition.onerror = () => setIsRecording(false);
+
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsRecording(true);
+    } catch {
+      // Speech recognition not supported
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
+  }
+
+  const nl = lang === 'nl';
+  const isEmpty = messages.length === 0;
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
+        {isEmpty ? (
+          // Empty state
+          <div className="flex flex-col items-center justify-center pt-16">
+            {/* Zen visual */}
+            <div className="relative mb-8">
+              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-pw-blue/20 to-pw-green/20 blur-xl" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-pw-blue/30 to-pw-green/30" />
+              </div>
+            </div>
+
+            <p className="text-pw-blue text-base font-medium">
+              {nl ? `Hoi${firstName ? ` ${firstName}` : ''}` : `Hi${firstName ? ` ${firstName}` : ''}`}
+            </p>
+            <p className="mt-1 text-xl font-bold text-pw-text dark:text-white">
+              {nl ? 'Hoe kan ik je helpen?' : 'How can I help you?'}
+            </p>
+
+            {/* Quick action chips */}
+            {chips.length > 0 && (
+              <div className="mt-8 grid w-full max-w-sm grid-cols-2 gap-2">
+                {chips.map(chip => (
+                  <button
+                    key={chip}
+                    onClick={() => sendMessage(chip)}
+                    className="rounded-xl border border-pw-border p-3 text-left text-[13px] font-medium text-pw-text transition-colors hover:bg-pw-border/30 active:scale-[0.97] dark:text-white dark:border-pw-border/50"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Message list
+          <>
+            {messages.map(msg => (
+              <div key={msg.id} className={`mb-3 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'rounded-br-md bg-pw-blue text-white'
+                      : 'rounded-bl-md border border-pw-border/60 bg-pw-surface dark:bg-pw-surface/50 text-pw-text dark:text-white'
+                  }`}
+                >
+                  {msg.role === 'assistant' ? (
+                    <div
+                      className="chat-markdown"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                    />
+                  ) : (
+                    <span>{msg.content}</span>
+                  )}
+                  {msg.role === 'assistant' && msg.content === '' && isStreaming && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:0ms]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:150ms]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:300ms]" />
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Inline chips after last assistant message */}
+            {!isStreaming && chips.length > 0 && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
+              <div className="mb-3 flex flex-wrap gap-1.5 pl-1">
+                {chips.slice(0, 3).map(chip => (
+                  <button
+                    key={chip}
+                    onClick={() => sendMessage(chip)}
+                    className="rounded-full border border-pw-border/60 px-3 py-1.5 text-[12px] font-medium text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text active:scale-[0.97] dark:border-pw-border/40"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input bar */}
+      <div className="border-t border-pw-border/60 bg-pw-surface px-4 py-3 dark:bg-pw-surface/50">
+        <div className="flex items-end gap-2">
+          {/* File upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
+            aria-label={nl ? 'Bestand uploaden' : 'Upload file'}
+          >
+            <Paperclip className="h-5 w-5" strokeWidth={1.5} />
+          </button>
+
+          {/* Text input */}
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={nl ? 'Typ je vraag...' : 'Type your question...'}
+            rows={1}
+            className="min-h-[36px] max-h-[120px] flex-1 resize-none rounded-2xl border border-pw-border/60 bg-pw-bg px-4 py-2 text-[14px] text-pw-text outline-none transition-colors placeholder:text-pw-muted focus:border-pw-blue/50 dark:bg-pw-bg/50 dark:text-white"
+          />
+
+          {/* Voice */}
+          <button
+            onClick={toggleVoice}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+              isRecording
+                ? 'bg-pw-red/10 text-pw-red'
+                : 'text-pw-muted hover:bg-pw-border/30 hover:text-pw-text'
+            }`}
+            aria-label={isRecording ? 'Stop' : (nl ? 'Spraak' : 'Voice')}
+          >
+            {isRecording ? <MicOff className="h-5 w-5" strokeWidth={1.5} /> : <Mic className="h-5 w-5" strokeWidth={1.5} />}
+          </button>
+
+          {/* Send */}
+          <button
+            onClick={() => sendMessage(input)}
+            disabled={!input.trim() || isStreaming}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pw-blue text-white transition-all hover:bg-pw-blue/90 active:scale-[0.95] disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label={nl ? 'Verstuur' : 'Send'}
+          >
+            {isStreaming ? (
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+            ) : (
+              <Send className="h-4 w-4" strokeWidth={2} />
+            )}
+          </button>
+        </div>
+
+        {/* Recording indicator */}
+        {isRecording && (
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-pw-red" />
+            <span className="text-[12px] font-medium text-pw-red">
+              {nl ? 'Luisteren...' : 'Listening...'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
