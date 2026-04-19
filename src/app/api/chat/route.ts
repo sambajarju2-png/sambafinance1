@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
         } else if (file.type === 'application/pdf') {
           // PDF → unpdf text extraction
           const text = await extractPdfText(buffer);
-          extractionContext = `\n\nDE GEBRUIKER HEEFT EEN PDF GEÜPLOAD. Dit is de geëxtraheerde tekst (eerste 3000 tekens):\n${text.slice(0, 3000)}\n\nAnalyseer deze tekst. Zoek naar: vendor/afzender, bedrag, vervaldatum, IBAN, referentie, escalatiefase. Presenteer wat je vindt aan de gebruiker en vraag of het klopt.`;
+          if (text) {
+            extractionContext = `\n\nDE GEBRUIKER HEEFT EEN PDF GEÜPLOAD. Dit is de geëxtraheerde tekst (eerste 3000 tekens):\n${text.slice(0, 3000)}\n\nAnalyseer deze tekst. Zoek naar: vendor/afzender, bedrag, vervaldatum, IBAN, referentie, escalatiefase. Presenteer wat je vindt aan de gebruiker en vraag of het klopt.`;
+          } else {
+            extractionContext = `\n\nDE GEBRUIKER HEEFT EEN PDF GEÜPLOAD maar de tekst kon niet worden geëxtraheerd. Vraag de gebruiker om een foto te maken van de rekening.`;
+          }
         }
       }
     } else {
