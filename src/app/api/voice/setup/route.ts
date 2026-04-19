@@ -34,7 +34,7 @@ async function handleSetup() {
             language: 'nl',
           },
           tts: {
-            voice_id: 'cblS8WYNsiBLGnlV6jjx',
+            voice_id: 'pNInz6obpgDQGcFmaJgB',
             model_id: 'eleven_flash_v2_5',
           },
         },
