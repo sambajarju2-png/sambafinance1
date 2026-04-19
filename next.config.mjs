@@ -30,7 +30,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://cdn.sanity.io https://ectcwerjdpiurubdpxcp.supabase.co https://api.dicebear.com",
               // FIX: Added graph.microsoft.com + login.microsoftonline.com for Outlook OAuth
-              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com",
+              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com https://api.elevenlabs.io wss://api.elevenlabs.io",
               "font-src 'self'",
               "frame-src 'none'",
               "object-src 'none'",
@@ -40,7 +40,7 @@ const nextConfig = {
             ].join('; '),
           },
           // FIX: geolocation() → geolocation=() (was missing = sign)
-          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=()' },
         ],
       },
     ];
