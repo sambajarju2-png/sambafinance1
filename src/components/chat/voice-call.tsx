@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { ConversationProvider, useConversation } from '@elevenlabs/react';
+import { useConversation } from '@elevenlabs/react';
 import { Phone, PhoneOff, Loader2 } from 'lucide-react';
 
 interface VoiceCallProps {
@@ -9,21 +9,23 @@ interface VoiceCallProps {
   lang: string;
 }
 
-function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
+export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
+  const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [started, setStarted] = useState(false);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
-    onConnect: () => setError(null),
+    onConnect: () => setIsConnecting(false),
     onDisconnect: () => onClose(),
     onError: (message: string) => {
       console.error('Voice error:', message);
       setError(nl ? 'Verbinding mislukt. Probeer opnieuw.' : 'Connection failed. Try again.');
+      setIsConnecting(false);
     },
   });
 
   const startCall = useCallback(async () => {
+    setIsConnecting(true);
     setError(null);
 
     try {
@@ -37,7 +39,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
       const { signedUrl, overrides } = await res.json();
 
-      conversation.startSession({
+      await conversation.startSession({
         signedUrl,
         overrides,
       });
@@ -48,24 +50,22 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           ? (nl ? 'Microfoon nodig. Geef toegang in je browser.' : 'Microphone needed. Grant access in your browser.')
           : (nl ? 'Kan gesprek niet starten. Probeer opnieuw.' : "Can't start call. Try again.")
       );
+      setIsConnecting(false);
     }
   }, [conversation, nl]);
 
-  const endCall = useCallback(() => {
-    conversation.endSession();
+  const endCall = useCallback(async () => {
+    await conversation.endSession();
     onClose();
   }, [conversation, onClose]);
 
+  // Auto-start on mount
   useEffect(() => {
-    if (!started) {
-      setStarted(true);
-      startCall();
-    }
-  }, [started, startCall]);
+    startCall();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const status = conversation.status;
-  const isConnecting = status === 'connecting';
-  const isActive = status === 'connected';
+  const isActive = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
 
   return (
@@ -117,7 +117,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         )}
 
         <button
-          onClick={error && !isActive ? onClose : endCall}
+          onClick={error ? onClose : endCall}
           className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white transition-all active:scale-95"
         >
           <PhoneOff className="h-7 w-7" strokeWidth={1.5} />
@@ -126,13 +126,5 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
       <p className="absolute bottom-10 text-[11px] text-white/20">PayWatch Voice</p>
     </div>
-  );
-}
-
-export default function VoiceCall(props: VoiceCallProps) {
-  return (
-    <ConversationProvider>
-      <VoiceCallInner {...props} />
-    </ConversationProvider>
   );
 }
