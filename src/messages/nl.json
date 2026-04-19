@@ -28,7 +28,8 @@
     "cashflow": "Cashflow",
     "feed": "Feed",
     "settings": "Instellingen",
-    "buddy": "Buddy"
+    "buddy": "Buddy",
+    "notifications": "Meldingen"
   },
   "auth": {
     "signIn": "Inloggen",
