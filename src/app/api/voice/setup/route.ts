@@ -35,6 +35,7 @@ async function handleSetup() {
           },
           tts: {
             voice_id: 'cblS8WYNsiBLGnlV6jjx',
+            model_id: 'eleven_flash_v2_5',
           },
         },
         platform_settings: {
