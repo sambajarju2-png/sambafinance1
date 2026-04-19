@@ -120,11 +120,6 @@ ${context}`;
           firstMessage: firstMsg,
           language: lang,
         },
-        tts: {
-          stability: 0.45,
-          similarity_boost: 0.8,
-          style: 0.3,
-        },
       },
       firstName,
       lang,
