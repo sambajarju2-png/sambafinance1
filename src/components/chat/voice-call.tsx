@@ -17,16 +17,19 @@ interface TranscriptEntry {
 
 function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [status, setStatus] = useState<'connecting' | 'active' | 'error'>('connecting');
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
-    onConnect: () => setStatus('active'),
+    onConnect: () => {
+      setStatus('active');
+      setDebugInfo('Connected');
+    },
     onDisconnect: async () => {
-      // Save transcript on disconnect
       if (transcriptRef.current.length > 0) {
         try {
           await fetch('/api/voice/save-transcript', {
@@ -39,8 +42,8 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       onClose();
     },
     onError: (message: string) => {
-      console.error('Voice error:', message);
-      setError(nl ? 'Verbinding mislukt.' : 'Connection failed.');
+      console.error('ElevenLabs onError:', message);
+      setErrorDetail(`SDK error: ${message}`);
       setStatus('error');
     },
     onMessage: (msg: { source?: string; message?: string }) => {
@@ -58,36 +61,51 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
   const startCall = useCallback(async () => {
     setStatus('connecting');
-    setError(null);
+    setErrorDetail(null);
+    setDebugInfo('Requesting microphone...');
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
+      setDebugInfo('Mic granted. Fetching token...');
 
       const res = await fetch('/api/voice/token');
-      if (!res.ok) throw new Error('Token failed');
+      const data = await res.json();
 
-      const { conversationToken, signedUrl, overrides } = await res.json();
-
-      // Use conversationToken for WebRTC (better), signedUrl for WebSocket (fallback)
-      const sessionOpts: Record<string, unknown> = {
-        overrides,
-        serverLocation: 'eu-residency',
-      };
-
-      if (conversationToken) {
-        sessionOpts.conversationToken = conversationToken;
-      } else if (signedUrl) {
-        sessionOpts.signedUrl = signedUrl;
+      if (!res.ok) {
+        setErrorDetail(`Token error (${res.status}): ${JSON.stringify(data)}`);
+        setStatus('error');
+        return;
       }
 
-      await conversation.startSession(sessionOpts);
+      setDebugInfo(`Token received: ${data.conversationToken ? 'WebRTC' : data.signedUrl ? 'WebSocket' : 'NONE'}`);
+
+      if (!data.conversationToken && !data.signedUrl) {
+        setErrorDetail('No token or URL returned from server');
+        setStatus('error');
+        return;
+      }
+
+      // Build session options
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sessionOpts: any = {
+        overrides: data.overrides,
+      };
+
+      if (data.conversationToken) {
+        sessionOpts.conversationToken = data.conversationToken;
+        setDebugInfo('Starting WebRTC session...');
+      } else {
+        sessionOpts.signedUrl = data.signedUrl;
+        setDebugInfo('Starting WebSocket session...');
+      }
+
+      const convId = await conversation.startSession(sessionOpts);
+      setDebugInfo(`Session started: ${convId}`);
     } catch (err) {
-      const msg = (err as Error).message || '';
-      setError(
-        msg.includes('Permission') || msg.includes('NotAllowed')
-          ? (nl ? 'Microfoon nodig. Geef toegang.' : 'Microphone needed.')
-          : (nl ? 'Kan niet verbinden.' : "Can't connect.")
-      );
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const errStack = err instanceof Error ? err.stack?.slice(0, 200) : '';
+      console.error('Voice startCall error:', err);
+      setErrorDetail(`${errMsg}\n${errStack}`);
       setStatus('error');
     }
   }, [conversation, nl]);
@@ -96,13 +114,11 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     await conversation.endSession();
   }, [conversation]);
 
-  // Auto-start
   useEffect(() => {
     startCall();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll transcript
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
@@ -112,9 +128,8 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
-      {/* Top area with circle */}
       <div className="flex flex-1 flex-col items-center justify-center">
-        {/* Pulsing circle */}
+        {/* Circle */}
         <div className="relative mb-6">
           {isActive && (
             <div
@@ -122,17 +137,15 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
               style={{
                 width: 140, height: 140, top: -30, left: -30,
                 animation: isSpeaking ? 'pulse 1.5s ease-in-out infinite' : 'pulse 3s ease-in-out infinite',
-                transition: 'background-color 0s',
               }}
             />
           )}
-
           <div className={`flex h-20 w-20 items-center justify-center rounded-full ${
             status === 'connecting' ? 'bg-pw-blue/30' :
             isSpeaking ? 'bg-pw-green/40' :
             isActive ? 'bg-pw-blue/40' :
             'bg-white/10'
-          }`} style={{ transition: 'background-color 0s' }}>
+          }`}>
             {status === 'connecting' ? (
               <Loader2 className="h-8 w-8 animate-spin text-white/70" strokeWidth={1.5} />
             ) : (
@@ -141,7 +154,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           </div>
         </div>
 
-        {/* Status */}
         <p className="mb-1 text-lg font-semibold text-white">
           {status === 'connecting' && (nl ? 'Verbinden...' : 'Connecting...')}
           {isActive && isSpeaking && 'PayBuddy'}
@@ -149,15 +161,24 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           {status === 'error' && 'PayBuddy'}
         </p>
 
-        <p className="mb-6 text-sm text-white/40">
-          {status === 'connecting' && (nl ? 'Even geduld' : 'Please wait')}
-          {isActive && isSpeaking && (nl ? 'Aan het praten' : 'Speaking')}
-          {isActive && !isSpeaking && (nl ? 'Stel je vraag' : 'Ask your question')}
-          {error && error}
-        </p>
+        {/* Debug info - always visible for troubleshooting */}
+        <p className="mb-2 text-[11px] text-white/30 text-center px-8">{debugInfo}</p>
+
+        {/* Error detail - visible and copyable */}
+        {errorDetail && (
+          <div className="mx-6 mb-4 max-w-sm rounded-lg bg-pw-red/10 border border-pw-red/20 px-4 py-3">
+            <p className="text-[11px] text-pw-red/80 font-mono break-all select-all">{errorDetail}</p>
+            <button
+              onClick={() => navigator.clipboard.writeText(errorDetail)}
+              className="mt-2 text-[10px] text-pw-red/50 underline"
+            >
+              {nl ? 'Kopieer fout' : 'Copy error'}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Live transcript */}
+      {/* Transcript */}
       {transcript.length > 0 && (
         <div className="mx-4 mb-4 max-h-[30vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3">
           {transcript.map((t, i) => (
@@ -172,7 +193,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Buttons */}
       <div className="flex items-center justify-center gap-6 pb-12" style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom))' }}>
         {status === 'error' && (
           <button
@@ -182,7 +203,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             <Phone className="h-6 w-6" strokeWidth={1.5} />
           </button>
         )}
-
         <button
           onClick={status === 'error' ? onClose : endCall}
           className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white active:scale-95"
@@ -194,7 +214,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   );
 }
 
-// Wrap with ConversationProvider (required by @elevenlabs/react v1.1.1)
 export default function VoiceCall(props: VoiceCallProps) {
   return (
     <ConversationProvider>
