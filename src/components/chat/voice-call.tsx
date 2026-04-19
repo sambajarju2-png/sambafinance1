@@ -77,29 +77,18 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         return;
       }
 
-      setDebugInfo(`Token received: ${data.conversationToken ? 'WebRTC' : data.signedUrl ? 'WebSocket' : 'NONE'}`);
+      setDebugInfo(`Connecting to agent...`);
 
-      if (!data.conversationToken && !data.signedUrl) {
-        setErrorDetail('No token or URL returned from server');
+      if (!data.agentId) {
+        setErrorDetail('No agentId returned');
         setStatus('error');
         return;
       }
 
-      // Build session options
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sessionOpts: any = {
+      const convId = await conversation.startSession({
+        agentId: data.agentId,
         overrides: data.overrides,
-      };
-
-      if (data.conversationToken) {
-        sessionOpts.conversationToken = data.conversationToken;
-        setDebugInfo('Starting WebRTC session...');
-      } else {
-        sessionOpts.signedUrl = data.signedUrl;
-        setDebugInfo('Starting WebSocket session...');
-      }
-
-      const convId = await conversation.startSession(sessionOpts);
+      });
       setDebugInfo(`Session started: ${convId}`);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
