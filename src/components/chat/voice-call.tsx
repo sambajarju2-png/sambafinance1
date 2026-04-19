@@ -27,7 +27,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const conversation = useConversation({
     onConnect: () => {
       setStatus('active');
-      setDebugInfo('Connected');
+      setDebugInfo('Connected!');
     },
     onDisconnect: async () => {
       if (transcriptRef.current.length > 0) {
@@ -43,7 +43,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     },
     onError: (message: string) => {
       console.error('ElevenLabs onError:', message);
-      setErrorDetail(`SDK error: ${message}`);
+      setErrorDetail(`SDK: ${message}`);
       setStatus('error');
     },
     onMessage: (msg: { source?: string; message?: string }) => {
@@ -66,53 +66,43 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      setDebugInfo('Mic granted. Fetching token...');
+      setDebugInfo('Mic OK. Fetching token...');
 
       const res = await fetch('/api/voice/token');
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorDetail(`Token error (${res.status}): ${JSON.stringify(data)}`);
+        setErrorDetail(`Token ${res.status}: ${JSON.stringify(data)}`);
         setStatus('error');
         return;
       }
 
-      setDebugInfo(`Connecting to agent...`);
-
-      if (!data.agentId) {
-        setErrorDetail('No agentId returned');
-        setStatus('error');
-        return;
-      }
-
-      // Try 1: Connect with overrides
-      // Try 2: If fails, retry without overrides (to isolate the issue)
-      try {
-        const convId = await conversation.startSession({
-          agentId: data.agentId,
+      // signedUrl forces WebSocket (stable on iOS Safari PWA)
+      // agentId + connectionType: 'websocket' as fallback
+      if (data.signedUrl) {
+        setDebugInfo('Connecting via WebSocket...');
+        await conversation.startSession({
+          signedUrl: data.signedUrl,
           overrides: data.overrides,
         });
-        setDebugInfo(`Session started: ${convId}`);
-      } catch (sessionErr) {
-        // Retry without overrides to test if overrides cause the failure
-        setDebugInfo('Retrying without overrides...');
-        try {
-          const convId2 = await conversation.startSession({
-            agentId: data.agentId,
-          });
-          setDebugInfo(`Session (no overrides): ${convId2}`);
-        } catch (retryErr) {
-          throw retryErr;
-        }
+      } else if (data.agentId) {
+        setDebugInfo('Connecting via agentId (WS)...');
+        await conversation.startSession({
+          agentId: data.agentId,
+          overrides: data.overrides,
+          connectionType: 'websocket',
+        });
+      } else {
+        setErrorDetail('No signedUrl or agentId returned');
+        setStatus('error');
       }
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      const errStack = err instanceof Error ? err.stack?.slice(0, 200) : '';
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('Voice startCall error:', err);
-      setErrorDetail(`${errMsg}\n${errStack}`);
+      setErrorDetail(msg);
       setStatus('error');
     }
-  }, [conversation, nl]);
+  }, [conversation]);
 
   const endCall = useCallback(async () => {
     await conversation.endSession();
@@ -133,7 +123,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
       <div className="flex flex-1 flex-col items-center justify-center">
-        {/* Circle */}
         <div className="relative mb-6">
           {isActive && (
             <div
@@ -165,10 +154,8 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           {status === 'error' && 'PayBuddy'}
         </p>
 
-        {/* Debug info - always visible for troubleshooting */}
         <p className="mb-2 text-[11px] text-white/30 text-center px-8">{debugInfo}</p>
 
-        {/* Error detail - visible and copyable */}
         {errorDetail && (
           <div className="mx-6 mb-4 max-w-sm rounded-lg bg-pw-red/10 border border-pw-red/20 px-4 py-3">
             <p className="text-[11px] text-pw-red/80 font-mono break-all select-all">{errorDetail}</p>
@@ -182,7 +169,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         )}
       </div>
 
-      {/* Transcript */}
       {transcript.length > 0 && (
         <div className="mx-4 mb-4 max-h-[30vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3">
           {transcript.map((t, i) => (
@@ -197,13 +183,9 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         </div>
       )}
 
-      {/* Buttons */}
       <div className="flex items-center justify-center gap-6 pb-12" style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom))' }}>
         {status === 'error' && (
-          <button
-            onClick={startCall}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95"
-          >
+          <button onClick={startCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95">
             <Phone className="h-6 w-6" strokeWidth={1.5} />
           </button>
         )}

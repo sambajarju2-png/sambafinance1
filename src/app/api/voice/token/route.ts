@@ -7,8 +7,8 @@ const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 
 /**
  * GET /api/voice/token
- * Generates a signed URL for ElevenLabs voice conversation.
- * Includes user context as conversation overrides.
+ * Returns signedUrl (WebSocket) + dynamic user context overrides.
+ * signedUrl forces WebSocket transport — stable on iOS Safari PWA.
  */
 export async function GET(req: NextRequest) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
-    // Load user context
     const [settingsRes, billsRes, plansRes] = await Promise.all([
       supabase.from('user_settings').select('first_name, gemeente, language, onboarding_profile').eq('user_id', userId).single(),
       supabase.from('bills').select('vendor, amount, due_date, status, escalation_stage, category').eq('user_id', userId).order('due_date', { ascending: true }).limit(30),
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
     const totalOutstanding = outstanding.reduce((sum, b) => sum + (b.amount || 0), 0);
     const escalated = outstanding.filter(b => ['herinnering', 'aanmaning', 'incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
-    // Build context for voice agent
     const context = `
 GEBRUIKER: ${firstName || 'onbekend'}
 TAAL: ${lang === 'nl' ? 'Nederlands' : 'English'}
@@ -75,8 +73,23 @@ ${context}`;
       ? `Hoi ${firstName}! Hoe gaat het? Waar kan ik je mee helpen?`
       : 'Hoi! Ik ben PayBuddy. Hoe gaat het vandaag?';
 
+    // Generate signed URL — forces WebSocket transport (stable on iOS Safari PWA)
+    const signedUrlRes = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+      { headers: { 'xi-api-key': apiKey } }
+    );
+
+    if (!signedUrlRes.ok) {
+      const err = await signedUrlRes.text();
+      console.error('ElevenLabs signed URL error:', err);
+      return NextResponse.json({ error: 'Failed to get voice token', details: err }, { status: 500, headers: NO_CACHE });
+    }
+
+    const { signed_url } = await signedUrlRes.json();
+
     return NextResponse.json({
-      agentId,
+      signedUrl: signed_url,
+      agentId, // fallback
       overrides: {
         agent: {
           prompt: { prompt: voicePrompt },
@@ -84,8 +97,6 @@ ${context}`;
           language: lang,
         },
       },
-      firstName,
-      lang,
     }, { headers: NO_CACHE });
   } catch (error) {
     console.error('Voice token error:', error);
