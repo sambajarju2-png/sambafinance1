@@ -134,7 +134,9 @@
     "notesPlaceholder": "Voeg een notitie toe...",
     "notesSaved": "Opgeslagen",
     "saveNotes": "Notitie opslaan",
-    "saveChanges": "Wijzigingen opslaan"
+    "saveChanges": "Wijzigingen opslaan",
+    "source_chat_buddy": "PayBuddy",
+    "source_outlook_scan": "Outlook scan"
   },
   "addBill": {
     "title": "Rekening toevoegen",

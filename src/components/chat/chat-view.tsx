@@ -99,7 +99,7 @@ export default function ChatView() {
           setMessages(data.messages?.map((m: { id: string; role: string; content: string; created_at: string }) => ({
             id: m.id,
             role: m.role as 'user' | 'assistant',
-            content: m.content,
+            content: m.content.replace(/\|\|\|BREAK\|\|\|/g, '\n\n'),
             createdAt: new Date(m.created_at),
           })) || []);
           setChips(data.chips || []);
@@ -194,8 +194,8 @@ export default function ChatView() {
             const parsed = JSON.parse(line.slice(6));
             if (parsed.type === 'text') {
               fullContent += parsed.text;
-              // During streaming, show clean text (strip markers for display)
-              const displayText = fullContent.split('|||BREAK|||').join('\n\n').split('|||PENDING_BILL|||')[0];
+              // Strip any stray markers during streaming display
+              const displayText = fullContent.replace(/\|\|\|BREAK\|\|\|/g, '\n\n').split('|||PENDING_BILL|||')[0];
               setMessages(prev => prev.map(m =>
                 m.id === assistantId ? { ...m, content: displayText } : m
               ));
@@ -204,25 +204,11 @@ export default function ChatView() {
         }
       }
 
-      // After streaming: split into multiple bubbles if |||BREAK||| present
-      if (fullContent.includes('|||BREAK|||')) {
-        const segments = fullContent.split('|||BREAK|||').map(s => s.trim()).filter(Boolean);
-        // Replace single message with first segment
-        setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: segments[0] } : m
-        ));
-        // Add remaining segments with staggered delay
-        for (let i = 1; i < segments.length; i++) {
-          await new Promise(r => setTimeout(r, 400 + i * 200));
-          const segId = assistantId + '-' + i;
-          setMessages(prev => [...prev, { id: segId, role: 'assistant' as const, content: segments[i], createdAt: new Date() }]);
-        }
-      } else {
-        // No splits - just update with final content
-        setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: fullContent } : m
-        ));
-      }
+      // Final content — strip any stray markers
+      const cleanFinal = fullContent.replace(/\|\|\|BREAK\|\|\|/g, '\n\n');
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId ? { ...m, content: cleanFinal } : m
+      ));
     } catch {
       setMessages(prev => prev.map(m =>
         m.id === assistantId ? { ...m, content: isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.' } : m

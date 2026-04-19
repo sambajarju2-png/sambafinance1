@@ -171,7 +171,8 @@
     "installments": "installments",
     "perMonth": "per month",
     "planActive": "Plan active",
-    "planCompleted": "Plan completed"
+    "planCompleted": "Plan completed",
+    "source_chat_buddy": "PayBuddy"
   },
   "addBill": {
     "title": "Add bill",
