@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink, Copy } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink, Copy, Clock } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -289,6 +289,14 @@ export default function ChatView() {
       {!isEmpty && (
         <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-2">
           <span className="text-[13px] font-semibold text-pw-text dark:text-white">PayBuddy</span>
+        <div className="flex items-center gap-2">
+          <a
+            href="/buddy/history"
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
+          >
+            <Clock className="h-3 w-3" strokeWidth={1.5} />
+            {nl ? 'Geschiedenis' : 'History'}
+          </a>
           <button
             onClick={clearChat}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
@@ -296,6 +304,7 @@ export default function ChatView() {
             <Trash2 className="h-3 w-3" strokeWidth={1.5} />
             {nl ? 'Wissen' : 'Clear'}
           </button>
+        </div>
         </div>
       )}
 

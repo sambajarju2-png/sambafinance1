@@ -10,13 +10,29 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createServerSupabaseClient();
 
-  // Load last 30 messages
-  const { data: messages } = await supabase
+  // Get the cleared timestamp
+  const { data: userSettings } = await supabase
+    .from('user_settings')
+    .select('chat_cleared_at, language')
+    .eq('user_id', userId)
+    .single();
+
+  const clearedAt = userSettings?.chat_cleared_at || null;
+  const showAll = new URL(req.url).searchParams.get('all') === 'true';
+
+  // Load messages — either current conversation or full history
+  let query = supabase
     .from('chat_messages')
     .select('id, role, content, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
-    .limit(30);
+    .limit(showAll ? 200 : 30);
+
+  if (clearedAt && !showAll) {
+    query = query.gt('created_at', clearedAt);
+  }
+
+  const { data: messages } = await query;
 
   // Load bills for chip generation
   const { data: bills } = await supabase
@@ -31,13 +47,7 @@ export async function GET(req: NextRequest) {
     .eq('user_id', userId)
     .eq('status', 'active');
 
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('language')
-    .eq('user_id', userId)
-    .single();
-
-  const lang = settings?.language || 'nl';
+  const lang = userSettings?.language || 'nl';
   const allBills = bills || [];
   const outstanding = allBills.filter((b: { status: string }) => b.status !== 'settled');
   const now = new Date();
@@ -75,7 +85,8 @@ export async function DELETE(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   const supabase = await createServerSupabaseClient();
-  await supabase.from('chat_messages').delete().eq('user_id', userId);
+  // Don't delete messages — just set cleared timestamp so history is preserved
+  await supabase.from('user_settings').update({ chat_cleared_at: new Date().toISOString() }).eq('user_id', userId);
 
   return NextResponse.json({ success: true }, { headers: NO_CACHE });
 }
