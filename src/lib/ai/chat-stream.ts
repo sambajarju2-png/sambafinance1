@@ -69,9 +69,13 @@ export async function streamChat(
               const event = JSON.parse(data);
 
               if (event.type === 'content_block_delta' && event.delta?.text) {
-                fullText += event.delta.text;
+                // Strip em-dashes and en-dashes from output
+                const cleanedText = event.delta.text
+                  .replace(/—/g, ' - ')
+                  .replace(/–/g, '-');
+                fullText += cleanedText;
                 controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`)
+                  encoder.encode(`data: ${JSON.stringify({ type: 'text', text: cleanedText })}\n\n`)
                 );
               }
 

@@ -69,3 +69,13 @@ export async function GET(req: NextRequest) {
     chips: chips.slice(0, 4),
   }, { headers: NO_CACHE });
 }
+
+export async function DELETE(req: NextRequest) {
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const supabase = await createServerSupabaseClient();
+  await supabase.from('chat_messages').delete().eq('user_id', userId);
+
+  return NextResponse.json({ success: true }, { headers: NO_CACHE });
+}

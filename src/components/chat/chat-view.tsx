@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Camera, Check, Pencil } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Camera, Check, Pencil, Trash2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -171,6 +171,7 @@ export default function ChatView() {
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -185,12 +186,35 @@ export default function ChatView() {
           try {
             const parsed = JSON.parse(line.slice(6));
             if (parsed.type === 'text') {
+              fullContent += parsed.text;
+              // During streaming, show clean text (strip markers for display)
+              const displayText = fullContent.split('|||BREAK|||').join('\n\n').split('|||PENDING_BILL|||')[0];
               setMessages(prev => prev.map(m =>
-                m.id === assistantId ? { ...m, content: m.content + parsed.text } : m
+                m.id === assistantId ? { ...m, content: displayText } : m
               ));
             }
           } catch {}
         }
+      }
+
+      // After streaming: split into multiple bubbles if |||BREAK||| present
+      if (fullContent.includes('|||BREAK|||')) {
+        const segments = fullContent.split('|||BREAK|||').map(s => s.trim()).filter(Boolean);
+        // Replace single message with first segment
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId ? { ...m, content: segments[0] } : m
+        ));
+        // Add remaining segments with staggered delay
+        for (let i = 1; i < segments.length; i++) {
+          await new Promise(r => setTimeout(r, 400 + i * 200));
+          const segId = assistantId + '-' + i;
+          setMessages(prev => [...prev, { id: segId, role: 'assistant' as const, content: segments[i], createdAt: new Date() }]);
+        }
+      } else {
+        // No splits - just update with final content
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId ? { ...m, content: fullContent } : m
+        ));
       }
     } catch {
       setMessages(prev => prev.map(m =>
@@ -256,8 +280,30 @@ export default function ChatView() {
   const nl = lang === 'nl';
   const isEmpty = messages.length === 0;
 
+  async function clearChat() {
+    if (!confirm(nl ? 'Chat wissen? Dit kan niet ongedaan worden.' : 'Clear chat? This cannot be undone.')) return;
+    try {
+      await fetch('/api/chat/history', { method: 'DELETE' });
+    } catch {}
+    setMessages([]);
+  }
+
   return (
     <div className="flex h-full flex-col">
+      {/* Chat header */}
+      {!isEmpty && (
+        <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-2">
+          <span className="text-[13px] font-semibold text-pw-text dark:text-white">PayBuddy</span>
+          <button
+            onClick={clearChat}
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
+          >
+            <Trash2 className="h-3 w-3" strokeWidth={1.5} />
+            {nl ? 'Wissen' : 'Clear'}
+          </button>
+        </div>
+      )}
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
         {isEmpty ? (
@@ -304,7 +350,7 @@ export default function ChatView() {
               const showButtons = bill && isLast && !isStreaming;
 
               return (
-                <div key={msg.id}>
+                <div key={msg.id} className="chat-bubble-enter">
                   <div className={`mb-1 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
                       className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${
