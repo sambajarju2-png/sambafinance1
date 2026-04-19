@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink, Copy } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -74,6 +74,7 @@ export default function ChatView() {
   const [confirmingBill, setConfirmingBill] = useState(false);
   const [confirmedBills, setConfirmedBills] = useState<Set<string>>(new Set());
   const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -369,6 +370,23 @@ export default function ChatView() {
                         </span>
                       )}
                     </div>
+                    {/* Copy button for assistant messages */}
+                    {msg.role === 'assistant' && cleanText && !isStreaming && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(cleanText.replace(/\*\*/g, ''));
+                          setCopiedId(msg.id);
+                          setTimeout(() => setCopiedId(null), 1500);
+                        }}
+                        className="ml-1 mb-0.5 flex items-center gap-1 text-[10px] text-pw-muted/50 transition-colors hover:text-pw-muted"
+                      >
+                        {copiedId === msg.id ? (
+                          <><Check className="h-2.5 w-2.5" strokeWidth={2} /> {nl ? 'Gekopieerd' : 'Copied'}</>
+                        ) : (
+                          <Copy className="h-2.5 w-2.5" strokeWidth={1.5} />
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* Confirm / Edit buttons */}

@@ -184,9 +184,31 @@ BUDDY SYSTEEM:
 
 KENNIS:
 - Je kent Nederlandse escalatiefases: factuur → herinnering → aanmaning → incasso → deurwaarder
-- Je kent WIK-kosten (15% van eerste €2.500, min €40, etc.)
 - Je kent ALLEEN de echte data van deze gebruiker (hieronder). Verzin NOOIT rekeningen.
 - Je kunt uitleggen: betalingsregelingen, bezwaar, uitstel, WIK-berekeningen.
+
+WIK-CALCULATOR (Wet Incassokosten):
+Als een rekening in incasso of deurwaarder staat, BEREKEN de extra kosten:
+- 15% over de eerste €2.500 (minimum €40)
+- 10% over de volgende €2.500 (€2.500-€5.000)
+- 5% over de volgende €5.000 (€5.000-€10.000)
+- 1% over de volgende €190.000
+- 0.5% over alles boven €200.000 (max €6.775)
+Voorbeeld: €200 rekening → WIK = €40 (minimum). Totaal wordt €240.
+Voorbeeld: €3.000 rekening → WIK = €375 (€2.500 x 15%) + (€500 x 10%) = €425. Totaal wordt €3.425.
+Noem ALTIJD het totaal (origineel + WIK) en zeg dat dit wettelijk vastgelegd is.
+
+BRIEVEN SCHRIJVEN:
+Als de gebruiker vraagt om een brief (bezwaar, betalingsregeling, uitstel, bevestiging):
+- Vraag over welke rekening het gaat (als niet duidelijk)
+- Zeg: "Je kunt een brief laten schrijven via de Acties tab van die rekening. Ga naar Betalingen, tik op [vendor naam], en dan Acties."
+- Bied aan om uit te leggen welk type brief het beste past
+
+WELKOMSTBERICHT (eerste bericht, als er geen chatgeschiedenis is):
+- Begin met een korte begroeting met naam
+- Geef een samenvatting: "Je hebt X rekeningen open (€Y totaal)"
+- Als er urgente rekeningen zijn: noem de belangrijkste 1-2
+- Eindig met een vraag: "Waar kan ik je mee helpen?"
 
 REGELS:
 1. NOOIT juridisch advies. Zeg "dit is geen juridisch advies" + Juridisch Loket (0900-8020).
@@ -291,31 +313,39 @@ function generateChips(
   const nl = lang === 'nl';
   const chips: string[] = [];
 
-  chips.push(nl ? 'Foto scannen' : 'Scan photo');
+  // Priority 1: Most relevant action based on situation
+  const severe = outstanding.filter(b => ['incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
-  if (escalated.length > 0) {
+  if (severe.length > 0) {
+    chips.push(nl ? 'Bereken extra kosten' : 'Calculate extra costs');
+    chips.push(nl ? 'Schrijf een brief' : 'Draft a letter');
+  } else if (escalated.length > 0) {
     chips.push(nl ? 'Wat moet ik eerst doen?' : 'What should I do first?');
   }
 
-  if (urgent.length > 0) {
+  if (urgent.length > 0 && chips.length < 2) {
     chips.push(nl ? 'Plan mijn week' : 'Plan my week');
   }
 
   if (allBills.length === 0) {
     chips.push(nl ? 'Rekening toevoegen' : 'Add a bill');
     chips.push(nl ? 'Hoe werkt PayWatch?' : 'How does PayWatch work?');
+  } else {
+    chips.push(nl ? 'Rekening toevoegen' : 'Add a bill');
   }
 
-  if (plans.length > 0) {
+  if (plans.length > 0 && chips.length < 4) {
     chips.push(nl ? 'Hoe gaat mijn regeling?' : "How's my payment plan?");
   }
 
   const settled = allBills.filter((b: unknown) => (b as { status: string }).status === 'settled');
-  if (settled.length > 0) {
+  if (settled.length > 0 && chips.length < 4) {
     chips.push(nl ? 'Hoeveel bespaar ik?' : 'How much am I saving?');
   }
 
-  chips.push(nl ? 'Hulp bij schulden' : 'Help with debt');
+  if (chips.length < 4) {
+    chips.push(nl ? 'Hulp bij schulden' : 'Help with debt');
+  }
 
   return chips.slice(0, 4);
 }
