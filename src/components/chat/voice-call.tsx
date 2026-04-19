@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useConversation } from '@elevenlabs/react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { ConversationProvider, useConversation } from '@elevenlabs/react';
 import { Phone, PhoneOff, Loader2 } from 'lucide-react';
 
 interface VoiceCallProps {
@@ -9,122 +9,188 @@ interface VoiceCallProps {
   lang: string;
 }
 
-export default function VoiceCall({ onClose, lang }: VoiceCallProps) {
-  const [isConnecting, setIsConnecting] = useState(true);
+interface TranscriptEntry {
+  role: 'user' | 'assistant';
+  text: string;
+  ts: number;
+}
+
+function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
+  const [status, setStatus] = useState<'connecting' | 'active' | 'error'>('connecting');
   const [error, setError] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
-    onConnect: () => setIsConnecting(false),
-    onDisconnect: () => onClose(),
+    onConnect: () => setStatus('active'),
+    onDisconnect: async () => {
+      // Save transcript on disconnect
+      if (transcriptRef.current.length > 0) {
+        try {
+          await fetch('/api/voice/save-transcript', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: transcriptRef.current }),
+          });
+        } catch {}
+      }
+      onClose();
+    },
     onError: (message: string) => {
       console.error('Voice error:', message);
-      setError(nl ? 'Verbinding mislukt. Probeer opnieuw.' : 'Connection failed. Try again.');
-      setIsConnecting(false);
+      setError(nl ? 'Verbinding mislukt.' : 'Connection failed.');
+      setStatus('error');
+    },
+    onMessage: (msg: { source?: string; message?: string }) => {
+      if (msg.message) {
+        const entry: TranscriptEntry = {
+          role: msg.source === 'user' ? 'user' : 'assistant',
+          text: msg.message,
+          ts: Date.now(),
+        };
+        transcriptRef.current.push(entry);
+        setTranscript(prev => [...prev, entry]);
+      }
     },
   });
 
   const startCall = useCallback(async () => {
-    setIsConnecting(true);
+    setStatus('connecting');
     setError(null);
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
       const res = await fetch('/api/voice/token');
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Token failed');
-      }
+      if (!res.ok) throw new Error('Token failed');
 
       const { signedUrl, overrides } = await res.json();
 
       await conversation.startSession({
         signedUrl,
         overrides,
+        serverLocation: 'eu-residency',
       });
     } catch (err) {
-      console.error('Start call error:', err);
+      const msg = (err as Error).message || '';
       setError(
-        (err as Error).message?.includes('Permission')
-          ? (nl ? 'Microfoon nodig. Geef toegang in je browser.' : 'Microphone needed. Grant access in your browser.')
-          : (nl ? 'Kan gesprek niet starten. Probeer opnieuw.' : "Can't start call. Try again.")
+        msg.includes('Permission') || msg.includes('NotAllowed')
+          ? (nl ? 'Microfoon nodig. Geef toegang.' : 'Microphone needed.')
+          : (nl ? 'Kan niet verbinden.' : "Can't connect.")
       );
-      setIsConnecting(false);
+      setStatus('error');
     }
   }, [conversation, nl]);
 
   const endCall = useCallback(async () => {
     await conversation.endSession();
-    onClose();
-  }, [conversation, onClose]);
+  }, [conversation]);
 
-  // Auto-start on mount
+  // Auto-start
   useEffect(() => {
     startCall();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-scroll transcript
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
+
   const isActive = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
-      <div className="relative mb-10">
-        {isActive && (
-          <>
-            <div className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/20' : 'bg-pw-blue/20'} animate-ping`} style={{ width: 160, height: 160, top: -40, left: -40 }} />
-            <div className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/10' : 'bg-pw-blue/10'}`} style={{ width: 140, height: 140, top: -30, left: -30, animation: 'pulse 2s ease-in-out infinite' }} />
-          </>
-        )}
-
-        <div className={`flex h-20 w-20 items-center justify-center rounded-full transition-all duration-500 ${
-          isConnecting ? 'bg-pw-blue/30' :
-          isSpeaking ? 'bg-pw-green/40 scale-110' :
-          isActive ? 'bg-pw-blue/40' :
-          'bg-white/10'
-        }`}>
-          {isConnecting ? (
-            <Loader2 className="h-8 w-8 animate-spin text-white/70" strokeWidth={1.5} />
-          ) : (
-            <Phone className="h-8 w-8 text-white" strokeWidth={1.5} />
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
+      {/* Top area with circle */}
+      <div className="flex flex-1 flex-col items-center justify-center">
+        {/* Pulsing circle */}
+        <div className="relative mb-6">
+          {isActive && (
+            <div
+              className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/15' : 'bg-pw-blue/15'}`}
+              style={{
+                width: 140, height: 140, top: -30, left: -30,
+                animation: isSpeaking ? 'pulse 1.5s ease-in-out infinite' : 'pulse 3s ease-in-out infinite',
+                transition: 'background-color 0s',
+              }}
+            />
           )}
+
+          <div className={`flex h-20 w-20 items-center justify-center rounded-full ${
+            status === 'connecting' ? 'bg-pw-blue/30' :
+            isSpeaking ? 'bg-pw-green/40' :
+            isActive ? 'bg-pw-blue/40' :
+            'bg-white/10'
+          }`} style={{ transition: 'background-color 0s' }}>
+            {status === 'connecting' ? (
+              <Loader2 className="h-8 w-8 animate-spin text-white/70" strokeWidth={1.5} />
+            ) : (
+              <Phone className="h-8 w-8 text-white" strokeWidth={1.5} />
+            )}
+          </div>
         </div>
+
+        {/* Status */}
+        <p className="mb-1 text-lg font-semibold text-white">
+          {status === 'connecting' && (nl ? 'Verbinden...' : 'Connecting...')}
+          {isActive && isSpeaking && 'PayBuddy'}
+          {isActive && !isSpeaking && (nl ? 'Luistert...' : 'Listening...')}
+          {status === 'error' && 'PayBuddy'}
+        </p>
+
+        <p className="mb-6 text-sm text-white/40">
+          {status === 'connecting' && (nl ? 'Even geduld' : 'Please wait')}
+          {isActive && isSpeaking && (nl ? 'Aan het praten' : 'Speaking')}
+          {isActive && !isSpeaking && (nl ? 'Stel je vraag' : 'Ask your question')}
+          {error && error}
+        </p>
       </div>
 
-      <p className="mb-2 text-lg font-semibold text-white">
-        {isConnecting && (nl ? 'Verbinden...' : 'Connecting...')}
-        {isActive && isSpeaking && 'PayBuddy'}
-        {isActive && !isSpeaking && (nl ? 'Luistert...' : 'Listening...')}
-        {!isConnecting && !isActive && 'PayBuddy'}
-      </p>
+      {/* Live transcript */}
+      {transcript.length > 0 && (
+        <div className="mx-4 mb-4 max-h-[30vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3">
+          {transcript.map((t, i) => (
+            <div key={i} className={`mb-1.5 text-[12px] leading-relaxed ${
+              t.role === 'user' ? 'text-pw-blue/70' : 'text-white/60'
+            }`}>
+              <span className="font-medium">{t.role === 'user' ? (nl ? 'Jij' : 'You') : 'PayBuddy'}:</span>{' '}
+              {t.text}
+            </div>
+          ))}
+          <div ref={transcriptEndRef} />
+        </div>
+      )}
 
-      <p className="mb-12 text-sm text-white/50">
-        {isConnecting && (nl ? 'Even geduld' : 'Please wait')}
-        {isActive && isSpeaking && (nl ? 'Aan het praten' : 'Speaking')}
-        {isActive && !isSpeaking && (nl ? 'Stel je vraag' : 'Ask your question')}
-        {error && error}
-      </p>
-
-      <div className="flex items-center gap-6">
-        {error && (
+      {/* Action buttons */}
+      <div className="flex items-center justify-center gap-6 pb-12" style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom))' }}>
+        {status === 'error' && (
           <button
             onClick={startCall}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white transition-all active:scale-95"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95"
           >
             <Phone className="h-6 w-6" strokeWidth={1.5} />
           </button>
         )}
 
         <button
-          onClick={error ? onClose : endCall}
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white transition-all active:scale-95"
+          onClick={status === 'error' ? onClose : endCall}
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white active:scale-95"
         >
           <PhoneOff className="h-7 w-7" strokeWidth={1.5} />
         </button>
       </div>
-
-      <p className="absolute bottom-10 text-[11px] text-white/20">PayWatch Voice</p>
     </div>
+  );
+}
+
+// Wrap with ConversationProvider (required by @elevenlabs/react v1.1.1)
+export default function VoiceCall(props: VoiceCallProps) {
+  return (
+    <ConversationProvider>
+      <VoiceCallInner {...props} />
+    </ConversationProvider>
   );
 }

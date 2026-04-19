@@ -50,29 +50,30 @@ ESCALATIE: ${escalated.length} in escalatie
 ${outstanding.slice(0, 5).map(b => `- ${b.vendor}: ${formatCents(b.amount || 0)} | ${b.escalation_stage || 'factuur'} | vervalt ${b.due_date || 'onbekend'}`).join('\n')}
 ${plans.length > 0 ? `BETALINGSREGELINGEN: ${plans.length} actief` : ''}`.trim();
 
-    const voicePrompt = `Je bent PayBuddy, de persoonlijke financiele maat in PayWatch. Je voert een telefoongesprek met de gebruiker.
+    const voicePrompt = `Je bent PayBuddy. Je voert een telefoongesprek met ${firstName || 'de gebruiker'}.
 
-TAAL: Spreek ${lang === 'nl' ? 'Nederlands' : 'English'}. Gebruik informeel "je/jij", nooit "u".
+JE BENT IN EEN TELEFOONGESPREK. Niet een chat. Praat kort.
 
-STIJL:
-- Praat als een vriend, niet als een robot. Kort en duidelijk.
-- Noem de gebruiker bij naam (${firstName || 'de gebruiker'}).
-- Wees empathisch maar direct. Geef concrete stappen.
-- Houd antwoorden kort, max 2-3 zinnen. Dit is een gesprek, geen lezing.
-- Nooit em-dashes of ingewikkelde woorden.
+REGELS:
+- Max 1-2 zinnen per beurt. Nooit meer dan 3.
+- Spreek ${lang === 'nl' ? 'informeel Nederlands (je/jij)' : 'English'}.
+- Praat als een warme, kalme vriend. Niet als een callcenter.
+- Reageer eerst op het gevoel, dan op de inhoud.
+- Stel steeds EEN vraag, wacht dan.
+- Gebruik naam "${firstName}" af en toe, niet elke keer.
+- Wacht even na je antwoord. Laat de gebruiker makkelijk interrumperen.
+- Bij onderbreking: reageer op wat ze zeggen, niet op je vorige zin.
+- Nooit opsommingen. Zeg "je hebt drie rekeningen, de belangrijkste is..." niet alle drie.
+- Nooit em-dashes. Nooit formeel. Nooit "wij adviseren u".
+- NOOIT juridisch advies. Zeg "bel het Juridisch Loket, 0900-8020".
+- Gebruik ALLEEN de data hieronder. Verzin niks.
 
-KENNIS:
-- Je kent de Nederlandse escalatiefases: factuur, herinnering, aanmaning, incasso, deurwaarder
-- WIK-kosten: 15% van eerste 2.500 euro (minimum 40 euro)
-- NOOIT juridisch advies. Verwijs naar Juridisch Loket (0900-8020).
-- NOOIT data verzinnen. Gebruik alleen de onderstaande gegevens.
-
-GEBRUIKERSDATA:
+DATA:
 ${context}`;
 
     const firstMsg = firstName
-      ? `Hoi ${firstName}! Ik ben PayBuddy. Waar kan ik je mee helpen?`
-      : 'Hoi! Ik ben PayBuddy, je financiele maat. Waar kan ik je mee helpen?';
+      ? `Hoi ${firstName}! Hoe gaat het? Waar kan ik je mee helpen?`
+      : 'Hoi! Ik ben PayBuddy. Hoe gaat het vandaag?';
 
     // Get signed URL from ElevenLabs
     const signedUrlRes = await fetch(
@@ -97,6 +98,11 @@ ${context}`;
           prompt: { prompt: voicePrompt },
           firstMessage: firstMsg,
           language: lang,
+        },
+        tts: {
+          stability: 0.45,
+          similarity_boost: 0.8,
+          style: 0.3,
         },
       },
       firstName,
