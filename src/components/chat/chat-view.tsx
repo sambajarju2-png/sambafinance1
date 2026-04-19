@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink, Copy, Clock } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, ExternalLink, Copy, Clock, Phone, Plus } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
 
 interface Message {
   id: string;
@@ -63,7 +66,7 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
-export default function ChatView() {
+export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -75,17 +78,18 @@ export default function ChatView() {
   const [confirmedBills, setConfirmedBills] = useState<Set<string>>(new Set());
   const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showVoiceCall, setShowVoiceCall] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef</* SpeechRecognition */ unknown>(null);
 
-  // Load existing messages + user settings on mount
+  // Load messages on mount
   useEffect(() => {
     async function load() {
       try {
-        // Load settings for name + lang
+        // Load settings
         const settingsRes = await fetch('/api/settings');
         if (settingsRes.ok) {
           const s = await settingsRes.json();
@@ -93,22 +97,58 @@ export default function ChatView() {
           setLang(s.language || 'nl');
         }
 
-        // Load recent messages
-        const histRes = await fetch('/api/chat/history');
-        if (histRes.ok) {
-          const data = await histRes.json();
-          setMessages(data.messages?.map((m: { id: string; role: string; content: string; created_at: string }) => ({
-            id: m.id,
-            role: m.role as 'user' | 'assistant',
-            content: m.content.replace(/\|\|\|BREAK\|\|\|/g, '\n\n'),
-            createdAt: new Date(m.created_at),
-          })) || []);
-          setChips(data.chips || []);
+        if (continueFrom) {
+          // Loading a specific past conversation
+          const histRes = await fetch(`/api/chat/history?all=true`);
+          if (histRes.ok) {
+            const data = await histRes.json();
+            const allMsgs = (data.messages || []) as { id: string; role: string; content: string; created_at: string }[];
+            // Find messages in the conversation window (within 60min of continueFrom)
+            const fromTime = new Date(continueFrom).getTime();
+            const windowMsgs = allMsgs.filter(m => {
+              const t = new Date(m.created_at).getTime();
+              return t >= fromTime;
+            });
+            setMessages(windowMsgs.map(m => ({
+              id: m.id,
+              role: m.role as 'user' | 'assistant',
+              content: m.content.replace(/\|\|\|BREAK\|\|\|/g, '\n\n'),
+              createdAt: new Date(m.created_at),
+            })));
+            setChips(data.chips || []);
+          }
+        } else {
+          // Fresh start check — auto-clear on new app session
+          const isNewSession = !sessionStorage.getItem('pw-chat-session');
+          if (isNewSession) {
+            sessionStorage.setItem('pw-chat-session', '1');
+            // Clear chat for fresh start
+            await fetch('/api/chat/history', { method: 'DELETE' });
+            // Just load chips
+            const histRes = await fetch('/api/chat/history');
+            if (histRes.ok) {
+              const data = await histRes.json();
+              setChips(data.chips || []);
+            }
+          } else {
+            // Continuing current session
+            const histRes = await fetch('/api/chat/history');
+            if (histRes.ok) {
+              const data = await histRes.json();
+              setMessages(data.messages?.map((m: { id: string; role: string; content: string; created_at: string }) => ({
+                id: m.id,
+                role: m.role as 'user' | 'assistant',
+                content: m.content.replace(/\|\|\|BREAK\|\|\|/g, '\n\n'),
+                createdAt: new Date(m.created_at),
+              })) || []);
+              setChips(data.chips || []);
+            }
+          }
         }
       } catch {}
     }
     load();
-  }, []);
+  }, [continueFrom]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -275,8 +315,7 @@ export default function ChatView() {
   const nl = lang === 'nl';
   const isEmpty = messages.length === 0;
 
-  async function clearChat() {
-    if (!confirm(nl ? 'Chat wissen? Dit kan niet ongedaan worden.' : 'Clear chat? This cannot be undone.')) return;
+  async function newChat() {
     try {
       await fetch('/api/chat/history', { method: 'DELETE' });
     } catch {}
@@ -288,7 +327,16 @@ export default function ChatView() {
       {/* Chat header */}
       {!isEmpty && (
         <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-2">
-          <span className="text-[13px] font-semibold text-pw-text dark:text-white">PayBuddy</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-pw-text dark:text-white">PayBuddy</span>
+            <button
+              onClick={() => setShowVoiceCall(true)}
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-pw-green/10 text-pw-green transition-colors hover:bg-pw-green/20"
+              aria-label={nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
+            >
+              <Phone className="h-3 w-3" strokeWidth={2} />
+            </button>
+          </div>
         <div className="flex items-center gap-2">
           <a
             href="/buddy/history"
@@ -298,11 +346,11 @@ export default function ChatView() {
             {nl ? 'Geschiedenis' : 'History'}
           </a>
           <button
-            onClick={clearChat}
+            onClick={newChat}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
           >
-            <Trash2 className="h-3 w-3" strokeWidth={1.5} />
-            {nl ? 'Wissen' : 'Clear'}
+            <Plus className="h-3 w-3" strokeWidth={1.5} />
+            {nl ? 'Nieuw' : 'New'}
           </button>
         </div>
         </div>
@@ -342,6 +390,15 @@ export default function ChatView() {
                 ))}
               </div>
             )}
+
+            {/* Voice call button */}
+            <button
+              onClick={() => setShowVoiceCall(true)}
+              className="mt-4 flex items-center gap-2 rounded-full border border-pw-green/30 bg-pw-green/5 px-5 py-2.5 text-[13px] font-medium text-pw-green transition-colors hover:bg-pw-green/10 active:scale-[0.97]"
+            >
+              <Phone className="h-4 w-4" strokeWidth={1.5} />
+              {nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
+            </button>
           </div>
         ) : (
           // Message list
@@ -594,6 +651,11 @@ export default function ChatView() {
           </div>
         )}
       </div>
+
+      {/* Voice call overlay */}
+      {showVoiceCall && (
+        <VoiceCall onClose={() => setShowVoiceCall(false)} lang={lang} />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Message {
@@ -184,6 +184,14 @@ export default function ChatHistoryPage() {
                         </div>
                       </div>
                     ))}
+                    {/* Continue button */}
+                    <a
+                      href={`/buddy?from=${encodeURIComponent(convo.messages[0].created_at)}`}
+                      className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-pw-blue/30 bg-pw-blue/5 px-4 py-2 text-[12px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/10 active:scale-[0.97]"
+                    >
+                      <ArrowRight className="h-3 w-3" strokeWidth={2} />
+                      {nl ? 'Doorgaan met dit gesprek' : 'Continue this conversation'}
+                    </a>
                   </div>
                 )}
               </div>
