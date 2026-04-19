@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Camera, Check, Pencil, Trash2 } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, Trash2, RotateCcw, ExternalLink } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -72,6 +72,8 @@ export default function ChatView() {
   const [firstName, setFirstName] = useState('');
   const [lang, setLang] = useState('nl');
   const [confirmingBill, setConfirmingBill] = useState(false);
+  const [confirmedBills, setConfirmedBills] = useState<Set<string>>(new Set());
+  const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -122,6 +124,7 @@ export default function ChatView() {
 
   const sendMessage = useCallback(async (text: string, file?: File) => {
     if ((!text.trim() && !file) || isStreaming) return;
+    const isNl = lang === 'nl';
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -160,9 +163,13 @@ export default function ChatView() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Fout' }));
+        const errorContent = err.error === 'Rate limited'
+          ? (isNl ? 'Even rustig aan! Probeer het over een minuutje opnieuw.' : 'Slow down! Try again in a minute.')
+          : (isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.');
         setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: `Fout: ${err.error || 'Er ging iets mis'}` } : m
+          m.id === assistantId ? { ...m, content: errorContent } : m
         ));
+        setFailedMessages(prev => new Set(prev).add(assistantId));
         setIsStreaming(false);
         return;
       }
@@ -218,12 +225,13 @@ export default function ChatView() {
       }
     } catch {
       setMessages(prev => prev.map(m =>
-        m.id === assistantId ? { ...m, content: 'Er ging iets mis. Probeer het opnieuw.' } : m
+        m.id === assistantId ? { ...m, content: isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.' } : m
       ));
+      setFailedMessages(prev => new Set(prev).add(assistantId));
     }
 
     setIsStreaming(false);
-  }, [isStreaming]);
+  }, [isStreaming, lang]);
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -378,7 +386,7 @@ export default function ChatView() {
                   </div>
 
                   {/* Confirm / Edit buttons */}
-                  {showButtons && (
+                  {showButtons && !confirmedBills.has(msg.id) && (
                     <div className="mb-3 flex gap-2 pl-1">
                       <button
                         onClick={async () => {
@@ -391,12 +399,32 @@ export default function ChatView() {
                             });
                             const data = await res.json();
                             if (data.success) {
-                              sendMessage(nl ? 'Bevestigd, voeg toe' : 'Confirmed, add it');
+                              setConfirmedBills(prev => new Set(prev).add(msg.id));
+                              // Add success message as assistant bubble (no AI call)
+                              const successMsg = nl
+                                ? `**${bill!.vendor}** is toegevoegd aan je rekeningen (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`
+                                : `**${bill!.vendor}** has been added to your bills (€${((bill!.amount_cents || 0) / 100).toFixed(2)}).`;
+                              setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'assistant' as const,
+                                content: successMsg,
+                                createdAt: new Date(),
+                              }]);
                             } else {
-                              sendMessage(nl ? 'Er ging iets mis bij het toevoegen' : 'Something went wrong adding the bill');
+                              setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'assistant' as const,
+                                content: nl ? 'Er ging iets mis bij het toevoegen. Probeer het opnieuw.' : 'Something went wrong. Try again.',
+                                createdAt: new Date(),
+                              }]);
                             }
                           } catch {
-                            sendMessage(nl ? 'Er ging iets mis' : 'Something went wrong');
+                            setMessages(prev => [...prev, {
+                              id: Date.now().toString(),
+                              role: 'assistant' as const,
+                              content: nl ? 'Er ging iets mis bij het toevoegen.' : 'Something went wrong.',
+                              createdAt: new Date(),
+                            }]);
                           }
                           setConfirmingBill(false);
                         }}
@@ -417,6 +445,47 @@ export default function ChatView() {
                       >
                         <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
                         {nl ? 'Bewerken' : 'Edit'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Confirmed badge */}
+                  {showButtons && confirmedBills.has(msg.id) && (
+                    <div className="mb-3 flex items-center gap-2 pl-1">
+                      <span className="flex items-center gap-1 rounded-lg bg-pw-green/10 px-3 py-1.5 text-[12px] font-medium text-pw-green">
+                        <Check className="h-3.5 w-3.5" strokeWidth={2} />
+                        {nl ? 'Toegevoegd' : 'Added'}
+                      </span>
+                      <a
+                        href="/betalingen"
+                        className="flex items-center gap-1 rounded-lg border border-pw-border/60 px-3 py-1.5 text-[12px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/5"
+                      >
+                        <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                        {nl ? 'Bekijk' : 'View'}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Retry button for failed messages */}
+                  {failedMessages.has(msg.id) && (
+                    <div className="mb-3 pl-1">
+                      <button
+                        onClick={() => {
+                          // Find the user message before this failed assistant message
+                          const msgIdx = messages.findIndex(m => m.id === msg.id);
+                          const userMsg = msgIdx > 0 ? messages[msgIdx - 1] : null;
+                          if (userMsg && userMsg.role === 'user') {
+                            // Remove failed messages
+                            setMessages(prev => prev.filter(m => m.id !== msg.id && m.id !== userMsg.id));
+                            setFailedMessages(prev => { const s = new Set(prev); s.delete(msg.id); return s; });
+                            // Retry
+                            sendMessage(userMsg.content);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg border border-pw-amber/50 bg-pw-amber/5 px-3 py-1.5 text-[12px] font-medium text-pw-amber transition-colors hover:bg-pw-amber/10 active:scale-[0.97]"
+                      >
+                        <RotateCcw className="h-3 w-3" strokeWidth={2} />
+                        {nl ? 'Opnieuw proberen' : 'Retry'}
                       </button>
                     </div>
                   )}
