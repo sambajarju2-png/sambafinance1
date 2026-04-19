@@ -100,19 +100,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Build user context
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const outstanding = bills.filter(b => b.status !== 'settled');
     const totalOutstanding = outstanding.reduce((sum, b) => sum + (b.amount || 0), 0);
     const urgentBills = outstanding.filter(b => {
       if (!b.due_date) return false;
       const due = new Date(b.due_date);
-      const now = new Date();
-      const diffDays = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      const diffDays = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 7 && diffDays >= 0;
     });
     const escalated = outstanding.filter(b => ['herinnering', 'aanmaning', 'incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
     const severe = outstanding.filter(b => ['incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
     const userContext = `
+VANDAAG: ${todayStr} (${today.toISOString().split('T')[0]})
+
 GEBRUIKERSPROFIEL:
 - Naam: ${firstName || 'onbekend'}
 - Taal: ${lang}
@@ -160,10 +163,14 @@ FORMATTING:
 REKENINGEN TOEVOEGEN:
 - Als een gebruiker een rekening wil toevoegen (via tekst, foto of PDF):
   1. Toon wat je ziet/begrijpt in een duidelijk overzicht
-  2. Vraag of het klopt. Gebruiker kan zeggen wat er anders moet.
-  3. Pas aan als nodig, toon opnieuw
-  4. Vraag expliciet: "Zal ik deze toevoegen aan je rekeningen?"
-  5. Alleen bij akkoord/ja/bevestiging → bevestig dat het is toegevoegd
+  2. Eindig je bericht ALTIJD met een speciaal JSON blok dat het systeem detecteert:
+     |||PENDING_BILL|||{"vendor":"naam","amount_cents":12345,"due_date":"2026-04-25","iban":"NL...","reference":"ref","escalation_stage":"factuur","category":"energie"}|||
+  3. Het systeem toont dan automatisch Bevestig/Bewerken knoppen aan de gebruiker
+  4. Als gebruiker bewerkt: pas de data aan en stuur het JSON blok opnieuw
+  5. Als gebruiker bevestigt: het systeem voegt de rekening automatisch toe
+  6. amount_cents is ALTIJD in centen (€200 = 20000). Gebruik de datum van VANDAAG als referentie.
+  7. escalation_stage opties: factuur, herinnering, aanmaning, incasso, deurwaarder
+  8. category opties: energie, water, telecom, internet, verzekering, overheid, wonen, zorg, vervoer, abonnement, incasso, overig
 
 BUDDY SYSTEEM:
 - Als gebruiker zegt "buddy toevoegen" of iets vergelijkbaars:

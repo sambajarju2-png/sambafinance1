@@ -2,13 +2,43 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Camera } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Camera, Check, Pencil } from 'lucide-react';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: Date;
+}
+
+interface PendingBill {
+  vendor: string;
+  amount_cents: number;
+  due_date?: string;
+  iban?: string;
+  reference?: string;
+  escalation_stage?: string;
+  category?: string;
+}
+
+const BILL_MARKER = '|||PENDING_BILL|||';
+
+function extractPendingBill(text: string): { cleanText: string; bill: PendingBill | null } {
+  const idx = text.indexOf(BILL_MARKER);
+  if (idx === -1) return { cleanText: text, bill: null };
+
+  const cleanText = text.slice(0, idx).trim();
+  const afterMarker = text.slice(idx + BILL_MARKER.length);
+  const endIdx = afterMarker.indexOf('|||');
+  if (endIdx === -1) return { cleanText, bill: null };
+
+  try {
+    const json = afterMarker.slice(0, endIdx).trim();
+    const bill = JSON.parse(json) as PendingBill;
+    return { cleanText, bill };
+  } catch {
+    return { cleanText, bill: null };
+  }
 }
 
 function renderMarkdown(text: string): string {
@@ -28,6 +58,7 @@ export default function ChatView() {
   const [isRecording, setIsRecording] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lang, setLang] = useState('nl');
+  const [confirmingBill, setConfirmingBill] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -252,36 +283,90 @@ export default function ChatView() {
         ) : (
           // Message list
           <>
-            {messages.map(msg => (
-              <div key={msg.id} className={`mb-3 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'rounded-br-md bg-pw-blue text-white'
-                      : 'rounded-bl-md border border-pw-border/60 bg-pw-surface dark:bg-pw-surface/50 text-pw-text dark:text-white'
-                  }`}
-                >
-                  {msg.role === 'assistant' ? (
+            {messages.map((msg, idx) => {
+              const isLast = idx === messages.length - 1;
+              const { cleanText, bill } = msg.role === 'assistant'
+                ? extractPendingBill(msg.content)
+                : { cleanText: msg.content, bill: null };
+              const showButtons = bill && isLast && !isStreaming;
+
+              return (
+                <div key={msg.id}>
+                  <div className={`mb-1 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className="chat-markdown"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
-                    />
-                  ) : (
-                    <span>{msg.content}</span>
-                  )}
-                  {msg.role === 'assistant' && msg.content === '' && isStreaming && (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:0ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:150ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:300ms]" />
-                    </span>
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'rounded-br-md bg-pw-blue text-white'
+                          : 'rounded-bl-md border border-pw-border/60 bg-pw-surface dark:bg-pw-surface/50 text-pw-text dark:text-white'
+                      }`}
+                    >
+                      {msg.role === 'assistant' ? (
+                        <div
+                          className="chat-markdown"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(cleanText) }}
+                        />
+                      ) : (
+                        <span>{msg.content}</span>
+                      )}
+                      {msg.role === 'assistant' && msg.content === '' && isStreaming && (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:0ms]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:150ms]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-pw-muted [animation-delay:300ms]" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Confirm / Edit buttons */}
+                  {showButtons && (
+                    <div className="mb-3 flex gap-2 pl-1">
+                      <button
+                        onClick={async () => {
+                          setConfirmingBill(true);
+                          try {
+                            const res = await fetch('/api/chat/confirm-bill', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(bill),
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              sendMessage(nl ? 'Bevestigd, voeg toe' : 'Confirmed, add it');
+                            } else {
+                              sendMessage(nl ? 'Er ging iets mis bij het toevoegen' : 'Something went wrong adding the bill');
+                            }
+                          } catch {
+                            sendMessage(nl ? 'Er ging iets mis' : 'Something went wrong');
+                          }
+                          setConfirmingBill(false);
+                        }}
+                        disabled={confirmingBill}
+                        className="flex items-center gap-1.5 rounded-lg bg-pw-green px-4 py-2 text-[13px] font-semibold text-white transition-all hover:bg-pw-green/90 active:scale-[0.97] disabled:opacity-50"
+                      >
+                        {confirmingBill ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" strokeWidth={2} />
+                        )}
+                        {nl ? 'Bevestig' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => sendMessage(nl ? 'Ik wil iets aanpassen' : 'I want to edit something')}
+                        disabled={confirmingBill}
+                        className="flex items-center gap-1.5 rounded-lg border border-pw-border px-4 py-2 text-[13px] font-medium text-pw-text transition-all hover:bg-pw-border/30 active:scale-[0.97] dark:text-white dark:border-pw-border/50"
+                      >
+                        <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        {nl ? 'Bewerken' : 'Edit'}
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Inline chips after last assistant message */}
-            {!isStreaming && chips.length > 0 && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
+            {!isStreaming && chips.length > 0 && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !extractPendingBill(messages[messages.length - 1].content).bill && (
               <div className="mb-3 flex flex-wrap gap-1.5 pl-1">
                 {chips.slice(0, 3).map(chip => (
                   <button
