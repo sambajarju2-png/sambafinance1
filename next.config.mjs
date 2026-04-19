@@ -30,8 +30,10 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://cdn.sanity.io https://ectcwerjdpiurubdpxcp.supabase.co https://api.dicebear.com",
               // FIX: Added graph.microsoft.com + login.microsoftonline.com for Outlook OAuth
-              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com https://api.elevenlabs.io wss://api.elevenlabs.io",
+              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com https://api.elevenlabs.io wss://api.elevenlabs.io https://*.livekit.cloud wss://*.livekit.cloud https://*.turn.livekit.cloud",
               "font-src 'self'",
+              "media-src 'self' blob:",
+              "worker-src 'self' blob:",
               "frame-src 'none'",
               "object-src 'none'",
               // FIX: Added base-uri and form-action restrictions

@@ -75,24 +75,45 @@ ${context}`;
       ? `Hoi ${firstName}! Hoe gaat het? Waar kan ik je mee helpen?`
       : 'Hoi! Ik ben PayBuddy. Hoe gaat het vandaag?';
 
-    // Get signed URL from ElevenLabs
-    const signedUrlRes = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
-      {
-        headers: { 'xi-api-key': apiKey },
-      }
-    );
+    // Get conversation token for WebRTC (preferred) or signed URL for WebSocket
+    let connectionData: { conversationToken?: string; signedUrl?: string } = {};
 
-    if (!signedUrlRes.ok) {
-      const err = await signedUrlRes.text();
-      console.error('ElevenLabs signed URL error:', err);
-      return NextResponse.json({ error: 'Failed to get voice token' }, { status: 500, headers: NO_CACHE });
+    // Try WebRTC token first (better audio quality)
+    try {
+      const tokenRes = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/get-conversation-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': apiKey,
+          },
+          body: JSON.stringify({ agent_id: agentId }),
+        }
+      );
+      if (tokenRes.ok) {
+        const data = await tokenRes.json();
+        connectionData.conversationToken = data.token;
+      }
+    } catch {}
+
+    // Fallback to signed URL (WebSocket)
+    if (!connectionData.conversationToken) {
+      const signedUrlRes = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+        { headers: { 'xi-api-key': apiKey } }
+      );
+      if (!signedUrlRes.ok) {
+        const err = await signedUrlRes.text();
+        console.error('ElevenLabs token error:', err);
+        return NextResponse.json({ error: 'Failed to get voice token' }, { status: 500, headers: NO_CACHE });
+      }
+      const { signed_url } = await signedUrlRes.json();
+      connectionData.signedUrl = signed_url;
     }
 
-    const { signed_url } = await signedUrlRes.json();
-
     return NextResponse.json({
-      signedUrl: signed_url,
+      ...connectionData,
       overrides: {
         agent: {
           prompt: { prompt: voicePrompt },

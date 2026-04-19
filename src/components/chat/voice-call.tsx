@@ -66,13 +66,21 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       const res = await fetch('/api/voice/token');
       if (!res.ok) throw new Error('Token failed');
 
-      const { signedUrl, overrides } = await res.json();
+      const { conversationToken, signedUrl, overrides } = await res.json();
 
-      await conversation.startSession({
-        signedUrl,
+      // Use conversationToken for WebRTC (better), signedUrl for WebSocket (fallback)
+      const sessionOpts: Record<string, unknown> = {
         overrides,
         serverLocation: 'eu-residency',
-      });
+      };
+
+      if (conversationToken) {
+        sessionOpts.conversationToken = conversationToken;
+      } else if (signedUrl) {
+        sessionOpts.signedUrl = signedUrl;
+      }
+
+      await conversation.startSession(sessionOpts);
     } catch (err) {
       const msg = (err as Error).message || '';
       setError(
