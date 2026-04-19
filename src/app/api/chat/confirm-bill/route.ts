@@ -19,11 +19,29 @@ export async function POST(req: NextRequest) {
 
     const vendor = String(body.vendor || '').trim();
     const amount_cents = Number(body.amount_cents) || 0;
-    const due_date = body.due_date || null;
     const category = body.category || 'overig';
     const iban = body.iban || null;
     const reference = body.reference || null;
     const escalation_stage = body.escalation_stage || 'factuur';
+
+    // Ensure due_date is a valid date string (NOT NULL in DB)
+    let due_date = body.due_date || null;
+    if (!due_date) {
+      // Default to 7 days from now if not provided
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      due_date = d.toISOString().split('T')[0];
+    }
+    // Normalize date format: ensure YYYY-MM-DD
+    if (due_date && !due_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      try {
+        due_date = new Date(due_date).toISOString().split('T')[0];
+      } catch {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        due_date = d.toISOString().split('T')[0];
+      }
+    }
 
     if (!vendor || !amount_cents) {
       return NextResponse.json({ error: 'vendor and amount_cents required' }, { status: 400, headers: NO_CACHE });
@@ -52,7 +70,7 @@ export async function POST(req: NextRequest) {
         currency: 'EUR',
         iban,
         reference,
-        due_date: due_date || null,
+        due_date,
         received_date: today,
         category,
         status: due_date && due_date < today ? 'action' : 'outstanding',

@@ -27,13 +27,26 @@ function extractPendingBill(text: string): { cleanText: string; bill: PendingBil
   const idx = text.indexOf(BILL_MARKER);
   if (idx === -1) return { cleanText: text, bill: null };
 
+  // Everything before the marker is the clean text
   const cleanText = text.slice(0, idx).trim();
   const afterMarker = text.slice(idx + BILL_MARKER.length);
-  const endIdx = afterMarker.indexOf('|||');
-  if (endIdx === -1) return { cleanText, bill: null };
+
+  // Find JSON object — look for { ... } allowing newlines
+  const jsonStart = afterMarker.indexOf('{');
+  if (jsonStart === -1) return { cleanText, bill: null };
+
+  // Find matching closing brace
+  let braceCount = 0;
+  let jsonEnd = -1;
+  for (let i = jsonStart; i < afterMarker.length; i++) {
+    if (afterMarker[i] === '{') braceCount++;
+    if (afterMarker[i] === '}') braceCount--;
+    if (braceCount === 0) { jsonEnd = i; break; }
+  }
+  if (jsonEnd === -1) return { cleanText, bill: null };
 
   try {
-    const json = afterMarker.slice(0, endIdx).trim();
+    const json = afterMarker.slice(jsonStart, jsonEnd + 1);
     const bill = JSON.parse(json) as PendingBill;
     return { cleanText, bill };
   } catch {
