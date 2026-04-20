@@ -405,6 +405,23 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         return 'Camera geopend. De gebruiker kan nu een foto maken van de rekening.';
       },
 
+      // ── Get schuldhulp info for user's gemeente ──
+      get_schuldhulp: async (params: { gemeente?: string }) => {
+        try {
+          const url = params.gemeente
+            ? `/api/voice/schuldhulp?gemeente=${encodeURIComponent(params.gemeente)}`
+            : '/api/voice/schuldhulp';
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            return data.summary || JSON.stringify(data);
+          }
+          return 'Kon schuldhulp informatie niet ophalen.';
+        } catch {
+          return 'Er ging iets mis. Bel de Nationale Schuldhulproute: 0800-8115.';
+        }
+      },
+
       // ── Send to chat (voice-to-chat handoff) ──
       send_to_chat: async (params: { message: string; type?: string }) => {
         try {
