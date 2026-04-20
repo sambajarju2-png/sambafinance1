@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationProvider, useConversation } from '@elevenlabs/react';
-import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, FileText } from 'lucide-react';
+import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, Camera } from 'lucide-react';
+import { sounds } from '@/lib/sounds';
 
 interface VoiceCallProps {
   onClose: (showSummary?: PostCallData | null) => void;
@@ -252,6 +253,8 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const callActionsRef = useRef<CallAction[]>([]);
   const callStartRef = useRef<number>(Date.now());
   const sentToChatRef = useRef(0);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
@@ -259,8 +262,10 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       setStatus('active');
       setDebugInfo('');
       callStartRef.current = Date.now();
+      sounds.connecting();
     },
     onDisconnect: async () => {
+      sounds.callEnded();
       // Save transcript
       if (transcriptRef.current.length > 0) {
         try {
@@ -307,7 +312,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       }
     },
     clientTools: {
-      // Add bill to user's account
+      // ── Add bill ──
       add_bill: async (params: { vendor: string; amount: string; due_date?: string; escalation_stage?: string; iban?: string }) => {
         try {
           const amountNum = parseFloat(String(params.amount).replace(',', '.'));
@@ -328,18 +333,79 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
           if (res.ok) {
             const data = await res.json();
+            sounds.billAdded();
             callActionsRef.current.push({ type: 'bill_added', data: { vendor: params.vendor, amount: amountCents }, ts: Date.now() });
             setBillsAdded(prev => [...prev, { vendor: params.vendor, amount: amountCents }]);
             if (data.duplicate) return `${params.vendor} stond al in de app.`;
             return `${params.vendor} toegevoegd.`;
           }
-          return 'Kon niet toevoegen. Probeer later opnieuw.';
+          return 'Kon niet toevoegen.';
         } catch {
           return 'Er ging iets mis.';
         }
       },
 
-      // Send content to chat (voice-to-chat handoff)
+      // ── Update bill (escalation, amount, status) ──
+      update_bill: async (params: { vendor: string; escalation_stage?: string; amount?: string; status?: string }) => {
+        try {
+          const res = await fetch('/api/voice/update-bill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+          });
+          if (res.ok) {
+            sounds.sentToChat();
+            callActionsRef.current.push({ type: 'bill_updated', data: { vendor: params.vendor, change: params.escalation_stage || params.status || '' }, ts: Date.now() });
+            return `${params.vendor} bijgewerkt.`;
+          }
+          return 'Kon niet bijwerken.';
+        } catch {
+          return 'Er ging iets mis.';
+        }
+      },
+
+      // ── Remove / mark as paid ──
+      remove_bill: async (params: { vendor: string; mark_as_paid?: boolean }) => {
+        try {
+          const res = await fetch('/api/voice/remove-bill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+          });
+          if (res.ok) {
+            sounds.billAdded();
+            callActionsRef.current.push({ type: 'bill_removed', data: { vendor: params.vendor }, ts: Date.now() });
+            return params.mark_as_paid
+              ? `${params.vendor} als betaald gemarkeerd.`
+              : `${params.vendor} verwijderd.`;
+          }
+          return 'Kon niet verwijderen.';
+        } catch {
+          return 'Er ging iets mis.';
+        }
+      },
+
+      // ── Get bill summary ──
+      get_bill_summary: async () => {
+        try {
+          const res = await fetch('/api/voice/bill-summary');
+          if (res.ok) {
+            const data = await res.json();
+            return JSON.stringify(data);
+          }
+          return 'Kon samenvatting niet ophalen.';
+        } catch {
+          return 'Er ging iets mis.';
+        }
+      },
+
+      // ── Request photo (opens camera during call) ──
+      request_photo: async () => {
+        setShowCamera(true);
+        return 'Camera geopend. De gebruiker kan nu een foto maken van de rekening.';
+      },
+
+      // ── Send to chat (voice-to-chat handoff) ──
       send_to_chat: async (params: { message: string; type?: string }) => {
         try {
           await fetch('/api/voice/send-to-chat', {
@@ -347,6 +413,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: params.message, type: params.type || 'note' }),
           });
+          sounds.sentToChat();
           sentToChatRef.current += 1;
           callActionsRef.current.push({ type: 'sent_to_chat', data: { message: params.message }, ts: Date.now() });
           return 'In de chat gezet.';
@@ -462,8 +529,89 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         </div>
       )}
 
+      {/* Camera input for bill photos */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setShowCamera(false);
+          // Upload photo to chat for AI processing
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            await fetch('/api/voice/send-to-chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: 'De gebruiker heeft een foto gemaakt van een rekening. Deze wordt verwerkt via de chat.',
+                type: 'photo_received',
+              }),
+            });
+            sentToChatRef.current += 1;
+          } catch {}
+          if (photoInputRef.current) photoInputRef.current.value = '';
+        }}
+      />
+
+      {/* Camera prompt overlay */}
+      {showCamera && (
+        <div className="absolute inset-x-0 bottom-28 flex justify-center z-10 px-6">
+          <div className="w-full max-w-xs rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4 text-center">
+            <p className="text-[13px] text-white/80 mb-3">
+              {nl ? 'Maak een foto van je rekening' : 'Take a photo of your bill'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (photoInputRef.current) {
+                    photoInputRef.current.setAttribute('capture', 'environment');
+                    photoInputRef.current.click();
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pw-blue py-2.5 text-[13px] font-medium text-white active:scale-95"
+              >
+                <Camera className="h-4 w-4" strokeWidth={1.5} />
+                {nl ? 'Camera' : 'Camera'}
+              </button>
+              <button
+                onClick={() => {
+                  if (photoInputRef.current) {
+                    photoInputRef.current.removeAttribute('capture');
+                    photoInputRef.current.click();
+                  }
+                }}
+                className="flex-1 rounded-xl bg-white/10 py-2.5 text-[13px] font-medium text-white/80 active:scale-95"
+              >
+                {nl ? 'Galerij' : 'Gallery'}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowCamera(false)}
+              className="mt-2 text-[11px] text-white/40"
+            >
+              {nl ? 'Annuleren' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom buttons */}
       <div className="flex items-center justify-center gap-5 pb-10" style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
+        {/* Camera button (during active call) */}
+        {isActive && (
+          <button
+            onClick={() => setShowCamera(true)}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white/70 active:scale-95"
+          >
+            <Camera className="h-5 w-5" strokeWidth={1.5} />
+          </button>
+        )}
+
         {status === 'error' && (
           <button onClick={startCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95 shadow-lg shadow-pw-blue/20">
             <Phone className="h-6 w-6" strokeWidth={1.5} />
