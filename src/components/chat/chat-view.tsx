@@ -6,6 +6,7 @@ import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, Extern
 import dynamic from 'next/dynamic';
 
 const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
+const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
 
 interface Message {
   id: string;
@@ -79,6 +80,8 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showVoiceCall, setShowVoiceCall] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [postCallData, setPostCallData] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -654,7 +657,26 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
 
       {/* Voice call overlay */}
       {showVoiceCall && (
-        <VoiceCall onClose={() => setShowVoiceCall(false)} lang={lang} />
+        <VoiceCall
+          onClose={(summary) => {
+            setShowVoiceCall(false);
+            if (summary) setPostCallData(summary);
+          }}
+          lang={lang}
+        />
+      )}
+
+      {/* Post-call summary */}
+      {postCallData && (
+        <PostCallSummaryLazy
+          data={postCallData}
+          lang={lang}
+          onDismiss={() => setPostCallData(null)}
+          onViewBills={() => {
+            setPostCallData(null);
+            window.location.href = '/betalingen';
+          }}
+        />
       )}
     </div>
   );

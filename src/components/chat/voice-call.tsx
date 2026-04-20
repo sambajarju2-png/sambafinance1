@@ -2,10 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationProvider, useConversation } from '@elevenlabs/react';
-import { Phone, PhoneOff, Loader2, Check } from 'lucide-react';
+import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, FileText } from 'lucide-react';
 
 interface VoiceCallProps {
-  onClose: () => void;
+  onClose: (showSummary?: PostCallData | null) => void;
   lang: string;
 }
 
@@ -15,22 +15,253 @@ interface TranscriptEntry {
   ts: number;
 }
 
+interface CallAction {
+  type: 'bill_added' | 'bill_updated' | 'bill_removed' | 'sent_to_chat';
+  data: Record<string, unknown>;
+  ts: number;
+}
+
+export interface PostCallData {
+  duration: number;
+  billsAdded: Array<{ vendor: string; amount: number }>;
+  sentToChat: number;
+  transcriptCount: number;
+}
+
+/* ─────────────────────────────────────────────
+   VOICE ORB — Canvas-based reactive animation
+   ───────────────────────────────────────────── */
+function VoiceOrb({ status, isSpeaking }: { status: string; isSpeaking: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
+  const phaseRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const size = 200;
+    const dpr = window.devicePixelRatio || 2;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    const center = size / 2;
+
+    function draw() {
+      phaseRef.current += 0.02;
+      const t = phaseRef.current;
+      ctx.clearRect(0, 0, size, size);
+
+      const isActive = status === 'active';
+      const baseR = isActive ? (isSpeaking ? 34 : 36) : 32;
+
+      const green = { r: 5, g: 150, b: 105 };
+      const blue = { r: 37, g: 99, b: 235 };
+      const red = { r: 220, g: 38, b: 38 };
+      let color = status === 'error' ? red : (isActive && isSpeaking ? green : blue);
+
+      // Outer organic rings
+      for (let ring = 3; ring >= 1; ring--) {
+        const breathe = isSpeaking
+          ? Math.sin(t * (2.5 + ring * 0.7)) * (6 + ring * 4)
+          : Math.sin(t * (0.8 + ring * 0.2)) * (2 + ring * 2);
+        const ringR = baseR + ring * 12 + breathe;
+        const alpha = isSpeaking ? 0.08 + Math.sin(t * 2 + ring) * 0.04 : 0.04 + Math.sin(t * 0.5 + ring) * 0.02;
+
+        ctx.beginPath();
+        for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+          const wobble = isSpeaking
+            ? Math.sin(angle * 3 + t * 2) * 3 + Math.sin(angle * 5 - t * 1.5) * 2
+            : Math.sin(angle * 2 + t * 0.8) * 1.5;
+          const r = ringR + wobble;
+          const x = center + Math.cos(angle) * r;
+          const y = center + Math.sin(angle) * r;
+          if (angle === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+        ctx.fill();
+      }
+
+      // Inner glow
+      const glowR = baseR + (isSpeaking ? Math.sin(t * 3) * 4 : Math.sin(t) * 2);
+      const gradient = ctx.createRadialGradient(center, center, 0, center, center, glowR + 10);
+      gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0.4)`);
+      gradient.addColorStop(0.6, `rgba(${color.r}, ${color.g}, ${color.b}, 0.15)`);
+      gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+      ctx.beginPath();
+      ctx.arc(center, center, glowR + 10, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Core
+      const coreGrad = ctx.createRadialGradient(center - 8, center - 8, 0, center, center, baseR);
+      coreGrad.addColorStop(0, `rgba(${Math.min(255, color.r + 60)}, ${Math.min(255, color.g + 60)}, ${Math.min(255, color.b + 60)}, 0.6)`);
+      coreGrad.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0.35)`);
+      ctx.beginPath();
+      ctx.arc(center, center, baseR, 0, Math.PI * 2);
+      ctx.fillStyle = coreGrad;
+      ctx.fill();
+
+      // Speaking particles
+      if (isSpeaking && isActive) {
+        for (let i = 0; i < 8; i++) {
+          const a = (Math.PI * 2 / 8) * i + t * 0.5;
+          const dist = baseR + 20 + Math.sin(t * 3 + i * 1.5) * 15;
+          const px = center + Math.cos(a) * dist;
+          const py = center + Math.sin(a) * dist;
+          const pSize = 1.5 + Math.sin(t * 2 + i) * 1;
+          const pAlpha = 0.3 + Math.sin(t * 2.5 + i) * 0.2;
+          ctx.beginPath();
+          ctx.arc(px, py, pSize, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${pAlpha})`;
+          ctx.fill();
+        }
+      }
+
+      // Connecting spinner
+      if (status === 'connecting') {
+        for (let i = 0; i < 3; i++) {
+          const a = t * 3 + (Math.PI * 2 / 3) * i;
+          const x = center + Math.cos(a) * (baseR + 15);
+          const y = center + Math.sin(a) * (baseR + 15);
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${0.2 + Math.sin(t * 4 + i * 2) * 0.15})`;
+          ctx.fill();
+        }
+      }
+
+      animRef.current = requestAnimationFrame(draw);
+    }
+    draw();
+    return () => cancelAnimationFrame(animRef.current);
+  }, [status, isSpeaking]);
+
+  return <canvas ref={canvasRef} style={{ width: 200, height: 200 }} className="pointer-events-none" />;
+}
+
+/* ─────────────────────────────────────────────
+   POST-CALL SUMMARY
+   ───────────────────────────────────────────── */
+export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
+  data: PostCallData;
+  lang: string;
+  onDismiss: () => void;
+  onViewBills: () => void;
+}) {
+  const nl = lang === 'nl';
+  const mins = Math.floor(data.duration / 60);
+  const secs = data.duration % 60;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onDismiss}>
+      <div
+        className="w-full max-w-lg rounded-t-3xl bg-white dark:bg-pw-navy px-5 pb-8 pt-6 animate-[slideUp_0.3s_ease-out]"
+        onClick={e => e.stopPropagation()}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+      >
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-green/10">
+              <Phone className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold text-gray-900 dark:text-white">
+                {nl ? 'Gesprek afgerond' : 'Call ended'}
+              </p>
+              <p className="text-[12px] text-gray-500">{mins}:{String(secs).padStart(2, '0')} min</p>
+            </div>
+          </div>
+          <button onClick={onDismiss} className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-white/5">
+            <X className="h-5 w-5 text-gray-400" strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-5 grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
+            <p className="text-[20px] font-bold text-pw-green">{data.billsAdded.length}</p>
+            <p className="text-[11px] text-gray-500">{nl ? 'Toegevoegd' : 'Added'}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
+            <p className="text-[20px] font-bold text-pw-blue">{data.sentToChat}</p>
+            <p className="text-[11px] text-gray-500">{nl ? 'In chat' : 'To chat'}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
+            <p className="text-[20px] font-bold text-gray-600 dark:text-gray-300">{data.transcriptCount}</p>
+            <p className="text-[11px] text-gray-500">{nl ? 'Berichten' : 'Messages'}</p>
+          </div>
+        </div>
+
+        {/* Bills added */}
+        {data.billsAdded.length > 0 && (
+          <div className="mb-5">
+            <p className="mb-2 text-[12px] font-medium text-gray-500 uppercase tracking-wide">
+              {nl ? 'Rekeningen toegevoegd' : 'Bills added'}
+            </p>
+            {data.billsAdded.map((bill, i) => (
+              <div key={i} className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 py-2 last:border-0">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-pw-green" strokeWidth={2} />
+                  <span className="text-[14px] text-gray-900 dark:text-white">{bill.vendor}</span>
+                </div>
+                <span className="text-[14px] font-medium text-gray-700 dark:text-gray-300">
+                  €{(bill.amount / 100).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="space-y-2.5">
+          {data.billsAdded.length > 0 && (
+            <button
+              onClick={onViewBills}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-pw-blue py-3.5 text-[14px] font-medium text-white active:scale-[0.98]"
+            >
+              {nl ? 'Bekijk rekeningen' : 'View bills'}
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+          )}
+          <button
+            onClick={onDismiss}
+            className="w-full rounded-xl bg-gray-100 dark:bg-white/5 py-3.5 text-[14px] font-medium text-gray-700 dark:text-gray-300 active:scale-[0.98]"
+          >
+            {nl ? 'Sluiten' : 'Close'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MAIN VOICE CALL INNER
+   ───────────────────────────────────────────── */
 function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [status, setStatus] = useState<'connecting' | 'active' | 'error'>('connecting');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
-  const [billsAdded, setBillsAdded] = useState<string[]>([]);
+  const [billsAdded, setBillsAdded] = useState<Array<{ vendor: string; amount: number }>>([]);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const callActionsRef = useRef<CallAction[]>([]);
+  const callStartRef = useRef<number>(Date.now());
+  const sentToChatRef = useRef(0);
   const nl = lang === 'nl';
 
   const conversation = useConversation({
     onConnect: () => {
       setStatus('active');
       setDebugInfo('');
+      callStartRef.current = Date.now();
     },
     onDisconnect: async () => {
+      // Save transcript
       if (transcriptRef.current.length > 0) {
         try {
           await fetch('/api/voice/save-transcript', {
@@ -40,7 +271,24 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           });
         } catch {}
       }
-      onClose();
+
+      // Build post-call data
+      const duration = Math.floor((Date.now() - callStartRef.current) / 1000);
+      const postCallData: PostCallData = {
+        duration,
+        billsAdded: callActionsRef.current
+          .filter(a => a.type === 'bill_added')
+          .map(a => ({ vendor: a.data.vendor as string, amount: a.data.amount as number })),
+        sentToChat: sentToChatRef.current,
+        transcriptCount: transcriptRef.current.length,
+      };
+
+      // Show summary if anything happened, otherwise just close
+      if (postCallData.billsAdded.length > 0 || postCallData.sentToChat > 0 || duration > 10) {
+        onClose(postCallData);
+      } else {
+        onClose(null);
+      }
     },
     onError: (message: string) => {
       console.error('ElevenLabs onError:', message);
@@ -58,16 +306,13 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         setTranscript(prev => [...prev, entry]);
       }
     },
-    // Client Tools — the agent can call these during the conversation
     clientTools: {
-      add_bill: async (params: { vendor: string; amount: string; due_date?: string; escalation_stage?: string }) => {
+      // Add bill to user's account
+      add_bill: async (params: { vendor: string; amount: string; due_date?: string; escalation_stage?: string; iban?: string }) => {
         try {
           const amountNum = parseFloat(String(params.amount).replace(',', '.'));
           const amountCents = Math.round(amountNum * 100);
-
-          if (!params.vendor || !amountCents) {
-            return 'Fout: vendor en bedrag zijn verplicht.';
-          }
+          if (!params.vendor || !amountCents) return 'Fout: vendor en bedrag zijn verplicht.';
 
           const res = await fetch('/api/chat/confirm-bill', {
             method: 'POST',
@@ -77,21 +322,36 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
               amount_cents: amountCents,
               due_date: params.due_date || null,
               escalation_stage: params.escalation_stage || 'factuur',
-              source: 'voice_call',
+              iban: params.iban || null,
             }),
           });
 
           if (res.ok) {
             const data = await res.json();
-            setBillsAdded(prev => [...prev, params.vendor]);
-            if (data.duplicate) {
-              return `Deze rekening van ${params.vendor} stond al in de app.`;
-            }
-            return `Rekening van ${params.vendor} (€${amountNum.toFixed(2)}) is toegevoegd aan de app.`;
+            callActionsRef.current.push({ type: 'bill_added', data: { vendor: params.vendor, amount: amountCents }, ts: Date.now() });
+            setBillsAdded(prev => [...prev, { vendor: params.vendor, amount: amountCents }]);
+            if (data.duplicate) return `${params.vendor} stond al in de app.`;
+            return `${params.vendor} toegevoegd.`;
           }
-          return 'Er ging iets mis bij het toevoegen. Probeer het later opnieuw.';
+          return 'Kon niet toevoegen. Probeer later opnieuw.';
         } catch {
-          return 'Er ging iets mis. Probeer het later opnieuw.';
+          return 'Er ging iets mis.';
+        }
+      },
+
+      // Send content to chat (voice-to-chat handoff)
+      send_to_chat: async (params: { message: string; type?: string }) => {
+        try {
+          await fetch('/api/voice/send-to-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: params.message, type: params.type || 'note' }),
+          });
+          sentToChatRef.current += 1;
+          callActionsRef.current.push({ type: 'sent_to_chat', data: { message: params.message }, ts: Date.now() });
+          return 'In de chat gezet.';
+        } catch {
+          return 'Kon niet naar de chat sturen.';
         }
       },
     },
@@ -100,11 +360,10 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const startCall = useCallback(async () => {
     setStatus('connecting');
     setErrorDetail(null);
-    setDebugInfo('Requesting microphone...');
+    setDebugInfo('');
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      setDebugInfo('Mic OK. Fetching token...');
 
       const res = await fetch('/api/voice/token');
       const data = await res.json();
@@ -116,26 +375,15 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       }
 
       if (data.signedUrl) {
-        setDebugInfo('Connecting...');
-        await conversation.startSession({
-          signedUrl: data.signedUrl,
-          overrides: data.overrides,
-        });
+        await conversation.startSession({ signedUrl: data.signedUrl, overrides: data.overrides });
       } else if (data.agentId) {
-        setDebugInfo('Connecting...');
-        await conversation.startSession({
-          agentId: data.agentId,
-          overrides: data.overrides,
-          connectionType: 'websocket',
-        });
+        await conversation.startSession({ agentId: data.agentId, overrides: data.overrides, connectionType: 'websocket' });
       } else {
         setErrorDetail('No connection data');
         setStatus('error');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('Voice startCall error:', err);
-      setErrorDetail(msg);
+      setErrorDetail(err instanceof Error ? err.message : String(err));
       setStatus('error');
     }
   }, [conversation]);
@@ -144,70 +392,52 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     await conversation.endSession();
   }, [conversation]);
 
-  useEffect(() => {
-    startCall();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcript]);
+  useEffect(() => { startCall(); }, []);
+  useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
 
   const isActive = conversation.status === 'connected';
   const isSpeaking = conversation.isSpeaking;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-pw-navy to-[#0F1B2D]">
+      {/* Top: Orb + status */}
       <div className="flex flex-1 flex-col items-center justify-center">
-        <div className="relative mb-6">
-          {isActive && (
-            <div
-              className={`absolute rounded-full ${isSpeaking ? 'bg-pw-green/15' : 'bg-pw-blue/15'}`}
-              style={{
-                width: 140, height: 140, top: -30, left: -30,
-                animation: isSpeaking ? 'pulse 1.5s ease-in-out infinite' : 'pulse 3s ease-in-out infinite',
-              }}
-            />
-          )}
-          <div className={`flex h-20 w-20 items-center justify-center rounded-full ${
-            status === 'connecting' ? 'bg-pw-blue/30' :
-            isSpeaking ? 'bg-pw-green/40' :
-            isActive ? 'bg-pw-blue/40' :
-            'bg-white/10'
-          }`}>
-            {status === 'connecting' ? (
-              <Loader2 className="h-8 w-8 animate-spin text-white/70" strokeWidth={1.5} />
-            ) : (
-              <Phone className="h-8 w-8 text-white" strokeWidth={1.5} />
-            )}
-          </div>
-        </div>
+        <VoiceOrb
+          status={status === 'active' ? 'active' : status === 'connecting' ? 'connecting' : 'error'}
+          isSpeaking={isSpeaking}
+        />
 
-        <p className="mb-1 text-lg font-semibold text-white">
+        <p className="mt-2 text-lg font-semibold text-white">
           {status === 'connecting' && (nl ? 'Verbinden...' : 'Connecting...')}
           {isActive && isSpeaking && 'PayBuddy'}
           {isActive && !isSpeaking && (nl ? 'Luistert...' : 'Listening...')}
           {status === 'error' && 'PayBuddy'}
         </p>
 
-        {debugInfo && <p className="mb-2 text-[11px] text-white/30 text-center px-8">{debugInfo}</p>}
+        <p className="mt-0.5 text-[13px] text-white/40">
+          {isActive && isSpeaking && (nl ? 'Aan het praten' : 'Speaking')}
+          {isActive && !isSpeaking && (nl ? 'Stel je vraag' : 'Ask your question')}
+          {status === 'error' && (nl ? 'Verbinding mislukt' : 'Connection failed')}
+        </p>
 
-        {/* Bills added during call */}
+        {debugInfo && <p className="mt-1 text-[11px] text-white/20">{debugInfo}</p>}
+
+        {/* Bills added badges */}
         {billsAdded.length > 0 && (
-          <div className="mx-6 mb-3 flex flex-wrap justify-center gap-2">
-            {billsAdded.map((v, i) => (
-              <span key={i} className="flex items-center gap-1 rounded-full bg-pw-green/20 px-3 py-1 text-[11px] text-pw-green">
-                <Check className="h-3 w-3" strokeWidth={2} />
-                {v}
+          <div className="mt-4 flex flex-wrap justify-center gap-2 px-6">
+            {billsAdded.map((b, i) => (
+              <span key={i} className="flex items-center gap-1.5 rounded-full bg-pw-green/15 px-3 py-1.5 text-[12px] font-medium text-pw-green">
+                <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                {b.vendor}
               </span>
             ))}
           </div>
         )}
 
         {errorDetail && (
-          <div className="mx-6 mb-4 max-w-sm rounded-lg bg-pw-red/10 border border-pw-red/20 px-4 py-3">
-            <p className="text-[11px] text-pw-red/80 font-mono break-all select-all">{errorDetail}</p>
-            <button onClick={() => navigator.clipboard.writeText(errorDetail)} className="mt-2 text-[10px] text-pw-red/50 underline">
+          <div className="mx-6 mt-4 max-w-sm rounded-2xl bg-pw-red/8 border border-pw-red/15 px-4 py-3">
+            <p className="text-[11px] text-pw-red/70 font-mono break-all select-all">{errorDetail}</p>
+            <button onClick={() => navigator.clipboard.writeText(errorDetail)} className="mt-2 text-[10px] text-pw-red/40 underline">
               {nl ? 'Kopieer fout' : 'Copy error'}
             </button>
           </div>
@@ -216,12 +446,15 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
       {/* Live transcript */}
       {transcript.length > 0 && (
-        <div className="mx-4 mb-4 max-h-[30vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3">
+        <div className="mx-4 mb-4 max-h-[28vh] overflow-y-auto rounded-2xl bg-white/[0.03] backdrop-blur-sm px-4 py-3 border border-white/[0.04]">
           {transcript.map((t, i) => (
-            <div key={i} className={`mb-1.5 text-[12px] leading-relaxed ${
-              t.role === 'user' ? 'text-pw-blue/70' : 'text-white/60'
+            <div key={i} className={`mb-2 text-[12px] leading-relaxed ${
+              t.role === 'user' ? 'text-pw-blue/60' : 'text-white/50'
             }`}>
-              <span className="font-medium">{t.role === 'user' ? (nl ? 'Jij' : 'You') : 'PayBuddy'}:</span>{' '}
+              <span className="font-semibold text-[11px] uppercase tracking-wider opacity-60">
+                {t.role === 'user' ? (nl ? 'Jij' : 'You') : 'PayBuddy'}
+              </span>
+              <br />
               {t.text}
             </div>
           ))}
@@ -229,15 +462,16 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-6 pb-12" style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom))' }}>
+      {/* Bottom buttons */}
+      <div className="flex items-center justify-center gap-5 pb-10" style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
         {status === 'error' && (
-          <button onClick={startCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95">
+          <button onClick={startCall} className="flex h-14 w-14 items-center justify-center rounded-full bg-pw-blue text-white active:scale-95 shadow-lg shadow-pw-blue/20">
             <Phone className="h-6 w-6" strokeWidth={1.5} />
           </button>
         )}
         <button
-          onClick={status === 'error' ? onClose : endCall}
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white active:scale-95"
+          onClick={status === 'error' ? () => onClose(null) : endCall}
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-pw-red text-white active:scale-95 shadow-lg shadow-pw-red/20"
         >
           <PhoneOff className="h-7 w-7" strokeWidth={1.5} />
         </button>
@@ -246,6 +480,9 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   );
 }
 
+/* ─────────────────────────────────────────────
+   WRAPPER
+   ───────────────────────────────────────────── */
 export default function VoiceCall(props: VoiceCallProps) {
   return (
     <ConversationProvider>

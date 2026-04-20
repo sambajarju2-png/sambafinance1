@@ -149,6 +149,7 @@ body {
 
 /* Drawer */
 @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .drawer-enter { animation: slide-up 300ms ease-out; }
 
 /* Toast */
