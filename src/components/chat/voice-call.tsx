@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationProvider, useConversation } from '@elevenlabs/react';
-import { Phone, PhoneOff, Loader2 } from 'lucide-react';
+import { Phone, PhoneOff, Loader2, Check } from 'lucide-react';
 
 interface VoiceCallProps {
   onClose: () => void;
@@ -20,6 +20,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [billsAdded, setBillsAdded] = useState<string[]>([]);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const nl = lang === 'nl';
@@ -27,7 +28,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const conversation = useConversation({
     onConnect: () => {
       setStatus('active');
-      setDebugInfo('Connected!');
+      setDebugInfo('');
     },
     onDisconnect: async () => {
       if (transcriptRef.current.length > 0) {
@@ -57,6 +58,43 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         setTranscript(prev => [...prev, entry]);
       }
     },
+    // Client Tools — the agent can call these during the conversation
+    clientTools: {
+      add_bill: async (params: { vendor: string; amount: string; due_date?: string; escalation_stage?: string }) => {
+        try {
+          const amountNum = parseFloat(String(params.amount).replace(',', '.'));
+          const amountCents = Math.round(amountNum * 100);
+
+          if (!params.vendor || !amountCents) {
+            return 'Fout: vendor en bedrag zijn verplicht.';
+          }
+
+          const res = await fetch('/api/chat/confirm-bill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vendor: params.vendor,
+              amount_cents: amountCents,
+              due_date: params.due_date || null,
+              escalation_stage: params.escalation_stage || 'factuur',
+              source: 'voice_call',
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setBillsAdded(prev => [...prev, params.vendor]);
+            if (data.duplicate) {
+              return `Deze rekening van ${params.vendor} stond al in de app.`;
+            }
+            return `Rekening van ${params.vendor} (€${amountNum.toFixed(2)}) is toegevoegd aan de app.`;
+          }
+          return 'Er ging iets mis bij het toevoegen. Probeer het later opnieuw.';
+        } catch {
+          return 'Er ging iets mis. Probeer het later opnieuw.';
+        }
+      },
+    },
   });
 
   const startCall = useCallback(async () => {
@@ -77,23 +115,21 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         return;
       }
 
-      // signedUrl forces WebSocket (stable on iOS Safari PWA)
-      // agentId + connectionType: 'websocket' as fallback
       if (data.signedUrl) {
-        setDebugInfo('Connecting via WebSocket...');
+        setDebugInfo('Connecting...');
         await conversation.startSession({
           signedUrl: data.signedUrl,
           overrides: data.overrides,
         });
       } else if (data.agentId) {
-        setDebugInfo('Connecting via agentId (WS)...');
+        setDebugInfo('Connecting...');
         await conversation.startSession({
           agentId: data.agentId,
           overrides: data.overrides,
           connectionType: 'websocket',
         });
       } else {
-        setErrorDetail('No signedUrl or agentId returned');
+        setErrorDetail('No connection data');
         setStatus('error');
       }
     } catch (err) {
@@ -154,21 +190,31 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           {status === 'error' && 'PayBuddy'}
         </p>
 
-        <p className="mb-2 text-[11px] text-white/30 text-center px-8">{debugInfo}</p>
+        {debugInfo && <p className="mb-2 text-[11px] text-white/30 text-center px-8">{debugInfo}</p>}
+
+        {/* Bills added during call */}
+        {billsAdded.length > 0 && (
+          <div className="mx-6 mb-3 flex flex-wrap justify-center gap-2">
+            {billsAdded.map((v, i) => (
+              <span key={i} className="flex items-center gap-1 rounded-full bg-pw-green/20 px-3 py-1 text-[11px] text-pw-green">
+                <Check className="h-3 w-3" strokeWidth={2} />
+                {v}
+              </span>
+            ))}
+          </div>
+        )}
 
         {errorDetail && (
           <div className="mx-6 mb-4 max-w-sm rounded-lg bg-pw-red/10 border border-pw-red/20 px-4 py-3">
             <p className="text-[11px] text-pw-red/80 font-mono break-all select-all">{errorDetail}</p>
-            <button
-              onClick={() => navigator.clipboard.writeText(errorDetail)}
-              className="mt-2 text-[10px] text-pw-red/50 underline"
-            >
+            <button onClick={() => navigator.clipboard.writeText(errorDetail)} className="mt-2 text-[10px] text-pw-red/50 underline">
               {nl ? 'Kopieer fout' : 'Copy error'}
             </button>
           </div>
         )}
       </div>
 
+      {/* Live transcript */}
       {transcript.length > 0 && (
         <div className="mx-4 mb-4 max-h-[30vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3">
           {transcript.map((t, i) => (
