@@ -265,20 +265,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [showCamera, setShowCamera] = useState(false);
   const nl = lang === 'nl';
 
-  // Pre-warm audio context on mount (avoids iOS first-play delay)
-  useEffect(() => {
-    try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
-      // Create and immediately discard a silent buffer to unlock audio
-      const buf = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(0);
-    } catch {}
-  }, []);
-
   const conversation = useConversation({
     onConnect: () => {
       setStatus('active');
