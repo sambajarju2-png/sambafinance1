@@ -76,6 +76,30 @@ export async function GET(req: NextRequest) {
       }, { headers: NO_CACHE });
     }
 
+    // Save schuldhulp info to chat so user has clickable links after the call
+    const chatMessage = [
+      `🏛️ **Schuldhulp in ${result.gemeente}**`,
+      '',
+      `**${result.organisation_name}** (${result.organisation_type})`,
+      result.coverage_note || '',
+      `🔗 ${result.organisation_url}`,
+      '',
+      `📞 **Nationale Schuldhulproute:** 0800-8115 (gratis)`,
+      `📞 **Juridisch Loket:** 0900-8020`,
+      `🔗 https://geldfit.nl`,
+    ].filter(Boolean).join('\n');
+
+    await supabase.from('chat_messages').insert({
+      user_id: userId,
+      role: 'assistant',
+      content: chatMessage,
+      metadata: {
+        source: 'voice_schuldhulp',
+        gemeente: result.gemeente,
+        organisation: result.organisation_name,
+      },
+    });
+
     return NextResponse.json({
       found: true,
       gemeente: result.gemeente,

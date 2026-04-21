@@ -440,6 +440,12 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
+            // Track that info was saved to chat (route auto-saves when found)
+            if (data.found) {
+              sounds.sentToChat();
+              sentToChatRef.current += 1;
+              callActionsRef.current.push({ type: 'sent_to_chat', data: { message: `Schuldhulp: ${data.gemeente}` }, ts: Date.now() });
+            }
             return data.summary || JSON.stringify(data);
           }
           return 'Kon schuldhulp informatie niet ophalen.';
