@@ -364,12 +364,19 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
         {isEmpty ? (
           // Empty state
           <div className="flex flex-col items-center justify-center pt-16">
-            {/* Zen visual */}
-            <div className="relative mb-8">
-              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-pw-blue/20 to-pw-green/20 blur-xl" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-pw-blue/30 to-pw-green/30" />
+            {/* PayBuddy avatar */}
+            <div className="relative mb-6">
+              {/* Outer breathing ring */}
+              <div className="absolute inset-[-8px] rounded-full bg-gradient-to-br from-pw-blue/15 to-pw-green/15 animate-[breathe_3s_ease-in-out_infinite]" />
+              {/* Main avatar circle */}
+              <div className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-pw-blue to-pw-green shadow-lg shadow-pw-blue/15">
+                {/* Shield icon */}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+                </svg>
               </div>
+              {/* Online indicator */}
+              <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white dark:border-pw-navy bg-pw-green" />
             </div>
 
             <p className="text-pw-blue text-base font-medium">
@@ -394,14 +401,26 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
               </div>
             )}
 
-            {/* Voice call button */}
-            <button
-              onClick={() => setShowVoiceCall(true)}
-              className="mt-4 flex items-center gap-2 rounded-full border border-pw-green/30 bg-pw-green/5 px-5 py-2.5 text-[13px] font-medium text-pw-green transition-colors hover:bg-pw-green/10 active:scale-[0.97]"
-            >
-              <Phone className="h-4 w-4" strokeWidth={1.5} />
-              {nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
-            </button>
+            {/* Action buttons row */}
+            <div className="mt-4 flex items-center gap-2">
+              {/* Voice call button */}
+              <button
+                onClick={() => setShowVoiceCall(true)}
+                className="flex items-center gap-2 rounded-full border border-pw-green/30 bg-pw-green/5 px-5 py-2.5 text-[13px] font-medium text-pw-green transition-colors hover:bg-pw-green/10 active:scale-[0.97]"
+              >
+                <Phone className="h-4 w-4" strokeWidth={1.5} />
+                {nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
+              </button>
+
+              {/* Schuldhulp connect button */}
+              <a
+                href="tel:0800-8115"
+                className="flex items-center gap-2 rounded-full border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/10 active:scale-[0.97]"
+              >
+                <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
+                {nl ? 'Hulplijn' : 'Helpline'}
+              </a>
+            </div>
           </div>
         ) : (
           // Message list
