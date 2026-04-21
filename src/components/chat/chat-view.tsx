@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, ExternalLink, Copy, Clock, Phone, Plus } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, ExternalLink, Copy, Clock, Phone, Plus, MessageCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
 const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
+const HulpInbox = dynamic(() => import('./hulp-inbox'), { ssr: false });
 
 interface Message {
   id: string;
@@ -80,6 +81,8 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showVoiceCall, setShowVoiceCall] = useState(false);
+  const [showHulpInbox, setShowHulpInbox] = useState(false);
+  const [hulpUnread, setHulpUnread] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [postCallData, setPostCallData] = useState<any>(null);
 
@@ -99,6 +102,15 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           setFirstName(s.first_name || '');
           setLang(s.language || 'nl');
         }
+
+        // Load hulp inbox unread count
+        try {
+          const hulpRes = await fetch('/api/hulp-inbox');
+          if (hulpRes.ok) {
+            const h = await hulpRes.json();
+            setHulpUnread(h.total_unread || 0);
+          }
+        } catch {}
 
         if (continueFrom) {
           // Loading a specific past conversation
@@ -339,6 +351,18 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             >
               <Phone className="h-3 w-3" strokeWidth={2} />
             </button>
+            <button
+              onClick={() => setShowHulpInbox(true)}
+              className="relative flex h-6 w-6 items-center justify-center rounded-full bg-pw-blue/10 text-pw-blue transition-colors hover:bg-pw-blue/20"
+              aria-label={nl ? 'Hulplijn' : 'Help inbox'}
+            >
+              <MessageCircle className="h-3 w-3" strokeWidth={2} />
+              {hulpUnread > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-pw-red px-0.5 text-[8px] font-bold text-white">
+                  {hulpUnread}
+                </span>
+              )}
+            </button>
           </div>
         <div className="flex items-center gap-2">
           <a
@@ -412,14 +436,19 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 {nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
               </button>
 
-              {/* Schuldhulp connect button */}
-              <a
-                href="tel:0800-8115"
-                className="flex items-center gap-2 rounded-full border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/10 active:scale-[0.97]"
+              {/* Hulp inbox button */}
+              <button
+                onClick={() => setShowHulpInbox(true)}
+                className="relative flex items-center gap-2 rounded-full border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/10 active:scale-[0.97]"
               >
-                <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
-                {nl ? 'Hulplijn' : 'Helpline'}
-              </a>
+                <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
+                {nl ? 'Hulplijn' : 'Help inbox'}
+                {hulpUnread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pw-red px-1 text-[10px] font-bold text-white">
+                    {hulpUnread}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         ) : (
@@ -694,6 +723,18 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           onViewBills={() => {
             setPostCallData(null);
             window.location.href = '/betalingen';
+          }}
+        />
+      )}
+
+      {/* Hulp inbox overlay */}
+      {showHulpInbox && (
+        <HulpInbox
+          lang={lang}
+          onClose={() => {
+            setShowHulpInbox(false);
+            // Refresh unread count
+            fetch('/api/hulp-inbox').then(r => r.json()).then(d => setHulpUnread(d.total_unread || 0)).catch(() => {});
           }}
         />
       )}
