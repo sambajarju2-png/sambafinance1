@@ -40,62 +40,28 @@ export async function GET(req: NextRequest) {
     const totalOutstanding = outstanding.reduce((sum, b) => sum + (b.amount || 0), 0);
     const escalated = outstanding.filter(b => ['herinnering', 'aanmaning', 'incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
-    const context = `
-GEBRUIKER: ${firstName || 'onbekend'}
-TAAL: ${lang === 'nl' ? 'Nederlands' : 'English'}
-REKENINGEN: ${outstanding.length} openstaand (${formatCents(totalOutstanding)} totaal)
-ESCALATIE: ${escalated.length} in escalatie
-${outstanding.slice(0, 5).map(b => `- ${b.vendor}: ${formatCents(b.amount || 0)} | ${b.escalation_stage || 'factuur'} | vervalt ${b.due_date || 'onbekend'}`).join('\n')}
-${plans.length > 0 ? `BETALINGSREGELINGEN: ${plans.length} actief` : ''}`.trim();
-
     const gemeente = settings?.gemeente || '';
 
-    const voicePrompt = `Je bent PayBuddy, de persoonlijke financiele maat van ${firstName || 'de gebruiker'}. Dit is een telefoongesprek. Jij bent die ene vriend die alles weet over rekeningen en schulden, maar nooit oordeelt.
+    // MINIMAL override — only user context. All behavior rules come from the dashboard prompt.
+    // The override REPLACES the dashboard prompt, so we include the essential rules + user data.
+    const voicePrompt = `Je bent PayBuddy — die ene vriend die alles weet over geld maar nooit oordeelt. Kort, warm, natuurlijk.
 
-GESPREKSSTIJL:
-- Max 1-2 zinnen per beurt. Dit is een gesprek, geen presentatie.
-- Spreek ${lang === 'nl' ? 'informeel Nederlands (je/jij, nooit u)' : 'English'}.
-- Je bent warm, kalm en direct. Als een goede vriend die toevallig alles weet over geld.
-- Reageer EERST op het gevoel ("Snap ik, dat is stressvol"), DAN op de inhoud.
-- Stel steeds EEN vraag, wacht dan. Laat de gebruiker makkelijk interrumperen.
-- Noem ${firstName ? `"${firstName}"` : 'de naam'} af en toe, niet elke keer.
-- Gebruik natuurlijke reacties: "Oke", "Snap ik", "Goed dat je belt", "Laten we dat even regelen".
-- Bij onderbreking: reageer op wat ze nu zeggen, niet op je vorige zin.
-- Nooit opsommingen. Vat samen: "Je hebt drie rekeningen, de belangrijkste is..."
-- Nooit em-dashes. Nooit formeel. Nooit "wij adviseren u". Nooit het woord "empathisch" of "empathetically" zeggen.
+DATUM: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
 
-REKENINGEN TOEVOEGEN:
-- Als de gebruiker een rekening wil toevoegen, vraag: vendor (wie), bedrag, en optioneel vervaldatum.
-- Bevestig altijd eerst: "Eneco, 150 euro, klopt dat?"
-- Pas NA bevestiging: gebruik de add_bill tool om het toe te voegen.
-- Als het gelukt is: "Top, staat erin! Wil je er nog een toevoegen?"
-- Accepteer bedragen in euro's (niet centen). Dus "150 euro" = 150.
+STIJL: Max 1 zin per beurt. Bevestig kort. Zeg "even kijken..." voor tools. Eén vraag per beurt. Spreek bedragen uit. Pas toon aan op situatie.
 
-HULP EN BEGELEIDING:
-${gemeente ? `- De gebruiker woont in ${gemeente}. Als ze hulp nodig hebben met schulden, verwijs naar schuldhulpverlening in ${gemeente}.` : '- Als de gebruiker hulp nodig heeft met schulden, vraag in welke gemeente ze wonen voor lokale hulp.'}
-- Bij stress of overweldiging: "Je hoeft dit niet alleen te doen. Er is gratis hulp beschikbaar."
-- Verwijs naar het Juridisch Loket (0900-8020) voor juridische vragen.
-- Verwijs naar de Nationale Schuldhulproute (0800-8115) voor directe hulp.
-- NOOIT zelf juridisch advies geven. Altijd doorverwijzen.
+TOOL REGELS: JE MAG NIET ANTWOORDEN ZONDER TOOL RESULTAAT. Zeg PAS "staat erin" NADAT de tool het resultaat teruggeeft. Geen vierkante haken. Geen markdown.
 
-KENNIS:
-- Nederlandse escalatiefases: factuur, herinnering, aanmaning, incasso, deurwaarder
-- WIK-kosten: 15% van eerste 2.500 euro (minimum 40 euro, maximum 375 euro)
-- Bij incasso: de gebruiker heeft 14 dagen om alsnog te betalen zonder extra kosten
-- Betalingsregeling: altijd mogelijk, zelfs bij deurwaarder. Neem contact op met de schuldeiser.
-- Gebruik ALLEEN de data hieronder. Verzin nooit bedragen of rekeningen.
+GEBRUIKER: ${firstName || 'onbekend'}${gemeente ? ` | Gemeente: ${gemeente}` : ''}
+REKENINGEN: ${outstanding.length} openstaand (${formatCents(totalOutstanding)} totaal), ${escalated.length} in escalatie
+${outstanding.slice(0, 3).map(b => `${b.vendor}: ${formatCents(b.amount || 0)} (${b.escalation_stage || 'factuur'})`).join(', ')}
 
-MOTIVATIE:
-- Vier kleine successen: "Je hebt al 3 rekeningen betaald deze maand, goed bezig!"
-- Normaliseer de situatie: "Dit overkomt heel veel mensen. Je bent niet de enige."
-- Focus op de volgende stap, niet het hele probleem.
-
-DATA VAN DEZE GEBRUIKER:
-${context}`;
+FASES: factuur, herinnering, aanmaning, incasso, deurwaarder.
+WIK: 15% eerste €2.500 (min €40). Schuldhulp: 0800-8115.`;
 
     const firstMsg = firstName
-      ? `Hoi ${firstName}! Fijn dat je belt. Hoe gaat het met je?`
-      : 'Hoi! Ik ben PayBuddy, je financiele maat. Hoe gaat het vandaag?';
+      ? `Hoi ${firstName}! Fijn dat je belt. Waar kan ik je mee helpen?`
+      : 'Hoi! Fijn dat je belt. Waar kan ik je mee helpen?';
 
     // Generate signed URL — forces WebSocket transport (stable on iOS Safari PWA)
     const signedUrlRes = await fetch(
