@@ -29,6 +29,14 @@ export interface PostCallData {
   transcriptCount: number;
 }
 
+/* ── Strip emotion tags like [happy], [excited] etc. from agent speech ── */
+function cleanAgentText(text: string): string {
+  return text
+    .replace(/\[(?:happy|excited|sad|surprised|angry|neutral|thinking|laughing|confused|concerned|empathetic)\]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 /* ─────────────────────────────────────────────
    VOICE ORB — Canvas-based reactive animation
    ───────────────────────────────────────────── */
@@ -257,6 +265,20 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [showCamera, setShowCamera] = useState(false);
   const nl = lang === 'nl';
 
+  // Pre-warm audio context on mount (avoids iOS first-play delay)
+  useEffect(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      // Create and immediately discard a silent buffer to unlock audio
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {}
+  }, []);
+
   const conversation = useConversation({
     onConnect: () => {
       setStatus('active');
@@ -302,9 +324,13 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     },
     onMessage: (msg: { source?: string; message?: string }) => {
       if (msg.message) {
+        // Clean emotion tags from agent responses
+        const cleaned = msg.source === 'user' ? msg.message : cleanAgentText(msg.message);
+        if (!cleaned) return; // Skip empty messages after cleaning
+
         const entry: TranscriptEntry = {
           role: msg.source === 'user' ? 'user' : 'assistant',
-          text: msg.message,
+          text: cleaned,
           ts: Date.now(),
         };
         transcriptRef.current.push(entry);
@@ -337,11 +363,11 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             callActionsRef.current.push({ type: 'bill_added', data: { vendor: params.vendor, amount: amountCents }, ts: Date.now() });
             setBillsAdded(prev => [...prev, { vendor: params.vendor, amount: amountCents }]);
             if (data.duplicate) return `${params.vendor} stond al in de app.`;
-            return `${params.vendor} toegevoegd.`;
+            return `${params.vendor} is opgeslagen.`;
           }
-          return 'Kon niet toevoegen.';
+          return 'Kon niet toevoegen, probeer opnieuw.';
         } catch {
-          return 'Er ging iets mis.';
+          return 'Er ging iets mis bij het opslaan.';
         }
       },
 
@@ -356,7 +382,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           if (res.ok) {
             sounds.sentToChat();
             callActionsRef.current.push({ type: 'bill_updated', data: { vendor: params.vendor, change: params.escalation_stage || params.status || '' }, ts: Date.now() });
-            return `${params.vendor} bijgewerkt.`;
+            return `${params.vendor} is bijgewerkt.`;
           }
           return 'Kon niet bijwerken.';
         } catch {
@@ -436,6 +462,54 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           return 'In de chat gezet.';
         } catch {
           return 'Kon niet naar de chat sturen.';
+        }
+      },
+
+      // ── WIK Shield: check incasso overcharge ──
+      check_wik: async (params: { bill_amount: string; claimed_costs: string; vendor?: string }) => {
+        try {
+          const res = await fetch('/api/voice/wik-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bill_amount: params.bill_amount,
+              claimed_costs: params.claimed_costs,
+              vendor: params.vendor || '',
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.overcharged) sounds.sentToChat();
+            return data.summary || JSON.stringify(data);
+          }
+          return 'Kon WIK-check niet uitvoeren.';
+        } catch {
+          return 'Er ging iets mis bij de WIK-controle.';
+        }
+      },
+
+      // ── WIK Shield: draft bezwaar letter ──
+      draft_wik_bezwaar: async (params: { vendor: string; bill_amount: string; claimed_costs: string }) => {
+        try {
+          const res = await fetch('/api/voice/wik-bezwaar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vendor: params.vendor,
+              bill_amount: params.bill_amount,
+              claimed_costs: params.claimed_costs,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            sounds.sentToChat();
+            sentToChatRef.current += 1;
+            callActionsRef.current.push({ type: 'sent_to_chat', data: { message: `WIK bezwaarbrief: ${params.vendor}` }, ts: Date.now() });
+            return data.summary || 'Bezwaarbrief staat in de chat.';
+          }
+          return 'Kon de bezwaarbrief niet maken.';
+        } catch {
+          return 'Er ging iets mis bij het opstellen van de brief.';
         }
       },
     },
