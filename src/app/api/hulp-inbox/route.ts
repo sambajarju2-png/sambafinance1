@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/hulp-inbox
  * Returns all hulp message threads for the user.
+ * Auto-seeds a personalized welcome from the user's gemeente schuldhulp org on first visit.
  * Query params: ?thread_id=xxx (get messages for a specific thread)
  */
 export async function GET(req: NextRequest) {
@@ -36,11 +37,74 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all messages grouped by thread
-    const { data: allMessages } = await supabase
+    let { data: allMessages } = await supabase
       .from('hulp_messages')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+
+    // ── AUTO-SEED: personalized welcome from user's gemeente on first visit ──
+    if (!allMessages || allMessages.length === 0) {
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('gemeente, first_name')
+        .eq('user_id', userId)
+        .single();
+
+      if (settings?.gemeente) {
+        // Look up local schuldhulp org
+        const { data: org } = await supabase
+          .from('gemeente_schuldhulp')
+          .select('gemeente, organisation_name, organisation_url, organisation_type, coverage_note')
+          .ilike('gemeente', settings.gemeente)
+          .limit(1)
+          .single();
+
+        if (org) {
+          const serviceClient = createServiceRoleClient();
+          const name = settings.first_name || '';
+          const greeting = name ? `Hoi ${name}!` : 'Hoi!';
+          const threadKey = `org:${org.organisation_name.toLowerCase().replace(/\s+/g, '-')}`;
+
+          await serviceClient.from('hulp_messages').insert([
+            {
+              user_id: userId,
+              thread_id: threadKey,
+              sender_type: 'gemeente',
+              sender_name: org.organisation_name,
+              content: `${greeting} Welkom bij ${org.organisation_name}. We helpen inwoners van ${org.gemeente} met geldzorgen en schulden. Als je vragen hebt of hulp nodig hebt, stuur gerust een berichtje. We zijn er voor je.`,
+              is_read: false,
+            },
+            {
+              user_id: userId,
+              thread_id: threadKey,
+              sender_type: 'gemeente',
+              sender_name: org.organisation_name,
+              content: `We bieden gratis en vrijblijvend een eerste gesprek aan. Geen wachtlijst, geen verplichtingen. Meer info: ${org.organisation_url}`,
+              is_read: false,
+            },
+          ]);
+
+          // Also seed Nationale Schuldhulproute as a universal thread
+          await serviceClient.from('hulp_messages').insert({
+            user_id: userId,
+            thread_id: 'org:schuldhulproute',
+            sender_type: 'hulpinstantie',
+            sender_name: 'Nationale Schuldhulproute',
+            content: `${greeting} Via de Nationale Schuldhulproute kun je gratis en anoniem hulp krijgen. Bel 0800-8115 of bezoek geldfit.nl. We verwijzen je door naar de juiste hulp in jouw gemeente.`,
+            is_read: false,
+          });
+
+          // Re-fetch after seeding
+          const { data: seeded } = await supabase
+            .from('hulp_messages')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          allMessages = seeded;
+        }
+      }
+    }
 
     // Group into threads
     const threadMap = new Map<string, {
