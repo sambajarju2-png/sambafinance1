@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknotes } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, banknote } from 'lucide-react';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
@@ -172,7 +172,7 @@ function SettingsContent() {
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
-        <SettingsLink icon={Banknotes} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
+        <SettingsLink icon={banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
