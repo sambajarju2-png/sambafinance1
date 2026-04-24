@@ -13,6 +13,7 @@ import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
 import MetricCard from '@/components/metric-card';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 import MatchCards from '@/components/bank/match-cards';
+import { useDashboardModules } from '@/lib/dashboard-modules';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -27,6 +28,7 @@ export default function OverzichtPage() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<OverzichtTab>('overview');
+  const { modules } = useDashboardModules();
 
   useEffect(() => {
     async function fetchBills() {
@@ -96,7 +98,7 @@ export default function OverzichtPage() {
       {activeTab === 'overview' ? (
         <>
           {/* Financial overview */}
-          <FinancialOverviewCard />
+          {modules.home_vrij_besteedbaar && <FinancialOverviewCard />}
 
           {/* Bank match confirmations */}
           <MatchCards />
@@ -172,7 +174,7 @@ export default function OverzichtPage() {
           )}
 
           {/* Schuldenvrij countdown */}
-          {!loading && <SchuldenvrijCountdown bills={bills} />}
+          {!loading && modules.home_schuldvrij_countdown && <SchuldenvrijCountdown bills={bills} />}
 
           {/* Quick actions */}
           <div className="flex gap-3">
@@ -219,7 +221,7 @@ export default function OverzichtPage() {
           )}
 
           {/* Achievements */}
-          <AchievementsDisplay />
+          {modules.home_rewards && <AchievementsDisplay />}
 
           {/* Mood tracker */}
           <MoodTracker />

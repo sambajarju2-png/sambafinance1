@@ -85,6 +85,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [showHulpInbox, setShowHulpInbox] = useState(false);
   const [showBuddyChat, setShowBuddyChat] = useState(false);
   const [hulpUnread, setHulpUnread] = useState(0);
+  const [buddyUnread, setBuddyUnread] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [postCallData, setPostCallData] = useState<any>(null);
 
@@ -111,6 +112,16 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           if (hulpRes.ok) {
             const h = await hulpRes.json();
             setHulpUnread(h.total_unread || 0);
+          }
+        } catch {}
+
+        // Load buddy unread count
+        try {
+          const buddyRes = await fetch('/api/buddy/messages');
+          if (buddyRes.ok) {
+            const b = await buddyRes.json();
+            const total = (b.conversations || []).reduce((sum: number, c: { unread: number }) => sum + c.unread, 0);
+            setBuddyUnread(total);
           }
         } catch {}
 
@@ -435,7 +446,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             )}
 
             {/* Action buttons row */}
-            <div className="mt-4 flex items-center gap-2">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {/* Voice call button */}
               <button
                 onClick={() => setShowVoiceCall(true)}
@@ -455,6 +466,20 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 {hulpUnread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pw-red px-1 text-[10px] font-bold text-white">
                     {hulpUnread}
+                  </span>
+                )}
+              </button>
+
+              {/* Buddy chat button */}
+              <button
+                onClick={() => setShowBuddyChat(true)}
+                className="relative flex items-center gap-2 rounded-full border border-purple-300/50 bg-purple-50/50 px-4 py-2.5 text-[13px] font-medium text-purple-600 transition-colors hover:bg-purple-100/50 active:scale-[0.97] dark:border-purple-500/30 dark:bg-purple-500/5 dark:text-purple-400"
+              >
+                <Users className="h-4 w-4" strokeWidth={1.5} />
+                {nl ? 'Buddy Chat' : 'Buddy Chat'}
+                {buddyUnread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pw-red px-1 text-[10px] font-bold text-white">
+                    {buddyUnread}
                   </span>
                 )}
               </button>
@@ -749,7 +774,14 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
       )}
 
       {showBuddyChat && (
-        <BuddyChat onClose={() => setShowBuddyChat(false)} />
+        <BuddyChat onClose={() => {
+          setShowBuddyChat(false);
+          // Refresh buddy unread count
+          fetch('/api/buddy/messages').then(r => r.json()).then(d => {
+            const total = (d.conversations || []).reduce((sum: number, c: { unread: number }) => sum + c.unread, 0);
+            setBuddyUnread(total);
+          }).catch(() => {});
+        }} />
       )}
     </div>
   );

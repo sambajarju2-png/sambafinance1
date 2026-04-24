@@ -12,6 +12,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { type Bill, formatCents } from '@/lib/bills';
+import { useDashboardModules } from '@/lib/dashboard-modules';
 
 type ForecastPeriod = '7' | '14' | '30';
 
@@ -23,6 +24,7 @@ interface CashflowPanelProps {
 export default function CashflowPanel({ bills, statsUnlocked }: CashflowPanelProps) {
   const t = useTranslations('cashflow');
   const [forecastDays, setForecastDays] = useState<ForecastPeriod>('14');
+  const { modules } = useDashboardModules();
 
   const {
     thisMonthTotal, thisMonthPaid, thisMonthRemaining, lastMonthTotal,
@@ -143,6 +145,7 @@ export default function CashflowPanel({ bills, statsUnlocked }: CashflowPanelPro
       </div>
 
       {/* Upcoming Forecast */}
+      {modules.cashflow_expected_expenses && (
       <div className="rounded-card border border-pw-border bg-pw-surface p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -181,8 +184,10 @@ export default function CashflowPanel({ bills, statsUnlocked }: CashflowPanelPro
           </>
         )}
       </div>
+      )}
 
       {/* Monthly History */}
+      {modules.cashflow_monthly_overview && (
       <div className="rounded-card border border-pw-border bg-pw-surface p-4">
         <div className="mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
@@ -211,6 +216,7 @@ export default function CashflowPanel({ bills, statsUnlocked }: CashflowPanelPro
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-pw-blue/30" /> {t('openLegend')}</span>
         </div>
       </div>
+      )}
 
       {/* Top Vendors */}
       {topVendors.length > 0 && (

@@ -10,6 +10,7 @@ import { type Bill, formatCents } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import CashflowPanel from '@/components/cashflow-panel';
 import MetricCard from '@/components/metric-card';
+import { useDashboardModules } from '@/lib/dashboard-modules';
 
 type SubTab = 'performance' | 'cashflow';
 
@@ -22,6 +23,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true);
   const [statsUnlocked, setStatsUnlocked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { modules } = useDashboardModules();
 
   useEffect(() => {
     async function load() {
@@ -62,7 +64,7 @@ export default function StatsPage() {
       {loading ? (
         <div className="space-y-3"><div className="skeleton h-[180px] rounded-card" /><div className="grid grid-cols-2 gap-2"><div className="skeleton h-[90px] rounded-[14px]" /><div className="skeleton h-[90px] rounded-[14px]" /></div></div>
       ) : activeTab === 'performance' ? (
-        <PerformanceTab bills={bills} t={t} canSeeFullStats={canSeeFullStats} onUnlocked={() => setStatsUnlocked(true)} />
+        <PerformanceTab bills={bills} t={t} canSeeFullStats={canSeeFullStats} onUnlocked={() => setStatsUnlocked(true)} showCategory={modules.stats_category} />
       ) : (
         <CashflowPanel bills={bills} statsUnlocked={canSeeFullStats} />
       )}
@@ -73,7 +75,7 @@ export default function StatsPage() {
 /* ============================================================
    PERFORMANCE TAB — Health card visible, rest blurred unless unlocked
    ============================================================ */
-function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked }: { bills: Bill[]; t: ReturnType<typeof useTranslations>; canSeeFullStats: boolean; onUnlocked: () => void }) {
+function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked, showCategory }: { bills: Bill[]; t: ReturnType<typeof useTranslations>; canSeeFullStats: boolean; onUnlocked: () => void; showCategory: boolean }) {
   if (bills.length === 0) {
     return (<div className="flex flex-col items-center py-16 text-center"><Target className="mb-4 h-12 w-12 text-pw-muted/40" strokeWidth={1.5} /><h2 className="text-[16px] font-semibold text-pw-text">{t('noData')}</h2><p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">{t('noDataHint')}</p></div>);
   }
@@ -135,7 +137,7 @@ function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked }: { bills: Bill
           t={t} onTimeRate={onTimeRate} onTimePaid={onTimePaid} settled={settled}
           streak={streak} savedCents={savedCents} overdue={overdue} escalated={escalated}
           categories={categories} maxCategoryTotal={maxCategoryTotal} bills={bills}
-          outstanding={outstanding}
+          outstanding={outstanding} showCategory={showCategory}
         />
       ) : (
         <ReferralGate onUnlocked={onUnlocked} />
@@ -223,11 +225,11 @@ function ReferralGate({ onUnlocked }: { onUnlocked: () => void }) {
 }
 
 /* Full performance content (shown when unlocked) */
-function FullPerformanceContent({ t, onTimeRate, onTimePaid, settled, streak, savedCents, overdue, escalated, categories, maxCategoryTotal, bills, outstanding }: {
+function FullPerformanceContent({ t, onTimeRate, onTimePaid, settled, streak, savedCents, overdue, escalated, categories, maxCategoryTotal, bills, outstanding, showCategory }: {
   t: ReturnType<typeof useTranslations>; onTimeRate: number; onTimePaid: Bill[]; settled: Bill[];
   streak: number; savedCents: number; overdue: Bill[]; escalated: Bill[];
   categories: Array<{ name: string; total: number; count: number }>; maxCategoryTotal: number;
-  bills: Bill[]; outstanding: Bill[];
+  bills: Bill[]; outstanding: Bill[]; showCategory: boolean;
 }) {
   const messages = useMessages();
   const catMap = (messages as Record<string, unknown>)?.addBill && typeof (messages as Record<string, unknown>).addBill === 'object'
@@ -270,7 +272,7 @@ function FullPerformanceContent({ t, onTimeRate, onTimePaid, settled, streak, sa
         />
       </div>
 
-      {categories.length > 0 && (
+      {showCategory && categories.length > 0 && (
         <div className="rounded-card border border-pw-border bg-pw-surface p-4">
           <h3 className="mb-3 text-[14px] font-bold text-pw-navy">{t('byCategory')}</h3>
           <div className="space-y-3">
