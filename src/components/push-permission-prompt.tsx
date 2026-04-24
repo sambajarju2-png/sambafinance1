@@ -17,6 +17,8 @@ export default function PushPermissionPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // In native mode, Capacitor handles push — skip web prompt
+    if (document.documentElement.classList.contains('native-app')) return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission !== 'default') return;
     if (localStorage.getItem('pw-push-asked')) return;

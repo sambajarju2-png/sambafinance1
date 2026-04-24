@@ -15,6 +15,20 @@ export default function PwaInstallDrawer() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(false);
+
+  useEffect(() => {
+    // Skip PWA prompt entirely in Capacitor native shell
+    if (document.documentElement.classList.contains('native-app')) {
+      setIsNativeApp(true);
+      return;
+    }
+    try {
+      import('@capacitor/core').then(({ Capacitor }) => {
+        if (Capacitor.isNativePlatform()) { setIsNativeApp(true); return; }
+      }).catch(() => {});
+    } catch {}
+  }, []);
 
   useEffect(() => {
     // iOS Safari: only use navigator.standalone (the matchMedia check is unreliable)
@@ -72,6 +86,7 @@ export default function PwaInstallDrawer() {
     sessionStorage.setItem('pwa-drawer-dismissed', 'true');
   }
 
+  if (isNativeApp) return null;
   if (isStandalone) return null;
   if (!showDrawer) return null;
 
