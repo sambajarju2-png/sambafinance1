@@ -34,6 +34,23 @@ export async function POST(
       return NextResponse.json({ error: 'Bill not found' }, { status: 404, headers: NO_CACHE });
     }
 
+    const contentType = req.headers.get('content-type') || '';
+
+    // Handle local storage flag (IndexedDB — image stays on device)
+    if (contentType.includes('application/json')) {
+      const body = await req.json();
+      if (body.stored_locally) {
+        await supabase
+          .from('bills')
+          .update({ confirmation_image_url: 'local://stored' })
+          .eq('id', billId)
+          .eq('user_id', userId);
+
+        return NextResponse.json({ url: 'local://stored' }, { status: 200, headers: NO_CACHE });
+      }
+    }
+
+    // Legacy: handle file upload via FormData → Supabase Storage
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
