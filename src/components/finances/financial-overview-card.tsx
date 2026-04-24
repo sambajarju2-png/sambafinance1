@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ArrowRight, Wallet, Receipt, Home as HomeIcon, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowRight, Wallet, Receipt, Home as HomeIcon, AlertTriangle, Check } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { useRouter } from 'next/navigation';
 
@@ -10,6 +10,7 @@ interface OverviewData {
   totaal_inkomen: number;
   totaal_vaste_lasten: number;
   totaal_open_rekeningen: number;
+  totaal_betaald_deze_maand: number;
   vrij_besteedbaar: number;
   expenses_count: number;
   bills_count: number;
@@ -122,6 +123,14 @@ export default function FinancialOverviewCard() {
               <Receipt className="h-3 w-3" /> Open rekeningen ({data.bills_count})
             </span>
             <span className="font-medium text-pw-red">-{formatCents(data.totaal_open_rekeningen)}</span>
+          </div>
+        )}
+        {data.totaal_betaald_deze_maand > 0 && (
+          <div className="flex items-center justify-between text-[12px]">
+            <span className="flex items-center gap-1.5 text-pw-muted">
+              <Check className="h-3 w-3" /> Betaald deze maand
+            </span>
+            <span className="font-medium text-pw-green">-{formatCents(data.totaal_betaald_deze_maand)}</span>
           </div>
         )}
       </div>

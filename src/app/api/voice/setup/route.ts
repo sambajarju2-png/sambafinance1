@@ -4,8 +4,15 @@ import { NextRequest, NextResponse } from 'next/server';
  * GET/POST /api/voice/setup
  * Creates the PayBuddy agent on ElevenLabs with a warm Dutch voice.
  * Returns the agent_id to set as ELEVENLABS_AGENT_ID env var.
+ * Protected — requires CRON_SECRET.
  */
-async function handleSetup() {
+async function handleSetup(req: NextRequest) {
+  // Admin only — requires CRON_SECRET
+  const auth = req.headers.get('authorization')?.replace('Bearer ', '');
+  if (auth !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'ELEVENLABS_API_KEY not set' }, { status: 500 });
 
@@ -64,5 +71,5 @@ async function handleSetup() {
   }
 }
 
-export async function GET() { return handleSetup(); }
-export async function POST() { return handleSetup(); }
+export async function GET(req: NextRequest) { return handleSetup(req); }
+export async function POST(req: NextRequest) { return handleSetup(req); }
