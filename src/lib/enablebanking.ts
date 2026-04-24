@@ -48,7 +48,7 @@ function generateJWT(): string {
 
   const payload = base64url(JSON.stringify({
     iss: APP_ID,
-    aud: 'enablebanking.com',
+    aud: 'api.enablebanking.com',
     iat: now,
     exp: now + 3600
   }))

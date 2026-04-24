@@ -256,7 +256,7 @@ export default function BankConnectCard() {
           <Shield className="h-4 w-4 text-pw-blue shrink-0 mt-0.5" strokeWidth={1.5} />
           <div>
             <p className="text-[11px] text-pw-muted leading-relaxed">
-              PayWatch gebruikt open banking (PSD2) via GoCardless om veilig je transacties op te halen.
+              PayWatch gebruikt open banking (PSD2) via Enable Banking om veilig je transacties op te halen.
               We kunnen nooit geld overmaken of je saldo wijzigen — alleen meelezen.
               Verbindingen verlopen automatisch na 90 dagen.
             </p>
