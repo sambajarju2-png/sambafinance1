@@ -47,6 +47,8 @@ export interface Bill {
   escalation_stage: EscalationStage;
   estimated_extra_costs: number;
   has_payment_plan: boolean;
+  expense_id: string | null;
+  is_recurring: boolean;
   created_at: string;
   updated_at: string;
 }
