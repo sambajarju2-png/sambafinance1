@@ -9,6 +9,7 @@ import {
   Check,
 } from 'lucide-react';
 import { type DashboardModules, DEFAULT_MODULES } from '@/lib/dashboard-modules';
+import { hapticFeedback } from '@/lib/capacitor';
 
 interface ModuleOption {
   key: keyof DashboardModules;
@@ -79,6 +80,7 @@ export default function DashboardModulesSettings() {
   }, []);
 
   async function handleToggle(key: keyof DashboardModules) {
+    hapticFeedback('light');
     const updated = { ...modules, [key]: !modules[key] };
     setModules(updated);
     setSaving(true);

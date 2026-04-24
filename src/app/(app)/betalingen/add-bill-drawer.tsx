@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Loader2, AlertCircle, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
+import { hapticFeedback } from '@/lib/capacitor';
 
 interface MatchedExpense {
   id: string;
@@ -118,6 +119,7 @@ export default function AddBillDrawer({ open, onClose, onBillAdded }: AddBillDra
       setPaymentDay('');
       setMatchedExpense(null);
 
+      hapticFeedback('medium');
       onBillAdded();
       onClose();
     } catch {

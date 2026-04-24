@@ -67,7 +67,10 @@ export default function Topbar({ notificationCount: initialCount }: TopbarProps)
   }
 
   return (
-    <header className="glass-topbar sticky top-0 z-40 flex h-14 items-center justify-between border-b border-pw-border/50 px-4">
+    <header
+      className="glass-topbar sticky top-0 z-40 flex h-14 items-center justify-between border-b border-pw-border/50 px-4"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', minHeight: 'calc(56px + env(safe-area-inset-top, 0px))' }}
+    >
       <div className="flex items-center gap-3">
         <img src="/logo.svg" alt="PayWatch" className="h-5 dark:hidden" />
         <img src="/logo-dark.svg" alt="PayWatch" className="h-5 hidden dark:block" />

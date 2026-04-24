@@ -194,16 +194,66 @@ body {
   animation: chat-bubble-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Capacitor native shell — safe area padding for iOS notch */
+/* Capacitor native shell — iOS polish */
 .cap-safe-top { padding-top: env(safe-area-inset-top, 0px); }
 .cap-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
-/* Hide bottom nav when keyboard is open on native */
-body.keyboard-open .bottom-nav-container {
+/* All fixed-bottom drawers get safe area padding in native mode */
+html.native-app .drawer-enter,
+html.native-app .drawer-spring {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+/* Hide bottom nav when keyboard is open */
+body.keyboard-open .bottom-nav-container,
+body.keyboard-open nav[class*="fixed bottom"] {
   display: none !important;
 }
 
 /* Prevent pull-to-refresh in native shell */
 html.native-app {
   overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth momentum scrolling for all scroll containers */
+html.native-app [class*="overflow-y-auto"],
+html.native-app [class*="overflow-auto"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Disable text selection on interactive elements (feels more native) */
+html.native-app button,
+html.native-app a,
+html.native-app nav {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Disable callout on long-press (native apps don't show this) */
+html.native-app img,
+html.native-app a {
+  -webkit-touch-callout: none;
+}
+
+/* Smooth tap highlight instead of gray flash */
+html.native-app * {
+  -webkit-tap-highlight-color: rgba(37, 99, 235, 0.08);
+}
+
+/* Page transition animation */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+html.native-app main {
+  animation: page-fade-in 0.2s ease-out;
+}
+
+/* Smoother drawer animation on native */
+html.native-app .drawer-enter {
+  animation: drawer-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+html.native-app .drawer-spring {
+  animation: drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }

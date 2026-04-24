@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Loader2, Check, Link as LinkIcon } from 'lucide-react';
 import { type Bill, BILL_CATEGORIES, parseToCents } from '@/lib/bills';
+import { hapticFeedback } from '@/lib/capacitor';
 
 interface EditBillDrawerProps {
   bill: Bill;
@@ -74,6 +75,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
       }
 
       const data = await res.json();
+      hapticFeedback('medium');
       setSaved(true);
       setTimeout(() => {
         onSaved(data.bill);

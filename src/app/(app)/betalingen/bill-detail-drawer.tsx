@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
+import { hapticFeedback } from '@/lib/capacitor';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
   Check, Star, Trash2, Loader2, Copy, Pencil, ShieldAlert, Landmark, Clock,
@@ -160,6 +161,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
         body: JSON.stringify({ status: 'settled', paid_date: today }),
       });
       if (res.ok) {
+        hapticFeedback('heavy');
         onUpdate();
         setActionLoading(null);
         setConfirmationOpen(true);
