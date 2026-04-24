@@ -7,9 +7,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:mobile": "IS_NATIVE=true next build",
+    "cap:sync": "npm run build:mobile && npx cap sync",
+    "cap:ios": "npm run cap:sync && npx cap open ios",
+    "cap:android": "npm run cap:sync && npx cap open android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.3",
+    "@capacitor/push-notifications": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@elevenlabs/react": "^1.1.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.101.1",
@@ -30,6 +42,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.10.6",
     "@types/react": "^19.2.0",

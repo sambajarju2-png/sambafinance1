@@ -30,6 +30,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# capacitor native build artifacts
+ios/App/Pods/
+ios/App/build/
+ios/App/App/public/
+android/app/build/
+android/.gradle/
+android/app/src/main/assets/public/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -193,3 +193,17 @@ body {
 .chat-bubble-enter {
   animation: chat-bubble-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Capacitor native shell — safe area padding for iOS notch */
+.cap-safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.cap-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Hide bottom nav when keyboard is open on native */
+body.keyboard-open .bottom-nav-container {
+  display: none !important;
+}
+
+/* Prevent pull-to-refresh in native shell */
+html.native-app {
+  overscroll-behavior: none;
+}
