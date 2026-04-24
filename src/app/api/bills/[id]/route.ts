@@ -93,6 +93,37 @@ export async function PATCH(
       }
     }
 
+    // Create linked expense if marked as recurring and not already linked
+    if (body.is_recurring && updated && !updated.expense_id) {
+      try {
+        const { data: expense } = await supabase
+          .from('user_expenses')
+          .insert({
+            user_id: userId,
+            name: updated.vendor,
+            category: updated.category === 'energie' ? 'energie' : updated.category === 'verzekering' ? 'verzekering' : updated.category === 'huur' ? 'huur' : 'overig',
+            amount: updated.amount,
+            monthly_amount: updated.amount,
+            interval: 'monthly',
+            iban: updated.iban || null,
+            reference: updated.reference || null,
+            is_active: true,
+          })
+          .select('id')
+          .single();
+
+        if (expense) {
+          await supabase
+            .from('bills')
+            .update({ expense_id: expense.id })
+            .eq('id', billId);
+          if (updated) (updated as Record<string, unknown>).expense_id = expense.id;
+        }
+      } catch (err) {
+        console.error('Failed to create linked expense:', err);
+      }
+    }
+
     return NextResponse.json({ bill: updated }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {

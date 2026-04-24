@@ -1,9 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Loader2, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { X, Loader2, AlertCircle, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
+
+interface MatchedExpense {
+  id: string;
+  name: string;
+  category: string;
+  amount: number;
+  interval: string;
+  monthly_amount: number;
+}
 
 interface AddBillDrawerProps {
   open: boolean;
@@ -25,6 +34,27 @@ export default function AddBillDrawer({ open, onClose, onBillAdded }: AddBillDra
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Recurring (vaste last) state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState('monthly');
+  const [paymentDay, setPaymentDay] = useState('');
+  const [matchedExpense, setMatchedExpense] = useState<MatchedExpense | null>(null);
+
+  // Auto-link: check if vendor matches an existing vaste last
+  const checkExpenseMatch = useCallback(async (v: string) => {
+    if (v.length < 3) { setMatchedExpense(null); return; }
+    try {
+      const res = await fetch(`/api/bills/match-expense?vendor=${encodeURIComponent(v)}`);
+      const data = await res.json();
+      setMatchedExpense(data.match || null);
+    } catch { setMatchedExpense(null); }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => { if (vendor.trim()) checkExpenseMatch(vendor.trim()); }, 500);
+    return () => clearTimeout(timer);
+  }, [vendor, checkExpenseMatch]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +91,9 @@ export default function AddBillDrawer({ open, onClose, onBillAdded }: AddBillDra
           reference: reference || null,
           payment_url: paymentUrl || null,
           notes: notes || null,
+          is_recurring: isRecurring,
+          recurring_interval: isRecurring ? recurringInterval : undefined,
+          payment_day: isRecurring && paymentDay ? parseInt(paymentDay) : undefined,
         }),
       });
 
@@ -80,6 +113,10 @@ export default function AddBillDrawer({ open, onClose, onBillAdded }: AddBillDra
       setReference('');
       setPaymentUrl('');
       setNotes('');
+      setIsRecurring(false);
+      setRecurringInterval('monthly');
+      setPaymentDay('');
+      setMatchedExpense(null);
 
       onBillAdded();
       onClose();
@@ -157,6 +194,70 @@ export default function AddBillDrawer({ open, onClose, onBillAdded }: AddBillDra
               ))}
             </select>
           </div>
+
+          {/* IBAN */}
+
+          {/* Auto-link suggestion */}
+          {matchedExpense && !isRecurring && (
+            <div className="rounded-xl border border-pw-blue/20 bg-pw-blue/5 p-3">
+              <div className="flex items-start gap-2">
+                <RefreshCw className="h-4 w-4 text-pw-blue mt-0.5 shrink-0" strokeWidth={1.5} />
+                <div className="flex-1">
+                  <p className="text-[12px] font-medium text-pw-navy">
+                    Dit lijkt op je vaste last &ldquo;{matchedExpense.name}&rdquo;
+                  </p>
+                  <p className="text-[11px] text-pw-muted mt-0.5">
+                    € {(matchedExpense.monthly_amount / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })} /maand
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsRecurring(true)}
+                    className="mt-1.5 text-[11px] font-semibold text-pw-blue hover:underline"
+                  >
+                    Koppelen als vaste last
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vaste last toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-pw-border bg-pw-surface p-3">
+            <div>
+              <p className="text-[13px] font-medium text-pw-navy">Vaste last</p>
+              <p className="text-[11px] text-pw-muted">Keert maandelijks terug</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsRecurring(!isRecurring)}
+              className={`relative h-7 w-12 rounded-full transition-colors ${isRecurring ? 'bg-pw-blue' : 'bg-pw-border'}`}
+            >
+              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Recurring options (shown when toggle is on) */}
+          {isRecurring && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-label text-pw-text">Interval</label>
+                <select value={recurringInterval} onChange={(e) => setRecurringInterval(e.target.value)}
+                  className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-body text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue">
+                  <option value="weekly">Wekelijks</option>
+                  <option value="monthly">Maandelijks</option>
+                  <option value="quarterly">Per kwartaal</option>
+                  <option value="yearly">Jaarlijks</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-label text-pw-text">Afschrijfdag</label>
+                <input type="number" inputMode="numeric" min="1" max="31"
+                  value={paymentDay} onChange={(e) => setPaymentDay(e.target.value)}
+                  placeholder="bijv. 15"
+                  className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-body text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
+              </div>
+            </div>
+          )}
 
           {/* IBAN */}
           <div>

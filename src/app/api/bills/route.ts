@@ -148,6 +148,47 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ── Recurring Bill → Create Vaste Last ──
+    if (body.is_recurring && bill) {
+      try {
+        // Map bill category to expense category
+        const expCategoryMap: Record<string, string> = {
+          energie: 'energie', water: 'water', telecom: 'telecom',
+          verzekering: 'verzekering', zorg: 'zorgverzekering',
+          huur: 'huur', internet: 'internet', overig: 'overig',
+          belasting: 'overig', boete: 'overig', abonnement: 'abonnement'
+        };
+
+        const { data: expense } = await supabase
+          .from('user_expenses')
+          .insert({
+            user_id: userId,
+            name: vendor,
+            category: expCategoryMap[category] || 'overig',
+            amount: amount_cents,
+            interval: body.recurring_interval || 'monthly',
+            monthly_amount: body.recurring_interval === 'yearly' ? Math.round(amount_cents / 12)
+              : body.recurring_interval === 'quarterly' ? Math.round(amount_cents / 3)
+              : amount_cents,
+            payment_day: body.payment_day || null,
+            iban: iban || null,
+            reference: reference || null,
+            is_active: true,
+          })
+          .select('id')
+          .single();
+
+        if (expense) {
+          await supabase
+            .from('bills')
+            .update({ expense_id: expense.id })
+            .eq('id', billId);
+        }
+      } catch (err) {
+        console.error('Failed to create linked expense (non-blocking):', err);
+      }
+    }
+
     return NextResponse.json({ bill }, { status: 201, headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {

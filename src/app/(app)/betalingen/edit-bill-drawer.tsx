@@ -28,6 +28,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
   const [iban, setIban] = useState(bill.iban || '');
   const [paymentUrl, setPaymentUrl] = useState(bill.payment_url || '');
   const [notes, setNotes] = useState(bill.notes || '');
+  const [isRecurring, setIsRecurring] = useState(!!bill.expense_id || bill.is_recurring);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -59,6 +60,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
           iban: iban.trim() || null,
           payment_url: paymentUrl.trim() || null,
           notes: notes.trim(),
+          is_recurring: isRecurring,
         }),
       });
 
@@ -168,6 +170,21 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
               placeholder="https://..."
               className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
             <p className="mt-1 text-[10px] text-pw-muted">{tAdd('paymentUrlHint')}</p>
+          </div>
+
+          {/* Vaste last toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-pw-border bg-pw-surface p-3">
+            <div>
+              <p className="text-[13px] font-medium text-pw-navy">Vaste last</p>
+              <p className="text-[11px] text-pw-muted">Keert maandelijks terug</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsRecurring(!isRecurring)}
+              className={`relative h-7 w-12 rounded-full transition-colors ${isRecurring ? 'bg-pw-blue' : 'bg-pw-border'}`}
+            >
+              <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
           </div>
 
           {/* Notes */}
