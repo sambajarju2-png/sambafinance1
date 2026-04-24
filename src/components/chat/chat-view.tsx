@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, ExternalLink, Copy, Clock, Phone, Plus, MessageCircle } from 'lucide-react';
+import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, ExternalLink, Copy, Clock, Phone, Plus, MessageCircle, Users } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
 const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
 const HulpInbox = dynamic(() => import('./hulp-inbox'), { ssr: false });
+const BuddyChat = dynamic(() => import('../buddy-chat'), { ssr: false });
 
 interface Message {
   id: string;
@@ -82,6 +83,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showVoiceCall, setShowVoiceCall] = useState(false);
   const [showHulpInbox, setShowHulpInbox] = useState(false);
+  const [showBuddyChat, setShowBuddyChat] = useState(false);
   const [hulpUnread, setHulpUnread] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [postCallData, setPostCallData] = useState<any>(null);
@@ -362,6 +364,13 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                   {hulpUnread}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setShowBuddyChat(true)}
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-purple-600 transition-colors hover:bg-purple-200"
+              aria-label="Buddy chat"
+            >
+              <Users className="h-3 w-3" strokeWidth={2} />
             </button>
           </div>
         <div className="flex items-center gap-2">
@@ -737,6 +746,10 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             fetch('/api/hulp-inbox').then(r => r.json()).then(d => setHulpUnread(d.total_unread || 0)).catch(() => {});
           }}
         />
+      )}
+
+      {showBuddyChat && (
+        <BuddyChat onClose={() => setShowBuddyChat(false)} />
       )}
     </div>
   );
