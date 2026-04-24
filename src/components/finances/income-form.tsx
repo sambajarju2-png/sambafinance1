@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   Wallet, Users, GraduationCap, HandCoins, Gift, CalendarDays,
-  Baby, Home, Briefcase, Loader2, Check, ChevronDown, ChevronUp, Plus, Minus
+  Baby, Home, Briefcase, Loader2, Check, Plus, Minus, Heart, ChevronDown
 } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 
@@ -42,35 +42,21 @@ const INITIAL: FinancesData = {
 };
 
 function CentsInput({
-  value,
-  onChange,
-  placeholder = '0',
-  icon,
-  label,
+  value, onChange, placeholder = '0', icon, label,
 }: {
-  value: number;
-  onChange: (cents: number) => void;
-  placeholder?: string;
-  icon: React.ReactNode;
-  label: string;
+  value: number; onChange: (cents: number) => void; placeholder?: string;
+  icon: React.ReactNode; label: string;
 }) {
   const [display, setDisplay] = useState(value > 0 ? (value / 100).toString() : '');
-
-  useEffect(() => {
-    setDisplay(value > 0 ? (value / 100).toString() : '');
-  }, [value]);
+  useEffect(() => { setDisplay(value > 0 ? (value / 100).toString() : ''); }, [value]);
 
   return (
     <div>
       <label className="mb-1 block text-[12px] font-medium text-pw-muted">{label}</label>
       <div className="relative">
-        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-pw-muted">
-          {icon}
-        </div>
+        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-pw-muted">{icon}</div>
         <input
-          type="number"
-          inputMode="decimal"
-          placeholder={placeholder}
+          type="number" inputMode="decimal" placeholder={placeholder}
           className="w-full rounded-xl border border-pw-border bg-pw-surface py-2.5 pl-10 pr-10 text-[15px] font-medium text-pw-text outline-none transition-colors focus:border-pw-blue focus:ring-1 focus:ring-pw-blue/20"
           value={display}
           onChange={(e) => {
@@ -79,10 +65,31 @@ function CentsInput({
             onChange(isNaN(euros) ? 0 : Math.round(euros * 100));
           }}
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-pw-muted">
-          €/mnd
-        </span>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-pw-muted">€/mnd</span>
       </div>
+    </div>
+  );
+}
+
+function SectionCard({ icon, title, children, defaultOpen = true }: {
+  icon: React.ReactNode; title: string; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-2xl border border-pw-border/60 bg-pw-surface shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-4 py-3.5"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-blue/[0.07]">
+            {icon}
+          </div>
+          <span className="text-[14px] font-semibold text-pw-text">{title}</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-pw-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="border-t border-pw-border/40 px-4 py-4 space-y-3">{children}</div>}
     </div>
   );
 }
@@ -92,26 +99,17 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [showExtra, setShowExtra] = useState(false);
-  const [showHousehold, setShowHousehold] = useState(false);
 
   useEffect(() => {
     fetch('/api/finances')
       .then(r => r.json())
-      .then(d => {
-        if (d && d.netto_inkomen !== undefined) {
-          setData(d);
-          if (d.has_partner || d.num_children > 0) setShowHousehold(true);
-          if (d.duo_inkomen || d.uitkering_inkomen || d.overig_inkomen) setShowExtra(true);
-        }
-      })
+      .then(d => { if (d && d.netto_inkomen !== undefined) setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   async function handleSave() {
-    setSaving(true);
-    setSaved(false);
+    setSaving(true); setSaved(false);
     try {
       const res = await fetch('/api/finances', {
         method: 'POST',
@@ -159,10 +157,13 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Primary income */}
-      <div className="space-y-3">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-pw-muted">Inkomen</h3>
+    <div className="space-y-4">
+      {/* Section 1: Inkomen */}
+      <SectionCard
+        icon={<Wallet className="h-4 w-4 text-pw-blue" />}
+        title="Inkomen"
+        defaultOpen={true}
+      >
         <CentsInput
           icon={<Wallet className="h-4 w-4" />}
           label="Netto inkomen per maand"
@@ -170,50 +171,38 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
           onChange={v => updateField('netto_inkomen', v)}
           placeholder="bijv. 2200"
         />
-      </div>
+        <CentsInput
+          icon={<GraduationCap className="h-4 w-4" />}
+          label="DUO / Studiefinanciering"
+          value={data.duo_inkomen}
+          onChange={v => updateField('duo_inkomen', v)}
+        />
+        <CentsInput
+          icon={<HandCoins className="h-4 w-4" />}
+          label="Uitkering (bijstand, WW, etc.)"
+          value={data.uitkering_inkomen}
+          onChange={v => updateField('uitkering_inkomen', v)}
+        />
+        <CentsInput
+          icon={<Gift className="h-4 w-4" />}
+          label="Overig inkomen"
+          value={data.overig_inkomen}
+          onChange={v => updateField('overig_inkomen', v)}
+        />
+      </SectionCard>
 
-      {/* Extra income toggle */}
-      <button
-        onClick={() => setShowExtra(!showExtra)}
-        className="flex w-full items-center gap-2 text-[13px] font-medium text-pw-blue"
+      {/* Section 2: Salarisbetaling */}
+      <SectionCard
+        icon={<CalendarDays className="h-4 w-4 text-pw-blue" />}
+        title="Salarisbetaling"
+        defaultOpen={data.salary_day_from !== null}
       >
-        {showExtra ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        Extra inkomsten (DUO, uitkering, etc.)
-      </button>
-
-      {showExtra && (
-        <div className="space-y-3 rounded-xl border border-pw-border/60 bg-pw-bg p-4">
-          <CentsInput
-            icon={<GraduationCap className="h-4 w-4" />}
-            label="DUO / Studiefinanciering"
-            value={data.duo_inkomen}
-            onChange={v => updateField('duo_inkomen', v)}
-          />
-          <CentsInput
-            icon={<HandCoins className="h-4 w-4" />}
-            label="Uitkering (bijstand, WW, etc.)"
-            value={data.uitkering_inkomen}
-            onChange={v => updateField('uitkering_inkomen', v)}
-          />
-          <CentsInput
-            icon={<Gift className="h-4 w-4" />}
-            label="Overig inkomen"
-            value={data.overig_inkomen}
-            onChange={v => updateField('overig_inkomen', v)}
-          />
-        </div>
-      )}
-
-      {/* Salary timing */}
-      <div className="space-y-3">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-pw-muted">Wanneer krijg je betaald?</h3>
+        <p className="text-[12px] text-pw-muted">Tussen welke dagen van de maand krijg je betaald?</p>
         <div className="flex items-center gap-3">
           <div className="flex-1">
             <label className="mb-1 block text-[11px] text-pw-muted">Van dag</label>
             <input
-              type="number"
-              min={1}
-              max={31}
+              type="number" inputMode="numeric" min={1} max={31}
               className="w-full rounded-xl border border-pw-border bg-pw-surface px-3 py-2.5 text-center text-[15px] font-medium outline-none focus:border-pw-blue"
               value={data.salary_day_from || ''}
               onChange={e => updateField('salary_day_from', parseInt(e.target.value) || null)}
@@ -224,9 +213,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
           <div className="flex-1">
             <label className="mb-1 block text-[11px] text-pw-muted">Tot dag</label>
             <input
-              type="number"
-              min={1}
-              max={31}
+              type="number" inputMode="numeric" min={1} max={31}
               className="w-full rounded-xl border border-pw-border bg-pw-surface px-3 py-2.5 text-center text-[15px] font-medium outline-none focus:border-pw-blue"
               value={data.salary_day_to || ''}
               onChange={e => updateField('salary_day_to', parseInt(e.target.value) || null)}
@@ -234,123 +221,122 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
             />
           </div>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Household toggle */}
-      <button
-        onClick={() => setShowHousehold(!showHousehold)}
-        className="flex w-full items-center gap-2 text-[13px] font-medium text-pw-blue"
+      {/* Section 3: Huishouden */}
+      <SectionCard
+        icon={<Users className="h-4 w-4 text-pw-blue" />}
+        title="Huishouden"
+        defaultOpen={data.has_partner || data.num_children > 0}
       >
-        {showHousehold ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        Huishouden & toeslagen check
-      </button>
+        {/* Partner */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-pw-muted" />
+            <span className="text-[13px] font-medium">Heb je een partner?</span>
+          </div>
+          <button
+            onClick={() => {
+              updateField('has_partner', !data.has_partner);
+              if (data.has_partner) updateField('partner_inkomen', 0);
+            }}
+            className={`relative h-6 w-11 rounded-full transition-colors ${data.has_partner ? 'bg-pw-blue' : 'bg-pw-border'}`}
+          >
+            <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${data.has_partner ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
 
-      {showHousehold && (
-        <div className="space-y-4 rounded-xl border border-pw-border/60 bg-pw-bg p-4">
-          {/* Partner */}
-          <div className="flex items-center justify-between">
+        {data.has_partner && (
+          <CentsInput
+            icon={<Briefcase className="h-4 w-4" />}
+            label="Netto inkomen partner per maand"
+            value={data.partner_inkomen}
+            onChange={v => updateField('partner_inkomen', v)}
+          />
+        )}
+
+        {/* Children */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-pw-muted" />
-              <span className="text-[13px] font-medium">Heb je een partner?</span>
+              <Baby className="h-4 w-4 text-pw-muted" />
+              <span className="text-[13px] font-medium">Kinderen onder 18</span>
             </div>
             <button
-              onClick={() => {
-                updateField('has_partner', !data.has_partner);
-                if (data.has_partner) updateField('partner_inkomen', 0);
-              }}
-              className={`relative h-6 w-11 rounded-full transition-colors ${data.has_partner ? 'bg-pw-blue' : 'bg-pw-border'}`}
+              onClick={addChild}
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-pw-blue/10 text-pw-blue"
             >
-              <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${data.has_partner ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+              <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-
-          {data.has_partner && (
-            <CentsInput
-              icon={<Briefcase className="h-4 w-4" />}
-              label="Netto inkomen partner per maand"
-              value={data.partner_inkomen}
-              onChange={v => updateField('partner_inkomen', v)}
-            />
-          )}
-
-          {/* Children */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Baby className="h-4 w-4 text-pw-muted" />
-                <span className="text-[13px] font-medium">Kinderen onder 18</span>
-              </div>
-              <button
-                onClick={addChild}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-pw-blue/10 text-pw-blue"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {data.children_ages.map((age, idx) => (
-              <div key={idx} className="mb-2 flex items-center gap-2">
-                <span className="w-16 text-[12px] text-pw-muted">Kind {idx + 1}</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={17}
-                  className="flex-1 rounded-lg border border-pw-border bg-pw-surface px-3 py-1.5 text-[14px] outline-none focus:border-pw-blue"
-                  value={age}
-                  onChange={e => setChildAge(idx, parseInt(e.target.value) || 0)}
-                  placeholder="Leeftijd"
-                />
-                <span className="text-[11px] text-pw-muted">jaar</span>
-                <button
-                  onClick={() => removeChild(idx)}
-                  className="flex h-6 w-6 items-center justify-center rounded-lg text-pw-red hover:bg-pw-red/10"
-                >
-                  <Minus className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Rent */}
-          <CentsInput
-            icon={<Home className="h-4 w-4" />}
-            label="Kale huur per maand (voor huurtoeslag)"
-            value={data.monthly_rent}
-            onChange={v => updateField('monthly_rent', v)}
-          />
-
-          {/* Kinderopvang */}
-          {data.num_children > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] font-medium">Maakt gebruik van kinderopvang?</span>
-              <button
-                onClick={() => updateField('has_kinderopvang', !data.has_kinderopvang)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${data.has_kinderopvang ? 'bg-pw-blue' : 'bg-pw-border'}`}
-              >
-                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${data.has_kinderopvang ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-          )}
-
-          {/* Vermogen */}
-          <div>
-            <label className="mb-1 block text-[12px] font-medium text-pw-muted">Spaargeld / vermogen (voor toeslagen check)</label>
-            <div className="relative">
+          {data.children_ages.map((age, idx) => (
+            <div key={idx} className="mb-2 flex items-center gap-2">
+              <span className="w-16 text-[12px] text-pw-muted">Kind {idx + 1}</span>
               <input
-                type="number"
-                inputMode="decimal"
-                className="w-full rounded-xl border border-pw-border bg-pw-surface py-2.5 pl-4 pr-10 text-[15px] font-medium outline-none focus:border-pw-blue"
-                value={data.vermogen > 0 ? data.vermogen / 100 : ''}
-                onChange={e => {
-                  const val = parseFloat(e.target.value);
-                  updateField('vermogen', isNaN(val) ? 0 : Math.round(val * 100));
-                }}
-                placeholder="0"
+                type="number" inputMode="numeric" min={0} max={17}
+                className="flex-1 rounded-lg border border-pw-border bg-pw-surface px-3 py-1.5 text-[14px] outline-none focus:border-pw-blue"
+                value={age}
+                onChange={e => setChildAge(idx, parseInt(e.target.value) || 0)}
+                placeholder="Leeftijd"
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-pw-muted">€</span>
+              <span className="text-[11px] text-pw-muted">jaar</span>
+              <button
+                onClick={() => removeChild(idx)}
+                className="flex h-6 w-6 items-center justify-center rounded-lg text-pw-red hover:bg-pw-red/10"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
             </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Section 4: Toeslagen check */}
+      <SectionCard
+        icon={<Heart className="h-4 w-4 text-pw-blue" />}
+        title="Toeslagen check"
+        defaultOpen={data.monthly_rent > 0 || data.vermogen > 0}
+      >
+        <p className="text-[12px] text-pw-muted mb-2">
+          Vul dit in om te zien of je recht hebt op toeslagen. Je huur wordt automatisch
+          overgenomen als je die bij vaste lasten hebt toegevoegd.
+        </p>
+        <CentsInput
+          icon={<Home className="h-4 w-4" />}
+          label="Kale huur per maand (optioneel — auto-detectie uit vaste lasten)"
+          value={data.monthly_rent}
+          onChange={v => updateField('monthly_rent', v)}
+        />
+
+        {data.num_children > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-medium">Kinderopvang?</span>
+            <button
+              onClick={() => updateField('has_kinderopvang', !data.has_kinderopvang)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${data.has_kinderopvang ? 'bg-pw-blue' : 'bg-pw-border'}`}
+            >
+              <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${data.has_kinderopvang ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-[12px] font-medium text-pw-muted">Spaargeld / vermogen</label>
+          <div className="relative">
+            <input
+              type="number" inputMode="decimal"
+              className="w-full rounded-xl border border-pw-border bg-pw-surface py-2.5 pl-4 pr-10 text-[15px] font-medium outline-none focus:border-pw-blue"
+              value={data.vermogen > 0 ? data.vermogen / 100 : ''}
+              onChange={e => {
+                const val = parseFloat(e.target.value);
+                updateField('vermogen', isNaN(val) ? 0 : Math.round(val * 100));
+              }}
+              placeholder="0"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-pw-muted">€</span>
           </div>
         </div>
-      )}
+      </SectionCard>
 
       {/* Total + save */}
       {totalIncome > 0 && (
@@ -370,10 +356,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
         {saving ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : saved ? (
-          <>
-            <Check className="h-4 w-4" />
-            Opgeslagen
-          </>
+          <><Check className="h-4 w-4" /> Opgeslagen</>
         ) : (
           'Opslaan'
         )}

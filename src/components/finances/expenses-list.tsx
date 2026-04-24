@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   Home, Zap, Droplets, Shield, Heart, Smartphone, Wifi, Repeat, Car, ShoppingCart,
-  MoreHorizontal, Plus, Loader2, Trash2, Pencil, X, Check, CircleDot
+  Plus, Loader2, Trash2, X, Check, CircleDot
 } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 
@@ -65,9 +65,7 @@ function AddExpenseForm({ onAdded }: { onAdded: () => void }) {
         }),
       });
       if (res.ok) {
-        setName('');
-        setAmount('');
-        setPaymentDay('');
+        setName(''); setAmount(''); setPaymentDay('');
         onAdded();
       }
     } catch { /* silent */ }
@@ -78,26 +76,20 @@ function AddExpenseForm({ onAdded }: { onAdded: () => void }) {
     <div className="space-y-3 rounded-xl border border-pw-blue/20 bg-pw-blue/[0.03] p-4">
       <div className="flex gap-2">
         <input
-          type="text"
-          placeholder="Bijv. Ziggo, Eneco..."
+          type="text" placeholder="Bijv. Ziggo, Eneco..."
           className="flex-1 rounded-xl border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] outline-none focus:border-pw-blue"
-          value={name}
-          onChange={e => setName(e.target.value)}
+          value={name} onChange={e => setName(e.target.value)}
         />
         <input
-          type="number"
-          inputMode="decimal"
-          placeholder="€"
+          type="number" inputMode="decimal" placeholder="€"
           className="w-24 rounded-xl border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-right outline-none focus:border-pw-blue"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
+          value={amount} onChange={e => setAmount(e.target.value)}
         />
       </div>
 
       <div className="flex gap-2">
         <select
-          value={category}
-          onChange={e => setCategory(e.target.value)}
+          value={category} onChange={e => setCategory(e.target.value)}
           className="flex-1 rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] outline-none"
         >
           {Object.entries(CATEGORY_CONFIG).map(([key, { label }]) => (
@@ -105,8 +97,7 @@ function AddExpenseForm({ onAdded }: { onAdded: () => void }) {
           ))}
         </select>
         <select
-          value={interval}
-          onChange={e => setInterval(e.target.value)}
+          value={interval} onChange={e => setInterval(e.target.value)}
           className="flex-1 rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] outline-none"
         >
           <option value="weekly">Per week</option>
@@ -116,16 +107,13 @@ function AddExpenseForm({ onAdded }: { onAdded: () => void }) {
         </select>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <div className="flex-1">
+          <label className="mb-1 block text-[11px] text-pw-muted">Afschrijfdag (dag van de maand)</label>
           <input
-            type="number"
-            min={1}
-            max={31}
-            placeholder="Afschrijfdag (optioneel)"
+            type="number" inputMode="numeric" min={1} max={31} placeholder="bijv. 15"
             className="w-full rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] outline-none focus:border-pw-blue"
-            value={paymentDay}
-            onChange={e => setPaymentDay(e.target.value)}
+            value={paymentDay} onChange={e => setPaymentDay(e.target.value)}
           />
         </div>
         <button
@@ -205,20 +193,13 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
       </div>
 
       {showAdd && (
-        <AddExpenseForm onAdded={() => {
-          fetchExpenses();
-          setShowAdd(false);
-          onChanged?.();
-        }} />
+        <AddExpenseForm onAdded={() => { fetchExpenses(); setShowAdd(false); onChanged?.(); }} />
       )}
 
       {expenses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-pw-border bg-pw-bg p-6 text-center">
           <p className="text-[13px] text-pw-muted">Nog geen vaste lasten toegevoegd</p>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="mt-2 text-[13px] font-medium text-pw-blue"
-          >
+          <button onClick={() => setShowAdd(true)} className="mt-2 text-[13px] font-medium text-pw-blue">
             Voeg je eerste vaste last toe
           </button>
         </div>
@@ -230,8 +211,7 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
             const isPaidThisMonth = expense.last_paid_month === currentMonth;
 
             return (
-              <div
-                key={expense.id}
+              <div key={expense.id}
                 className="flex items-center gap-3 rounded-xl border border-pw-border/60 bg-pw-surface p-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
               >
                 <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-pw-bg ${config.color}`}>
@@ -261,25 +241,20 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
                   </div>
                   <div className="flex flex-col gap-1">
                     {!isPaidThisMonth && (
-                      <button
-                        onClick={() => handleMarkPaid(expense.id)}
+                      <button onClick={() => handleMarkPaid(expense.id)}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-green/10 hover:text-pw-green"
                         title="Markeer als betaald"
-                      >
-                        <Check className="h-3 w-3" />
-                      </button>
+                      ><Check className="h-3 w-3" /></button>
                     )}
-                    <button
-                      onClick={() => handleDelete(expense.id)}
+                    <button onClick={() => handleDelete(expense.id)}
                       disabled={deletingId === expense.id}
                       className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-red/10 hover:text-pw-red"
                       title="Verwijderen"
                     >
-                      {deletingId === expense.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3 w-3" />
-                      )}
+                      {deletingId === expense.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Trash2 className="h-3 w-3" />
+                      }
                     </button>
                   </div>
                 </div>
@@ -289,7 +264,6 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
         </div>
       )}
 
-      {/* Total */}
       {expenses.length > 0 && (
         <div className="flex items-center justify-between rounded-xl border border-pw-border/60 bg-pw-bg px-4 py-3">
           <span className="text-[13px] text-pw-muted">Totaal vaste lasten per maand</span>
