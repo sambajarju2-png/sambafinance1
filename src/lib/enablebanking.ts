@@ -100,7 +100,8 @@ export interface ASPSP {
  * List available banks for a country (default: NL)
  */
 export async function listBanks(country = 'NL'): Promise<ASPSP[]> {
-  return ebFetch(`/aspsps?country=${country}`)
+  const res = await ebFetch(`/aspsps?country=${country}`)
+  return res.aspsps || []
 }
 
 // ─── Authorization ───────────────────────────────────────────
