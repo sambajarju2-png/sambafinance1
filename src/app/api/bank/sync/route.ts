@@ -217,7 +217,10 @@ function mapTransaction(
     remittance_info: description,
     bank_category: tx.bankTransactionCode || tx.proprietaryBankTransactionCode || null,
     is_recurring: false,
-    raw_data: tx
+    raw_data: tx,
+    matched_expense_id: null as string | null,
+    matched_bill_id: null as string | null,
+    pw_category: null as string | null
   }
 }
 
