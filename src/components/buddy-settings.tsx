@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, UserPlus, Trash2, Copy, Check, Loader2, Share2, Users, Bell, Eye, EyeOff, ChevronRight, ExternalLink, LayoutDashboard, KeyRound } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Copy, Check, Loader2, Share2, Users, Bell, Eye, EyeOff, ChevronRight, ExternalLink, LayoutDashboard, KeyRound, MessageCircle } from 'lucide-react';
 import BuddyDashboardView from '@/components/buddy-dashboard-view';
+import BuddyChat from '@/components/buddy-chat';
 
 interface BuddyOf {
   id: string;
@@ -50,6 +51,7 @@ export default function BuddySettings() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [maxBuddies] = useState(3);
   const [statuses, setStatuses] = useState<Record<string, 'green' | 'red'>>({});
+  const [showChat, setShowChat] = useState(false);
 
   // Buddy code entry state
   const [buddyCode, setBuddyCode] = useState('');
@@ -167,6 +169,10 @@ export default function BuddySettings() {
   // Show buddy dashboard if viewing
   if (viewingDashboard) {
     return <BuddyDashboardView userId={viewingDashboard} onBack={() => setViewingDashboard(null)} />;
+  }
+
+  if (showChat) {
+    return <BuddyChat onClose={() => setShowChat(false)} />;
   }
 
   return (
@@ -308,6 +314,10 @@ export default function BuddySettings() {
                     <p className="text-[13px] font-semibold text-pw-text truncate">{b.buddy_name || 'Onbekend'}</p>
                     <p className="text-[10px] text-pw-muted">{ROLE_LABELS[b.role] || b.role}</p>
                   </div>
+                  <button onClick={() => setShowChat(true)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-pw-blue hover:bg-pw-blue/10 transition-colors">
+                    <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
                   <button onClick={() => handleDelete(b.id)} disabled={deleting === b.id}
                     className="flex h-7 w-7 items-center justify-center rounded-full text-pw-muted hover:text-pw-red hover:bg-red-50 transition-colors">
                     {deleting === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} /> : <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />}
