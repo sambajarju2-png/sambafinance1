@@ -33,7 +33,18 @@ export default function FinancialOverviewCard() {
 
   if (loading) {
     return (
-      <div className="h-[180px] animate-pulse rounded-[14px] border border-pw-border/60 bg-pw-surface" />
+      <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-4 space-y-3 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 rounded bg-pw-border/40" />
+          <div className="h-3 w-28 rounded bg-pw-border/40" />
+        </div>
+        <div className="h-7 w-32 rounded bg-pw-border/50" />
+        <div className="flex gap-3">
+          <div className="flex-1 rounded-lg bg-pw-border/20 h-14" />
+          <div className="flex-1 rounded-lg bg-pw-border/20 h-14" />
+          <div className="flex-1 rounded-lg bg-pw-border/20 h-14" />
+        </div>
+      </div>
     );
   }
 

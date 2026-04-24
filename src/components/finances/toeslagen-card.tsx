@@ -50,7 +50,26 @@ export default function ToeslagenCard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return null;
+  if (loading) return (
+    <div className="space-y-3 animate-pulse">
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-4 rounded bg-pw-border/50" />
+        <div className="h-3 w-28 rounded bg-pw-border/50" />
+      </div>
+      <div className="rounded-xl border border-pw-border/30 p-4 space-y-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="flex items-start gap-3 rounded-lg bg-pw-bg p-3">
+            <div className="h-8 w-8 rounded-lg bg-pw-border/40 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-24 rounded bg-pw-border/40" />
+              <div className="h-2 w-36 rounded bg-pw-border/30" />
+            </div>
+            <div className="h-4 w-16 rounded bg-pw-border/40" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
   if (!data) return null;
 
   const eligible = Object.entries(data)

@@ -72,8 +72,8 @@ export default function MatchCards() {
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
-          <CreditCard className="h-4 w-4 text-green-600" strokeWidth={1.5} />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-blue/10">
+          <CreditCard className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
         </div>
         <div>
           <h3 className="text-[13px] font-semibold text-pw-navy">
@@ -165,7 +165,7 @@ export default function MatchCards() {
             <button
               onClick={() => handleAction('confirm')}
               disabled={acting}
-              className="btn-press flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+              className="btn-press flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-pw-blue py-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
               {acting ? (
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />

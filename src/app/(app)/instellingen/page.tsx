@@ -36,6 +36,7 @@ function SettingsContent() {
   const [signingOut, setSigningOut] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [financesRefreshKey, setFinancesRefreshKey] = useState(0);
 
   // Read ?tab=gmail (or other tabs) from URL — also support ?tab=sync for Outlook callback
   useEffect(() => {
@@ -152,9 +153,9 @@ function SettingsContent() {
       <div className="space-y-6">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
         <h2 className="text-heading text-pw-navy">Mijn Financiën</h2>
-        <IncomeForm onSaved={() => {}} />
-        <ExpensesList onChanged={() => {}} />
-        <ToeslagenCard />
+        <IncomeForm onSaved={() => setFinancesRefreshKey(k => k + 1)} />
+        <ExpensesList onChanged={() => setFinancesRefreshKey(k => k + 1)} />
+        <ToeslagenCard key={financesRefreshKey} />
       </div>
     );
   }

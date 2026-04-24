@@ -153,7 +153,28 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
     data.uitkering_inkomen + data.toeslagen_inkomen + data.overig_inkomen;
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-pw-muted" /></div>;
+    return (
+      <div className="space-y-4 animate-pulse">
+        {[1, 2].map(i => (
+          <div key={i} className="rounded-xl border border-pw-border/30 bg-pw-surface p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 rounded bg-pw-border/40" />
+              <div className="h-3.5 w-20 rounded bg-pw-border/50" />
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-32 rounded bg-pw-border/30" />
+                <div className="h-10 w-full rounded-lg bg-pw-border/20" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-24 rounded bg-pw-border/30" />
+                <div className="h-10 w-full rounded-lg bg-pw-border/20" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
