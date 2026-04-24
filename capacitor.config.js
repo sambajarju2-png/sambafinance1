@@ -15,10 +15,14 @@ const config = {
   },
   plugins: {
     SplashScreen: {
-      launchAutoHide: true,
-      launchShowDuration: 1500,
+      launchAutoHide: false,
+      launchShowDuration: 0,
       backgroundColor: '#0A2540',
-      showSpinner: false,
+      showSpinner: true,
+      spinnerColor: '#2563EB',
+      splashFullScreen: true,
+      splashImmersive: true,
+      launchFadeOutDuration: 300,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

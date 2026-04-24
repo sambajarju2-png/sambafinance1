@@ -19,6 +19,12 @@ export function useNativeInit() {
         const { Capacitor } = await import('@capacitor/core');
         if (!Capacitor.isNativePlatform()) return;
 
+        // Hide splash screen — page is loaded and rendering
+        try {
+          const { SplashScreen } = await import('@capacitor/splash-screen');
+          await SplashScreen.hide({ fadeOutDuration: 300 });
+        } catch {}
+
         // Status bar — match PayWatch navy theme
         try {
           const { StatusBar, Style } = await import('@capacitor/status-bar');
