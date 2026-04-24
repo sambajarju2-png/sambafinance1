@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknotes } from 'lucide-react';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
@@ -20,8 +20,11 @@ import TrustBadges from '@/components/trust-badges';
 import AdminTestPanel from '@/components/admin-test-panel';
 import ReferralSettings from '@/components/referral-settings';
 import BuddySettings from '@/components/buddy-settings';
+import IncomeForm from '@/components/finances/income-form';
+import ExpensesList from '@/components/finances/expenses-list';
+import ToeslagenCard from '@/components/finances/toeslagen-card';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -39,7 +42,7 @@ function SettingsContent() {
     if (tab === 'sync' || tab === 'gmail') {
       setActiveTab('gmail');
       // Don't clean URL yet — gmail-settings reads ?outlook= params
-    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy'].includes(tab)) {
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       window.history.replaceState(null, '', '/instellingen');
     }
@@ -143,6 +146,18 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'finances') {
+    return (
+      <div className="space-y-6">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <h2 className="text-heading text-pw-navy">Mijn Financiën</h2>
+        <IncomeForm onSaved={() => {}} />
+        <ExpensesList onChanged={() => {}} />
+        <ToeslagenCard />
+      </div>
+    );
+  }
+
   if (activeTab === 'buddy') {
     return (
       <div className="space-y-4">
@@ -157,6 +172,7 @@ function SettingsContent() {
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
+        <SettingsLink icon={Banknotes} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />

@@ -11,6 +11,7 @@ import MoodTracker from '@/components/mood-tracker';
 import AchievementsDisplay from '@/components/achievements';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
 import MetricCard from '@/components/metric-card';
+import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -93,6 +94,9 @@ export default function OverzichtPage() {
 
       {activeTab === 'overview' ? (
         <>
+          {/* Financial overview */}
+          <FinancialOverviewCard />
+
           {/* Stat cards (2x2) */}
           {loading ? (
             <div className="grid grid-cols-2 gap-3">
