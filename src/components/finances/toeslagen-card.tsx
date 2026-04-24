@@ -88,7 +88,7 @@ export default function ToeslagenCard() {
             kinderopvangtoeslag: a.kinderopvangtoeslag > 0 ? (a.kinderopvangtoeslag / 100).toFixed(2).replace('.', ',') : '',
           });
           // Auto-show control if any actual amounts entered
-          if (Object.values(a).some((v: number) => v > 0)) setShowControl(true);
+          if ((Object.values(a) as number[]).some(v => v > 0)) setShowControl(true);
         }
       })
       .catch(() => {})
