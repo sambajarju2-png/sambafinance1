@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { deleteRequisition } from '@/lib/gocardless'
+import { deleteSession } from '@/lib/enablebanking'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
               return { name, value: rest.join('=') }
             })
           },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          setAll(_cookies) {}
+          setAll() {}
         }
       }
     )
@@ -39,41 +38,28 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Verify this connection belongs to the user
-    const { data: connection } = await supabase
+    const { data: conn } = await supabase
       .from('bank_connections')
       .select('*')
       .eq('id', connection_id)
       .eq('user_id', user.id)
       .single()
 
-    if (!connection) {
-      return NextResponse.json({ error: 'Bankverbinding niet gevonden' }, { status: 404 })
+    if (!conn) {
+      return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
     }
 
-    // Delete requisition from GoCardless (best effort)
-    try {
-      await deleteRequisition(connection.requisition_id)
-    } catch (err) {
-      console.error('[Bank] Failed to delete requisition from GoCardless:', err)
-      // Continue anyway — we still want to remove from our DB
+    // Revoke Enable Banking session
+    if (conn.agreement_id) {
+      try { await deleteSession(conn.agreement_id) } catch { /* best effort */ }
     }
 
-    // Delete transactions first (FK constraint)
-    await supabase
-      .from('bank_transactions')
-      .delete()
-      .eq('connection_id', connection_id)
-
-    // Delete the connection
-    await supabase
-      .from('bank_connections')
-      .delete()
-      .eq('id', connection_id)
+    await supabase.from('bank_transactions').delete().eq('connection_id', connection_id)
+    await supabase.from('bank_connections').delete().eq('id', connection_id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Bank] Disconnect error:', error)
-    return NextResponse.json({ error: 'Kon bankverbinding niet verwijderen' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ontkoppelen' }, { status: 500 })
   }
 }

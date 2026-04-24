@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { getAccountDetails, getAccountBalances } from '@/lib/gocardless'
+import { getBalances } from '@/lib/enablebanking'
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,8 +18,7 @@ export async function GET(req: NextRequest) {
               return { name, value: rest.join('=') }
             })
           },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          setAll(_cookies) {}
+          setAll() {}
         }
       }
     )
@@ -34,7 +33,6 @@ export async function GET(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get all bank connections for this user
     const { data: connections } = await supabase
       .from('bank_connections')
       .select('*')
@@ -45,45 +43,34 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ connections: [], accounts: [] })
     }
 
-    // For linked connections, fetch account details and balances
     const accounts = []
     for (const conn of connections) {
       if (conn.status === 'linked' && conn.account_ids?.length > 0) {
-        for (const accountId of conn.account_ids) {
+        for (const accountUid of conn.account_ids) {
           try {
-            const [detailsRes, balancesRes] = await Promise.allSettled([
-              getAccountDetails(accountId),
-              getAccountBalances(accountId)
-            ])
-
-            const details = detailsRes.status === 'fulfilled' ? detailsRes.value.account : null
-            const balances = balancesRes.status === 'fulfilled' ? balancesRes.value.balances : []
-
-            // Find the "expected" balance (available funds)
-            const availableBalance = balances.find(
-              (b: { balanceType: string }) => b.balanceType === 'expected' || b.balanceType === 'interimAvailable'
-            ) || balances[0]
+            const balData = await getBalances(accountUid)
+            const bal = balData.balances?.[0]
 
             accounts.push({
-              account_id: accountId,
+              account_id: accountUid,
               connection_id: conn.id,
               institution_name: conn.institution_name,
               institution_logo: conn.institution_logo,
-              iban: details?.iban || 'Onbekend',
-              owner_name: details?.ownerName || '',
-              balance: availableBalance ? {
-                amount: Math.round(parseFloat(availableBalance.balanceAmount.amount) * 100),
-                currency: availableBalance.balanceAmount.currency,
-                date: availableBalance.referenceDate
+              iban: accountUid,  // UID serves as identifier
+              owner_name: '',
+              balance: bal ? {
+                amount: Math.round(parseFloat(bal.balance_amount.amount) * 100),
+                currency: bal.balance_amount.currency,
+                date: bal.reference_date
               } : null,
               status: conn.status,
               last_synced: conn.last_synced_at,
               valid_until: conn.access_valid_until
             })
           } catch (err) {
-            console.error(`[Bank] Error fetching account ${accountId}:`, err)
+            console.error(`[Bank] Error fetching account ${accountUid}:`, err)
             accounts.push({
-              account_id: accountId,
+              account_id: accountUid,
               connection_id: conn.id,
               institution_name: conn.institution_name,
               institution_logo: conn.institution_logo,

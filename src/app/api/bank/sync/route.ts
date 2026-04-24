@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { getAccountTransactions, Transaction } from '@/lib/gocardless'
+import { getTransactions, Transaction } from '@/lib/enablebanking'
 
-/**
- * Sync bank transactions for a user.
- * - Fetches transactions from the last 30 days (or since last sync)
- * - Stores new transactions in bank_transactions table
- * - Auto-matches against user_expenses by IBAN or name
- * - Auto-matches against bills by vendor name
- */
 export async function POST(req: NextRequest) {
   try {
     const cookieHeader = req.headers.get('cookie')
@@ -25,8 +18,7 @@ export async function POST(req: NextRequest) {
               return { name, value: rest.join('=') }
             })
           },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          setAll(_cookies) {}
+          setAll() {}
         }
       }
     )
@@ -37,38 +29,34 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const connectionId = body.connection_id // optional: sync specific connection
+    const connectionId = body.connection_id
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get linked connections
     let query = supabase
       .from('bank_connections')
       .select('*')
       .eq('user_id', user.id)
       .eq('status', 'linked')
 
-    if (connectionId) {
-      query = query.eq('id', connectionId)
-    }
+    if (connectionId) query = query.eq('id', connectionId)
 
     const { data: connections } = await query
 
     if (!connections || connections.length === 0) {
-      return NextResponse.json({ error: 'Geen gekoppelde bankrekening gevonden' }, { status: 404 })
+      return NextResponse.json({ error: 'Geen gekoppelde bank gevonden' }, { status: 404 })
     }
 
-    // Get user's expenses for matching
+    // Get expenses + bills for matching
     const { data: expenses } = await supabase
       .from('user_expenses')
       .select('id, name, iban, reference, category')
       .eq('user_id', user.id)
       .eq('is_active', true)
 
-    // Get user's open bills for matching
     const { data: bills } = await supabase
       .from('bills')
       .select('id, vendor, amount, iban')
@@ -77,145 +65,97 @@ export async function POST(req: NextRequest) {
 
     let totalNew = 0
     let totalMatched = 0
-    const syncResults = []
 
     for (const conn of connections) {
-      for (const accountId of conn.account_ids || []) {
+      for (const accountUid of conn.account_ids || []) {
         try {
-          // Calculate date range: last 30 days or since last sync
           const dateFrom = conn.last_synced_at
-            ? new Date(new Date(conn.last_synced_at).getTime() - 2 * 24 * 60 * 60 * 1000) // 2 day overlap
-                .toISOString().split('T')[0]
-            : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            ? new Date(new Date(conn.last_synced_at).getTime() - 2 * 86400000).toISOString().split('T')[0]
+            : new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-          const dateTo = new Date().toISOString().split('T')[0]
+          const txData = await getTransactions(accountUid, dateFrom)
+          const txs = txData.transactions || []
 
-          const txData = await getAccountTransactions(accountId, dateFrom, dateTo)
-          const bookedTxs = txData.transactions?.booked || []
-
-          // Process each transaction
-          const newTransactions = []
-          for (const tx of bookedTxs) {
-            const txRecord = mapTransaction(tx, user.id, conn.id, accountId)
-
-            // Auto-match against expenses
-            const matchedExpense = matchExpense(tx, expenses || [])
-            if (matchedExpense) {
-              txRecord.matched_expense_id = matchedExpense.id
-              txRecord.pw_category = matchedExpense.category
+          const records = []
+          for (const tx of txs) {
+            const record = mapTx(tx, user.id, conn.id, accountUid)
+            const matchedExp = matchExpense(tx, expenses || [])
+            if (matchedExp) {
+              record.matched_expense_id = matchedExp.id
+              record.pw_category = matchedExp.category
               totalMatched++
             }
-
-            // Auto-match against bills
             const matchedBill = matchBill(tx, bills || [])
-            if (matchedBill) {
-              txRecord.matched_bill_id = matchedBill.id
-            }
-
-            newTransactions.push(txRecord)
+            if (matchedBill) record.matched_bill_id = matchedBill.id
+            records.push(record)
           }
 
-          if (newTransactions.length > 0) {
-            // Upsert transactions (skip duplicates via unique constraint)
+          if (records.length > 0) {
             const { data: inserted } = await supabase
               .from('bank_transactions')
-              .upsert(newTransactions, {
-                onConflict: 'user_id,account_id,transaction_id',
-                ignoreDuplicates: true
-              })
+              .upsert(records, { onConflict: 'user_id,account_id,transaction_id', ignoreDuplicates: true })
               .select('id')
-
             totalNew += inserted?.length || 0
           }
-
-          syncResults.push({
-            account_id: accountId,
-            institution: conn.institution_name,
-            transactions_found: bookedTxs.length,
-            new_stored: newTransactions.length
-          })
-
         } catch (err) {
-          console.error(`[Bank] Sync error for account ${accountId}:`, err)
-          syncResults.push({
-            account_id: accountId,
-            institution: conn.institution_name,
-            error: 'Synchronisatie mislukt'
-          })
+          console.error(`[Bank] Sync error for ${accountUid}:`, err)
         }
       }
 
-      // Update last synced timestamp
       await supabase
         .from('bank_connections')
         .update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', conn.id)
     }
 
-    // Mark matched expenses as paid this month
+    // Auto-mark expenses as paid
     if (totalMatched > 0 && expenses) {
-      const currentMonth = new Date().toISOString().slice(0, 7) // "2026-04"
-      for (const expense of expenses) {
-        // Check if any transaction matched this expense this month
-        const { data: matchedTx } = await supabase
+      const month = new Date().toISOString().slice(0, 7)
+      for (const exp of expenses) {
+        const { data: match } = await supabase
           .from('bank_transactions')
-          .select('id, booking_date')
-          .eq('matched_expense_id', expense.id)
-          .gte('booking_date', `${currentMonth}-01`)
+          .select('id')
+          .eq('matched_expense_id', exp.id)
+          .gte('booking_date', `${month}-01`)
           .limit(1)
-
-        if (matchedTx && matchedTx.length > 0) {
-          await supabase
-            .from('user_expenses')
-            .update({
-              last_paid_at: new Date().toISOString(),
-              last_paid_month: currentMonth
-            })
-            .eq('id', expense.id)
+        if (match?.length) {
+          await supabase.from('user_expenses').update({
+            last_paid_at: new Date().toISOString(),
+            last_paid_month: month
+          }).eq('id', exp.id)
         }
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      new_transactions: totalNew,
-      matched: totalMatched,
-      results: syncResults
-    })
+    return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched })
   } catch (error) {
     console.error('[Bank] Sync error:', error)
     return NextResponse.json({ error: 'Synchronisatie mislukt' }, { status: 500 })
   }
 }
 
-// ─── Transaction Mapping ─────────────────────────────────────
+// ─── Mapping & Matching ──────────────────────────────────────
 
-function mapTransaction(
-  tx: Transaction,
-  userId: string,
-  connectionId: string,
-  accountId: string
-) {
-  const amount = Math.round(parseFloat(tx.transactionAmount.amount) * 100)
-  const description = tx.remittanceInformationUnstructured
-    || tx.remittanceInformationStructured
-    || ''
+function mapTx(tx: Transaction, userId: string, connId: string, accountUid: string) {
+  const amount = Math.round(parseFloat(tx.transaction_amount.amount) * 100)
+  const isDebit = tx.credit_debit_indicator === 'DBIT'
+  const description = tx.remittance_information?.join(' ') || ''
 
   return {
     user_id: userId,
-    connection_id: connectionId,
-    account_id: accountId,
-    transaction_id: tx.transactionId || `${tx.bookingDate}_${amount}_${tx.creditorName || tx.debtorName || 'unknown'}`,
-    booking_date: tx.bookingDate,
-    value_date: tx.valueDate || null,
-    amount,
-    currency: tx.transactionAmount.currency,
-    creditor_name: tx.creditorName || null,
-    debtor_name: tx.debtorName || null,
-    creditor_iban: tx.creditorAccount?.iban || null,
-    debtor_iban: tx.debtorAccount?.iban || null,
+    connection_id: connId,
+    account_id: accountUid,
+    transaction_id: tx.entry_reference || `${tx.booking_date}_${amount}_${tx.creditor?.name || tx.debtor?.name || 'x'}`,
+    booking_date: tx.booking_date || tx.transaction_date,
+    value_date: tx.value_date || null,
+    amount: isDebit ? -Math.abs(amount) : Math.abs(amount),
+    currency: tx.transaction_amount.currency,
+    creditor_name: tx.creditor?.name || null,
+    debtor_name: tx.debtor?.name || null,
+    creditor_iban: tx.creditor_account?.iban || null,
+    debtor_iban: tx.debtor_account?.iban || null,
     remittance_info: description,
-    bank_category: tx.bankTransactionCode || tx.proprietaryBankTransactionCode || null,
+    bank_category: tx.bank_transaction_code?.description || null,
     is_recurring: false,
     raw_data: tx,
     matched_expense_id: null as string | null,
@@ -224,86 +164,40 @@ function mapTransaction(
   }
 }
 
-// ─── Auto-Matching ───────────────────────────────────────────
+interface Exp { id: string; name: string; iban: string | null; reference: string | null; category: string }
 
-interface ExpenseMatch {
-  id: string
-  name: string
-  iban: string | null
-  reference: string | null
-  category: string
-}
+function matchExpense(tx: Transaction, expenses: Exp[]): Exp | null {
+  if (!expenses.length) return null
+  if (tx.credit_debit_indicator !== 'DBIT') return null
 
-function matchExpense(tx: Transaction, expenses: ExpenseMatch[]): ExpenseMatch | null {
-  if (expenses.length === 0) return null
+  const credIban = tx.creditor_account?.iban?.replace(/\s/g, '')
+  const desc = (tx.remittance_information?.join(' ') || '').toLowerCase()
+  const credName = (tx.creditor?.name || '').toLowerCase()
 
-  // Only match outgoing payments (negative amounts)
-  const amount = parseFloat(tx.transactionAmount.amount)
-  if (amount >= 0) return null
-
-  const creditorIban = tx.creditorAccount?.iban?.replace(/\s/g, '')
-  const description = (tx.remittanceInformationUnstructured || '').toLowerCase()
-  const creditorName = (tx.creditorName || '').toLowerCase()
-
-  for (const expense of expenses) {
-    // Match by IBAN (strongest signal)
-    if (expense.iban && creditorIban) {
-      const expenseIban = expense.iban.replace(/\s/g, '')
-      if (expenseIban === creditorIban) return expense
-    }
-
-    // Match by reference in payment description
-    if (expense.reference && description.includes(expense.reference.toLowerCase())) {
-      return expense
-    }
-
-    // Match by expense name in creditor name or description
-    const expenseName = expense.name.toLowerCase()
-    if (expenseName.length > 3) { // avoid false positives on short names
-      if (creditorName.includes(expenseName) || description.includes(expenseName)) {
-        return expense
-      }
-    } else if (expenseName.length > 0) {
-      // Short names: use word boundary matching
-      const regex = new RegExp(`\\b${expenseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
-      if (regex.test(creditorName) || regex.test(description)) {
-        return expense
-      }
+  for (const e of expenses) {
+    if (e.iban && credIban && e.iban.replace(/\s/g, '') === credIban) return e
+    if (e.reference && desc.includes(e.reference.toLowerCase())) return e
+    const n = e.name.toLowerCase()
+    if (n.length > 3 && (credName.includes(n) || desc.includes(n))) return e
+    if (n.length > 0 && n.length <= 3) {
+      const re = new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+      if (re.test(credName) || re.test(desc)) return e
     }
   }
-
   return null
 }
 
-interface BillMatch {
-  id: string
-  vendor: string
-  amount: number
-  iban: string | null
-}
+interface Bill { id: string; vendor: string; amount: number; iban: string | null }
 
-function matchBill(tx: Transaction, bills: BillMatch[]): BillMatch | null {
-  if (bills.length === 0) return null
+function matchBill(tx: Transaction, bills: Bill[]): Bill | null {
+  if (!bills.length || tx.credit_debit_indicator !== 'DBIT') return null
+  const amt = Math.abs(Math.round(parseFloat(tx.transaction_amount.amount) * 100))
+  const credName = (tx.creditor?.name || '').toLowerCase()
 
-  const amount = parseFloat(tx.transactionAmount.amount)
-  if (amount >= 0) return null // only match debits
-
-  const txAmountCents = Math.abs(Math.round(amount * 100))
-  const creditorName = (tx.creditorName || '').toLowerCase()
-  const creditorIban = tx.creditorAccount?.iban?.replace(/\s/g, '')
-
-  for (const bill of bills) {
-    const vendorName = bill.vendor.toLowerCase()
-
-    // Match by vendor name + similar amount (within 10%)
-    const amountDiff = Math.abs(txAmountCents - bill.amount) / bill.amount
-    const nameMatch = creditorName.includes(vendorName) || vendorName.includes(creditorName)
-    const ibanMatch = bill.iban && creditorIban && bill.iban.replace(/\s/g, '') === creditorIban
-
-    if ((nameMatch || ibanMatch) && amountDiff < 0.1) {
-      return bill
-    }
+  for (const b of bills) {
+    const v = b.vendor.toLowerCase()
+    const diff = Math.abs(amt - b.amount) / b.amount
+    if ((credName.includes(v) || v.includes(credName)) && diff < 0.1) return b
   }
-
   return null
 }

@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getRequisition } from '@/lib/gocardless'
+import { createSession } from '@/lib/enablebanking'
 
 /**
- * GoCardless redirects here after bank authorization.
- * URL: /api/bank/callback?ref=REQUISITION_ID
- * 
- * The requisition ID is embedded in the redirect URL by GoCardless.
- * We look it up, fetch the linked accounts, and update the connection.
+ * Enable Banking redirects here after bank authorization.
+ * URL: /api/bank/callback?code=XXX&state=YYY
  */
 export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app'
 
   try {
     const { searchParams } = new URL(req.url)
-    const ref = searchParams.get('ref')
+    const code = searchParams.get('code')
+    const state = searchParams.get('state')
 
-    if (!ref) {
-      // GoCardless sends ref as the requisition reference
-      // Sometimes it's in different params, try to extract requisition from the URL
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=missing_ref`)
+    if (!code) {
+      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=no_code`)
     }
 
     const supabase = createClient(
@@ -27,80 +23,55 @@ export async function GET(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Find the bank connection by reference or requisition_id
-    // GoCardless may send back the reference we provided
-    let connection = null
-
-    // Try by requisition_id first
-    const { data: byReqId } = await supabase
+    // Find the pending connection by state
+    let connectionQuery = supabase
       .from('bank_connections')
       .select('*')
-      .eq('requisition_id', ref)
-      .single()
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-    if (byReqId) {
-      connection = byReqId
-    } else {
-      // Try to find a pending connection for the user (fallback)
-      const { data: pending } = await supabase
+    if (state) {
+      connectionQuery = supabase
         .from('bank_connections')
         .select('*')
+        .eq('agreement_id', state)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(1)
         .single()
-
-      connection = pending
     }
+
+    const { data: connection } = state
+      ? await connectionQuery
+      : await supabase
+          .from('bank_connections')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
 
     if (!connection) {
       return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=connection_not_found`)
     }
 
-    // Fetch the requisition from GoCardless to get account IDs
-    const requisition = await getRequisition(connection.requisition_id)
+    // Exchange code for session — get accounts
+    const session = await createSession(code)
 
-    if (requisition.status === 'LN' && requisition.accounts.length > 0) {
-      // Successfully linked — save account IDs
-      await supabase
-        .from('bank_connections')
-        .update({
-          account_ids: requisition.accounts,
-          status: 'linked',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.id)
+    // Extract account UIDs
+    const accountUids = session.accounts.map(a => a.uid)
 
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&bank=connected`)
-    } else if (requisition.status === 'EX') {
-      await supabase
-        .from('bank_connections')
-        .update({ status: 'expired', error_message: 'Bankverbinding verlopen' })
-        .eq('id', connection.id)
+    // Update connection with session and accounts
+    await supabase
+      .from('bank_connections')
+      .update({
+        account_ids: accountUids,
+        agreement_id: session.session_id,  // store session_id for later use
+        status: 'linked',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connection.id)
 
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=expired`)
-    } else if (requisition.status === 'RJ') {
-      await supabase
-        .from('bank_connections')
-        .update({ status: 'error', error_message: 'Bankverbinding geweigerd' })
-        .eq('id', connection.id)
-
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=rejected`)
-    } else {
-      // Status is CR (created) or GA (granting access) — might still be processing
-      // Update what we have and let the user know
-      await supabase
-        .from('bank_connections')
-        .update({
-          account_ids: requisition.accounts || [],
-          status: requisition.accounts?.length > 0 ? 'linked' : 'pending',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.id)
-
-      const redirectStatus = requisition.accounts?.length > 0 ? 'bank=connected' : 'bank=pending'
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&${redirectStatus}`)
-    }
+    return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&bank=connected`)
   } catch (error) {
     console.error('[Bank] Callback error:', error)
     return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=callback_failed`)
