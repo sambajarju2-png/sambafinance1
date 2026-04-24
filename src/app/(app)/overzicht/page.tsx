@@ -12,6 +12,7 @@ import AchievementsDisplay from '@/components/achievements';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
 import MetricCard from '@/components/metric-card';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
+import MatchCards from '@/components/bank/match-cards';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -96,6 +97,9 @@ export default function OverzichtPage() {
         <>
           {/* Financial overview */}
           <FinancialOverviewCard />
+
+          {/* Bank match confirmations */}
+          <MatchCards />
 
           {/* Stat cards (2x2) */}
           {loading ? (
