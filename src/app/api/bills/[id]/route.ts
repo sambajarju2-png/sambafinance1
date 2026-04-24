@@ -103,8 +103,11 @@ export async function PATCH(
             name: updated.vendor,
             category: updated.category === 'energie' ? 'energie' : updated.category === 'verzekering' ? 'verzekering' : updated.category === 'huur' ? 'huur' : 'overig',
             amount: updated.amount,
-            monthly_amount: updated.amount,
-            interval: 'monthly',
+            monthly_amount: body.recurring_interval === 'weekly' ? Math.round(updated.amount * 4.33)
+              : body.recurring_interval === 'quarterly' ? Math.round(updated.amount / 3)
+              : body.recurring_interval === 'yearly' ? Math.round(updated.amount / 12)
+              : updated.amount,
+            interval: body.recurring_interval || 'monthly',
             iban: updated.iban || null,
             reference: updated.reference || null,
             is_active: true,

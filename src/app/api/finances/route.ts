@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     salary_day_from, salary_day_to, has_partner = false,
     num_children = 0, children_ages = [], monthly_rent = 0,
     has_kinderopvang = false, vermogen = 0,
+    toeslagen_actueel,
   } = body;
 
   // Auto-detect huur from vaste lasten if not manually set
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
     has_partner, num_children, children_ages,
     monthly_rent: effectiveRent, has_kinderopvang, vermogen,
     toeslagen_eligible: toeslagenResult,
+    ...(toeslagen_actueel && typeof toeslagen_actueel === 'object' ? { toeslagen_actueel } : {}),
   };
 
   const { data, error } = await supabase

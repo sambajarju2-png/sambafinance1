@@ -29,6 +29,8 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
   const [paymentUrl, setPaymentUrl] = useState(bill.payment_url || '');
   const [notes, setNotes] = useState(bill.notes || '');
   const [isRecurring, setIsRecurring] = useState(!!bill.expense_id || bill.is_recurring);
+  const [recurringInterval, setRecurringInterval] = useState('monthly');
+  const [paymentDay, setPaymentDay] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -61,6 +63,8 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
           payment_url: paymentUrl.trim() || null,
           notes: notes.trim(),
           is_recurring: isRecurring,
+          recurring_interval: isRecurring ? recurringInterval : undefined,
+          payment_day: isRecurring && paymentDay ? parseInt(paymentDay) : undefined,
         }),
       });
 
@@ -176,7 +180,7 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
           <div className="flex items-center justify-between rounded-xl border border-pw-border bg-pw-surface p-3">
             <div>
               <p className="text-[13px] font-medium text-pw-navy">Vaste last</p>
-              <p className="text-[11px] text-pw-muted">Keert maandelijks terug</p>
+              <p className="text-[11px] text-pw-muted">Keert periodiek terug</p>
             </div>
             <button
               type="button"
@@ -186,6 +190,29 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
               <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${isRecurring ? 'translate-x-[22px]' : 'translate-x-0'}`} />
             </button>
           </div>
+
+          {/* Recurring options */}
+          {isRecurring && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-[12px] font-semibold text-pw-text">Interval</label>
+                <select value={recurringInterval} onChange={(e) => setRecurringInterval(e.target.value)}
+                  className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue">
+                  <option value="weekly">Wekelijks</option>
+                  <option value="monthly">Maandelijks</option>
+                  <option value="quarterly">Per kwartaal</option>
+                  <option value="yearly">Jaarlijks</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[12px] font-semibold text-pw-text">Afschrijfdag</label>
+                <input type="number" inputMode="numeric" min="1" max="31"
+                  value={paymentDay} onChange={(e) => setPaymentDay(e.target.value)}
+                  placeholder="bijv. 15"
+                  className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>
