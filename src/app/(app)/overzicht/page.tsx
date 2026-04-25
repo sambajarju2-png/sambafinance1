@@ -107,7 +107,7 @@ export default function OverzichtPage() {
 
       {activeTab === 'overview' ? (
         <PullToRefresh onRefresh={fetchBills}>
-          <>
+          <div className="space-y-5">
           {/* Financial overview */}
           {modules.home_vrij_besteedbaar && <FinancialOverviewCard />}
 
@@ -249,7 +249,7 @@ export default function OverzichtPage() {
               </p>
             </div>
           )}
-          </>
+          </div>
         </PullToRefresh>
       ) : (
         /* AI Inzicht tab */
