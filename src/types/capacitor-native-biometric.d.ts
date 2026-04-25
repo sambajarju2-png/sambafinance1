@@ -1,4 +1,4 @@
-declare module 'capacitor-native-biometric' {
+declare module '@capgo/capacitor-native-biometric' {
   export interface IsAvailableResult {
     isAvailable: boolean;
     biometryType: number;
