@@ -26,7 +26,7 @@ import ToeslagenCard from '@/components/finances/toeslagen-card';
 import BankConnectCard from '@/components/bank/bank-connect-card';
 import DashboardModulesSettings from '@/components/dashboard-modules-settings';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -45,7 +45,7 @@ function SettingsContent() {
     if (tab === 'sync' || tab === 'gmail') {
       setActiveTab('gmail');
       // Don't clean URL yet — gmail-settings reads ?outlook= params
-    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard'].includes(tab)) {
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       window.history.replaceState(null, '', '/instellingen');
     }
@@ -191,6 +191,16 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'security') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <h2 className="text-heading text-pw-navy">Beveiliging</h2>
+        <BiometricSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
@@ -200,6 +210,7 @@ function SettingsContent() {
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
         <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
+        <BiometricMenuLink onClick={() => setActiveTab('security')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
@@ -385,5 +396,127 @@ function SettingsLink({ icon: Icon, label, description, onClick }: { icon: React
       <div className="flex-1"><p className="text-[14px] font-semibold text-pw-text">{label}</p><p className="text-[11px] text-pw-muted">{description}</p></div>
       <ChevronRight className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
     </button>
+  );
+}
+
+/* ============================================================
+   BIOMETRIC SECURITY — Face ID / Touch ID toggle
+   ============================================================ */
+function BiometricMenuLink({ onClick }: { onClick: () => void }) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    async function check() {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { isBiometricAvailable } = await import('@/lib/biometric');
+          const { available } = await isBiometricAvailable();
+          setShow(available);
+        }
+      } catch {}
+    }
+    check();
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <SettingsLink
+      icon={Shield}
+      label="Beveiliging"
+      description="Face ID, app vergrendeling"
+      onClick={onClick}
+    />
+  );
+}
+
+function BiometricSettings() {
+  const [available, setAvailable] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [biometryLabel, setBiometryLabel] = useState('Face ID');
+  const [toggling, setToggling] = useState(false);
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const { isBiometricAvailable, isBiometricEnabled, getBiometricLabel } = await import('@/lib/biometric');
+        const { available: avail, type } = await isBiometricAvailable();
+        setAvailable(avail);
+        setEnabled(isBiometricEnabled());
+        setBiometryLabel(getBiometricLabel(type));
+      } catch {}
+    }
+    init();
+  }, []);
+
+  async function handleToggle() {
+    setToggling(true);
+    try {
+      const { verifyBiometric, enableBiometric, disableBiometric } = await import('@/lib/biometric');
+      const { haptic } = await import('@/lib/capacitor');
+
+      if (enabled) {
+        // Disabling — just remove the flag
+        disableBiometric();
+        setEnabled(false);
+        await haptic('select');
+      } else {
+        // Enabling — verify first to confirm hardware works
+        const success = await verifyBiometric(`Schakel ${biometryLabel} in voor PayWatch`);
+        if (success) {
+          enableBiometric();
+          setEnabled(true);
+          await haptic('success');
+        } else {
+          await haptic('error');
+        }
+      }
+    } catch {} finally {
+      setToggling(false);
+    }
+  }
+
+  if (!available) {
+    return (
+      <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+        <p className="text-[13px] text-pw-muted">
+          Biometrische authenticatie is niet beschikbaar op dit apparaat.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-input bg-pw-bg">
+              <Shield className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold text-pw-text">App vergrendeling</p>
+              <p className="text-[11px] text-pw-muted">Gebruik {biometryLabel} om PayWatch te openen</p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggle}
+            disabled={toggling}
+            className={`relative h-7 w-12 rounded-full transition-colors duration-200 ${
+              enabled ? 'bg-pw-blue' : 'bg-gray-300'
+            } disabled:opacity-50`}
+          >
+            <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
+              enabled ? 'translate-x-5' : 'translate-x-0.5'
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-pw-muted px-1">
+        Wanneer ingeschakeld, wordt {biometryLabel} gevraagd telkens als je PayWatch opent. Je kunt altijd terugvallen op je toegangscode.
+      </p>
+    </div>
   );
 }

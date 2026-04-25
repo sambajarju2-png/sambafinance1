@@ -6,6 +6,7 @@ import ServiceWorkerRegistration from '@/components/pwa/sw-register';
 import { ThemeProvider } from '@/components/theme-provider';
 import SplashScreen from '@/components/splash-screen';
 import NativeShell from '@/components/native-shell';
+import BiometricLock from '@/components/biometric-lock';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -59,6 +60,7 @@ export default async function RootLayout({
             <ServiceWorkerRegistration />
             <SplashScreen />
             <NativeShell />
+            <BiometricLock />
             {children}
           </NextIntlClientProvider>
         </ThemeProvider>

@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { haptic } from '@/lib/capacitor';
 import {
   LayoutDashboard,
   CreditCard,
@@ -50,6 +51,7 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => haptic('select')}
               className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1"
             >
               <div
@@ -76,6 +78,7 @@ export default function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => haptic('select')}
             className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1"
           >
             <Icon

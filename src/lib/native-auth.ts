@@ -35,7 +35,7 @@ function getParam(url: string, name: string): string | null {
  * Opens Google/Outlook auth in SFSafariViewController instead of the WebView.
  */
 export async function startNativeOAuth(
-  provider: 'google' | 'azure'
+  provider: 'google' | 'azure' | 'apple'
 ): Promise<{ url: string | null; error: string | null }> {
   try {
     const supabase = createClient();

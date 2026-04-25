@@ -19,6 +19,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -186,6 +187,45 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     }
   }
 
+  async function handleAppleAuth() {
+    setError(null);
+    setAppleLoading(true);
+
+    try {
+      let isNative = false;
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        isNative = Capacitor.isNativePlatform();
+      } catch {}
+
+      if (isNative) {
+        const { startNativeOAuth } = await import('@/lib/native-auth');
+        const { error: nativeError } = await startNativeOAuth('apple');
+        if (nativeError) {
+          setError(nativeError);
+          setAppleLoading(false);
+        }
+        return;
+      }
+
+      // Web flow
+      const { error: appleError } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (appleError) {
+        setError(appleError.message);
+        setAppleLoading(false);
+      }
+    } catch {
+      setError(tCommon('error'));
+      setAppleLoading(false);
+    }
+  }
+
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center bg-pw-bg px-6 py-12">
       {/* Language + Theme toggle */}
@@ -261,6 +301,22 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
             </svg>
           )}
           {t('continueWithGoogle')}
+        </button>
+
+        {/* Apple Button — required by App Store when offering Google sign-in */}
+        <button
+          onClick={handleAppleAuth}
+          disabled={appleLoading || loading || googleLoading}
+          className="btn-press mt-3 flex w-full items-center justify-center gap-3 rounded-button bg-black px-4 py-3 text-body font-medium text-white transition-colors hover:bg-gray-900 disabled:opacity-50"
+        >
+          {appleLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-white/60" strokeWidth={1.5} />
+          ) : (
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+            </svg>
+          )}
+          {lang === 'nl' ? 'Ga verder met Apple' : 'Continue with Apple'}
         </button>
 
         {/* Divider */}
