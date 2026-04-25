@@ -508,6 +508,20 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           return 'Er ging iets mis bij het opstellen van de brief.';
         }
       },
+
+      // ── Get full financial overview (income, expenses, toeslagen, beslagvrije voet, bills) ──
+      get_financial_overview: async () => {
+        try {
+          const res = await fetch('/api/voice/financial-overview');
+          if (res.ok) {
+            const data = await res.json();
+            return data.summary || JSON.stringify(data);
+          }
+          return 'Kon financieel overzicht niet ophalen.';
+        } catch {
+          return 'Er ging iets mis bij het ophalen van financiele gegevens.';
+        }
+      },
     },
   });
 
