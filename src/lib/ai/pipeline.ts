@@ -142,11 +142,11 @@ export async function classifyEmail(
 }
 
 // ============================================================
-// 2. EMAIL BILL EXTRACTION (Sonnet — upgraded from Haiku)
+// 2. EMAIL BILL EXTRACTION (Mistral — EU-hosted via Scaleway)
 //
-// Sonnet produces far more reliable JSON and understands complex
-// Dutch bill formats better. Costs ~6x more per call but prevents
-// the "JSON parse failed" errors that were causing missed bills.
+// Mistral handles structured Dutch extraction well with JSON mode.
+// All bill data stays in EU (Paris). Cheaper than Sonnet and prevents
+// data from leaving Europe.
 // ============================================================
 
 const EXTRACTION_PROMPT = `You are extracting structured data from a Dutch bill/invoice email.
@@ -251,8 +251,8 @@ export async function extractBillFromEmail(
     .replace('{pdf_note}', pdfNote)
     .replace('{vendor_context}', vendorContext);
 
-  // Use Sonnet for extraction — far more reliable JSON than Haiku
-  const result = await callSonnet(prompt, userId, 'email_extraction', 1500);
+  // Use Mistral (Scaleway EU) for extraction — all bill data stays in Europe
+  const result = await callMistralText(prompt, userId, 'email_extraction');
 
   const extracted = normalizeExtraction(result);
 
