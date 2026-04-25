@@ -81,7 +81,7 @@ export default function StatsPage() {
       {loading ? (
         <div className="space-y-3"><div className="skeleton h-[180px] rounded-card" /><div className="grid grid-cols-2 gap-2"><div className="skeleton h-[90px] rounded-[14px]" /><div className="skeleton h-[90px] rounded-[14px]" /></div></div>
       ) : activeTab === 'performance' ? (
-        <PerformanceTab bills={bills} t={t} canSeeFullStats={canSeeFullStats} onUnlocked={() => setStatsUnlocked(true)} showCategory={modules.stats_category} />
+        <PerformanceTab bills={bills} t={t} canSeeFullStats={canSeeFullStats} onUnlocked={() => setStatsUnlocked(true)} showCategory={modules.stats_category} financialData={financialData} />
       ) : (
         <CashflowPanel bills={bills} statsUnlocked={canSeeFullStats} />
       )}
@@ -92,7 +92,7 @@ export default function StatsPage() {
 /* ============================================================
    PERFORMANCE TAB — Health card visible, rest blurred unless unlocked
    ============================================================ */
-function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked, showCategory }: { bills: Bill[]; t: ReturnType<typeof useTranslations>; canSeeFullStats: boolean; onUnlocked: () => void; showCategory: boolean }) {
+function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked, showCategory, financialData }: { bills: Bill[]; t: ReturnType<typeof useTranslations>; canSeeFullStats: boolean; onUnlocked: () => void; showCategory: boolean; financialData: { totaalInkomen: number; totaalVasteLasten: number; vrij: number; hasFinances: boolean; } | null }) {
   if (bills.length === 0) {
     return (<div className="flex flex-col items-center py-16 text-center"><Target className="mb-4 h-12 w-12 text-pw-muted/40" strokeWidth={1.5} /><h2 className="text-[16px] font-semibold text-pw-text">{t('noData')}</h2><p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">{t('noDataHint')}</p></div>);
   }
