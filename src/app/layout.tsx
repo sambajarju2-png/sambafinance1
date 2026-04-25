@@ -49,7 +49,7 @@ export default async function RootLayout({
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className={`${plusJakarta.variable} font-sans`}>
+      <body className={`${plusJakarta.variable} font-sans`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
