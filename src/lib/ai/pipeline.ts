@@ -1,4 +1,4 @@
-import { callGeminiText, callGeminiVision } from './gemini';
+import { callMistralText, callMistralVision } from './mistral';
 import { callHaiku, callSonnet } from './haiku';
 import { buildExtractionPrompt } from './prompts';
 import { buildCorrectionPrompt } from '../ai-corrections';
@@ -10,13 +10,13 @@ import { regexExtract, needsAiFallback } from '../regex-extractor';
 /**
  * PayWatch Dual-AI Pipeline
  *
- * ALL AI calls go through this file. Routes never call Gemini or Haiku directly.
+ * ALL AI calls go through this file. Routes never call AI directly.
  *
  * Architecture:
- * - Gemini Flash: email classification (is this a bill? yes/no)
+ * - Mistral Small 3.2 (Scaleway EU): email classification (is this a bill? yes/no)
  * - Claude Sonnet: email extraction (reliable JSON, deep Dutch understanding)
  * - Claude Haiku: insights + draft letters (cheaper, good enough)
- * - Gemini Vision: camera scan extraction
+ * - Mistral Small 3.2 Vision (Scaleway EU): camera scan extraction
  * - Database handles categorization (561 known vendors + incasso agencies)
  *
  * SERVER-ONLY — never import in client components.
@@ -94,7 +94,7 @@ export interface InsightResult {
 const CATEGORY_HINT_LIST = 'wonen|nutsvoorzieningen|zorg|verzekeringen|telecom|overheid|vervoer|leningen|winkels|abonnementen|gezin|zakelijk|incasso|overig';
 
 // ============================================================
-// 1. EMAIL CLASSIFICATION (Gemini)
+// 1. EMAIL CLASSIFICATION (Mistral)
 // ============================================================
 
 const CLASSIFICATION_PROMPT = `You are analyzing an email to determine if it contains a bill, invoice, or payment request. Consider the subject, sender, and body content.
@@ -127,7 +127,7 @@ export async function classifyEmail(
     .replace('{sender}', sender)
     .replace('{body}', body.slice(0, 500));
 
-  const result = await callGeminiText(prompt, userId, 'email_classification');
+  const result = await callMistralText(prompt, userId, 'email_classification');
 
   if (result._parse_error && result.is_bill === undefined) {
     console.warn('Classification parse error, defaulting to not-a-bill for:', subject.slice(0, 60));
@@ -302,11 +302,11 @@ export async function extractBillFromEmail(
 }
 
 // ============================================================
-// 3. CAMERA BILL EXTRACTION (Gemini Vision)
+// 3. CAMERA BILL EXTRACTION (Mistral Vision)
 // 
-// NO vendor context here — Gemini Flash has limited context window.
+// NO vendor context here — Mistral handles classification only.
 // Sending 291 vendor names DILUTES extraction quality.
-// Let Gemini focus 100% on reading the image.
+// Let Mistral focus 100% on reading the image.
 // Category + escalation are handled AFTER by DB lookup.
 // ============================================================
 
@@ -327,7 +327,7 @@ export async function extractBillFromPhoto(
   // Build prompt with Dutch rules + corrections ONLY (no vendor context)
   const prompt = buildExtractionPrompt(correctionRules);
 
-  const result = await callGeminiVision(
+  const result = await callMistralVision(
     imageBase64,
     mimeType,
     prompt,

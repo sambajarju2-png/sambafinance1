@@ -36,7 +36,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://cdn.jsdelivr.net",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://cdn.sanity.io https://ectcwerjdpiurubdpxcp.supabase.co https://api.dicebear.com https://*.enablebanking.com https://img.logo.dev",
-              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://generativelanguage.googleapis.com https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com https://api.elevenlabs.io wss://api.elevenlabs.io wss://*.elevenlabs.io",
+              "connect-src 'self' https://ectcwerjdpiurubdpxcp.supabase.co https://api.scaleway.ai https://api.anthropic.com https://graph.microsoft.com https://login.microsoftonline.com https://api.elevenlabs.io wss://api.elevenlabs.io wss://*.elevenlabs.io",
               "font-src 'self'",
               "media-src 'self' blob:",
               "worker-src 'self' blob:",
