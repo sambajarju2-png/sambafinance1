@@ -102,6 +102,16 @@ export default function GmailSettings() {
         return;
       }
       const { url } = await res.json();
+      // Google blocks OAuth in WKWebView — use SFSafariViewController in native
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({ url, presentationStyle: 'popover' });
+          setConnectingGmail(false);
+          return;
+        }
+      } catch {}
       window.location.href = url;
     } catch {
       setStatusMessage({ type: 'error', text: t('errorGeneral') });
@@ -121,6 +131,16 @@ export default function GmailSettings() {
         return;
       }
       const { url } = await res.json();
+      // Also use SFSafariViewController for Outlook in native
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({ url, presentationStyle: 'popover' });
+          setConnectingOutlook(false);
+          return;
+        }
+      } catch {}
       window.location.href = url;
     } catch {
       setStatusMessage({ type: 'error', text: 'Er ging iets mis bij het verbinden met Outlook.' });
