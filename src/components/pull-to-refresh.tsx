@@ -44,6 +44,7 @@ export function PullToRefresh({
       </motion.div>
       <motion.div
         drag="y"
+        dragDirectionLock
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.5 }}
         onDrag={(_, info) => {

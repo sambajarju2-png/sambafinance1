@@ -48,7 +48,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
   if (isTabSwitch) {
     return (
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.div key={pathname} {...presets.tabFade}>
+        <motion.div key={pathname} {...presets.tabFade} className="bg-pw-bg">
           {children}
         </motion.div>
       </AnimatePresence>
@@ -65,6 +65,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
         initial={variants.initial}
         animate={variants.animate}
         exit={variants.exit}
+        className="bg-pw-bg"
       >
         {children}
       </motion.div>

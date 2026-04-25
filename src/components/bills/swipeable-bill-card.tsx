@@ -56,17 +56,19 @@ export function SwipeableBillCard({
       {/* Card layer (draggable) */}
       <motion.div
         drag="x"
+        dragDirectionLock
         dragConstraints={{ left: -AUTO_COMPLETE_THRESHOLD, right: 0 }}
-        dragElastic={{ left: 0.2, right: 0 }}
+        dragElastic={{ left: 0.15, right: 0 }}
+        dragSnapToOrigin={false}
         style={{ x }}
         onDragEnd={(_, info) => {
           const offset = info.offset.x;
+          const velocity = info.velocity.x;
           if (offset < -AUTO_COMPLETE_THRESHOLD * 0.9) {
-            // Power user: dragged all the way → auto-delete
             haptic('heavy');
             onDelete();
-          } else if (offset < -REVEAL_WIDTH / 2) {
-            // Reveal action buttons
+          } else if (offset < -100 || velocity < -500) {
+            // Reveal action buttons (drag > 100px OR fast flick)
             haptic('select');
             animate(x, -REVEAL_WIDTH, spring.snap);
             setRevealed(true);
