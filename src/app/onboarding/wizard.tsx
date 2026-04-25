@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 import {
@@ -18,27 +18,29 @@ interface Props { initialName: string; initialLanguage: 'nl' | 'en'; }
 // ─── Spring (iOS feel) ───────────────────────────────────────────────────────
 const sp = { type: 'spring' as const, stiffness: 300, damping: 30 };
 
-// ─── Lottie (dynamic import — no SSR) ────────────────────────────────────────
-const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then(m => m.DotLottieReact),
-  { ssr: false, loading: () => <div className="w-28 h-28" /> }
-);
-const LOTTIE: Record<string, string> = {
-  welcome: '/lottie/safe.lottie',
-  house: '/lottie/home.lottie',
-  income: '/lottie/wallet.lottie',
-  scan: '/lottie/email.lottie',
-  summary: '/lottie/success.lottie',
-  bDone: '/lottie/success.lottie',
-  pDone: '/lottie/success.lottie',
+// ─── Lottie (standard JSON format — no WASM needed) ─────────────────────────
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
+const LOTTIE_MAP: Record<string, string> = {
+  welcome: '/lottie/safe.json',
+  house: '/lottie/home.json',
+  income: '/lottie/wallet.json',
+  scan: '/lottie/email.json',
+  summary: '/lottie/success.json',
+  bDone: '/lottie/success.json',
+  pDone: '/lottie/success.json',
 };
 
 function LottieHero({ step }: { step: string }) {
-  const src = LOTTIE[step];
-  if (!src) return null;
+  const src = LOTTIE_MAP[step];
+  const [data, setData] = useState<object | null>(null);
+  useEffect(() => {
+    if (!src) return;
+    fetch(src).then(r => r.json()).then(setData).catch(() => {});
+  }, [src]);
+  if (!src || !data) return null;
   return (
     <div className="flex justify-center mb-4">
-      <DotLottieReact src={src} autoplay loop={step !== 'summary' && step !== 'bDone' && step !== 'pDone'} style={{ width: 140, height: 140 }} />
+      <Lottie animationData={data} loop={!['summary','bDone','pDone'].includes(step)} autoplay style={{ width: 140, height: 140 }} />
     </div>
   );
 }
@@ -210,7 +212,8 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
     <div className="mb-5">
       <label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-1.5">{label}</label>
       {note&&<p className="text-[11px] text-pw-muted mb-1.5">{note}</p>}
-      <input type={type} inputMode={type==='number'?'numeric':undefined} value={val} onChange={e=>set(e.target.value)} placeholder={ph} autoComplete="off"
+      <input type={type} inputMode={type==='number'?'decimal':undefined} value={val} onChange={e=>set(e.target.value)} placeholder={ph} autoComplete="off" enterKeyHint="next"
+        onFocus={e => { setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); }}
         className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors"/>
     </div>
   );
@@ -289,7 +292,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <p className="text-[13px] text-pw-muted text-center mb-8">{t.cityX}</p>
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-4 w-4 h-4 text-pw-muted" strokeWidth={1.5}/>
-          <input value={gem||gemQ} onChange={e=>{setGemQ(e.target.value);setGem('');setGemDD(true);}} onFocus={()=>setGemDD(true)} placeholder={t.search} autoComplete="off"
+          <input value={gem||gemQ} onChange={e=>{setGemQ(e.target.value);setGem('');setGemDD(true);}} onFocus={e=>{setGemDD(true);setTimeout(()=>e.target.scrollIntoView({behavior:'smooth',block:'center'}),300);}} placeholder={t.search} autoComplete="off" enterKeyHint="done"
             className="w-full pl-10 pr-10 py-3.5 rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20"/>
           {gem&&<button onClick={()=>{setGem('');setGemQ('');}} className="absolute right-3.5 top-4"><X className="w-4 h-4 text-pw-muted"/></button>}
           {gemDD&&!gem&&<div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 shadow-xl">
@@ -402,17 +405,17 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-pw-bg dark:bg-gray-900">
+    <main className="fixed inset-0 flex flex-col bg-pw-bg dark:bg-gray-900">
       {/* Progress */}
-      {step>0&&<div className="px-5 pt-4 pb-1">
+      {step>0&&<div className="px-5 pt-3 pb-1 shrink-0">
         <div className="h-1.5 w-full bg-pw-border/30 dark:bg-gray-700 rounded-full overflow-hidden">
           <motion.div className="h-full bg-pw-blue rounded-full origin-left" animate={{scaleX:prog/100}} transition={sp}/>
         </div>
         <p className="text-[11px] text-pw-muted text-center mt-1">{step}/{tot-1}</p>
       </div>}
 
-      {/* Step content — key is ONLY step number, never content-dependent */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Step content — scrollable */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
@@ -420,15 +423,15 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
             animate={{opacity:1,x:0}}
             exit={{opacity:0,x:dir*-25}}
             transition={sp}
-            className="flex-1 flex flex-col px-5 py-4"
+            className="px-5 py-4 pb-4"
           >
             {stepContent()}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Footer */}
-      <div className="px-5 pb-8 pt-2 space-y-2" style={{paddingBottom:'max(2rem, env(safe-area-inset-bottom))'}}>
+      {/* Footer — always visible, never scrolled away */}
+      <div className="px-5 pt-2 pb-4 shrink-0 bg-pw-bg dark:bg-gray-900" style={{paddingBottom:'max(1rem, env(safe-area-inset-bottom))'}}>
         {err&&<p className="text-red-500 text-[12px] text-center">Er ging iets mis. Probeer het opnieuw.</p>}
         {skipOk&&!last&&<button onClick={next} className="w-full py-2.5 text-[14px] font-semibold text-pw-muted active:scale-[0.97] transition-transform">{t.skip}</button>}
         {cur!=='branch'&&<div className="flex gap-3">
