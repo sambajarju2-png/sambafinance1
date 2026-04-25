@@ -117,13 +117,13 @@ export default function OverzichtPage() {
           {/* Stat cards (2x2) */}
           <AnimatePresence mode="popLayout">
           {loading ? (
-            <motion.div key="skeleton-grid" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="grid grid-cols-2 gap-3">
+            <motion.div key="skeleton-grid" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="grid grid-cols-2 gap-3.5">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="skeleton h-[90px] rounded-[14px]" />
               ))}
             </motion.div>
           ) : (
-            <motion.div key="real-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="grid grid-cols-2 gap-2.5">
+            <motion.div key="real-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="grid grid-cols-2 gap-3.5">
               <MetricCard
                 icon={<CreditCard className="h-[15px] w-[15px] text-pw-blue" strokeWidth={1.8} />}
                 label={t('outstanding')}
