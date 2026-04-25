@@ -31,7 +31,7 @@ export async function isBiometricAvailable(): Promise<{
       return { available: false, type: 'none' };
     }
 
-    const { NativeBiometric } = await import('capacitor-native-biometric');
+    const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
     const result = await NativeBiometric.isAvailable();
 
     const typeMap: Record<number, BiometryType> = {
@@ -55,7 +55,7 @@ export async function isBiometricAvailable(): Promise<{
  */
 export async function verifyBiometric(reason?: string): Promise<boolean> {
   try {
-    const { NativeBiometric } = await import('capacitor-native-biometric');
+    const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
     await NativeBiometric.verifyIdentity({
       reason: reason || 'Ontgrendel PayWatch',
       title: 'PayWatch',
