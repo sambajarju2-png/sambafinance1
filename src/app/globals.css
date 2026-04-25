@@ -262,3 +262,64 @@ html.native-app .drawer-enter {
 html.native-app .drawer-spring {
   animation: drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
+
+/* ─── iOS Native Scroll ─────────────────────────────── */
+html.native-app .native-scroll {
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+html.native-app .native-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Drawer/Sheet Background Scale ─────────────────── */
+/* When a Vaul drawer is open, the page behind scales down */
+html.native-app [data-vaul-drawer-wrapper] {
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+              border-radius 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+html.native-app [data-vaul-overlay][data-state="open"] ~ [data-vaul-drawer-wrapper],
+html.native-app [vaul-drawer-visible] ~ main {
+  transform: scale(0.96);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ─── iOS Toggle Switch ─────────────────────────────── */
+.ios-toggle {
+  width: 51px;
+  height: 31px;
+  border-radius: 999px;
+  padding: 2px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+.ios-toggle-knob {
+  width: 27px;
+  height: 27px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1);
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ios-toggle[data-active="true"] .ios-toggle-knob {
+  transform: translateX(20px);
+}
+
+/* ─── Prevent Web Highlights on Native ──────────────── */
+html.native-app button,
+html.native-app a,
+html.native-app [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ─── Touch Action for Gesture Control ──────────────── */
+html.native-app .gesture-x {
+  touch-action: pan-y;
+}
+html.native-app .gesture-y {
+  touch-action: pan-x;
+}
