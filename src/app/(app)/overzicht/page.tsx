@@ -30,8 +30,20 @@ export default function OverzichtPage() {
   const t = useTranslations('dashboard');
   const router = useRouter();
 
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [bills, setBills] = useState<Bill[]>(() => {
+    // SWR: Show cached bills instantly while refetching
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('pw-bills-cache');
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') return !sessionStorage.getItem('pw-bills-cache');
+    return true;
+  });
   const [activeTab, setActiveTab] = useState<OverzichtTab>('overview');
   const { modules } = useDashboardModules();
 
@@ -40,7 +52,9 @@ export default function OverzichtPage() {
       const res = await fetch('/api/bills');
       if (res.ok) {
         const data = await res.json();
-        setBills(data.bills || []);
+        const fresh = data.bills || [];
+        setBills(fresh);
+        try { sessionStorage.setItem('pw-bills-cache', JSON.stringify(fresh)); } catch {}
       }
     } catch {
       console.error('Failed to fetch bills');

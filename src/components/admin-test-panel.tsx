@@ -39,6 +39,22 @@ export default function AdminTestPanel() {
     } else if (name === 'pwa') {
       localStorage.removeItem('pwa-drawer-dismissed');
       window.dispatchEvent(new Event('paywatch-trigger-pwa'));
+    } else if (name === 'notifications') {
+      fetch('/api/admin/test-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'notifications' }),
+      }).then(() => {
+        window.dispatchEvent(new CustomEvent('pw-notif-refresh'));
+      }).catch(() => {});
+    } else if (name === 'bank') {
+      fetch('/api/admin/test-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bank' }),
+      }).catch(() => {});
+    } else if (name === 'cleanup') {
+      fetch('/api/admin/test-data', { method: 'DELETE' }).catch(() => {});
     }
 
     setTriggered(name);
@@ -49,6 +65,9 @@ export default function AdminTestPanel() {
     { key: 'tour', label: t('triggerTour'), confirmLabel: t('tourReset') },
     { key: 'feedback', label: t('triggerFeedback'), confirmLabel: t('feedbackReset') },
     { key: 'pwa', label: t('triggerPwa'), confirmLabel: t('pwaReset') },
+    { key: 'notifications', label: 'Test notificaties', confirmLabel: 'Notificaties aangemaakt!' },
+    { key: 'bank', label: 'Test bank matching', confirmLabel: 'Transacties aangemaakt!' },
+    { key: 'cleanup', label: 'Verwijder testdata', confirmLabel: 'Testdata verwijderd!' },
   ];
 
   return (
