@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTranslations, useMessages } from 'next-intl';
-import { hapticFeedback } from '@/lib/capacitor';
+import { hapticFeedback, haptic } from '@/lib/capacitor';
 import {
   X, Calendar, Tag, FileText, Hash, CreditCard, ExternalLink,
   Check, Star, Trash2, Loader2, Copy, Pencil, ShieldAlert, Landmark, Clock,
@@ -202,9 +203,23 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
 
   return (
     <>
-      <div className="drawer-backdrop fixed inset-0 z-50 bg-black/40" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-50 bg-black/40"
+        onClick={onClose}
+      />
 
-      <div className="drawer-spring fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]">
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 1 }}
+        onAnimationStart={() => haptic('tap')}
+        className="fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[20px] bg-pw-bg shadow-[var(--shadow-drawer)]"
+      >
         <div className="flex justify-center pt-3"><div className="h-1 w-10 rounded-full bg-pw-border" /></div>
 
         {/* ── Branded Gov Header (CJIB / Belastingdienst) ── */}
@@ -474,7 +489,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       <DraftLetterDrawer bill={bill} open={draftLetterOpen} onClose={() => setDraftLetterOpen(false)} />
       <EditBillDrawer bill={bill} open={editOpen} onClose={() => setEditOpen(false)} onSaved={() => { onUpdate(); setEditOpen(false); }} />

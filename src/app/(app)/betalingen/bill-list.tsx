@@ -248,7 +248,11 @@ export default function BillList() {
       {paidToast && <PaidToast vendor={paidToast.vendor} amount={paidToast.amount} currency={paidToast.currency} onDone={() => setPaidToast(null)} />}
 
       <AddBillDrawer open={addDrawerOpen} onClose={() => setAddDrawerOpen(false)} onBillAdded={fetchBills} />
-      <BillDetailDrawer bill={selectedBill} onClose={() => setSelectedBill(null)} onUpdate={fetchBills} onPaid={handleBillPaid} />
+      <AnimatePresence>
+        {selectedBill && (
+          <BillDetailDrawer bill={selectedBill} onClose={() => setSelectedBill(null)} onUpdate={fetchBills} onPaid={handleBillPaid} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
