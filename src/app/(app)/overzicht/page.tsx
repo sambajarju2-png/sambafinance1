@@ -30,20 +30,8 @@ export default function OverzichtPage() {
   const t = useTranslations('dashboard');
   const router = useRouter();
 
-  const [bills, setBills] = useState<Bill[]>(() => {
-    // SWR: Show cached bills instantly while refetching
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('pw-bills-cache');
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== 'undefined') return !sessionStorage.getItem('pw-bills-cache');
-    return true;
-  });
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<OverzichtTab>('overview');
   const { modules } = useDashboardModules();
 
@@ -64,8 +52,15 @@ export default function OverzichtPage() {
   }, []);
 
   useEffect(() => {
+    // SWR: show cached bills instantly, then refresh in background
+    try {
+      const cached = sessionStorage.getItem('pw-bills-cache');
+      if (cached) {
+        setBills(JSON.parse(cached));
+        setLoading(false);
+      }
+    } catch {}
     fetchBills();
-    // Recalculate streak in background
     fetch('/api/streak').catch(() => {});
   }, [fetchBills]);
 
