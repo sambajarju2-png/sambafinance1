@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle, CreditCard, Clock, CalendarDays, CircleCheck } from 'lucide-react';
 import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
@@ -14,6 +15,10 @@ import MetricCard from '@/components/metric-card';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 import MatchCards from '@/components/bank/match-cards';
 import { useDashboardModules } from '@/lib/dashboard-modules';
+import { PullToRefresh } from '@/components/pull-to-refresh';
+import { AnimatedCounter } from '@/components/animated-counter';
+import { presets } from '@/lib/motion';
+import { haptic } from '@/lib/capacitor';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -30,25 +35,25 @@ export default function OverzichtPage() {
   const [activeTab, setActiveTab] = useState<OverzichtTab>('overview');
   const { modules } = useDashboardModules();
 
-  useEffect(() => {
-    async function fetchBills() {
-      try {
-        const res = await fetch('/api/bills');
-        if (res.ok) {
-          const data = await res.json();
-          setBills(data.bills || []);
-        }
-      } catch {
-        console.error('Failed to fetch bills');
-      } finally {
-        setLoading(false);
+  const fetchBills = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bills');
+      if (res.ok) {
+        const data = await res.json();
+        setBills(data.bills || []);
       }
+    } catch {
+      console.error('Failed to fetch bills');
+    } finally {
+      setLoading(false);
     }
-    fetchBills();
+  }, []);
 
+  useEffect(() => {
+    fetchBills();
     // Recalculate streak in background
     fetch('/api/streak').catch(() => {});
-  }, []);
+  }, [fetchBills]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
@@ -83,20 +88,26 @@ export default function OverzichtPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-              activeTab === tab.key
-                ? 'bg-pw-surface text-pw-text shadow-sm'
-                : 'text-pw-muted hover:text-pw-text'
-            }`}
+            onClick={() => { haptic('select'); setActiveTab(tab.key); }}
+            className="relative flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-semibold"
           >
-            {tab.label}
+            {activeTab === tab.key && (
+              <motion.div
+                layoutId="dashboard-tab-pill"
+                className="absolute inset-0 rounded-[6px] bg-pw-surface shadow-sm"
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className={`relative z-10 ${activeTab === tab.key ? 'text-pw-text' : 'text-pw-muted'}`}>
+              {tab.label}
+            </span>
           </button>
         ))}
       </div>
 
       {activeTab === 'overview' ? (
-        <>
+        <PullToRefresh onRefresh={fetchBills}>
+          <>
           {/* Financial overview */}
           {modules.home_vrij_besteedbaar && <FinancialOverviewCard />}
 
@@ -104,14 +115,15 @@ export default function OverzichtPage() {
           <MatchCards />
 
           {/* Stat cards (2x2) */}
+          <AnimatePresence mode="popLayout">
           {loading ? (
-            <div className="grid grid-cols-2 gap-3">
+            <motion.div key="skeleton-grid" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="skeleton h-[90px] rounded-[14px]" />
               ))}
-            </div>
+            </motion.div>
           ) : (
-            <div className="grid grid-cols-2 gap-2.5">
+            <motion.div key="real-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="grid grid-cols-2 gap-2.5">
               <MetricCard
                 icon={<CreditCard className="h-[15px] w-[15px] text-pw-blue" strokeWidth={1.8} />}
                 label={t('outstanding')}
@@ -140,8 +152,9 @@ export default function OverzichtPage() {
                 sub={t('thisMonth')}
                 color="green"
               />
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Mijn schulden card */}
           {!loading && outstanding.length > 0 && (
@@ -150,7 +163,7 @@ export default function OverzichtPage() {
                 <div>
                   <p className="text-[11px] font-medium text-pw-muted">{t('debtCard')}</p>
                   <p className="mt-0.5 text-[24px] font-extrabold text-pw-navy">
-                    {formatCents(outstandingTotal)}
+                    <AnimatedCounter value={outstandingTotal / 100} />
                   </p>
                 </div>
                 {escalated.length > 0 && (
@@ -236,7 +249,8 @@ export default function OverzichtPage() {
               </p>
             </div>
           )}
-        </>
+          </>
+        </PullToRefresh>
       ) : (
         /* AI Inzicht tab */
         <AiInsightsPanel bills={bills} />

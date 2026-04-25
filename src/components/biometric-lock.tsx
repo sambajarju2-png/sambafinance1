@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isBiometricEnabled, isBiometricAvailable, verifyBiometric, getBiometricLabel, type BiometryType } from '@/lib/biometric';
 import { Fingerprint, ShieldCheck, Loader2 } from 'lucide-react';
+import { useStatusBar } from '@/lib/use-status-bar';
 
 /**
  * Full-screen biometric lock overlay.
@@ -16,6 +17,9 @@ export default function BiometricLock() {
   const [checking, setChecking] = useState(true);
   const [biometryType, setBiometryType] = useState<BiometryType>('faceId');
   const [failed, setFailed] = useState(false);
+
+  // Navy background — use light status bar text while locked
+  useStatusBar(locked ? 'light' : 'dark');
 
   const attemptUnlock = useCallback(async () => {
     setFailed(false);

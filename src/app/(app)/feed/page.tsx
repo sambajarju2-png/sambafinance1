@@ -9,6 +9,7 @@ import {
 import CommunityNamePicker from '@/components/community-name-picker';
 import CommunityBanOverlay from '@/components/community-ban-overlay';
 import ReportDrawer from '@/components/report-drawer';
+import { PullToRefresh } from '@/components/pull-to-refresh';
 
 interface Post {
   id: string;
@@ -214,6 +215,7 @@ function FeedContent() {
         </div>
       )}
 
+      <PullToRefresh onRefresh={fetchPosts}>
       {loading ? (
         <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[120px] rounded-card" />)}</div>
       ) : posts.length === 0 ? (
@@ -239,6 +241,7 @@ function FeedContent() {
           ))}
         </div>
       )}
+      </PullToRefresh>
 
       {showNamePicker && <CommunityNamePicker onComplete={handleProfileComplete} onClose={() => setShowNamePicker(false)} />}
       {composeOpen && profile && !profile.is_banned && (

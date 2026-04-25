@@ -3,12 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Star, Check, CreditCard, List, CalendarDays, ShieldAlert, Landmark } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
 import dynamic from 'next/dynamic';
 import AddBillDrawer from './add-bill-drawer';
 import PaidToast from '@/components/paid-toast';
+import { PullToRefresh } from '@/components/pull-to-refresh';
+import { SwipeableBillCard } from '@/components/bills/swipeable-bill-card';
+import { presets } from '@/lib/motion';
+import { haptic } from '@/lib/capacitor';
 
 const BillDetailDrawer = dynamic(() => import('./bill-detail-drawer'), {
   loading: () => <div className="fixed inset-0 z-50 bg-black/20" />,
@@ -183,32 +188,59 @@ export default function BillList() {
         <>
           <div className="flex gap-1.5 rounded-input bg-pw-border/50 p-1">
             {tabs.map((tab) => (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                  activeTab === tab.key ? 'bg-pw-surface text-pw-text shadow-sm' : 'text-pw-muted hover:text-pw-text'
-                }`}>
-                {tab.label}
+              <button key={tab.key} onClick={() => { haptic('select'); setActiveTab(tab.key); }}
+                className="relative flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-semibold">
+                {activeTab === tab.key && (
+                  <motion.div
+                    layoutId="bills-tab-pill"
+                    className="absolute inset-0 rounded-[6px] bg-pw-surface shadow-sm"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-10 ${activeTab === tab.key ? 'text-pw-text' : 'text-pw-muted'}`}>
+                  {tab.label}
+                </span>
               </button>
             ))}
           </div>
 
+          <PullToRefresh onRefresh={fetchBills}>
+          <AnimatePresence mode="popLayout">
           {loading ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[72px] rounded-card" />)}</div>
+            <motion.div key="bill-skeletons" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[72px] rounded-card" />)}</motion.div>
           ) : sortedBills.length === 0 ? (
-            <div className="flex flex-col items-center py-16 text-center">
+            <motion.div key="empty" {...presets.fadeIn} className="flex flex-col items-center py-16 text-center">
               <CreditCard className="mb-4 h-12 w-12 text-pw-muted/40" strokeWidth={1.5} />
               <h2 className="text-[16px] font-semibold text-pw-text">{t('noBills')}</h2>
               <p className="mt-1 max-w-[280px] text-[13px] text-pw-muted">{t('noBillsHint')}</p>
-            </div>
+            </motion.div>
           ) : (
-            <div className="space-y-2">
-              {sortedBills.map((bill, index) => (
-                <BillRow key={bill.id} bill={bill} index={index} tEsc={tEsc} catMap={catMap}
-                  isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)}
-                  onQuickPay={() => handleQuickPay(bill)} />
-              ))}
-            </div>
+            <motion.div key="bill-list" variants={presets.listContainer} initial="hidden" animate="show" className="space-y-2">
+              {sortedBills.map((bill, index) => {
+                const isPaid = bill.status === 'settled';
+                return isPaid ? (
+                  <motion.div key={bill.id} variants={presets.listItem} layout>
+                    <BillRow bill={bill} index={index} tEsc={tEsc} catMap={catMap}
+                      isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)}
+                      onQuickPay={() => handleQuickPay(bill)} />
+                  </motion.div>
+                ) : (
+                  <motion.div key={bill.id} variants={presets.listItem} layout>
+                    <SwipeableBillCard
+                      onMarkPaid={() => handleQuickPay(bill)}
+                      onDelete={() => { /* future: delete bill */ }}
+                    >
+                      <BillRow bill={bill} index={index} tEsc={tEsc} catMap={catMap}
+                        isExiting={justPaidId === bill.id} onTap={() => setSelectedBill(bill)}
+                        onQuickPay={() => handleQuickPay(bill)} />
+                    </SwipeableBillCard>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           )}
+          </AnimatePresence>
+          </PullToRefresh>
         </>
       )}
 

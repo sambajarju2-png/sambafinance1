@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationProvider, useConversation } from '@elevenlabs/react';
 import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, Camera } from 'lucide-react';
 import { sounds } from '@/lib/sounds';
+import { useStatusBar } from '@/lib/use-status-bar';
 
 interface VoiceCallProps {
   onClose: (showSummary?: PostCallData | null) => void;
@@ -264,6 +265,9 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [showCamera, setShowCamera] = useState(false);
   const nl = lang === 'nl';
+
+  // Voice call has dark background — light status bar text
+  useStatusBar('light');
 
   const conversation = useConversation({
     onConnect: () => {

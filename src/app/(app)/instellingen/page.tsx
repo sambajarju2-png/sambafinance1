@@ -25,6 +25,7 @@ import ExpensesList from '@/components/finances/expenses-list';
 import ToeslagenCard from '@/components/finances/toeslagen-card';
 import BankConnectCard from '@/components/bank/bank-connect-card';
 import DashboardModulesSettings from '@/components/dashboard-modules-settings';
+import { IOSSwitch } from '@/components/ui/ios-switch';
 
 type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security';
 
@@ -500,17 +501,11 @@ function BiometricSettings() {
               <p className="text-[11px] text-pw-muted">Gebruik {biometryLabel} om PayWatch te openen</p>
             </div>
           </div>
-          <button
-            onClick={handleToggle}
+          <IOSSwitch
+            checked={enabled}
+            onChange={() => handleToggle()}
             disabled={toggling}
-            className={`relative h-7 w-12 rounded-full transition-colors duration-200 ${
-              enabled ? 'bg-pw-blue' : 'bg-gray-300'
-            } disabled:opacity-50`}
-          >
-            <div className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
-              enabled ? 'translate-x-5' : 'translate-x-0.5'
-            }`} />
-          </button>
+          />
         </div>
       </div>
 
