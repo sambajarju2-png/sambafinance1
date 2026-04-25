@@ -39,6 +39,28 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
   useEffect(() => setMounted(true), []);
 
+  // Listen for native OAuth cancellation (user tapped "Done" in SFSafariViewController)
+  useEffect(() => {
+    function handleCancel() {
+      setGoogleLoading(false);
+    }
+    window.addEventListener('paywatch:oauth-cancelled', handleCancel);
+    return () => window.removeEventListener('paywatch:oauth-cancelled', handleCancel);
+  }, []);
+
+  // Display errors passed via URL params (from native OAuth callback failures)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlError = params.get('error');
+      if (urlError) {
+        setError(decodeURIComponent(urlError));
+        // Clean the URL so error doesn't persist on refresh
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
+
   async function switchLang(newLang: 'nl' | 'en') {
     if (newLang === lang || isPending) return;
     setLang(newLang);
