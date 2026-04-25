@@ -189,6 +189,24 @@ export default function OverzichtPage() {
           {/* Schuldenvrij countdown */}
           {!loading && modules.home_schuldvrij_countdown && <SchuldenvrijCountdown bills={bills} />}
 
+          {/* Beslagvrije voet — only show when bills are in incasso/deurwaarder stage */}
+          {!loading && bills.some(b => ['incasso', 'deurwaarder'].includes(b.escalation_stage || '')) && (
+            <button
+              onClick={() => router.push('/beslagvrije-voet')}
+              className="w-full rounded-card border border-pw-blue/20 bg-pw-blue/[0.04] p-4 text-left transition-colors hover:bg-pw-blue/[0.07]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pw-blue/10">
+                  <Shield className="h-5 w-5 text-pw-blue" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold text-pw-text">Beslagvrije voet berekenen</p>
+                  <p className="text-[11px] text-pw-muted">Controleer of de deurwaarder niet te veel inhoudt</p>
+                </div>
+              </div>
+            </button>
+          )}
+
           {/* Quick actions */}
           <div className="flex gap-3">
             <button

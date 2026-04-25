@@ -25,18 +25,35 @@ export default function StatsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const { modules } = useDashboardModules();
 
+  // Financial data for enhanced health score
+  const [financialData, setFinancialData] = useState<{
+    totaalInkomen: number; totaalVasteLasten: number; vrij: number; hasFinances: boolean;
+  } | null>(null);
+
   useEffect(() => {
     async function load() {
       try {
-        const [billsRes, profileRes] = await Promise.all([
+        const [billsRes, profileRes, finRes] = await Promise.all([
           fetch('/api/bills'),
           fetch('/api/settings/profile'),
+          fetch('/api/finances/overview'),
         ]);
         if (billsRes.ok) { const d = await billsRes.json(); setBills(d.bills || []); }
         if (profileRes.ok) {
           const d = await profileRes.json();
           setStatsUnlocked(d.profile?.stats_unlocked || false);
           if (d.profile?.email && ADMIN_EMAILS.includes(d.profile.email.toLowerCase())) setIsAdmin(true);
+        }
+        if (finRes.ok) {
+          const d = await finRes.json();
+          if (d.has_finances) {
+            setFinancialData({
+              totaalInkomen: d.totaal_inkomen || 0,
+              totaalVasteLasten: d.totaal_vaste_lasten || 0,
+              vrij: d.vrij_besteedbaar || 0,
+              hasFinances: true,
+            });
+          }
         }
       } catch {} finally { setLoading(false); }
     }
@@ -95,10 +112,27 @@ function PerformanceTab({ bills, t, canSeeFullStats, onUnlocked, showCategory }:
 
   let healthScore = 50;
   if (bills.length > 0) {
-    const onTimeBonus = onTimeRate * 0.4;
-    const noOverdueBonus = overdue.length === 0 ? 30 : Math.max(0, 30 - overdue.length * 10);
-    const noEscalationBonus = escalated.length === 0 ? 30 : Math.max(0, 30 - escalated.length * 15);
-    healthScore = Math.min(100, Math.round(onTimeBonus + noOverdueBonus + noEscalationBonus));
+    // Payment behavior (40 points max)
+    const onTimeBonus = onTimeRate * 0.25; // max 25
+    const noOverdueBonus = overdue.length === 0 ? 15 : Math.max(0, 15 - overdue.length * 5);
+
+    // Escalation risk (20 points max)
+    const noEscalationBonus = escalated.length === 0 ? 20 : Math.max(0, 20 - escalated.length * 10);
+
+    // Financial health (40 points max) — only if financial data available
+    let financialBonus = 20; // default if no data
+    if (financialData?.hasFinances && financialData.totaalInkomen > 0) {
+      const vasteLastenRatio = financialData.totaalVasteLasten / financialData.totaalInkomen;
+      // Vaste lasten ratio: <40% = 15pts, 40-60% = 10pts, 60-80% = 5pts, >80% = 0pts
+      const ratioScore = vasteLastenRatio < 0.4 ? 15 : vasteLastenRatio < 0.6 ? 10 : vasteLastenRatio < 0.8 ? 5 : 0;
+      // Buffer: positive vrij besteedbaar = good
+      const bufferScore = financialData.vrij > 20000 ? 15 : financialData.vrij > 10000 ? 10 : financialData.vrij > 0 ? 5 : 0;
+      // Has financial data set up = 10pts (engagement)
+      const setupScore = 10;
+      financialBonus = ratioScore + bufferScore + setupScore;
+    }
+
+    healthScore = Math.min(100, Math.round(onTimeBonus + noOverdueBonus + noEscalationBonus + financialBonus));
   }
 
   const healthColor = healthScore >= 70 ? 'text-pw-green' : healthScore >= 40 ? 'text-pw-amber' : 'text-pw-red';

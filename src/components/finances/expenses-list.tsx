@@ -34,6 +34,17 @@ const CATEGORY_CONFIG: Record<string, { icon: typeof Home; label: string; color:
   overig: { icon: CircleDot, label: 'Overig', color: 'text-gray-500' },
 };
 
+// Nibud referentiebegrotingen 2026 — monthly norms in cents (alleenstaand)
+// Source: Nibud.nl referentiebegrotingen
+const NIBUD_NORMS: Record<string, number> = {
+  energie: 15000,         // €150/month average
+  water: 2500,            // €25/month
+  zorgverzekering: 17500, // €175/month (basispremie + gemiddeld aanvullend)
+  telecom: 3500,          // €35/month
+  internet: 4500,         // €45/month
+  verzekering: 5000,      // €50/month (excl. zorg)
+};
+
 const INTERVAL_LABELS: Record<string, string> = {
   weekly: 'per week',
   monthly: 'per maand',
@@ -227,11 +238,37 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-pw-muted">
-                    {config.label}
-                    {expense.interval !== 'monthly' && ` · ${INTERVAL_LABELS[expense.interval]}`}
-                    {expense.payment_day && ` · dag ${expense.payment_day}`}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[11px] text-pw-muted">
+                      {config.label}
+                      {expense.interval !== 'monthly' && ` · ${INTERVAL_LABELS[expense.interval]}`}
+                      {expense.payment_day && ` · dag ${expense.payment_day}`}
+                    </p>
+                    {(() => {
+                      const norm = NIBUD_NORMS[expense.category];
+                      if (!norm || expense.monthly_amount <= 0) return null;
+                      const diff = Math.round(((expense.monthly_amount - norm) / norm) * 100);
+                      if (diff > 10) {
+                        return (
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                            {diff}% boven norm
+                          </span>
+                        );
+                      }
+                      if (diff >= -5) {
+                        return (
+                          <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                            binnen norm
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                          {Math.abs(diff)}% onder norm
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
