@@ -456,6 +456,10 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                 <ActionButton icon={FileText} label={t('draftLetter')} desc={t('draftLetterDesc')} color="text-pw-purple"
                   loading={false} onClick={() => setDraftLetterOpen(true)} />
               )}
+              {['incasso', 'deurwaarder'].includes(bill.escalation_stage || '') && (
+                <ActionButton icon={Shield} label="Beslagvrije voet" desc="Bereken hoeveel je mag houden bij beslag" color="text-pw-blue"
+                  loading={false} onClick={() => { window.location.href = '/beslagvrije-voet'; }} />
+              )}
               <ActionButton icon={Star} label={bill.is_favorite ? t('removeFavorite') : t('addFavorite')} desc={t('favoriteDesc')} color="text-pw-amber"
                 loading={actionLoading === 'fav'} onClick={() => patchBill({ is_favorite: !bill.is_favorite }, 'fav')} />
               <ActionButton icon={Trash2} label={t('deleteBill')} desc={t('deleteBillDesc')} color="text-pw-red"

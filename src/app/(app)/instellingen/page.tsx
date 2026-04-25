@@ -209,6 +209,7 @@ function SettingsContent() {
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
+        <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
         <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
         <BiometricMenuLink onClick={() => setActiveTab('security')} />
