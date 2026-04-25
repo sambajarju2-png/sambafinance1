@@ -28,14 +28,20 @@ export const ease = {
 };
 
 export const spring = {
+  /** Push/pop navigation, sheet present — iOS .smooth */
+  nav: { type: 'spring' as const, stiffness: 350, damping: 35, mass: 0.9 },
+  /** Quick UI response — toggle, tab indicator, button — iOS .snappy */
+  snap: { type: 'spring' as const, stiffness: 500, damping: 40, mass: 0.8 },
   /** Button/card press — snappy, no bounce */
   press: { type: 'spring' as const, stiffness: 500, damping: 30 },
   /** Sheet/drawer — heavy, fluid */
-  sheet: { type: 'spring' as const, stiffness: 400, damping: 35 },
-  /** Playful bounce — reactions, success states */
-  bounce: { type: 'spring' as const, stiffness: 300, damping: 20 },
+  sheet: { type: 'spring' as const, stiffness: 300, damping: 30, mass: 1 },
+  /** Playful bounce — reactions, success, drag release — iOS .bouncy */
+  bounce: { type: 'spring' as const, stiffness: 400, damping: 17, mass: 1 },
+  /** Subtle layout reflow — lists, accordion */
+  layout: { type: 'spring' as const, stiffness: 600, damping: 50 },
   /** Toggle switch — fast snap */
-  toggle: { type: 'spring' as const, stiffness: 500, damping: 30 },
+  toggle: { type: 'spring' as const, stiffness: 500, damping: 35 },
 };
 
 /** Swipe-back gesture thresholds */
