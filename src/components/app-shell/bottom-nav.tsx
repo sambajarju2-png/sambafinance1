@@ -33,7 +33,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-pw-border/60"
+      className="bottom-nav-container fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-pw-border/60"
       style={{
         paddingBottom: 'env(safe-area-inset-bottom, 16px)',
         paddingTop: '6px',

@@ -80,7 +80,7 @@ export default function OverzichtPage() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
 
       {/* Sub-tab toggle */}

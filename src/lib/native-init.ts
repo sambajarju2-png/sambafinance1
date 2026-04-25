@@ -35,8 +35,10 @@ export function useNativeInit() {
         try {
           const { StatusBar, Style } = await import('@capacitor/status-bar');
           await StatusBar.setStyle({ style: Style.Dark });
+          // Content renders BEHIND status bar — true edge-to-edge
+          await StatusBar.setOverlaysWebView({ overlay: true });
           if (platform === 'android') {
-            await StatusBar.setBackgroundColor({ color: '#0A2540' });
+            await StatusBar.setBackgroundColor({ color: '#00000000' }); // transparent
           }
         } catch {}
 
