@@ -67,6 +67,17 @@ export async function POST(req: NextRequest) {
 
   // ── INSERT DUMMY BANK TRANSACTIONS ──
   if (type === 'bank' || type === 'both') {
+    // Create/find demo bank connection (connection_id is NOT NULL)
+    const demoConnId = '00000000-0000-0000-0000-000000000001';
+    await supabase.from('bank_connections').upsert({
+      id: demoConnId,
+      user_id: userId,
+      institution_id: 'DEMO_BANK',
+      institution_name: 'Demo ABN AMRO',
+      requisition_id: 'demo-req-001',
+      status: 'linked',
+    }, { onConflict: 'id' });
+
     // Get user's actual bills for realistic matching
     const { data: bills } = await supabase
       .from('bills')
@@ -80,7 +91,7 @@ export async function POST(req: NextRequest) {
       // Matching transactions (same vendor/amount as real bills)
       ...(bills || []).slice(0, 4).map((bill, i) => ({
         user_id: userId,
-        connection_id: null,
+        connection_id: demoConnId,
         account_id: 'demo-account',
         transaction_id: `demo-tx-${Date.now()}-${i}`,
         booking_date: new Date(today.getTime() - (i + 1) * 86400000).toISOString().split('T')[0],
@@ -102,7 +113,7 @@ export async function POST(req: NextRequest) {
       // Unmatched transactions (no bill match)
       {
         user_id: userId,
-        connection_id: null,
+        connection_id: demoConnId,
         account_id: 'demo-account',
         transaction_id: `demo-tx-${Date.now()}-unmatched-1`,
         booking_date: new Date(today.getTime() - 2 * 86400000).toISOString().split('T')[0],
@@ -123,7 +134,7 @@ export async function POST(req: NextRequest) {
       },
       {
         user_id: userId,
-        connection_id: null,
+        connection_id: demoConnId,
         account_id: 'demo-account',
         transaction_id: `demo-tx-${Date.now()}-unmatched-2`,
         booking_date: new Date(today.getTime() - 5 * 86400000).toISOString().split('T')[0],

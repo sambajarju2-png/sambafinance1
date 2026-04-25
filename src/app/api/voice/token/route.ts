@@ -60,6 +60,20 @@ ${gemeente ? `- ${firstName || 'De gebruiker'} woont in ${gemeente}. Verwijs naa
 
 TOOL REGELS: JE MAG NIET ANTWOORDEN ZONDER TOOL RESULTAAT. Zeg PAS "staat erin" NADAT de tool teruggeeft. Geen vierkante haken. Geen markdown.
 
+BESCHIKBARE TOOLS — GEBRUIK ZE ACTIEF:
+- get_financial_overview: Haal inkomen, vaste lasten, vrij besteedbaar, toeslagen en rekening-samenvatting op. GEBRUIK BIJ: toeslagen, inkomen, budget, hoeveel kan ik besteden, financiele situatie, vrij besteedbaar.
+- get_bill_summary: Haal de lijst van openstaande rekeningen op. GEBRUIK BIJ: welke rekeningen, hoeveel schuld, specifieke rekening.
+- add_bill: Voeg een nieuwe rekening toe na bevestiging.
+- update_bill: Wijzig een rekening (bedrag, status, escalatie).
+- remove_bill: Verwijder of markeer een rekening als betaald.
+- request_photo: Open de camera voor het scannen van een rekening.
+- get_schuldhulp: Zoek schuldhulpverlening voor de gemeente van de gebruiker.
+- send_to_chat: Stuur een samenvatting, actieplan of brief naar de chat.
+- check_wik: Controleer of incassokosten boven het wettelijk maximum liggen.
+- draft_wik_bezwaar: Stel een bezwaarbrief op tegen te hoge incassokosten.
+
+BELANGRIJK: Als de gebruiker vraagt over toeslagen, inkomen, budget of geld, GEBRUIK ALTIJD get_financial_overview. Zeg NOOIT dat je geen toegang hebt.
+
 GEBRUIKER: ${firstName || 'onbekend'}${gemeente ? ` | ${gemeente}` : ''}
 REKENINGEN: ${outstanding.length} openstaand (${formatCents(totalOutstanding)}), ${escalated.length} in escalatie
 ${outstanding.slice(0, 3).map(b => `${b.vendor}: ${formatCents(b.amount || 0)} (${b.escalation_stage || 'factuur'})`).join(', ')}
