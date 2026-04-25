@@ -207,16 +207,16 @@ function SettingsContent() {
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
-        <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
-        <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
         <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
-        <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
-        <BiometricMenuLink onClick={() => setActiveTab('security')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
-        <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
-        <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
+        <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
+        <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
+        <BiometricMenuLink onClick={() => setActiveTab('security')} />
+        <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
+        <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
+        <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Users} label="Vrienden uitnodigen" description="Deel PayWatch en ontgrendel functies" onClick={() => setActiveTab('referral')} />
         <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => setActiveTab('help')} />
       </div>

@@ -208,8 +208,8 @@ export default function EditBillDrawer({ bill, open, onClose, onSaved }: EditBil
               </div>
               <div>
                 <label className="mb-1.5 block text-[12px] font-semibold text-pw-text">Afschrijfdag</label>
-                <input type="number" inputMode="numeric" min="1" max="31"
-                  value={paymentDay} onChange={(e) => setPaymentDay(e.target.value)}
+                <input type="number" inputMode="numeric" min="1" max="31" maxLength={2}
+                  value={paymentDay} onChange={(e) => { const v = e.target.value; if (v === '' || v === '0') { setPaymentDay(v); return; } const n = parseInt(v); if (!isNaN(n)) setPaymentDay(String(Math.min(31, Math.max(1, n)))); }}
                   placeholder="bijv. 15"
                   className="w-full rounded-input border border-pw-border bg-pw-surface px-3 py-2.5 text-[14px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue" />
               </div>
