@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { LayoutDashboard, Camera, Mail, Plus, Shield, AlertTriangle, CreditCard, Clock, CalendarDays, CircleCheck } from 'lucide-react';
 import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';

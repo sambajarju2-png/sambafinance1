@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { IOSSwitch } from '@/components/ui/ios-switch';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -200,20 +201,10 @@ function ModuleSection({
               <p className="text-[13px] font-medium text-pw-text">{opt.label}</p>
               <p className="mt-0.5 text-[11px] text-pw-muted">{opt.description}</p>
             </div>
-            <button
-              onClick={() => onToggle(opt.key)}
-              className={`relative inline-flex h-[28px] w-[50px] flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
-                modules[opt.key] ? 'bg-pw-blue' : 'bg-gray-200'
-              }`}
-              role="switch"
-              aria-checked={modules[opt.key]}
-            >
-              <span
-                className={`inline-block h-[24px] w-[24px] rounded-full bg-white shadow-md transition-transform duration-200 ${
-                  modules[opt.key] ? 'translate-x-[24px]' : 'translate-x-[2px]'
-                }`}
-              />
-            </button>
+            <IOSSwitch
+              checked={modules[opt.key]}
+              onChange={() => onToggle(opt.key)}
+            />
           </div>
         ))}
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Mail, Bell, Users, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { IOSSwitch } from '@/components/ui/ios-switch';
 
 export default function NotificationPreferences() {
   const t = useTranslations('notifications');
@@ -74,14 +75,11 @@ export default function NotificationPreferences() {
                 <p className="text-[10px] text-pw-muted">{item.desc}</p>
               </div>
             </div>
-            <button onClick={() => toggle(item.key)} disabled={saving === item.key}
-              className={`relative h-6 w-10 rounded-full transition-colors ${prefs[item.key] ? 'bg-pw-blue' : 'bg-pw-border'}`}>
-              {saving === item.key ? (
-                <Loader2 className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 animate-spin text-white" strokeWidth={2} />
-              ) : (
-                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs[item.key] ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              )}
-            </button>
+            <IOSSwitch
+              checked={prefs[item.key]}
+              onChange={() => toggle(item.key)}
+              disabled={saving === item.key}
+            />
           </div>
         ))}
       </div>

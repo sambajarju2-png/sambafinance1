@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { IOSSwitch } from '@/components/ui/ios-switch';
 
 export default function DarkModeToggle() {
   const { theme, setTheme } = useTheme();
@@ -45,18 +46,10 @@ export default function DarkModeToggle() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setTheme(isDark ? 'light' : 'dark')}
-          className={`relative h-7 w-12 rounded-full transition-colors ${
-            isDark ? 'bg-pw-purple' : 'bg-pw-border'
-          }`}
-        >
-          <div
-            className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-              isDark ? 'translate-x-5' : 'translate-x-0.5'
-            }`}
-          />
-        </button>
+        <IOSSwitch
+          checked={isDark}
+          onChange={(v) => setTheme(v ? 'dark' : 'light')}
+        />
       </div>
     </div>
   );

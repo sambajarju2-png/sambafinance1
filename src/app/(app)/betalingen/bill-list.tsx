@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Star, Check, CreditCard, List, CalendarDays, ShieldAlert, Landmark } from 'lucide-react';
 import { formatCents, type Bill, type EscalationStage } from '@/lib/bills';
 import { detectGovBrand, getGovBrandInfo } from '@/lib/gov-brands';
@@ -278,8 +278,10 @@ function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
   const borderStyle = brandInfo ? { borderColor: `${brandInfo.color}30` } : undefined;
 
   return (
-    <div
+    <motion.div
       data-bill-id={bill.id}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.1 }}
       className={`bill-row-press relative flex w-full items-center gap-3 rounded-card border px-3.5 py-3 transition-colors overflow-hidden ${
         isExiting ? 'bill-paid-exit' : 'bill-row-enter'
       } ${baseStyle}`}
@@ -360,7 +362,7 @@ function BillRow({ bill, index, tEsc, catMap, isExiting, onTap, onQuickPay }: {
           <Check className="h-4 w-4" strokeWidth={2} />
         </button>
       )}
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 import { useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { haptic } from '@/lib/capacitor';

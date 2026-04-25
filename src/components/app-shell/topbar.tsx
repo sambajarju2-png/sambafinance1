@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Bell, Loader2, Sun, Moon, Settings } from 'lucide-react';
+import { useStatusBar } from '@/lib/use-status-bar';
 
 interface TopbarProps {
   notificationCount: number;
@@ -13,6 +14,9 @@ interface TopbarProps {
 export default function Topbar({ notificationCount: initialCount }: TopbarProps) {
   const t = useTranslations('nav');
   const router = useRouter();
+
+  // Default: dark text on light background (overridden by voice call / biometric lock)
+  useStatusBar('dark');
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [notifCount, setNotifCount] = useState(initialCount);
