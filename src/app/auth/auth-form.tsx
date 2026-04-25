@@ -120,6 +120,28 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     setGoogleLoading(true);
 
     try {
+      // Check if running in native Capacitor shell
+      let isNative = false;
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        isNative = Capacitor.isNativePlatform();
+      } catch {}
+
+      if (isNative) {
+        // Native flow: open in SFSafariViewController, return via deep link
+        const { startNativeOAuth } = await import('@/lib/native-auth');
+        const { error: nativeError } = await startNativeOAuth('google');
+        if (nativeError) {
+          setError(nativeError);
+          setGoogleLoading(false);
+        }
+        // If no error, SFSafariViewController is now open — user is authenticating.
+        // The appUrlOpen listener in native-init.ts will handle the callback.
+        // Keep loading state active until callback completes.
+        return;
+      }
+
+      // Web flow: standard Supabase OAuth redirect
       const { error: googleError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

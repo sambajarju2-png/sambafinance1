@@ -6,7 +6,6 @@ import AppTour from '@/components/app-tour';
 import FeedbackPopup from '@/components/feedback-popup';
 import PushPermissionPrompt from '@/components/push-permission-prompt';
 import PwaInstallDrawer from '@/components/pwa/install-prompt';
-import NativeShell from '@/components/native-shell';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -27,7 +26,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Topbar notificationCount={0} />
       <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
       <BottomNav />
-      <NativeShell />
       <AppTour />
       <FeedbackPopup />
       <PwaInstallDrawer />

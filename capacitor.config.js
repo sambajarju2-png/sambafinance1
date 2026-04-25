@@ -27,6 +27,13 @@ const config = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    Keyboard: {
+      resize: 'native',
+      resizeOnFullScreen: true,
+    },
+    Browser: {
+      presentationStyle: 'popover',
+    },
   },
   ios: {
     contentInset: 'automatic',
