@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Topbar from '@/components/app-shell/topbar';
 import BottomNav from '@/components/app-shell/bottom-nav';
+import PageTransition from '@/components/page-transition';
 import AppTour from '@/components/app-tour';
 import FeedbackPopup from '@/components/feedback-popup';
 import PushPermissionPrompt from '@/components/push-permission-prompt';
@@ -24,7 +25,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col bg-pw-bg">
       <Topbar notificationCount={0} />
-      <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
+      <main className="flex-1 px-4 pb-24 pt-4">
+        <PageTransition>{children}</PageTransition>
+      </main>
       <BottomNav />
       <AppTour />
       <FeedbackPopup />

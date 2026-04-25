@@ -513,7 +513,16 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     setDebugInfo('');
 
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request microphone permission
+      // In WKWebView, navigator.mediaDevices may be undefined until 
+      // the WebView is on a secure origin with proper Info.plist permissions
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        // On iOS WKWebView, getUserMedia might not be available
+        // ElevenLabs SDK handles microphone access internally via WebSocket
+        console.warn('[VoiceCall] getUserMedia not available — relying on ElevenLabs SDK');
+      }
 
       const res = await fetch('/api/voice/token');
       const data = await res.json();

@@ -4,6 +4,12 @@
 <dict>
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PayWatch gebruikt je microfoon voor spraakgesprekken met PayBuddy, je financiële assistent.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PayWatch gebruikt je camera om rekeningen en QR-codes te scannen.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Gebruik Face ID om PayWatch snel en veilig te ontgrendelen.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

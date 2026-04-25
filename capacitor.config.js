@@ -11,6 +11,8 @@ const config = {
       'accounts.google.com',
       'login.microsoftonline.com',
       '*.enablebanking.com',
+      '*.elevenlabs.io',
+      '*.convai.com',
     ],
   },
   plugins: {
