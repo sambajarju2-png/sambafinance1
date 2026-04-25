@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import dynamic from 'next/dynamic';
 import {
   Shield, ChevronRight, ChevronLeft, Check, Loader2,
   Mail, Camera, ClipboardList, Users, Briefcase, MapPin,
@@ -16,6 +17,31 @@ interface Props { initialName: string; initialLanguage: 'nl' | 'en'; }
 
 // ─── Spring (iOS feel) ───────────────────────────────────────────────────────
 const sp = { type: 'spring' as const, stiffness: 300, damping: 30 };
+
+// ─── Lottie (dynamic import — no SSR) ────────────────────────────────────────
+const DotLottieReact = dynamic(
+  () => import('@lottiefiles/dotlottie-react').then(m => m.DotLottieReact),
+  { ssr: false, loading: () => <div className="w-28 h-28" /> }
+);
+const LOTTIE: Record<string, string> = {
+  welcome: '/lottie/safe.lottie',
+  house: '/lottie/home.lottie',
+  income: '/lottie/wallet.lottie',
+  scan: '/lottie/email.lottie',
+  summary: '/lottie/success.lottie',
+  bDone: '/lottie/success.lottie',
+  pDone: '/lottie/success.lottie',
+};
+
+function LottieHero({ step }: { step: string }) {
+  const src = LOTTIE[step];
+  if (!src) return null;
+  return (
+    <div className="flex justify-center mb-4">
+      <DotLottieReact src={src} autoplay loop={step !== 'summary' && step !== 'bDone' && step !== 'pDone'} style={{ width: 140, height: 140 }} />
+    </div>
+  );
+}
 
 // ─── Gemeente ────────────────────────────────────────────────────────────────
 const GEMS = ['Amsterdam','Rotterdam','Den Haag','Utrecht','Eindhoven','Groningen','Tilburg','Almere','Breda','Nijmegen','Apeldoorn','Haarlem','Arnhem','Enschede','Amersfoort','Zaanstad','Haarlemmermeer','Den Bosch','Zoetermeer','Zwolle','Leiden','Maastricht','Dordrecht','Ede','Leeuwarden','Alphen aan den Rijn','Emmen','Westland','Delft','Deventer','Sittard-Geleen','Helmond','Venlo','Oss','Roosendaal','Heerlen','Schiedam','Spijkenisse','Vlaardingen','Almelo','Gouda','Lelystad','Hilversum'].sort();
@@ -219,7 +245,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   function stepContent() {
     switch(cur) {
       case 'welcome': return (<>
-        <div className="flex justify-center mb-8 mt-4"><div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-pw-blue/15 to-blue-200 dark:from-pw-blue/25 dark:to-blue-900 flex items-center justify-center"><Shield className="w-12 h-12 text-pw-blue" strokeWidth={1.5}/></div></div>
+        <LottieHero step="welcome"/>
         <h1 className="text-[28px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.welcome}</h1>
         <p className="text-[14px] text-pw-muted text-center mb-10 px-4">{t.tagline}</p>
         <p className="text-[13px] text-pw-muted text-center mb-4">{t.lang}</p>
@@ -275,7 +301,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       </>);
 
       case 'house': return (<>
-        <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center"><Home className="w-8 h-8 text-amber-600" strokeWidth={1.5}/></div></div>
+        <LottieHero step="house"/>
         <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{pT('house')}</h1>
         <Tog label={t.partner} val={hasPart} set={setHasPart}/>
         <div className="mb-5"><label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-2">{t.kids}</label>
@@ -293,7 +319,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       </>);
 
       case 'income': return (<>
-        <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center"><Wallet className="w-8 h-8 text-pw-blue" strokeWidth={1.5}/></div></div>
+        <LottieHero step="income"/>
         <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{pT('income')}</h1>
         <Inp label={t.salary} val={sal} set={setSal} ph="bijv. 2400" type="number"/>
         {hasPart&&<Inp label={t.partnerInc} val={partInc} set={setPartInc} ph="0" type="number"/>}
@@ -323,7 +349,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       </>);
 
       case 'scan': return (<>
-        <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center"><Mail className="w-8 h-8 text-sky-600" strokeWidth={1.5}/></div></div>
+        <LottieHero step="scan"/>
         <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{t.scan}</h1>
         <ScanBtn icon={Mail} label={t.gmail} sub={t.gmailX} id="gmail"/>
         <ScanBtn icon={Mail} label={t.outl} sub={t.gmailX} id="outlook"/>
@@ -339,7 +365,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       </>);
 
       case 'summary': return (<>
-        <div className="flex justify-center mb-6"><div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-100 to-yellow-200 dark:from-amber-800/30 dark:to-yellow-900/30 flex items-center justify-center"><Trophy className="w-10 h-10 text-amber-600" strokeWidth={1.5}/></div></div>
+        <LottieHero step="summary"/>
         <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{fn?`${fn}, ${t.done.charAt(0).toLowerCase()}${t.done.slice(1)}`:t.done}</h1>
         <p className="text-[14px] text-pw-muted text-center mb-8">{insight()}</p>
         <div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50">
@@ -358,7 +384,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <Inp label={t.code} val={invCode} set={setInvCode} ph="ABCD-1234"/>
       </>);
       case 'bDone': return (<>
-        <div className="flex justify-center mt-8 mb-6"><div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center"><Check className="w-12 h-12 text-emerald-600" strokeWidth={2}/></div></div>
+        <LottieHero step="bDone"/>
         <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.conn}</h1>
         <p className="text-[14px] text-pw-muted text-center">{t.connX}</p>
       </>);
@@ -368,7 +394,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <div className="space-y-3">{[t.p1,t.p2,t.p3,t.p4].map((txt,i)=>(<div key={i} className="flex items-start gap-3.5 p-4 rounded-xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-600"><div className="w-7 h-7 rounded-full bg-pw-blue text-white text-[13px] font-bold flex items-center justify-center shrink-0">{i+1}</div><p className="text-[14px] text-pw-text dark:text-gray-200 leading-relaxed">{txt}</p></div>))}</div>
       </>);
       case 'pDone': return (<>
-        <div className="flex justify-center mt-8 mb-6"><div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center"><Check className="w-12 h-12 text-emerald-600" strokeWidth={2}/></div></div>
+        <LottieHero step="pDone"/>
         <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.proD}</h1>
       </>);
       default: return null;
