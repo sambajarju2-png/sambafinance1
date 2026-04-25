@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import {
   Shield, ChevronRight, ChevronLeft, Check, Loader2,
@@ -116,6 +116,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   // ── State ──
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1|-1>(1);
+  const [vis, setVis] = useState(true); // CSS fade flag
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(false);
   const [userType, setUserType] = useState<UserType>(null);
@@ -171,10 +172,18 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
     (['name','bName','pName'].includes(cur)&&fn.trim().length>0)||
     ['city','pCity','house','income','exp','scan','safe','summary','bInv','bDone','pHow','pDone'].includes(cur);
 
-  // ── Nav (NO animation key tied to content) ──
-  function next() { setDir(1); setStep(s=>Math.min(s+1,tot-1)); }
-  function back() { if(!step)return; setDir(-1); if(step===2&&userType){setUserType(null);setStep(1);} else setStep(s=>s-1); }
-  function pick(ut:UserType) { setUserType(ut); setDir(1); setStep(2); }
+  // ── Nav (CSS fade — inputs never unmount, keyboard stays on iOS) ──
+  const go = useCallback((nextStep: number, d: 1|-1) => {
+    setVis(false);
+    setTimeout(() => {
+      setDir(d);
+      setStep(nextStep);
+      setVis(true);
+    }, 120);
+  }, []);
+  function next() { go(Math.min(step+1,tot-1), 1); }
+  function back() { if(!step)return; if(step===2&&userType){setUserType(null);go(1,-1);} else go(step-1,-1); }
+  function pick(ut:UserType) { setUserType(ut); go(2,1); }
 
   // Personalize
   const pT = (k:string) => {
@@ -183,15 +192,25 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   };
   const insight = () => !tInc ? t.hiL : disp>80000 ? t.hiH : t.hiM;
 
-  // Keyboard
+  // Keyboard — Enter to proceed, Escape to go back
+  const canNextRef = useRef(canNext);
+  const savingRef = useRef(saving);
+  const curRef = useRef(cur);
+  const lastRef = useRef(last);
+  canNextRef.current = canNext;
+  savingRef.current = saving;
+  curRef.current = cur;
+  lastRef.current = last;
+
   useEffect(()=>{
     const h=(e:KeyboardEvent)=>{
-      if(e.key==='Enter'&&canNext&&!saving&&cur!=='branch'){e.preventDefault();last?complete():next();}
+      if(e.key==='Enter'&&canNextRef.current&&!savingRef.current&&curRef.current!=='branch'){e.preventDefault();lastRef.current?complete():next();}
       if(e.key==='Escape'&&step>0){e.preventDefault();back();}
     };
     window.addEventListener('keydown',h);
     return()=>window.removeEventListener('keydown',h);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[step]);
 
   // Save
   async function complete() {
@@ -404,7 +423,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-pw-bg dark:bg-gray-900">
+    <main className="flex min-h-[100svh] flex-col bg-pw-bg dark:bg-gray-900">
       {/* Progress */}
       {step>0&&<div className="px-5 pt-3 pb-1">
         <div className="h-1.5 w-full bg-pw-border/30 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -413,24 +432,18 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <p className="text-[11px] text-pw-muted text-center mt-1">{step}/{tot-1}</p>
       </div>}
 
-      {/* Step content */}
-      <div className="flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={step}
-            initial={{opacity:0,x:dir*50}}
-            animate={{opacity:1,x:0}}
-            exit={{opacity:0,x:dir*-25}}
-            transition={sp}
-            className="px-5 py-4"
-          >
-            {stepContent()}
-          </motion.div>
-        </AnimatePresence>
+      {/* Step content — CSS transition, no mount/unmount (fixes iOS keyboard) */}
+      <div className="flex-1 overflow-y-auto">
+        <div
+          className="px-5 py-4 transition-opacity duration-100 ease-out"
+          style={{ opacity: vis ? 1 : 0 }}
+        >
+          {stepContent()}
+        </div>
       </div>
 
-      {/* Footer — sticky at bottom */}
-      <div className="sticky bottom-0 px-5 pt-2 pb-4 bg-pw-bg dark:bg-gray-900" style={{paddingBottom:'max(1rem, env(safe-area-inset-bottom))'}}>
+      {/* Footer — flex-pinned, no sticky (avoids iOS keyboard conflicts) */}
+      <div className="shrink-0 px-5 pt-2 pb-4 bg-pw-bg dark:bg-gray-900" style={{paddingBottom:'max(1rem, env(safe-area-inset-bottom))'}}>
         {err&&<p className="text-red-500 text-[12px] text-center">Er ging iets mis. Probeer het opnieuw.</p>}
         {skipOk&&!last&&<button onClick={next} className="w-full py-2.5 text-[14px] font-semibold text-pw-muted active:scale-[0.97] transition-transform">{t.skip}</button>}
         {cur!=='branch'&&<div className="flex gap-3">

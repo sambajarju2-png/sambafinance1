@@ -27,7 +27,7 @@ export default async function OnboardingPage() {
   if (settings?.onboarding_complete) redirect('/overzicht');
 
   return (
-    <div className="flex min-h-dvh flex-col bg-pw-bg">
+    <div className="flex min-h-[100svh] flex-col bg-pw-bg">
       <TrustBadges />
       <div className="flex-1">
         <OnboardingWizard
