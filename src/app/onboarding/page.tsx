@@ -27,9 +27,9 @@ export default async function OnboardingPage() {
   if (settings?.onboarding_complete) redirect('/overzicht');
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-pw-bg">
+    <div className="flex flex-col bg-pw-bg" style={{ height: '100dvh' }}>
       <TrustBadges />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0">
         <OnboardingWizard
           initialName={settings?.display_name || user.email?.split('@')[0] || ''}
           initialLanguage={(settings?.language as 'nl' | 'en') || 'nl'}

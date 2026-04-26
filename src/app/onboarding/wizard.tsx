@@ -66,8 +66,10 @@ totExp:'Totaal vaste lasten',avg:'gem.',
 scan:'Hoe voeg je rekeningen toe?',gmail:'Koppel Gmail',gmailX:'Read-only. Alles op EU-servers.',outl:'Koppel Outlook',cam:'Scan met camera',camX:'Scan tot 5 rekeningen tegelijk',man:'Handmatig',manX:'Voeg bedragen zelf toe',
 scanInfo:'Je kunt op elk moment je e-mail koppelen via het dashboard. PayWatch scant dan automatisch je inbox op facturen.',
 safe:'Vangnet',safeX:'Nodig iemand uit die meekijkt. Ze kunnen niets wijzigen.',budEmail:'E-mailadres buddy',
-done:'Je bent klaar!',inc:'Maandinkomen',costs:'Vaste lasten',free:'Vrij besteedbaar',scanning:'Scanning',buddy:'Buddy',
+done:'Je bent klaar!',doneSub:'PayWatch houdt nu je rekeningen in de gaten. We waarschuwen je voordat het misgaat.',inc:'Maandinkomen',costs:'Vaste lasten',free:'Vrij besteedbaar',scanning:'Scanning',buddy:'Buddy',
 on:'Gekoppeld',off:'Nog niet',inv:'Uitgenodigd',noB:'Geen buddy',go:'Naar mijn dashboard',
+stat1:'1,4 miljoen',stat1x:'Nederlanders hebben problematische schulden',stat2:'€43.300',stat2x:'Gemiddelde schuld bij aanmelding schuldhulp',stat3:'73%',stat3x:'Wacht te lang met hulp zoeken',
+pw1:'Automatisch rekeningen scannen via je inbox',pw2:'Waarschuwingen voordat een factuur escaleert',pw3:'Overzicht van al je vaste lasten op één plek',
 invC:'Uitnodiging accepteren',code:'Uitnodigingscode',conn:'Je bent verbonden!',connX:'Je kunt nu het overzicht bekijken',view:'Bekijk dashboard',
 org:'Organisatie',role:'Functie',sw:'Maatschappelijk werker',dc:'Schuldhulpverlener',bc:'Budgetcoach',
 how:'Zo werkt het',p1:'Je cliënten maken hun eigen account',p2:'Zij nodigen jou uit als buddy',p3:'Jij krijgt een read-only overzicht',p4:'Je monitort escalatierisico\'s',
@@ -92,8 +94,10 @@ totExp:'Total fixed costs',avg:'avg',
 scan:'How do you add bills?',gmail:'Connect Gmail',gmailX:'Read-only. All on EU servers.',outl:'Connect Outlook',cam:'Scan with camera',camX:'Scan up to 5 bills at once',man:'Manual entry',manX:'Add amounts yourself',
 scanInfo:'You can connect your email at any time from the dashboard. PayWatch will automatically scan your inbox for invoices.',
 safe:'Safety net',safeX:"Invite someone to keep you accountable. They can only view your bills.",budEmail:"Buddy's email",
-done:"You're all set!",inc:'Monthly income',costs:'Fixed costs',free:'Disposable income',scanning:'Scanning',buddy:'Buddy',
+done:"You're all set!",doneSub:'PayWatch is now watching your bills. We\'ll alert you before things escalate.',inc:'Monthly income',costs:'Fixed costs',free:'Disposable income',scanning:'Scanning',buddy:'Buddy',
 on:'Connected',off:'Not yet',inv:'Invited',noB:'No buddy',go:'Go to my dashboard',
+stat1:'1.4 million',stat1x:'Dutch people have problematic debts',stat2:'€43,300',stat2x:'Average debt at time of seeking help',stat3:'73%',stat3x:'Wait too long before seeking help',
+pw1:'Automatically scan bills from your inbox',pw2:'Warnings before an invoice escalates',pw3:'Overview of all fixed costs in one place',
 invC:'Accept invitation',code:'Invite code',conn:"You're connected!",connX:'You can now view their bill overview',view:'View dashboard',
 org:'Organization',role:'Role',sw:'Social worker',dc:'Debt counselor',bc:'Budget coach',
 how:'How it works',p1:'Your clients create their own account',p2:'They invite you as their buddy',p3:'You get read-only access',p4:'You monitor escalation risks',
@@ -408,19 +412,43 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <Inp label={t.budEmail} val={budE} set={setBudE} ph="naam@email.com" type="email"/>
       </>);
 
-      case 'summary': return (<>
+      case 'summary': {
+        return (<>
         <LottieHero step="summary"/>
-        <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.done}</h1>
-        <p className="text-[14px] text-pw-muted text-center mb-8">{insight()}</p>
-        <div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50">
-          <div className="flex justify-between items-center py-3"><span className="text-[13px] text-pw-muted">{t.inc}</span><span className="text-[16px] font-bold text-pw-text dark:text-gray-100">{fmt(tInc)}</span></div>
-          <div className="flex justify-between items-center py-3"><span className="text-[13px] text-pw-muted">{t.costs}</span><span className="text-[16px] font-semibold text-pw-text dark:text-gray-200">−{fmt(tExp)}</span></div>
-          <div className="flex justify-between items-center py-4"><span className="text-[14px] font-medium text-pw-text dark:text-gray-200">{t.free}</span><span className="text-[24px] font-extrabold text-pw-blue">{fmt(disp)}</span></div>
-          <div className="flex justify-between items-center py-3"><span className="text-[13px] text-pw-muted">{t.scanning}</span><span className="text-[13px] font-semibold text-pw-text dark:text-gray-200">{scans.size?t.on:t.off}</span></div>
-          <div className="flex justify-between items-center py-3"><span className="text-[13px] text-pw-muted">{t.buddy}</span><span className="text-[13px] font-semibold text-pw-text dark:text-gray-200">{budE?t.inv:t.noB}</span></div>
+        <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-1">{t.done}</h1>
+        <p className="text-[13px] text-pw-muted text-center mb-6 px-4">{t.doneSub}</p>
+
+        {/* What PayWatch does for you */}
+        <div className="rounded-2xl bg-pw-blue/5 dark:bg-blue-900/15 border border-pw-blue/15 p-4 mb-4">
+          <div className="space-y-2.5">
+            {[t.pw1,t.pw2,t.pw3].map((txt,i)=>(
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-pw-blue flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-white" strokeWidth={3}/></div>
+                <p className="text-[13px] text-pw-text dark:text-gray-200">{txt}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        {kids>0&&tInc>0&&<div className="mt-4 p-3.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><p className="text-[12px] text-purple-700 dark:text-purple-300">{t.kidH}</p></div>}
-      </>);
+
+        {/* Financial summary */}
+        {tInc>0&&<div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50 mb-4">
+          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.inc}</span><span className="text-[16px] font-bold text-pw-text dark:text-gray-100">{fmt(tInc)}</span></div>
+          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.costs}</span><span className="text-[16px] font-semibold text-pw-text dark:text-gray-200">−{fmt(tExp)}</span></div>
+          <div className="flex justify-between items-center py-3"><span className="text-[14px] font-medium text-pw-text dark:text-gray-200">{t.free}</span><span className="text-[22px] font-extrabold text-pw-blue">{fmt(disp)}</span></div>
+        </div>}
+
+        {/* Debt statistics — why this matters */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[{v:t.stat1,x:t.stat1x},{v:t.stat2,x:t.stat2x},{v:t.stat3,x:t.stat3x}].map((s,i)=>(
+            <div key={i} className="rounded-xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-700 p-3 text-center">
+              <p className="text-[16px] font-extrabold text-pw-navy dark:text-white">{s.v}</p>
+              <p className="text-[10px] text-pw-muted leading-tight mt-1">{s.x}</p>
+            </div>
+          ))}
+        </div>
+
+        {kids>0&&tInc>0&&<div className="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><p className="text-[12px] text-purple-700 dark:text-purple-300">{t.kidH}</p></div>}
+      </>);}
 
       case 'bInv': return (<>
         <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-pw-blue/10 flex items-center justify-center"><Users className="w-8 h-8 text-pw-blue" strokeWidth={1.5}/></div></div>
