@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import SplashScreen from '@/components/splash-screen';
 import NativeShell from '@/components/native-shell';
 import BiometricLock from '@/components/biometric-lock';
+import OfflineDetector from '@/components/offline-detector';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -62,6 +63,7 @@ export default async function RootLayout({
             <SplashScreen />
             <NativeShell />
             <BiometricLock />
+            <OfflineDetector />
             {children}
           </NextIntlClientProvider>
         </ThemeProvider>

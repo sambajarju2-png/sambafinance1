@@ -4,7 +4,9 @@ const config = {
   appName: 'PayWatch',
   webDir: 'out',
   server: {
-    url: 'https://app.paywatch.app',
+    // No server.url — loads local out/index.html first (works offline)
+    // The local page checks connectivity and redirects to the remote app
+    // allowNavigation enables Capacitor bridge on the remote domain
     allowNavigation: [
       'app.paywatch.app',
       '*.paywatch.app',
