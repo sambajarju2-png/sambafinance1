@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     // 4. Optionally apply to all matching past transactions
     let updated_count = 0;
     if (apply_to_all && creditorName) {
-      const { count } = await supabase
+      const { data: updated } = await supabase
         .from('bank_transactions')
         .update({
           pw_category: category,
@@ -95,10 +95,10 @@ export async function POST(req: NextRequest) {
         })
         .eq('user_id', user.id)
         .ilike('creditor_name', `%${creditorName}%`)
-        .neq('category_source', 'user') // don't override other user corrections
-        .select('id', { count: 'exact', head: true });
+        .neq('category_source', 'user')
+        .select('id');
 
-      updated_count = count || 0;
+      updated_count = updated?.length || 0;
     }
 
     // 5. Refresh analytics to reflect the change
