@@ -70,16 +70,18 @@ export async function POST() {
         .eq('platform', 'ios');
 
       for (const nt of (nativeTokens || [])) {
+        // Use sandbox for development builds, production for App Store
+        const useSandbox = process.env.APNS_SANDBOX === 'true';
         const ok = await sendApnsPush(nt.token, {
           title: testPayload.title,
           body: testPayload.body,
           url: '/betalingen',
-        });
+        }, useSandbox);
         if (ok) {
           nativeSent++;
         } else {
-          await supabase.from('native_push_tokens').delete().eq('token', nt.token);
-          errors.push('APNs: token rejected');
+          // Don't auto-delete token on failure — might be sandbox/production mismatch
+          errors.push('APNs: send failed (check sandbox vs production mode)');
         }
       }
     } else {

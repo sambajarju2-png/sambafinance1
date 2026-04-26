@@ -90,8 +90,9 @@ export async function POST(req: NextRequest) {
           .eq('user_id', userId)
           .eq('platform', 'ios');
 
+        const useSandbox = process.env.APNS_SANDBOX === 'true';
         for (const nt of (nativeTokens || [])) {
-          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen' });
+          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen' }, useSandbox);
           if (ok) {
             nativeSent++;
           } else {
