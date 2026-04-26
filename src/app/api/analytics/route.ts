@@ -44,13 +44,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Analytics laden mislukt' }, { status: 500 });
     }
 
-    return NextResponse.json(data || {
-      monthly_categories: [],
-      weekly_cashflow: [],
-      monthly_totals: [],
-      debt_summary: [],
-      has_bank_connection: false,
-      uncategorized_count: 0,
+    // Check if user has an active bank connection
+    const { count } = await supabase
+      .from('bank_connections')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'linked');
+
+    const hasBankConnection = (count || 0) > 0;
+
+    return NextResponse.json({
+      ...(data || {}),
+      has_bank_connection: hasBankConnection,
+      // Map monthly_trends as monthly_totals for the entry card
+      monthly_totals: data?.monthly_trends || [],
     });
   } catch (error) {
     console.error('[Analytics] Error:', error);

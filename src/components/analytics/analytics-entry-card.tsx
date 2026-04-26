@@ -24,7 +24,7 @@ export default function AnalyticsEntryCard() {
         if (res.ok) {
           const d = await res.json();
           if (d.has_bank_connection && d.monthly_totals?.length > 0) {
-            const latest = d.monthly_totals[0];
+            const latest = d.monthly_totals[d.monthly_totals.length - 1];
             setData({
               has_bank_connection: true,
               income: latest.income_cents,
