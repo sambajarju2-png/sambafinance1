@@ -87,14 +87,14 @@ export default function AnalyticsPage() {
   function prevMonth() {
     if (currentMonthIdx < months.length - 1) {
       setSelectedMonth(months[currentMonthIdx + 1]);
-      haptic('light');
+      haptic('tap');
     }
   }
 
   function nextMonth() {
     if (currentMonthIdx > 0) {
       setSelectedMonth(months[currentMonthIdx - 1]);
-      haptic('light');
+      haptic('tap');
     }
   }
 
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
         {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); haptic('light'); }}
+            onClick={() => { setTab(t.id); haptic('tap'); }}
             className={`flex-none whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors
               ${tab === t.id
                 ? 'border-b-2 border-pw-blue text-pw-blue font-semibold'
