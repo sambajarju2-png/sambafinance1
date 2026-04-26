@@ -18,8 +18,8 @@ export default function CommunityNamePicker({ onComplete, onClose }: CommunityNa
   const [acceptedRules, setAcceptedRules] = useState(false);
 
   const avatarUrl = name.trim()
-    ? `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(name.trim())}`
-    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=default`;
+    ? `https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=${encodeURIComponent(name.trim())}`
+    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=default`;
 
   function handleNextStep() {
     const trimmed = name.trim();
