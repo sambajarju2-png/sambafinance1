@@ -336,7 +336,8 @@ function BankSelectorModal({ onClose }: { onClose: () => void }) {
           // When user closes the browser, refresh connections
           Browser.addListener('browserFinished', () => {
             setConnecting(null);
-            fetchAccounts();
+            // Reload the page to refresh bank connections
+            window.location.reload();
           });
           return;
         }
