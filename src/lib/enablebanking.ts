@@ -213,6 +213,7 @@ export interface Transaction {
   remittance_information?: string[]
   entry_reference?: string
   bank_transaction_code?: { code?: string; description?: string }
+  merchant_category_code?: string
 }
 
 export interface TransactionsResponse {

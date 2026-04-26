@@ -179,8 +179,8 @@ function mapTx(tx: Transaction, userId: string, connId: string, accountUid: stri
   const amount = Math.round(parseFloat(tx.transaction_amount.amount) * 100)
   const isDebit = tx.credit_debit_indicator === 'DBIT'
   const description = tx.remittance_information?.join(' ') || ''
-  // Extract MCC from raw transaction (not in TS interface but in JSONB)
-  const mcc = (tx as Record<string, unknown>).merchant_category_code as string || null
+  // Extract MCC from Enable Banking transaction
+  const mcc = tx.merchant_category_code || null
 
   return {
     user_id: userId,
