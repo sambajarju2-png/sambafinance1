@@ -41,17 +41,19 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Check for existing connection
-    const { data: existing } = await supabase
+    // Check for existing PENDING connection (user may have started auth but not completed)
+    // Allow multiple LINKED accounts from the same bank (personal + business, etc.)
+    const { data: existingPending } = await supabase
       .from('bank_connections')
       .select('id')
       .eq('user_id', user.id)
       .eq('institution_name', institution_name)
-      .in('status', ['pending', 'linked'])
+      .eq('status', 'pending')
       .single()
 
-    if (existing) {
-      return NextResponse.json({ error: 'Deze bank is al gekoppeld' }, { status: 409 })
+    if (existingPending) {
+      // Delete the stale pending connection so user can retry
+      await supabase.from('bank_connections').delete().eq('id', existingPending.id)
     }
 
     // Start Enable Banking auth flow

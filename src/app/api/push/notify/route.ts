@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sendApnsPush, isApnsConfigured } from '@/lib/apns';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
 
@@ -49,12 +50,12 @@ export async function POST(req: NextRequest) {
     }
 
     let totalSent = 0;
+    let nativeSent = 0;
+    const apnsEnabled = isApnsConfigured();
+
     for (const [userId, bills] of Object.entries(userBills)) {
       const { data: settings } = await supabase.from('user_settings').select('notify_push_enabled').eq('user_id', userId).single();
       if (!settings?.notify_push_enabled) continue;
-
-      const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', userId);
-      if (!subs || subs.length === 0) continue;
 
       const overdue = bills.filter((b: UrgentBill) => b.due_date < today);
       const dueTmrw = bills.filter((b: UrgentBill) => b.due_date === tomorrow);
@@ -66,15 +67,36 @@ export async function POST(req: NextRequest) {
       else if (dueTmrw.length > 0) { title = `${dueTmrw.length} rekening${dueTmrw.length > 1 ? 'en' : ''} vervalt morgen`; body = dueTmrw.map((b: UrgentBill) => b.vendor).join(', '); }
       else if (due3d.length > 0) { title = `${due3d.length} rekening${due3d.length > 1 ? 'en' : ''} vervalt over 3 dagen`; body = due3d.map((b: UrgentBill) => b.vendor).join(', '); }
 
+      // ── Web Push (VAPID) ──
+      const { data: subs } = await supabase.from('push_subscriptions').select('endpoint, p256dh, auth_key').eq('user_id', userId);
       const payload = JSON.stringify({ title, body, tag: 'paywatch-reminder', url: '/betalingen' });
 
-      for (const sub of subs) {
+      for (const sub of (subs || [])) {
         try {
           await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, payload);
           totalSent++;
         } catch (err) {
           if (err instanceof Error && (err.message.includes('410') || err.message.includes('404'))) {
             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+          }
+        }
+      }
+
+      // ── APNs (native iOS) ──
+      if (apnsEnabled) {
+        const { data: nativeTokens } = await supabase
+          .from('native_push_tokens')
+          .select('token, platform')
+          .eq('user_id', userId)
+          .eq('platform', 'ios');
+
+        for (const nt of (nativeTokens || [])) {
+          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen' });
+          if (ok) {
+            nativeSent++;
+          } else {
+            // Remove invalid token
+            await supabase.from('native_push_tokens').delete().eq('token', nt.token);
           }
         }
       }
@@ -157,7 +179,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('user_settings').update({ last_budget_alert_at: new Date().toISOString() }).eq('user_id', bu.user_id);
     }
 
-    return NextResponse.json({ sent: totalSent, budget_alerts: budgetAlertsSent }, { headers: NO_CACHE });
+    return NextResponse.json({ sent: totalSent, native: nativeSent, budget_alerts: budgetAlertsSent }, { headers: NO_CACHE });
   } catch (err) {
     console.error('Push notify error:', err);
     return NextResponse.json({ error: 'Failed' }, { status: 500, headers: NO_CACHE });

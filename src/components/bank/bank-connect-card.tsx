@@ -212,11 +212,20 @@ export default function BankConnectCard() {
       {/* Pending connections */}
       {connections.filter(c => c.status === 'pending').map(conn => (
         <div key={conn.id} className="rounded-card border border-yellow-200 bg-yellow-50 p-4">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-yellow-600" strokeWidth={1.5} />
-            <p className="text-[12px] font-medium text-yellow-700">
-              {conn.institution_name} — Wacht op autorisatie
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-yellow-600" strokeWidth={1.5} />
+              <p className="text-[12px] font-medium text-yellow-700">
+                {conn.institution_name} — Wacht op autorisatie
+              </p>
+            </div>
+            <button
+              onClick={() => handleDisconnect(conn.id)}
+              disabled={disconnecting === conn.id}
+              className="text-[11px] font-medium text-yellow-700 hover:text-red-600 transition-colors"
+            >
+              {disconnecting === conn.id ? '...' : 'Annuleer'}
+            </button>
           </div>
         </div>
       ))}
