@@ -43,6 +43,8 @@ export default function CameraScanPage() {
   const [qrLinkCaptured, setQrLinkCaptured] = useState(false);
   // Store original AI extraction for correction tracking
   const [aiExtraction, setAiExtraction] = useState<Record<string, unknown> | null>(null);
+  const [fileQueue, setFileQueue] = useState<File[]>([]);
+  const [queueProgress, setQueueProgress] = useState({ current: 0, total: 0 });
 
   // Handle QR code scan result
   async function handleQRResult(data: string) {
@@ -131,8 +133,29 @@ export default function CameraScanPage() {
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Limit to 5 files
+    const fileList = Array.from(files).slice(0, 5);
+    const total = fileList.length;
+
+    // Queue remaining files (process first one now)
+    if (total > 1) {
+      setFileQueue(fileList.slice(1));
+      setQueueProgress({ current: 1, total });
+    } else {
+      setFileQueue([]);
+      setQueueProgress({ current: 0, total: 0 });
+    }
+
+    // Process first file
+    await processFile(fileList[0]);
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function processFile(file: File) {
 
     setStep('extracting');
     setError(null);
@@ -216,7 +239,19 @@ export default function CameraScanPage() {
         throw new Error(data.error || 'Save failed');
       }
 
-      router.push('/betalingen');
+      // If more files in queue, process next one
+      if (fileQueue.length > 0) {
+        const nextFile = fileQueue[0];
+        setFileQueue(prev => prev.slice(1));
+        setQueueProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        // Reset form for next file
+        setVendor(''); setAmount(''); setDueDate(''); setCategory('overig');
+        setIban(''); setReference(''); setPaymentUrl(''); setEscalationStage('factuur');
+        setAiExtraction(null);
+        await processFile(nextFile);
+      } else {
+        router.push('/betalingen');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Opslaan mislukt');
       setStep('confirm');
@@ -361,11 +396,15 @@ export default function CameraScanPage() {
             <button onClick={() => {
               if (fileInputRef.current) {
                 fileInputRef.current.removeAttribute('capture');
+                fileInputRef.current.setAttribute('multiple', '');
                 fileInputRef.current.click();
-                fileInputRef.current.setAttribute('capture', 'environment');
+                setTimeout(() => {
+                  fileInputRef.current?.removeAttribute('multiple');
+                  fileInputRef.current?.setAttribute('capture', 'environment');
+                }, 500);
               }
             }} className="mt-3 text-[13px] font-semibold text-pw-blue">
-              {t('chooseFromGallery')}
+              {t('chooseFromGallery')} (max 5)
             </button>
           </div>
         )}
@@ -376,6 +415,13 @@ export default function CameraScanPage() {
             <Loader2 className="mb-4 h-12 w-12 animate-spin text-pw-blue" strokeWidth={1.5} />
             <h2 className="text-heading text-pw-navy">{t('extracting')}</h2>
             <p className="mt-2 text-body text-pw-muted">{t('extractingHint')}</p>
+            {queueProgress.total > 1 && (
+              <div className="mt-4 px-4 py-2 rounded-full bg-pw-blue/5 border border-pw-blue/20">
+                <p className="text-[12px] font-semibold text-pw-blue">
+                  {queueProgress.current} / {queueProgress.total}
+                </p>
+              </div>
+            )}
             {qrLinkCaptured && (
               <div className="mt-4 flex items-center gap-2 rounded-full bg-green-50 border border-pw-green/20 px-3 py-1.5">
                 <Check className="h-3 w-3 text-pw-green" strokeWidth={2} />

@@ -63,7 +63,8 @@ dFrom:'Rond dag',dTo:'tot dag',totInc:'Totaal maandinkomen',
 exp:'Vaste lasten',expX:'Pas aan of sla over — we vullen gemiddelden in',
 zorg:'Zorgverzekering',ener:'Energie',water:'Water',tel:'Telefoon + internet',verz:'Verzekeringen',verv:'Vervoer',
 totExp:'Totaal vaste lasten',avg:'gem.',
-scan:'Hoe wil je rekeningen toevoegen?',gmail:'Koppel Gmail',gmailX:'Read-only. Alles op EU-servers.',outl:'Koppel Outlook',cam:'Scan met camera',man:'Handmatig',
+scan:'Hoe voeg je rekeningen toe?',gmail:'Koppel Gmail',gmailX:'Read-only. Alles op EU-servers.',outl:'Koppel Outlook',cam:'Scan met camera',camX:'Scan tot 5 rekeningen tegelijk',man:'Handmatig',manX:'Voeg bedragen zelf toe',
+scanInfo:'Je kunt op elk moment je e-mail koppelen via het dashboard. PayWatch scant dan automatisch je inbox op facturen.',
 safe:'Vangnet',safeX:'Nodig iemand uit die meekijkt. Ze kunnen niets wijzigen.',budEmail:'E-mailadres buddy',
 done:'Je bent klaar!',inc:'Maandinkomen',costs:'Vaste lasten',free:'Vrij besteedbaar',scanning:'Scanning',buddy:'Buddy',
 on:'Gekoppeld',off:'Nog niet',inv:'Uitgenodigd',noB:'Geen buddy',go:'Naar mijn dashboard',
@@ -88,7 +89,8 @@ dFrom:'Around day',dTo:'to day',totInc:'Total monthly income',
 exp:'Fixed expenses',expX:"Adjust or skip — we've filled in Dutch averages",
 zorg:'Health insurance',ener:'Energy',water:'Water',tel:'Phone + internet',verz:'Other insurance',verv:'Transport',
 totExp:'Total fixed costs',avg:'avg',
-scan:'How do you want to add bills?',gmail:'Connect Gmail',gmailX:'Read-only. All on EU servers.',outl:'Connect Outlook',cam:'Scan with camera',man:'Add manually',
+scan:'How do you add bills?',gmail:'Connect Gmail',gmailX:'Read-only. All on EU servers.',outl:'Connect Outlook',cam:'Scan with camera',camX:'Scan up to 5 bills at once',man:'Manual entry',manX:'Add amounts yourself',
+scanInfo:'You can connect your email at any time from the dashboard. PayWatch will automatically scan your inbox for invoices.',
 safe:'Safety net',safeX:"Invite someone to keep you accountable. They can only view your bills.",budEmail:"Buddy's email",
 done:"You're all set!",inc:'Monthly income',costs:'Fixed costs',free:'Disposable income',scanning:'Scanning',buddy:'Buddy',
 on:'Connected',off:'Not yet',inv:'Invited',noB:'No buddy',go:'Go to my dashboard',
@@ -185,11 +187,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   function back() { if(!step)return; if(step===2&&userType){setUserType(null);go(1,-1);} else go(step-1,-1); }
   function pick(ut:UserType) { setUserType(ut); go(2,1); }
 
-  // Personalize
-  const pT = (k:string) => {
-    const b = t[k]||k;
-    return fn.trim() && ['city','house','income'].includes(k) ? `${fn}, ${b.charAt(0).toLowerCase()}${b.slice(1)}` : b;
-  };
+  // Personalize (summary only)
   const insight = () => !tInc ? t.hiL : disp>80000 ? t.hiH : t.hiM;
 
   // Keyboard — Enter to proceed, Escape to go back
@@ -231,8 +229,13 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
     <div className="mb-5">
       <label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-1.5">{label}</label>
       {note&&<p className="text-[11px] text-pw-muted mb-1.5">{note}</p>}
-      <input type={type} inputMode={type==='number'?'decimal':undefined} value={val} onChange={e=>set(e.target.value)} placeholder={ph} autoComplete="off" enterKeyHint="next" autoCapitalize="off" autoCorrect="off"
-        className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors"/>
+      {type === 'date' ? (
+        <input type="date" defaultValue={val} onBlur={e=>set(e.target.value)} onChange={e=>set(e.target.value)} autoComplete="off"
+          className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors appearance-none"/>
+      ) : (
+        <input type={type} inputMode={type==='number'?'decimal':undefined} value={val} onChange={e=>set(e.target.value)} placeholder={ph} autoComplete="off" enterKeyHint="next" autoCapitalize="off" autoCorrect="off"
+          className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors"/>
+      )}
     </div>
   );
 
@@ -306,7 +309,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
       case 'city': case 'pCity': return (<>
         <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center"><MapPin className="w-8 h-8 text-emerald-600" strokeWidth={1.5}/></div></div>
-        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-2">{pT('city')}</h1>
+        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.city}</h1>
         <p className="text-[13px] text-pw-muted text-center mb-8">{t.cityX}</p>
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-4 w-4 h-4 text-pw-muted" strokeWidth={1.5}/>
@@ -323,7 +326,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
       case 'house': return (<>
         <LottieHero step="house"/>
-        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{pT('house')}</h1>
+        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{t.house}</h1>
         <Tog label={t.partner} val={hasPart} set={setHasPart}/>
         <div className="mb-5"><label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-2">{t.kids}</label>
           <div className="flex items-center gap-4">
@@ -341,7 +344,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
       case 'income': return (<>
         <LottieHero step="income"/>
-        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{pT('income')}</h1>
+        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{t.income}</h1>
         <Inp label={t.salary} val={sal} set={setSal} ph="bijv. 2400" type="number"/>
         {hasPart&&<Inp label={t.partnerInc} val={partInc} set={setPartInc} ph="0" type="number"/>}
         <Inp label={t.uitk} val={uitk} set={setUitk} ph="0" type="number"/>
@@ -371,11 +374,22 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
       case 'scan': return (<>
         <LottieHero step="scan"/>
-        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-8">{t.scan}</h1>
-        <ScanBtn icon={Mail} label={t.gmail} sub={t.gmailX} id="gmail"/>
-        <ScanBtn icon={Mail} label={t.outl} sub={t.gmailX} id="outlook"/>
-        <ScanBtn icon={Camera} label={t.cam} id="camera"/>
-        <ScanBtn icon={ClipboardList} label={t.man} id="manual"/>
+        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-6">{t.scan}</h1>
+
+        {/* Info: email koppeling via dashboard */}
+        <div className="rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20 p-4 mb-5">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-pw-blue/10 flex items-center justify-center shrink-0 mt-0.5"><Mail className="w-4 h-4 text-pw-blue" strokeWidth={1.5}/></div>
+            <div>
+              <p className="text-[13px] font-semibold text-pw-text dark:text-gray-100 mb-1">{t.gmail} / {t.outl}</p>
+              <p className="text-[12px] text-pw-muted leading-relaxed">{t.scanInfo}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Camera scan - highlighted as main action */}
+        <ScanBtn icon={Camera} label={t.cam} sub={t.camX} id="camera"/>
+        <ScanBtn icon={ClipboardList} label={t.man} sub={t.manX} id="manual"/>
       </>);
 
       case 'safe': return (<>
@@ -387,7 +401,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
       case 'summary': return (<>
         <LottieHero step="summary"/>
-        <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{fn?`${fn}, ${t.done.charAt(0).toLowerCase()}${t.done.slice(1)}`:t.done}</h1>
+        <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.done}</h1>
         <p className="text-[14px] text-pw-muted text-center mb-8">{insight()}</p>
         <div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50">
           <div className="flex justify-between items-center py-3"><span className="text-[13px] text-pw-muted">{t.inc}</span><span className="text-[16px] font-bold text-pw-text dark:text-gray-100">{fmt(tInc)}</span></div>
@@ -423,7 +437,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   }
 
   return (
-    <main className="flex min-h-[100svh] flex-col bg-pw-bg dark:bg-gray-900">
+    <main className="flex h-full flex-col bg-pw-bg dark:bg-gray-900">
       {/* Progress */}
       {step>0&&<div className="px-5 pt-3 pb-1">
         <div className="h-1.5 w-full bg-pw-border/30 dark:bg-gray-700 rounded-full overflow-hidden">
