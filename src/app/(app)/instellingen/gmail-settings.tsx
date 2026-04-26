@@ -118,7 +118,18 @@ export default function GmailSettings() {
     setConnectingGmail(true);
     setStatusMessage(null);
     try {
-      const res = await fetch('/api/gmail/connect', { method: 'POST' });
+      // Check if native before making request (so server can store is_native in state)
+      let isNativePlatform = false;
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        isNativePlatform = Capacitor.isNativePlatform();
+      } catch {}
+
+      const res = await fetch('/api/gmail/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ native: isNativePlatform }),
+      });
       if (!res.ok) {
         const data = await res.json();
         setStatusMessage({ type: 'error', text: data.error || t('errorGeneral') });
@@ -127,12 +138,9 @@ export default function GmailSettings() {
       }
       const { url } = await res.json();
       // Google blocks OAuth in WKWebView — use SFSafariViewController in native
-      try {
-        const { Capacitor } = await import('@capacitor/core');
-        if (Capacitor.isNativePlatform()) {
+      if (isNativePlatform) {
+        try {
           const { Browser } = await import('@capacitor/browser');
-          // Set cookie so callback knows to return auto-close page
-          document.cookie = 'paywatch-native=1;path=/;max-age=600;samesite=lax';
           await Browser.open({ url, presentationStyle: 'popover' });
           // When user closes browser, refresh accounts
           const handler = await Browser.addListener('browserFinished', () => {
@@ -141,8 +149,8 @@ export default function GmailSettings() {
             fetchAccounts();
           });
           return;
-        }
-      } catch {}
+        } catch {}
+      }
       window.location.href = url;
     } catch {
       setStatusMessage({ type: 'error', text: t('errorGeneral') });
@@ -154,7 +162,17 @@ export default function GmailSettings() {
     setConnectingOutlook(true);
     setStatusMessage(null);
     try {
-      const res = await fetch('/api/auth/outlook/connect', { method: 'POST' });
+      let isNativePlatform = false;
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        isNativePlatform = Capacitor.isNativePlatform();
+      } catch {}
+
+      const res = await fetch('/api/auth/outlook/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ native: isNativePlatform }),
+      });
       if (!res.ok) {
         const data = await res.json();
         setStatusMessage({ type: 'error', text: data.error || 'Er ging iets mis.' });
@@ -162,12 +180,9 @@ export default function GmailSettings() {
         return;
       }
       const { url } = await res.json();
-      // Also use SFSafariViewController for Outlook in native
-      try {
-        const { Capacitor } = await import('@capacitor/core');
-        if (Capacitor.isNativePlatform()) {
+      if (isNativePlatform) {
+        try {
           const { Browser } = await import('@capacitor/browser');
-          document.cookie = 'paywatch-native=1;path=/;max-age=600;samesite=lax';
           await Browser.open({ url, presentationStyle: 'popover' });
           const handler = await Browser.addListener('browserFinished', () => {
             handler.remove();
@@ -175,8 +190,8 @@ export default function GmailSettings() {
             fetchAccounts();
           });
           return;
-        }
-      } catch {}
+        } catch {}
+      }
       window.location.href = url;
     } catch {
       setStatusMessage({ type: 'error', text: 'Er ging iets mis bij het verbinden met Outlook.' });

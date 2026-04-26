@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     // Validate state
     const { data: stateRow, error: stateError } = await supabase
       .from('gmail_oauth_states')
-      .select('user_id, expires_at')
+      .select('user_id, expires_at, is_native')
       .eq('state', state)
       .single();
 
@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = stateRow.user_id;
+    const isNative = stateRow.is_native === true;
     await supabase.from('gmail_oauth_states').delete().eq('state', state);
 
     // Exchange code for tokens
@@ -61,14 +62,14 @@ export async function GET(req: NextRequest) {
     if (!tokenResponse.ok) {
       const errBody = await tokenResponse.text();
       console.error('Token exchange failed:', errBody);
-      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=token_exchange`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=token_exchange`, isNative);
     }
 
     const tokens = await tokenResponse.json();
     const { access_token, refresh_token, expires_in } = tokens;
 
     if (!access_token || !refresh_token) {
-      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=missing_tokens`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=missing_tokens`, isNative);
     }
 
     // Get Gmail email
@@ -104,10 +105,10 @@ export async function GET(req: NextRequest) {
 
     if (upsertError) {
       console.error('Failed to store Gmail tokens:', upsertError);
-      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`, isNative);
     }
 
-    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=connected`);
+    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=connected`, isNative);
   } catch (err) {
     console.error('Gmail callback error:', err);
     return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=unknown`);

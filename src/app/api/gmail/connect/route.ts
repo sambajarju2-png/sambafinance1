@@ -34,10 +34,17 @@ export async function POST(req: NextRequest) {
       .delete()
       .lt('expires_at', new Date().toISOString());
 
-    // Store the state
+    // Check if request comes from native app
+    let isNative = false;
+    try {
+      const body = await req.json();
+      isNative = body.native === true;
+    } catch { /* no body or invalid JSON */ }
+
+    // Store the state (with native flag for callback redirect)
     const { error: stateError } = await supabase
       .from('gmail_oauth_states')
-      .insert({ state, user_id: userId, expires_at: expiresAt });
+      .insert({ state, user_id: userId, expires_at: expiresAt, is_native: isNative });
 
     if (stateError) {
       console.error('Failed to store OAuth state:', stateError);

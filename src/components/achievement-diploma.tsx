@@ -66,9 +66,7 @@ export default function AchievementDiploma({ open, onClose }: Props) {
     // "Certified by" label
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.letterSpacing = '3px';
     ctx.fillText('CERTIFICAAT VAN', 48, 72);
-    ctx.letterSpacing = '0px';
 
     // PayWatch logo
     ctx.fillStyle = '#FFFFFF';

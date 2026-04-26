@@ -10,10 +10,11 @@ import { NextRequest, NextResponse } from 'next/server';
  * Detection: checks for `paywatch-native=1` cookie set by
  * gmail-settings.tsx before opening Browser.open()
  */
-export function oauthRedirect(req: NextRequest, url: string): NextResponse {
-  const isNative = req.cookies.get('paywatch-native')?.value === '1';
+export function oauthRedirect(req: NextRequest, url: string, isNative?: boolean): NextResponse {
+  // Use explicit param (from DB state row); fallback to cookie for backward compat
+  const native = isNative ?? req.cookies.get('paywatch-native')?.value === '1';
 
-  if (!isNative) {
+  if (!native) {
     return NextResponse.redirect(url);
   }
 

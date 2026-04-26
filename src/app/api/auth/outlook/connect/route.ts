@@ -6,7 +6,7 @@
  * File: src/app/api/auth/outlook/connect/route.ts
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth';
@@ -14,7 +14,7 @@ import { getMicrosoftAuthUrl } from '@/lib/microsoft-graph';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   // Step-by-step with individual try/catch so we know EXACTLY where it fails
   
   // Step 1: Auth
@@ -84,12 +84,20 @@ export async function POST() {
 
   // Step 6: Insert state
   try {
+    // Check if request comes from native app
+    let isNative = false;
+    try {
+      const body = await req.json();
+      isNative = body.native === true;
+    } catch { /* no body */ }
+
     const { error: stateError } = await supabase
       .from('outlook_oauth_states')
       .insert({
         state,
         user_id: userId,
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        is_native: isNative,
       });
 
     if (stateError) {
