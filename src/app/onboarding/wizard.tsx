@@ -113,6 +113,60 @@ const EXP_CFG = [
   { key:'verv', cat:'vervoer', icon:Car, def:0 },
 ];
 
+// ─── Reusable components (MUST be outside main component to prevent unmount/remount on re-render) ──
+function Inp({label,val,set,ph,type='text',note}:{label:string;val:string;set:(v:string)=>void;ph?:string;type?:string;note?:string}) {
+  return (
+    <div className="mb-5">
+      <label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-1.5">{label}</label>
+      {note&&<p className="text-[11px] text-pw-muted mb-1.5">{note}</p>}
+      <input
+        type={type}
+        inputMode={type==='number'?'decimal':undefined}
+        value={val}
+        onChange={e=>set(e.target.value)}
+        placeholder={ph}
+        autoComplete="off"
+        enterKeyHint="next"
+        autoCapitalize={type==='text'?'words':'off'}
+        autoCorrect="off"
+        className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors"
+      />
+    </div>
+  );
+}
+
+function Tog({label,val,set}:{label:string;val:boolean;set:(v:boolean)=>void}) {
+  return (
+    <button onClick={()=>set(!val)} className="flex items-center justify-between w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 mb-4 active:scale-[0.98] transition-transform">
+      <span className="text-[14px] font-medium text-pw-text dark:text-gray-100">{label}</span>
+      <div className={`w-12 h-7 rounded-full relative transition-colors ${val?'bg-pw-blue':'bg-pw-border dark:bg-gray-600'}`}>
+        <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${val?'translate-x-[22px]':'translate-x-0.5'}`}/>
+      </div>
+    </button>
+  );
+}
+
+function BranchCard({icon:I,label,sub,onClick}:{icon:React.ElementType;label:string;sub:string;onClick:()=>void}) {
+  return (
+    <button onClick={onClick} className="w-full flex items-start gap-4 rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 text-left mb-3 active:scale-[0.97] transition-all hover:shadow-lg hover:border-pw-blue/30">
+      <div className="w-11 h-11 rounded-xl bg-pw-bg dark:bg-gray-700 text-pw-blue flex items-center justify-center shrink-0"><I className="w-5 h-5" strokeWidth={1.5}/></div>
+      <div className="flex-1"><p className="text-[15px] font-semibold text-pw-text dark:text-gray-100">{label}</p><p className="text-[12px] text-pw-muted mt-1 leading-relaxed">{sub}</p></div>
+      <ChevronRight className="w-5 h-5 text-pw-muted shrink-0 mt-2"/>
+    </button>
+  );
+}
+
+function ScanBtn({icon:I,label,sub,id,scans,setScans}:{icon:React.ElementType;label:string;sub?:string;id:string;scans:Set<string>;setScans:(s:Set<string>)=>void}) {
+  const s=scans.has(id);
+  return (
+    <button onClick={()=>{const n=new Set(scans);s?n.delete(id):n.add(id);setScans(n);}} className={`w-full flex items-center gap-3.5 rounded-xl border p-4 mb-3 transition-all active:scale-[0.97] ${s?'border-pw-blue bg-pw-blue/5 dark:bg-blue-900/20':'border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800'}`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s?'bg-pw-blue text-white':'bg-pw-bg dark:bg-gray-700 text-pw-muted'}`}><I className="w-5 h-5" strokeWidth={1.5}/></div>
+      <div className="flex-1 text-left"><p className="text-[14px] font-semibold text-pw-text dark:text-gray-100">{label}</p>{sub&&<p className="text-[11px] text-pw-muted mt-0.5">{sub}</p>}</div>
+      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${s?'border-pw-blue bg-pw-blue':'border-pw-border dark:border-gray-500'}`}>{s&&<Check className="w-3.5 h-3.5 text-white" strokeWidth={3}/>}</div>
+    </button>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function OnboardingWizard({ initialName, initialLanguage }: Props) {
   // ── State ──
@@ -223,47 +277,6 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       window.location.href='/overzicht';
     } catch { setSaving(false); setErr(true); }
   }
-
-  // ── Reusable pieces ──
-  const Inp = ({label,val,set,ph,type='text',note}:{label:string;val:string;set:(v:string)=>void;ph?:string;type?:string;note?:string}) => (
-    <div className="mb-5">
-      <label className="block text-[12px] font-semibold text-pw-text dark:text-gray-200 mb-1.5">{label}</label>
-      {note&&<p className="text-[11px] text-pw-muted mb-1.5">{note}</p>}
-      {type === 'date' ? (
-        <input type="date" defaultValue={val} onBlur={e=>set(e.target.value)} onChange={e=>set(e.target.value)} autoComplete="off"
-          className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors appearance-none"/>
-      ) : (
-        <input type={type} inputMode={type==='number'?'decimal':undefined} value={val} onChange={e=>set(e.target.value)} placeholder={ph} autoComplete="off" enterKeyHint="next" autoCapitalize="off" autoCorrect="off"
-          className="w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 text-[15px] text-pw-text dark:text-gray-100 placeholder:text-pw-muted/40 focus:border-pw-blue focus:outline-none focus:ring-2 focus:ring-pw-blue/20 transition-colors"/>
-      )}
-    </div>
-  );
-
-  const Tog = ({label,val,set}:{label:string;val:boolean;set:(v:boolean)=>void}) => (
-    <button onClick={()=>set(!val)} className="flex items-center justify-between w-full rounded-xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 px-4 py-3.5 mb-4 active:scale-[0.98] transition-transform">
-      <span className="text-[14px] font-medium text-pw-text dark:text-gray-100">{label}</span>
-      <div className={`w-12 h-7 rounded-full relative transition-colors ${val?'bg-pw-blue':'bg-pw-border dark:bg-gray-600'}`}>
-        <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${val?'translate-x-[22px]':'translate-x-0.5'}`}/>
-      </div>
-    </button>
-  );
-
-  const BranchCard = ({icon:I,label,sub,onClick}:{icon:React.ElementType;label:string;sub:string;onClick:()=>void}) => (
-    <button onClick={onClick} className="w-full flex items-start gap-4 rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 text-left mb-3 active:scale-[0.97] transition-all hover:shadow-lg hover:border-pw-blue/30">
-      <div className="w-11 h-11 rounded-xl bg-pw-bg dark:bg-gray-700 text-pw-blue flex items-center justify-center shrink-0"><I className="w-5 h-5" strokeWidth={1.5}/></div>
-      <div className="flex-1"><p className="text-[15px] font-semibold text-pw-text dark:text-gray-100">{label}</p><p className="text-[12px] text-pw-muted mt-1 leading-relaxed">{sub}</p></div>
-      <ChevronRight className="w-5 h-5 text-pw-muted shrink-0 mt-2"/>
-    </button>
-  );
-
-  const ScanBtn = ({icon:I,label,sub,id}:{icon:React.ElementType;label:string;sub?:string;id:string}) => {
-    const s=scans.has(id);
-    return (<button onClick={()=>{const n=new Set(scans);s?n.delete(id):n.add(id);setScans(n);}} className={`w-full flex items-center gap-3.5 rounded-xl border p-4 mb-3 transition-all active:scale-[0.97] ${s?'border-pw-blue bg-pw-blue/5 dark:bg-blue-900/20':'border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800'}`}>
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s?'bg-pw-blue text-white':'bg-pw-bg dark:bg-gray-700 text-pw-muted'}`}><I className="w-5 h-5" strokeWidth={1.5}/></div>
-      <div className="flex-1 text-left"><p className="text-[14px] font-semibold text-pw-text dark:text-gray-100">{label}</p>{sub&&<p className="text-[11px] text-pw-muted mt-0.5">{sub}</p>}</div>
-      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${s?'border-pw-blue bg-pw-blue':'border-pw-border dark:border-gray-500'}`}>{s&&<Check className="w-3.5 h-3.5 text-white" strokeWidth={3}/>}</div>
-    </button>);
-  };
 
   // ── Step content (NO animation wrapper here — just plain JSX) ──
   function stepContent() {
@@ -376,20 +389,16 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <LottieHero step="scan"/>
         <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-6">{t.scan}</h1>
 
-        {/* Info: email koppeling via dashboard */}
-        <div className="rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20 p-4 mb-5">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-pw-blue/10 flex items-center justify-center shrink-0 mt-0.5"><Mail className="w-4 h-4 text-pw-blue" strokeWidth={1.5}/></div>
-            <div>
-              <p className="text-[13px] font-semibold text-pw-text dark:text-gray-100 mb-1">{t.gmail} / {t.outl}</p>
-              <p className="text-[12px] text-pw-muted leading-relaxed">{t.scanInfo}</p>
-            </div>
-          </div>
-        </div>
+        <ScanBtn icon={Mail} label={t.gmail} sub={t.gmailX} id="gmail" scans={scans} setScans={setScans}/>
+        <ScanBtn icon={Mail} label={t.outl} sub={t.gmailX} id="outlook" scans={scans} setScans={setScans}/>
+        <ScanBtn icon={Camera} label={t.cam} sub={t.camX} id="camera" scans={scans} setScans={setScans}/>
+        <ScanBtn icon={ClipboardList} label={t.man} sub={t.manX} id="manual" scans={scans} setScans={setScans}/>
 
-        {/* Camera scan - highlighted as main action */}
-        <ScanBtn icon={Camera} label={t.cam} sub={t.camX} id="camera"/>
-        <ScanBtn icon={ClipboardList} label={t.man} sub={t.manX} id="manual"/>
+        {(scans.has('gmail')||scans.has('outlook'))&&(
+          <div className="mt-2 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20">
+            <p className="text-[12px] text-pw-muted leading-relaxed">{t.scanInfo}</p>
+          </div>
+        )}
       </>);
 
       case 'safe': return (<>
