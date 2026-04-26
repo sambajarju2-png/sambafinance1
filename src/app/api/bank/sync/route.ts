@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { getTransactions, Transaction } from '@/lib/enablebanking'
+import { sendPushToUser } from '@/lib/push'
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,6 +66,8 @@ export async function POST(req: NextRequest) {
 
     let totalNew = 0
     let totalMatched = 0
+    let totalBillMatches = 0
+    const billMatchDetails: Array<{ vendor: string; amount: number; date: string; type: string }> = []
 
     for (const conn of connections) {
       for (const accountUid of conn.account_ids || []) {
@@ -85,8 +88,18 @@ export async function POST(req: NextRequest) {
               record.pw_category = matchedExp.category
               totalMatched++
             }
-            const matchedBill = matchBill(tx, bills || [])
-            if (matchedBill) record.matched_bill_id = matchedBill.id
+            const billMatch = matchBill(tx, bills || [])
+            if (billMatch) {
+              record.matched_bill_id = billMatch.bill.id
+              ;(record as Record<string, unknown>).match_type = billMatch.type
+              totalBillMatches++
+              billMatchDetails.push({
+                vendor: billMatch.bill.vendor,
+                amount: Math.abs(record.amount),
+                date: record.booking_date,
+                type: billMatch.type,
+              })
+            }
             records.push(record)
           }
 
@@ -108,6 +121,23 @@ export async function POST(req: NextRequest) {
         .eq('id', conn.id)
     }
 
+    // Send push notification for new bill matches
+    if (billMatchDetails.length > 0) {
+      try {
+        const first = billMatchDetails[0]
+        const amountStr = `€${(first.amount / 100).toFixed(2).replace('.', ',')}`
+        const dateStr = new Date(first.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+        const title = first.type === 'partial'
+          ? 'Mogelijke betaling gevonden'
+          : 'Betaling gevonden'
+        const body = billMatchDetails.length === 1
+          ? `Het lijkt erop dat je ${first.vendor} van ${amountStr} hebt betaald op ${dateStr}. Klopt dit?`
+          : `${billMatchDetails.length} betalingen gevonden die bij je rekeningen passen. Controleer op het Overzicht.`
+
+        await sendPushToUser(user.id, { title, body, url: '/overzicht', tag: 'paywatch-match' })
+      } catch { /* notification is non-critical */ }
+    }
+
     // Auto-mark expenses as paid
     if (totalMatched > 0 && expenses) {
       const month = new Date().toISOString().slice(0, 7)
@@ -127,7 +157,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched })
+    return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched, bill_matches: totalBillMatches })
   } catch (error) {
     console.error('[Bank] Sync error:', error)
     return NextResponse.json({ error: 'Synchronisatie mislukt' }, { status: 500 })
@@ -188,16 +218,35 @@ function matchExpense(tx: Transaction, expenses: Exp[]): Exp | null {
 }
 
 interface Bill { id: string; vendor: string; amount: number; iban: string | null }
+interface BillMatch { bill: Bill; type: 'exact' | 'partial' }
 
-function matchBill(tx: Transaction, bills: Bill[]): Bill | null {
+function matchBill(tx: Transaction, bills: Bill[]): BillMatch | null {
   if (!bills.length || tx.credit_debit_indicator !== 'DBIT') return null
   const amt = Math.abs(Math.round(parseFloat(tx.transaction_amount.amount) * 100))
   const credName = (tx.creditor?.name || '').toLowerCase()
+  const credIban = (tx.creditor_account?.iban || '').replace(/\s/g, '')
+  const desc = (tx.remittance_information?.join(' ') || '').toLowerCase()
 
   for (const b of bills) {
     const v = b.vendor.toLowerCase()
-    const diff = Math.abs(amt - b.amount) / b.amount
-    if ((credName.includes(v) || v.includes(credName)) && diff < 0.1) return b
+    const billIban = (b.iban || '').replace(/\s/g, '')
+    const vendorMatch = (credName.length > 2 && v.length > 2) &&
+      (credName.includes(v) || v.includes(credName))
+    const ibanMatch = billIban && credIban && billIban === credIban
+    const refMatch = b.id && desc.includes(b.id.slice(-8))
+
+    if (!vendorMatch && !ibanMatch) continue
+
+    const diff = Math.abs(amt - b.amount) / Math.max(b.amount, 1)
+
+    // Exact match: vendor/IBAN + amount within 10%
+    if (diff < 0.1) return { bill: b, type: 'exact' }
+
+    // Partial match: vendor/IBAN matches but amount differs (betalingsregeling?)
+    // Allow up to 50% difference — user will confirm
+    if (diff < 0.5 && (ibanMatch || refMatch || vendorMatch)) {
+      return { bill: b, type: 'partial' }
+    }
   }
   return null
 }

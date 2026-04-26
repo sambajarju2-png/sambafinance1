@@ -15,6 +15,7 @@ interface Match {
   bill_vendor: string;
   bill_amount: number;
   bill_due_date: string;
+  match_type: 'exact' | 'partial';
 }
 
 export default function MatchCards() {
@@ -79,7 +80,9 @@ export default function MatchCards() {
           <h3 className="text-[13px] font-semibold text-pw-navy">
             {remaining} betaling{remaining !== 1 ? 'en' : ''} gevonden
           </h3>
-          <p className="text-[11px] text-pw-muted">Bevestig of de rekening betaald is</p>
+          <p className="text-[11px] text-pw-muted">
+            {match.match_type === 'partial' ? 'Bedrag verschilt — controleer of dit klopt' : 'Bevestig of de rekening betaald is'}
+          </p>
         </div>
       </div>
 
@@ -152,6 +155,20 @@ export default function MatchCards() {
             </p>
           )}
 
+          {/* Partial match warning */}
+          {match.match_type === 'partial' && (
+            <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200/50 px-3 py-2.5">
+              <p className="text-[12px] font-semibold text-amber-700">
+                Bedrag verschilt — betalingsregeling?
+              </p>
+              <p className="text-[11px] text-amber-600 mt-0.5">
+                Betaald: € {(Math.abs(match.tx_amount) / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
+                {' '}· Rekening: € {(match.bill_amount / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
+                {' '}(verschil: € {(Math.abs(Math.abs(match.tx_amount) - match.bill_amount) / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })})
+              </p>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-3 mt-4">
             <button
@@ -172,7 +189,7 @@ export default function MatchCards() {
               ) : (
                 <Check className="h-4 w-4" strokeWidth={2} />
               )}
-              Betaald
+              {match.match_type === 'partial' ? 'Termijn betaald' : 'Betaald'}
             </button>
           </div>
         </div>

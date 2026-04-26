@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     // Get transactions that have a matched bill but haven't been confirmed/dismissed
     const { data: matches } = await supabase
       .from('bank_transactions')
-      .select('id, creditor_name, creditor_iban, amount, booking_date, remittance_info, matched_bill_id, connection_id')
+      .select('id, creditor_name, creditor_iban, amount, booking_date, remittance_info, matched_bill_id, connection_id, match_type')
       .eq('user_id', user.id)
       .not('matched_bill_id', 'is', null)
       .is('match_status', null)
@@ -85,7 +85,8 @@ export async function GET(req: NextRequest) {
           tx_description: m.remittance_info,
           bill_vendor: bill.vendor,
           bill_amount: bill.amount,
-          bill_due_date: bill.due_date
+          bill_due_date: bill.due_date,
+          match_type: m.match_type || 'exact',
         }
       })
 
