@@ -17,6 +17,7 @@ import FinancialOverviewCard from '@/components/finances/financial-overview-card
 import MatchCards from '@/components/bank/match-cards';
 import { useDashboardModules } from '@/lib/dashboard-modules';
 import { PullToRefresh } from '@/components/pull-to-refresh';
+import AnalyticsEntryCard from '@/components/analytics/analytics-entry-card';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { presets } from '@/lib/motion';
 import { haptic } from '@/lib/capacitor';
@@ -92,6 +93,9 @@ export default function OverzichtPage() {
   return (
     <div className="space-y-5">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
+
+      {/* Financial analytics entry — only shows with bank sync */}
+      <AnalyticsEntryCard />
 
       {/* Sub-tab toggle */}
       <div className="flex gap-1.5 rounded-input bg-pw-border/50 p-1">

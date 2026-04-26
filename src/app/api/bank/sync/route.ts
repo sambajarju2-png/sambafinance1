@@ -157,6 +157,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Run transaction categorization pipeline
+    try {
+      const { categorizeUserTransactions } = await import('@/lib/analytics/categorizer')
+      const catResult = await categorizeUserTransactions(user.id)
+      console.log(`[Bank] Categorized ${catResult.categorized} transactions (${catResult.aiCalled} via AI)`)
+    } catch (catErr) {
+      console.error('[Bank] Categorization error (non-blocking):', catErr)
+    }
+
     return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched, bill_matches: totalBillMatches })
   } catch (error) {
     console.error('[Bank] Sync error:', error)
@@ -170,6 +179,8 @@ function mapTx(tx: Transaction, userId: string, connId: string, accountUid: stri
   const amount = Math.round(parseFloat(tx.transaction_amount.amount) * 100)
   const isDebit = tx.credit_debit_indicator === 'DBIT'
   const description = tx.remittance_information?.join(' ') || ''
+  // Extract MCC from raw transaction (not in TS interface but in JSONB)
+  const mcc = (tx as Record<string, unknown>).merchant_category_code as string || null
 
   return {
     user_id: userId,
@@ -186,6 +197,8 @@ function mapTx(tx: Transaction, userId: string, connId: string, accountUid: stri
     debtor_iban: tx.debtor_account?.iban || null,
     remittance_info: description,
     bank_category: tx.bank_transaction_code?.description || null,
+    mcc,
+    category_source: 'unset',
     is_recurring: false,
     raw_data: tx,
     matched_expense_id: null as string | null,
