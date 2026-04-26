@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
               billMatchDetails.push({
                 vendor: billMatch.bill.vendor,
                 amount: Math.abs(record.amount),
-                date: record.booking_date,
+                date: record.booking_date || new Date().toISOString().split('T')[0],
                 type: billMatch.type,
               })
             }
