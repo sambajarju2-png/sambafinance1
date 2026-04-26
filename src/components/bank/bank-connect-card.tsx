@@ -325,7 +325,22 @@ function BankSelectorModal({ onClose }: { onClose: () => void }) {
         return;
       }
 
-      // Redirect to bank authorization page
+      // Open bank authorization page
+      // Native: use SFSafariViewController (dismissible overlay)
+      // Web: direct navigation
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({ url: data.link, presentationStyle: 'popover' });
+          // When user closes the browser, refresh connections
+          Browser.addListener('browserFinished', () => {
+            setConnecting(null);
+            fetchAccounts();
+          });
+          return;
+        }
+      } catch {}
       window.location.href = data.link;
     } catch {
       setError('Er ging iets mis. Probeer het opnieuw.');
