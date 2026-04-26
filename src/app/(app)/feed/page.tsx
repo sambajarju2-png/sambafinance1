@@ -190,7 +190,7 @@ function FeedContent() {
         <button onClick={() => setComposeOpen(true)}
           className="bill-row-press flex w-full items-center gap-3 rounded-card border border-dashed border-pw-blue/30 bg-pw-blue/5 px-4 py-3 text-left">
           <div className="h-8 w-8 overflow-hidden rounded-full border border-pw-border bg-pw-surface">
-            <img src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=${encodeURIComponent(profile.display_name)}`} alt="" className="h-full w-full" />
+            <img src={`https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(profile.display_name)}`} alt="" className="h-full w-full" />
           </div>
           <span className="flex-1 text-[13px] text-pw-muted">Deel je verhaal...</span>
           <Send className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
@@ -295,8 +295,8 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
   const cardRef = useRef<HTMLDivElement>(null);
 
   const avatarUrl = post.is_anonymous
-    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=anonymous'
-    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=${encodeURIComponent(post.display_name)}`;
+    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
+    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(post.display_name)}`;
   const badge = post.badge_type ? BADGE_LABELS[post.badge_type] : null;
 
   // Auto-open comments when navigated from notification deep link
@@ -527,8 +527,8 @@ function CommentRow({ comment, onReplyTo, onDelete, onEdit, onReport }: {
   const [editContent, setEditContent] = useState(comment.content);
 
   const cAvatar = comment.is_anonymous
-    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=anonymous'
-    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=${encodeURIComponent(comment.display_name)}`;
+    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
+    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(comment.display_name)}`;
 
   return (
     <div className="flex items-start gap-2.5">
@@ -623,8 +623,8 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
   }
 
   const avatarUrl = isAnonymous
-    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=anonymous'
-    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?backgroundColor=transparent&seed=${encodeURIComponent(displayName)}`;
+    ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
+    : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(displayName)}`;
 
   return (
     <>
