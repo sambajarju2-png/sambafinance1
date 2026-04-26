@@ -9,7 +9,7 @@
 
 # next.js
 /.next/
-/out/
+# /out/ — NOT ignored: contains local fallback for Capacitor offline handling
 
 # production
 /build

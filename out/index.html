@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PayWatch</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0A2540;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: env(safe-area-inset-top, 0);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .logo { margin-bottom: 16px; opacity: 0; animation: fadeIn 0.5s ease-out 0.1s forwards; }
+    .title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; opacity: 0; animation: fadeIn 0.5s ease-out 0.3s forwards; }
+    .subtitle { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 8px; opacity: 0; animation: fadeIn 0.5s ease-out 0.5s forwards; }
+    
+    /* Loading state */
+    .loading { margin-top: 32px; display: flex; gap: 6px; }
+    .loading .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); animation: pulse 1.2s ease-in-out infinite; }
+    .loading .dot:nth-child(2) { animation-delay: 200ms; }
+    .loading .dot:nth-child(3) { animation-delay: 400ms; }
+    
+    /* Offline state */
+    .offline { display: none; text-align: center; margin-top: 32px; }
+    .offline-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .offline h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .offline p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.5; margin-bottom: 24px; }
+    .retry-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #2563EB; color: white; border: none;
+      padding: 12px 24px; border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .retry-btn:active { transform: scale(0.97); }
+    .retry-btn.loading-btn { opacity: 0.6; }
+    
+    .hidden { display: none !important; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <!-- Logo -->
+  <div class="logo">
+    <svg width="56" height="56" viewBox="0 0 48 48" fill="none">
+      <rect width="48" height="48" rx="12" fill="#2563EB"/>
+      <path d="M16 20h16M16 28h10" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="34" cy="28" r="4" fill="white" opacity="0.6"/>
+    </svg>
+  </div>
+  <h1 class="title">PayWatch</h1>
+  <p class="subtitle" id="subtitle">Laden...</p>
+  
+  <!-- Loading dots (shown while checking connectivity) -->
+  <div class="loading" id="loadingDots">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+  
+  <!-- Offline state (shown when no internet) -->
+  <div class="offline" id="offlineState">
+    <div class="offline-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="2" x2="22" y2="22"/>
+        <path d="M8.5 16.5a5 5 0 0 1 7 0"/>
+        <path d="M2 8.82a15 15 0 0 1 4.17-2.65"/>
+        <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/>
+        <path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/>
+        <path d="M5 12.86a10 10 0 0 1 5.17-2.86"/>
+        <line x1="12" y1="20" x2="12.01" y2="20"/>
+      </svg>
+    </div>
+    <h2>Geen internetverbinding</h2>
+    <p>Controleer je wifi of mobiele data en probeer het opnieuw.</p>
+    <button class="retry-btn" id="retryBtn" onclick="tryConnect()">
+      Opnieuw proberen
+    </button>
+  </div>
+
+  <script>
+    var APP_URL = 'https://app.paywatch.app';
+    var MAX_RETRIES = 3;
+    var retryCount = 0;
+
+    function showOffline() {
+      document.getElementById('loadingDots').classList.add('hidden');
+      document.getElementById('offlineState').style.display = 'block';
+      document.getElementById('subtitle').textContent = 'Geen verbinding';
+    }
+
+    function tryConnect() {
+      var btn = document.getElementById('retryBtn');
+      btn.textContent = 'Verbinden...';
+      btn.classList.add('loading-btn');
+      
+      // Try to fetch the remote app
+      fetch(APP_URL + '/api/settings/profile', { method: 'HEAD', mode: 'no-cors' })
+        .then(function() {
+          // Connection works — redirect to the app
+          window.location.href = APP_URL;
+        })
+        .catch(function() {
+          btn.textContent = 'Opnieuw proberen';
+          btn.classList.remove('loading-btn');
+        });
+    }
+
+    // On load: check connectivity and redirect
+    function init() {
+      if (!navigator.onLine) {
+        showOffline();
+        return;
+      }
+
+      // Try to load the remote app
+      var timeout = setTimeout(function() {
+        // Took too long — might be offline
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          init();
+        } else {
+          showOffline();
+        }
+      }, 8000);
+
+      fetch(APP_URL, { method: 'HEAD', mode: 'no-cors' })
+        .then(function() {
+          clearTimeout(timeout);
+          window.location.replace(APP_URL);
+        })
+        .catch(function() {
+          clearTimeout(timeout);
+          showOffline();
+        });
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', function() {
+      tryConnect();
+    });
+
+    // Start
+    init();
+  </script>
+</body>
+</html>
