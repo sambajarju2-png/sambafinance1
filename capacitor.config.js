@@ -4,9 +4,7 @@ const config = {
   appName: 'PayWatch',
   webDir: 'out',
   server: {
-    // No server.url — loads local out/index.html first (works offline)
-    // The local page checks connectivity and redirects to the remote app
-    // allowNavigation enables Capacitor bridge on the remote domain
+    url: 'https://app.paywatch.app',
     allowNavigation: [
       'app.paywatch.app',
       '*.paywatch.app',
@@ -20,7 +18,7 @@ const config = {
   plugins: {
     SplashScreen: {
       launchAutoHide: false,
-      launchShowDuration: 0,
+      launchShowDuration: 30000,
       backgroundColor: '#0A2540',
       showSpinner: true,
       spinnerColor: '#2563EB',
