@@ -70,6 +70,7 @@ export interface AnalyticsBundle {
   monthly_totals: MonthlyTotalItem[];
   debt_summary: DebtItem[];
   has_bank_connection: boolean;
+  is_admin?: boolean;
   uncategorized_count: number;
   transactions: TransactionItem[];
   subscriptions: SubscriptionItem[];

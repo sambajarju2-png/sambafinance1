@@ -213,6 +213,25 @@ export function categorizeByRules(
     }
   }
 
+  // 1b. Revolut-specific internal transfer detection (no IBAN, only remittance_info)
+  const infoLower = info.toLowerCase().trim();
+  if (
+    infoLower === 'to eur' ||
+    infoLower.startsWith('from flexible cash funds') ||
+    infoLower.startsWith('aanvulling saldotekort') ||
+    infoLower.startsWith('from savings vault') ||
+    infoLower.startsWith('to savings vault')
+  ) {
+    return {
+      category: 'eigen_rekening',
+      sub_category: null,
+      confidence: 0.95,
+      source: 'rules',
+      merchant_clean_name: null,
+      is_internal_transfer: true,
+    };
+  }
+
   // 2. Bank transaction code
   if (tx.bank_category) {
     const bankCatLower = tx.bank_category.toLowerCase();

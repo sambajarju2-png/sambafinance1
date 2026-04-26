@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
         {tab === 'trend' && <TabTrend data={data.monthly_totals} />}
         {tab === 'schuld' && <TabSchuld debts={data.debt_summary} totals={data.monthly_totals} />}
         {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} onTap={(tx) => { setCorrecting(tx); haptic('tap'); }} />}
-        {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} />}
+        {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} showVergelijk={data.is_admin === true} />}
       </div>
 
       {/* Category correction sheet */}
@@ -755,7 +755,7 @@ function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: 
 
 // ─── Tab: Abonnementen ───────────────────────────────────────
 
-function TabAbonnementen({ subscriptions }: { subscriptions: SubscriptionItem[] }) {
+function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: SubscriptionItem[]; showVergelijk?: boolean }) {
   if (subscriptions.length === 0) {
     return (
       <div className="flex flex-col items-center py-12 text-center">
@@ -781,6 +781,28 @@ function TabAbonnementen({ subscriptions }: { subscriptions: SubscriptionItem[] 
     onregelmatig: 'Onregelmatig',
   };
 
+  // Provider detection for Vergelijk CTAs (admin only)
+  const SWITCHABLE_PROVIDERS: Record<string, { sector: string; saving: string }> = {
+    vattenfall: { sector: 'energie', saving: 'tot €200/jr' },
+    eneco: { sector: 'energie', saving: 'tot €180/jr' },
+    essent: { sector: 'energie', saving: 'tot €150/jr' },
+    kpn: { sector: 'telecom', saving: 'tot €120/jr' },
+    ziggo: { sector: 'telecom', saving: 'tot €100/jr' },
+    'T-Mobile': { sector: 'telecom', saving: 'tot €96/jr' },
+    vodafone: { sector: 'telecom', saving: 'tot €84/jr' },
+    'zilveren kruis': { sector: 'verzekering', saving: 'tot €150/jr' },
+    menzis: { sector: 'verzekering', saving: 'tot €120/jr' },
+    'nationale-nederlanden': { sector: 'verzekering', saving: 'tot €80/jr' },
+  };
+
+  function detectProvider(name: string): { sector: string; saving: string } | null {
+    const lower = name.toLowerCase();
+    for (const [key, val] of Object.entries(SWITCHABLE_PROVIDERS)) {
+      if (lower.includes(key.toLowerCase())) return val;
+    }
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       {/* Total cost card */}
@@ -800,28 +822,76 @@ function TabAbonnementen({ subscriptions }: { subscriptions: SubscriptionItem[] 
       <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
         {subscriptions.map(sub => {
           const displayName = sub.merchant_clean_name || sub.creditor_name;
+          const provider = showVergelijk ? detectProvider(displayName) : null;
           return (
-            <div key={sub.id} className="px-3.5 py-3 flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-medium text-pw-text truncate">{displayName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-pw-muted">{FREQ_LABELS[sub.frequency] || sub.frequency}</span>
-                  {sub.pw_category && (
-                    <>
-                      <span className="text-[10px] text-pw-muted/40">&middot;</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-pw-bg text-pw-muted">{getCategoryLabel(sub.pw_category)}</span>
-                    </>
-                  )}
+            <div key={sub.id}>
+              <div className="px-3.5 py-3 flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-pw-text truncate">{displayName}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-pw-muted">{FREQ_LABELS[sub.frequency] || sub.frequency}</span>
+                    {sub.pw_category && (
+                      <>
+                        <span className="text-[10px] text-pw-muted/40">&middot;</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-pw-bg text-pw-muted">{getCategoryLabel(sub.pw_category)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right ml-3 flex-shrink-0">
+                  <p className="text-[13px] font-semibold text-pw-text">{formatCents(sub.avg_amount)}</p>
+                  <p className="text-[10px] text-pw-muted">{formatCents(sub.annual_cost)}/jr</p>
                 </div>
               </div>
-              <div className="text-right ml-3 flex-shrink-0">
-                <p className="text-[13px] font-semibold text-pw-text">{formatCents(sub.avg_amount)}</p>
-                <p className="text-[10px] text-pw-muted">{formatCents(sub.annual_cost)}/jr</p>
-              </div>
+
+              {/* Vergelijk CTA — admin preview only */}
+              {provider && (
+                <div className="mx-3.5 mb-3 p-3 rounded-[10px] bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-[11px] font-semibold text-green-800 dark:text-green-300">
+                        Bespaar op {provider.sector}
+                      </p>
+                      <p className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">
+                        Vergelijk aanbieders — bespaar {provider.saving}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => haptic('tap')}
+                      className="shrink-0 ml-2 px-3 py-1.5 bg-green-600 text-white text-[11px] font-semibold rounded-[6px] active:scale-95 transition-transform"
+                    >
+                      Vergelijk
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-green-600/60 dark:text-green-500/40 mt-1.5">
+                    Admin preview — PayWatch ontvangt een vergoeding bij overstap
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* Vergelijk summary card — admin only */}
+      {showVergelijk && subscriptions.some(s => detectProvider(s.merchant_clean_name || s.creditor_name)) && (
+        <div className="rounded-card border border-green-200 dark:border-green-800/40 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4">
+          <p className="text-[13px] font-semibold text-green-900 dark:text-green-200">Vergelijk & Bespaar</p>
+          <p className="text-[11px] text-green-700 dark:text-green-400 mt-1 leading-relaxed">
+            Op basis van je abonnementen kun je mogelijk besparen op energie, telecom en verzekeringen.
+            Vergelijk aanbieders en ontdek goedkopere opties.
+          </p>
+          <button
+            onClick={() => haptic('tap')}
+            className="mt-3 w-full bg-green-600 text-white py-2.5 rounded-[6px] text-[13px] font-semibold active:scale-[0.98] transition-transform"
+          >
+            Bekijk alle bespaarmogelijkheden
+          </button>
+          <p className="text-[9px] text-green-600/50 dark:text-green-500/30 mt-2 text-center">
+            Admin preview — wordt afgeleverd via Daisycon affiliate links
+          </p>
+        </div>
+      )}
 
       {/* Insight block */}
       {subscriptions.length >= 3 && (

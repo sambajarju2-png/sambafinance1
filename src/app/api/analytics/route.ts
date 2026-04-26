@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       // Recent transactions for Transacties tab
       supabase
         .from('bank_transactions')
-        .select('id, booking_date, amount, creditor_name, debtor_name, merchant_clean_name, pw_category, pw_sub_category, category_source, category_confidence, creditor_iban, is_internal_transfer')
+        .select('id, booking_date, amount, creditor_name, debtor_name, merchant_clean_name, pw_category, pw_sub_category, category_source, category_confidence, creditor_iban, is_internal_transfer, remittance_info')
         .eq('user_id', user.id)
         .or('is_internal_transfer.eq.false,is_internal_transfer.is.null')
         .order('booking_date', { ascending: false })
@@ -95,8 +95,12 @@ export async function GET(req: NextRequest) {
       debt_payments_cents: t.debt_payments_cents || 0,
     }));
 
+    const ADMIN_EMAILS = ['sambajarju2@gmail.com'];
+    const is_admin = ADMIN_EMAILS.includes(user.email || '');
+
     return NextResponse.json({
       has_bank_connection,
+      is_admin,
       monthly_categories: categoriesRes.data || [],
       weekly_cashflow: cashflowRes.data || [],
       monthly_totals,
@@ -114,7 +118,7 @@ export async function GET(req: NextRequest) {
         id: t.id,
         booking_date: t.booking_date,
         amount: t.amount,
-        display_name: t.merchant_clean_name || t.creditor_name || t.debtor_name || 'Onbekend',
+        display_name: t.merchant_clean_name || t.creditor_name || t.debtor_name || t.remittance_info || 'Onbekend',
         creditor_name: t.creditor_name,
         pw_category: t.pw_category || 'onbekend',
         pw_sub_category: t.pw_sub_category,
