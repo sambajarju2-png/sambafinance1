@@ -62,7 +62,13 @@ export default function AppTour() {
     setShow(false);
     localStorage.setItem('paywatch-tour-seen', 'true');
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  }, []);
+    // If user chose Gmail/Outlook during onboarding, redirect to settings to connect
+    const pendingScan = localStorage.getItem('paywatch-pending-scan');
+    if (pendingScan) {
+      localStorage.removeItem('paywatch-pending-scan');
+      router.push('/instellingen');
+    }
+  }, [router]);
 
   const handleNext = useCallback(() => {
     if (animating) return;
@@ -77,7 +83,10 @@ export default function AppTour() {
       }, 150);
     } else {
       handleDismiss();
-      router.push('/overzicht');
+      // handleDismiss already handles the pending scan redirect
+      if (!localStorage.getItem('paywatch-pending-scan')) {
+        router.push('/overzicht');
+      }
     }
   }, [step, animating, router, handleDismiss]);
 
@@ -166,7 +175,7 @@ export default function AppTour() {
           paddingBottom: 'env(safe-area-inset-bottom, 16px)',
           paddingTop: '8px',
           height: '76px',
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'var(--surface)',
           borderTop: '1px solid var(--border)',
         }}
       >

@@ -302,12 +302,11 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         for(const[cat,amt] of Object.entries(exps)){if(amt>0) await fetch('/api/expenses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat,name:cat,amount:amt*100,monthly_amount:amt*100,interval:'monthly'})});}
       }
       await fetch('/api/onboarding/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({first_name:fn.trim(),last_name:ln.trim(),language:lang,gemeente:gem||undefined,user_type:userType,scan_preference:[...scans].join(',')||'none'})});
-      // Redirect to settings if Gmail/Outlook was selected, otherwise dashboard
+      // Always go to dashboard first — tour will show, then redirect to settings if needed
       if (scans.has('gmail') || scans.has('outlook')) {
-        window.location.href='/instellingen';
-      } else {
-        window.location.href='/overzicht';
+        localStorage.setItem('paywatch-pending-scan', [...scans].join(','));
       }
+      window.location.href='/overzicht';
     } catch { setSaving(false); setErr(true); }
   }
 

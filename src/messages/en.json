@@ -700,27 +700,27 @@
     "getStarted": "Get started",
     "overview": {
       "title": "Overview",
-      "desc": "See your outstanding bills, savings and debts in one place."
+      "desc": "See your bills, financial insights and debt-free countdown in one place."
     },
     "payments": {
       "title": "Payments",
-      "desc": "Manage all your bills, mark them as paid and check the calendar."
+      "desc": "Manage all your bills. View escalation stage, pay directly and track your calendar."
     },
     "feed": {
       "title": "Community Feed",
-      "desc": "Share experiences, tips and success stories with other users."
+      "desc": "Share experiences, ask questions and support others. Anonymous or with your name."
     },
     "stats": {
-      "title": "Statistics",
-      "desc": "View your payment performance, health score and cashflow."
+      "title": "Financial Insight",
+      "desc": "Categorize transactions, discover subscriptions and see where your money goes."
     },
     "cashflow": {
       "title": "Cashflow",
       "desc": "See your monthly spending and expected costs."
     },
     "settings": {
-      "title": "Settings",
-      "desc": "Customize your profile, notifications and email connection."
+      "title": "More",
+      "desc": "Buddy mode, settings, bank connection and notification preferences."
     },
     "previous": "Previous"
   },

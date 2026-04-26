@@ -636,27 +636,27 @@
     "getStarted": "Aan de slag",
     "overview": {
       "title": "Overzicht",
-      "desc": "Bekijk je openstaande rekeningen, besparingen en schulden op één plek."
+      "desc": "Bekijk je rekeningen, financieel inzicht en schuldenvrij countdown op één plek."
     },
     "payments": {
       "title": "Betalingen",
-      "desc": "Beheer al je rekeningen, markeer ze als betaald en bekijk de kalender."
+      "desc": "Beheer al je rekeningen. Bekijk escalatiefase, betaal direct en volg je agenda."
     },
     "feed": {
       "title": "Community Feed",
-      "desc": "Deel ervaringen, tips en succesverhalen met andere gebruikers."
+      "desc": "Deel ervaringen, stel vragen en steun anderen. Anoniem of met naam."
     },
     "stats": {
-      "title": "Statistieken",
-      "desc": "Bekijk je betaalprestaties, health score en cashflow."
+      "title": "Financieel Inzicht",
+      "desc": "Categoriseer transacties, ontdek abonnementen en zie waar je geld naartoe gaat."
     },
     "cashflow": {
       "title": "Cashflow",
       "desc": "Zie je maandelijkse uitgaven en verwachte kosten."
     },
     "settings": {
-      "title": "Instellingen",
-      "desc": "Pas je profiel, meldingen en Gmail-koppeling aan."
+      "title": "Meer",
+      "desc": "Buddy modus, instellingen, bank koppelen en meldingen aanpassen."
     },
     "previous": "Vorige"
   },
