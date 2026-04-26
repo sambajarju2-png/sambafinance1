@@ -5,26 +5,40 @@ import { Bell, X } from 'lucide-react';
 
 /**
  * Floating banner that prompts user to enable push notifications.
- * Tap "Enable" → triggers the native iOS/Android/browser permission dialog.
- * Shows once 1.5s after first dashboard load. Dismissed permanently on close or grant.
- *
- * Why a banner? iOS PWAs require a user gesture (button tap) to trigger
- * Notification.requestPermission(). Auto-triggering is silently blocked.
+ * Works on BOTH web (VAPID) and native (Capacitor PushNotifications).
+ * Shows once 1.5s after first dashboard load.
  */
 export default function PushPermissionPrompt() {
   const [visible, setVisible] = useState(false);
   const [enabling, setEnabling] = useState(false);
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // In native mode, Capacitor handles push — skip web prompt
-    if (document.documentElement.classList.contains('native-app')) return;
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-    if (Notification.permission !== 'default') return;
     if (localStorage.getItem('pw-push-asked')) return;
 
-    const timer = setTimeout(() => setVisible(true), 1500);
-    return () => clearTimeout(timer);
+    async function check() {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          setIsNative(true);
+          const { PushNotifications } = await import('@capacitor/push-notifications');
+          const perm = await PushNotifications.checkPermissions();
+          // Only show if permission hasn't been asked yet
+          if (perm.receive === 'prompt') {
+            setTimeout(() => setVisible(true), 1500);
+          }
+          return;
+        }
+      } catch {}
+
+      // Web fallback
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+      if (Notification.permission !== 'default') return;
+      setTimeout(() => setVisible(true), 1500);
+    }
+
+    check();
   }, []);
 
   function handleDismiss() {
@@ -37,33 +51,43 @@ export default function PushPermissionPrompt() {
     localStorage.setItem('pw-push-asked', '1');
 
     try {
-      const permission = await Notification.requestPermission();
-
-      if (permission === 'granted') {
-        const reg = await navigator.serviceWorker.ready;
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (vapidKey) {
-          const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: vapidKey,
-          });
-          const json = sub.toJSON();
-
-          await fetch('/api/push/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              endpoint: json.endpoint,
-              p256dh: json.keys?.p256dh,
-              auth_key: json.keys?.auth,
-            }),
-          });
-
+      if (isNative) {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const result = await PushNotifications.requestPermissions();
+        if (result.receive === 'granted') {
+          await PushNotifications.register();
           await fetch('/api/settings/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ notify_push_enabled: true }),
           });
+        }
+      } else {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const reg = await navigator.serviceWorker.ready;
+          const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          if (vapidKey) {
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: vapidKey,
+            });
+            const json = sub.toJSON();
+            await fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                endpoint: json.endpoint,
+                p256dh: json.keys?.p256dh,
+                auth_key: json.keys?.auth,
+              }),
+            });
+            await fetch('/api/settings/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notify_push_enabled: true }),
+            });
+          }
         }
       }
     } catch (err) {

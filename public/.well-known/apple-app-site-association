@@ -1,0 +1,22 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TQRT5ZJH6W.nl.paywatch.app",
+        "paths": [
+          "/instellingen*",
+          "/overzicht*",
+          "/betalingen*",
+          "/api/gmail/callback*",
+          "/api/auth/outlook/callback*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "TQRT5ZJH6W.nl.paywatch.app"
+    ]
+  }
+}

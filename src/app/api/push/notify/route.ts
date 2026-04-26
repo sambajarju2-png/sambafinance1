@@ -91,8 +91,9 @@ export async function POST(req: NextRequest) {
           .eq('platform', 'ios');
 
         const useSandbox = process.env.APNS_SANDBOX === 'true';
+        const badgeCount = bills.length; // Total urgent bills = badge count
         for (const nt of (nativeTokens || [])) {
-          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen' }, useSandbox);
+          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen', badge: badgeCount }, useSandbox);
           if (ok) {
             nativeSent++;
           } else {

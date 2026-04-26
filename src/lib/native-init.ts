@@ -62,9 +62,14 @@ export function useNativeInit() {
           const { App } = await import('@capacitor/app');
 
           // Refresh data when app returns to foreground
-          App.addListener('appStateChange', ({ isActive }) => {
+          App.addListener('appStateChange', async ({ isActive }) => {
             if (isActive) {
               window.dispatchEvent(new CustomEvent('paywatch:resume'));
+              // Clear badge and delivered notifications
+              try {
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                await PushNotifications.removeAllDeliveredNotifications();
+              } catch {}
             }
           });
 

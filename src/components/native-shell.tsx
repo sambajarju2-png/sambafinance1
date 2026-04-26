@@ -43,7 +43,6 @@ export default function NativeShell() {
   return (
     <style>{`
       .native-app .pwa-install-prompt,
-      .native-app .push-permission-prompt,
       .native-app .pwa-badge,
       .native-app [data-pwa-only] {
         display: none !important;
