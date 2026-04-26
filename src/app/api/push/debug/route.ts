@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import * as http2 from 'http2';
 import * as jose from 'jose';
+
+const NO_CACHE = { 'Cache-Control': 'no-store' };
 
 /**
  * POST /api/push/debug
  * Diagnoses APNs configuration and attempts a test push with detailed logging.
  */
 export async function POST() {
-  const userId = await getAuthUserId();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+  return runDebug();
+}
+
+export async function GET() {
+  return runDebug();
+}
+
+async function runDebug() {
+  // Temporary debug — get first user's token
+  const { createServiceRoleClient } = await import('@/lib/supabase/server');
+  const supabase = createServiceRoleClient();
 
   const keyId = process.env.APNS_KEY_ID || '';
   const teamId = process.env.APNS_TEAM_ID || '';
@@ -71,8 +81,8 @@ export async function POST() {
   const { data: tokens } = await supabase
     .from('native_push_tokens')
     .select('token')
-    .eq('user_id', userId)
-    .eq('platform', 'ios');
+    .eq('platform', 'ios')
+    .limit(1);
 
   if (!tokens || tokens.length === 0) {
     debug.step = 'no_tokens';
