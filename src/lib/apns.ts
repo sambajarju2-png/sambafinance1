@@ -1,24 +1,19 @@
 /**
  * Apple Push Notification service (APNs) sender
  * 
- * Uses JWT-based authentication with HTTP/2.
+ * Uses HTTP/2 (required by APNs — fetch/HTTP1.1 will NOT work).
+ * JWT auth via jose (ES256).
+ * 
  * Required env vars:
  *   APNS_KEY_ID   — Key ID from Apple Developer portal
  *   APNS_TEAM_ID  — Your Apple Developer Team ID
  *   APNS_KEY_P8   — Contents of the .p8 auth key file
- * 
- * Setup instructions:
- *   1. Go to https://developer.apple.com/account/resources/authkeys/list
- *   2. Create a new key → Enable "Apple Push Notifications service (APNs)"
- *   3. Download the .p8 file
- *   4. Copy Key ID, Team ID, and file contents to Vercel env vars
- *   5. For APNS_KEY_P8, paste the full contents including BEGIN/END PRIVATE KEY lines
+ *   APNS_SANDBOX  — 'true' for development builds, omit for production
  */
 
+import * as http2 from 'http2';
 import * as jose from 'jose';
 
-const APNS_PROD_HOST = 'https://api.push.apple.com';
-const APNS_DEV_HOST = 'https://api.sandbox.push.apple.com';
 const BUNDLE_ID = 'nl.paywatch.app';
 
 let cachedToken: { jwt: string; expiresAt: number } | null = null;
@@ -53,6 +48,11 @@ async function getApnsJwt(): Promise<string> {
   return jwt;
 }
 
+export type ApnsResult =
+  | { ok: true }
+  | { ok: false; unregistered: true }
+  | { ok: false; unregistered: false; status: number; reason: string };
+
 interface ApnsPayload {
   title: string;
   body: string;
@@ -61,61 +61,116 @@ interface ApnsPayload {
 }
 
 /**
- * Send a push notification to an iOS device via APNs.
- * Returns true if successful, false if failed (e.g. invalid token).
+ * Send a push notification to an iOS device via APNs HTTP/2.
+ * 
+ * IMPORTANT: APNs requires HTTP/2. Node's fetch() only does HTTP/1.1,
+ * which causes "Response does not match the HTTP/1.1 protocol" errors.
+ * We MUST use the http2 module.
  */
 export async function sendApnsPush(
   deviceToken: string,
   payload: ApnsPayload,
   sandbox = false
-): Promise<boolean> {
+): Promise<ApnsResult> {
+  const host = sandbox
+    ? 'https://api.sandbox.push.apple.com'
+    : 'https://api.push.apple.com';
+
+  const body = JSON.stringify({
+    aps: {
+      alert: {
+        title: payload.title,
+        body: payload.body,
+      },
+      sound: 'default',
+      badge: payload.badge ?? 1,
+      'mutable-content': 1,
+    },
+    url: payload.url || '/overzicht',
+  });
+
+  let jwt: string;
   try {
-    const jwt = await getApnsJwt();
-    const host = sandbox ? APNS_DEV_HOST : APNS_PROD_HOST;
+    jwt = await getApnsJwt();
+  } catch (err) {
+    console.error('[APNs] JWT error:', err);
+    return { ok: false, unregistered: false, status: 0, reason: 'JWT generation failed' };
+  }
 
-    const apnsPayload = {
-      aps: {
-        alert: {
-          title: payload.title,
-          body: payload.body,
-        },
-        sound: 'default',
-        badge: payload.badge ?? 1,
-        'mutable-content': 1,
-      },
-      url: payload.url || '/overzicht',
-    };
+  return new Promise((resolve) => {
+    let settled = false;
 
-    const response = await fetch(`${host}/3/device/${deviceToken}`, {
-      method: 'POST',
-      headers: {
-        'authorization': `bearer ${jwt}`,
-        'apns-topic': BUNDLE_ID,
-        'apns-push-type': 'alert',
-        'apns-priority': '10',
-        'apns-expiration': '0',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(apnsPayload),
+    const client = http2.connect(host);
+
+    client.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      console.error('[APNs] http2 connect error:', err);
+      client.destroy();
+      resolve({ ok: false, unregistered: false, status: 0, reason: err.message });
     });
 
-    if (response.ok) {
-      return true;
-    }
+    const req = client.request({
+      ':method': 'POST',
+      ':path': `/3/device/${deviceToken}`,
+      'authorization': `bearer ${jwt}`,
+      'apns-topic': BUNDLE_ID,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'apns-expiration': '0',
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body).toString(),
+    });
 
-    const errorBody = await response.text();
-    console.error(`[APNs] Failed (${response.status}):`, errorBody);
+    let statusCode = 0;
+    req.on('response', (headers) => {
+      statusCode = Number(headers[':status']);
+    });
 
-    // 410 Gone = token no longer valid
-    if (response.status === 410 || response.status === 400) {
-      return false; // Signal to remove this token
-    }
+    let responseBody = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk: string) => { responseBody += chunk; });
 
-    return false;
-  } catch (err) {
-    console.error('[APNs] Send error:', err);
-    return false;
-  }
+    req.on('end', () => {
+      if (settled) return;
+      settled = true;
+      client.close();
+
+      if (statusCode === 200) {
+        console.log('[APNs] Push sent successfully');
+        resolve({ ok: true });
+        return;
+      }
+
+      let reason = 'Unknown';
+      try {
+        const parsed = JSON.parse(responseBody);
+        reason = parsed.reason ?? reason;
+      } catch {
+        reason = responseBody || 'empty response';
+      }
+
+      console.error(`[APNs] Push failed: ${statusCode} — ${reason}`);
+
+      // 410 = device token no longer valid → caller should delete it
+      if (statusCode === 410) {
+        resolve({ ok: false, unregistered: true });
+      } else {
+        resolve({ ok: false, unregistered: false, status: statusCode, reason });
+      }
+    });
+
+    req.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      client.destroy();
+      console.error('[APNs] Request error:', err);
+      resolve({ ok: false, unregistered: false, status: 0, reason: err.message });
+    });
+
+    req.write(body);
+    req.end();
+  });
 }
 
 /**

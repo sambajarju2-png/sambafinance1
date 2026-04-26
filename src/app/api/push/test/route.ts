@@ -70,18 +70,19 @@ export async function POST() {
         .eq('platform', 'ios');
 
       for (const nt of (nativeTokens || [])) {
-        // Use sandbox for development builds, production for App Store
         const useSandbox = process.env.APNS_SANDBOX === 'true';
-        const ok = await sendApnsPush(nt.token, {
+        const result = await sendApnsPush(nt.token, {
           title: testPayload.title,
           body: testPayload.body,
           url: '/betalingen',
         }, useSandbox);
-        if (ok) {
+        if (result.ok) {
           nativeSent++;
+        } else if (result.unregistered) {
+          await supabase.from('native_push_tokens').delete().eq('token', nt.token);
+          errors.push('APNs: token expired — deleted');
         } else {
-          // Don't auto-delete token on failure — might be sandbox/production mismatch
-          errors.push('APNs: send failed (check sandbox vs production mode)');
+          errors.push(`APNs: ${result.status} ${result.reason}`);
         }
       }
     } else {

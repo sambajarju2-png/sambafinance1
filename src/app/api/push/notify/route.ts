@@ -91,15 +91,16 @@ export async function POST(req: NextRequest) {
           .eq('platform', 'ios');
 
         const useSandbox = process.env.APNS_SANDBOX === 'true';
-        const badgeCount = bills.length; // Total urgent bills = badge count
+        const badgeCount = bills.length;
         for (const nt of (nativeTokens || [])) {
-          const ok = await sendApnsPush(nt.token, { title, body, url: '/betalingen', badge: badgeCount }, useSandbox);
-          if (ok) {
+          const result = await sendApnsPush(nt.token, { title, body, url: '/betalingen', badge: badgeCount }, useSandbox);
+          if (result.ok) {
             nativeSent++;
-          } else {
-            // Remove invalid token
+          } else if (result.unregistered) {
             await supabase.from('native_push_tokens').delete().eq('token', nt.token);
           }
+          // Non-410 errors: log but keep token
+        }
         }
       }
     }
