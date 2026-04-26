@@ -42,7 +42,7 @@ export default function AnalyticsEntryCard() {
 
   return (
     <button
-      onClick={() => { haptic('light'); router.push('/analytics'); }}
+      onClick={() => { haptic('tap'); router.push('/analytics'); }}
       className="btn-press w-full rounded-card-lg border border-pw-blue/15 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 dark:from-blue-950/30 dark:to-indigo-950/15 p-4 text-left transition-all active:scale-[0.98]"
     >
       <div className="flex items-center justify-between">
