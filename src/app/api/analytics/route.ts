@@ -27,37 +27,74 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 });
     }
 
-    const months = parseInt(req.nextUrl.searchParams.get('months') || '6');
-
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data, error } = await supabase.rpc('get_analytics_bundle', {
-      p_user_id: user.id,
-      p_months: months,
-    });
-
-    if (error) {
-      console.error('[Analytics] RPC error:', error);
-      return NextResponse.json({ error: 'Analytics laden mislukt' }, { status: 500 });
-    }
-
-    // Check if user has an active bank connection
+    // Check bank connection
     const { count } = await supabase
       .from('bank_connections')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('status', 'linked');
 
-    const hasBankConnection = (count || 0) > 0;
+    const has_bank_connection = (count || 0) > 0;
+
+    // Fetch all analytics data in parallel
+    const [categoriesRes, cashflowRes, totalsRes, debtRes, uncatRes] = await Promise.all([
+      supabase
+        .from('analytics_monthly_categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('month', { ascending: false }),
+      supabase
+        .from('analytics_weekly_cashflow')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('week_start', { ascending: true })
+        .limit(12),
+      supabase
+        .from('analytics_monthly_totals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('month', { ascending: true }),
+      supabase
+        .from('bills')
+        .select('id, vendor, amount, category, status, due_date, escalation_stage')
+        .eq('user_id', user.id)
+        .neq('status', 'settled'),
+      supabase
+        .from('bank_transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('pw_category', null),
+    ]);
+
+    // Map monthly_totals to include debt_payments_cents as expected
+    const monthly_totals = (totalsRes.data || []).map(t => ({
+      month: t.month,
+      income_cents: t.income_cents,
+      expenses_cents: t.expenses_cents,
+      net_cents: t.net_cents,
+      debt_payments_cents: t.debt_payments_cents || 0,
+    }));
 
     return NextResponse.json({
-      ...(data || {}),
-      has_bank_connection: hasBankConnection,
-      // Map monthly_trends as monthly_totals for the entry card
-      monthly_totals: data?.monthly_trends || [],
+      has_bank_connection,
+      monthly_categories: categoriesRes.data || [],
+      weekly_cashflow: cashflowRes.data || [],
+      monthly_totals,
+      debt_summary: (debtRes.data || []).map(b => ({
+        id: b.id,
+        vendor: b.vendor,
+        amount: b.amount,
+        category: b.category,
+        status: b.status,
+        due_date: b.due_date,
+        escalation_stage: b.escalation_stage,
+      })),
+      uncategorized_count: uncatRes.count || 0,
     });
   } catch (error) {
     console.error('[Analytics] Error:', error);
