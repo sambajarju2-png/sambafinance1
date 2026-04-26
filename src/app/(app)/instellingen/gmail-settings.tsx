@@ -61,6 +61,30 @@ export default function GmailSettings() {
 
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
 
+  // ── Native: refresh accounts when SFSafariViewController closes ──
+  // After OAuth completes in the native browser, the callback loads inside
+  // SFSafariViewController (not the app's WKWebView). When the user dismisses
+  // it, we need to refetch accounts to pick up the newly connected account.
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    async function setupBrowserListener() {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
+        const { Browser } = await import('@capacitor/browser');
+        const handle = await Browser.addListener('browserFinished', () => {
+          // SFSafariViewController was dismissed — refetch accounts
+          setConnectingGmail(false);
+          setConnectingOutlook(false);
+          fetchAccounts();
+        });
+        cleanup = () => handle.remove();
+      } catch {}
+    }
+    setupBrowserListener();
+    return () => { if (cleanup) cleanup(); };
+  }, [fetchAccounts]);
+
   useEffect(() => {
     const status = searchParams.get('status');
     const outlook = searchParams.get('outlook');
@@ -107,8 +131,15 @@ export default function GmailSettings() {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
           const { Browser } = await import('@capacitor/browser');
+          // Set cookie so callback knows to return auto-close page
+          document.cookie = 'paywatch-native=1;path=/;max-age=600;samesite=lax';
           await Browser.open({ url, presentationStyle: 'popover' });
-          setConnectingGmail(false);
+          // When user closes browser, refresh accounts
+          const handler = await Browser.addListener('browserFinished', () => {
+            handler.remove();
+            setConnectingGmail(false);
+            fetchAccounts();
+          });
           return;
         }
       } catch {}
@@ -136,8 +167,13 @@ export default function GmailSettings() {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
           const { Browser } = await import('@capacitor/browser');
+          document.cookie = 'paywatch-native=1;path=/;max-age=600;samesite=lax';
           await Browser.open({ url, presentationStyle: 'popover' });
-          setConnectingOutlook(false);
+          const handler = await Browser.addListener('browserFinished', () => {
+            handler.remove();
+            setConnectingOutlook(false);
+            fetchAccounts();
+          });
           return;
         }
       } catch {}

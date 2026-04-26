@@ -14,6 +14,7 @@ import {
   exchangeCodeForTokens,
   getUserEmail,
 } from '@/lib/microsoft-graph';
+import { oauthRedirect } from '@/lib/oauth-redirect';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,14 +46,14 @@ export async function GET(request: NextRequest) {
   if (error) {
     await log('microsoft_error', `${error}: ${errorDescription || 'no description'}`);
     if (error === 'access_denied') {
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=cancelled`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=cancelled`);
     }
-    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
   }
 
   if (!code || !state) {
     await log('missing_params', `code=${code}, state=${state}`);
-    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
   }
 
   // Step 1: Validate state
@@ -67,13 +68,13 @@ export async function GET(request: NextRequest) {
 
     if (stateError || !stateRecord) {
       await log('1_validate_state_fail', `error=${stateError?.message || 'not found'}, code=${stateError?.code}`);
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     if (new Date(stateRecord.expires_at) < new Date()) {
       await log('1_state_expired', `expired_at=${stateRecord.expires_at}`);
       await supabase.from('outlook_oauth_states').delete().eq('state', state);
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     const userId = stateRecord.user_id;
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
       await log('2_token_exchange_ok', `has_access_token=${!!tokens.access_token}, has_refresh_token=${!!tokens.refresh_token}, expires_in=${tokens.expires_in}`);
     } catch (e: unknown) {
       await log('2_token_exchange_FAIL', e instanceof Error ? e.message : String(e));
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     // Step 3: Get email
@@ -104,12 +105,12 @@ export async function GET(request: NextRequest) {
       await log('3_get_email_ok', `email=${outlookEmail}`);
     } catch (e: unknown) {
       await log('3_get_email_FAIL', e instanceof Error ? e.message : String(e));
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     if (!outlookEmail) {
       await log('3_get_email_empty', 'getUserEmail returned empty');
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     // Step 4: Encrypt tokens
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       await log('4_encrypt_ok', `access_len=${encryptedAccessToken.length}, refresh_len=${encryptedRefreshToken.length}`);
     } catch (e: unknown) {
       await log('4_encrypt_FAIL', e instanceof Error ? e.message : String(e));
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     const tokenExpiresAt = Date.now() + tokens.expires_in * 1000;
@@ -150,21 +151,21 @@ export async function GET(request: NextRequest) {
 
       if (upsertError) {
         await log('5_upsert_FAIL', `${upsertError.message} (code: ${upsertError.code}, details: ${upsertError.details})`);
-        return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+        return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
       }
       
       await log('5_upsert_ok', 'account saved');
     } catch (e: unknown) {
       await log('5_upsert_CATCH', e instanceof Error ? e.message : String(e));
-      return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+      return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
     }
 
     await log('6_SUCCESS', `${outlookEmail} connected for user ${userId}`);
-    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=connected`);
+    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=connected`);
 
   } catch (e: unknown) {
     // Top-level catch — if ANYTHING uncaught happens
     await log('TOP_LEVEL_CATCH', e instanceof Error ? `${e.message}\n${e.stack}` : String(e));
-    return NextResponse.redirect(`${settingsUrl}?tab=sync&outlook=error`);
+    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
   }
 }

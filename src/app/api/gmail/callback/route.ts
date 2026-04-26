@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { encrypt } from '@/lib/encryption';
+import { oauthRedirect } from '@/lib/oauth-redirect';
 
 /**
  * GET /api/gmail/callback
@@ -14,11 +15,11 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
 
   if (error) {
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=denied`);
+    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=denied`);
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=missing_params`);
+    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=missing_params`);
   }
 
   try {
@@ -32,12 +33,12 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (stateError || !stateRow) {
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=invalid_state`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=invalid_state`);
     }
 
     if (new Date(stateRow.expires_at) < new Date()) {
       await supabase.from('gmail_oauth_states').delete().eq('state', state);
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=expired`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=expired`);
     }
 
     const userId = stateRow.user_id;
@@ -60,14 +61,14 @@ export async function GET(req: NextRequest) {
     if (!tokenResponse.ok) {
       const errBody = await tokenResponse.text();
       console.error('Token exchange failed:', errBody);
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=token_exchange`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=token_exchange`);
     }
 
     const tokens = await tokenResponse.json();
     const { access_token, refresh_token, expires_in } = tokens;
 
     if (!access_token || !refresh_token) {
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=missing_tokens`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=missing_tokens`);
     }
 
     // Get Gmail email
@@ -103,12 +104,12 @@ export async function GET(req: NextRequest) {
 
     if (upsertError) {
       console.error('Failed to store Gmail tokens:', upsertError);
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`);
+      return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`);
     }
 
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=connected`);
+    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=connected`);
   } catch (err) {
     console.error('Gmail callback error:', err);
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=gmail&status=error&reason=unknown`);
+    return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=unknown`);
   }
 }
