@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, TrendingUp, TrendingDown, AlertTriangle, Loader2,
   ChevronLeft, ChevronRight, Wallet, ArrowDownUp, BarChart3, Target,
+  X, Home, Receipt, ShoppingCart, UtensilsCrossed, Train, ShoppingBag,
+  Music, HeartPulse, Repeat, Briefcase, Landmark, Coins, Banknote, HelpCircle, Check,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -13,7 +15,7 @@ import {
   AreaChart, Area,
 } from 'recharts';
 import { formatCents } from '@/lib/bills';
-import { getCategoryLabel, getCategoryColor, DEBT_CATEGORY_IDS, FIXED_COST_IDS } from '@/lib/analytics/categories';
+import { getCategoryLabel, getCategoryColor, CATEGORIES, DEBT_CATEGORY_IDS, FIXED_COST_IDS } from '@/lib/analytics/categories';
 import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem, TransactionItem, SubscriptionItem } from '@/lib/analytics/types';
 import { haptic } from '@/lib/capacitor';
 
@@ -35,6 +37,18 @@ const CHART_COLORS = [
   '#0891B2', '#CA8A04', '#DC2626', '#6366F1', '#94A3B8',
 ];
 
+// Lucide icon components mapped by category
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  wonen: Home, vaste_lasten: Receipt, boodschappen: ShoppingCart,
+  eten_drinken: UtensilsCrossed, vervoer: Train, winkelen: ShoppingBag,
+  vrije_tijd: Music, zorg: HeartPulse, abonnementen: Repeat,
+  schuld: AlertTriangle, salaris: Briefcase, overheid: Landmark,
+  overig_inkomen: Coins, pin_opname: Banknote, onbekend: HelpCircle,
+};
+
+// Categories available for user correction (exclude internal)
+const CORRECTABLE_CATEGORIES = CATEGORIES.filter(c => c.id !== 'eigen_rekening');
+
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
@@ -55,6 +69,8 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [correcting, setCorrecting] = useState<TransactionItem | null>(null);
+  const [correctionLoading, setCorrectionLoading] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,6 +93,41 @@ export default function AnalyticsPage() {
     }
     load();
   }, []);
+
+  // Reload analytics data after correction
+  async function reloadData() {
+    try {
+      const res = await fetch('/api/analytics');
+      if (res.ok) setData(await res.json());
+    } catch { /* silent */ }
+  }
+
+  // Handle category correction
+  async function handleCorrection(category: string, subCategory: string | null, applyToAll: boolean) {
+    if (!correcting) return;
+    setCorrectionLoading(true);
+    try {
+      const res = await fetch('/api/analytics/correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_id: correcting.id,
+          category,
+          sub_category: subCategory,
+          apply_to_all: applyToAll,
+        }),
+      });
+      if (res.ok) {
+        haptic('success');
+        setCorrecting(null);
+        await reloadData();
+      }
+    } catch (err) {
+      console.error('Correction failed:', err);
+    } finally {
+      setCorrectionLoading(false);
+    }
+  }
 
   // Available months for navigation
   const months = useMemo(() => {
@@ -243,9 +294,19 @@ export default function AnalyticsPage() {
         {tab === 'geldstroom' && <TabGeldstroom data={data.weekly_cashflow} />}
         {tab === 'trend' && <TabTrend data={data.monthly_totals} />}
         {tab === 'schuld' && <TabSchuld debts={data.debt_summary} totals={data.monthly_totals} />}
-        {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} />}
+        {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} onTap={(tx) => { setCorrecting(tx); haptic('tap'); }} />}
         {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} />}
       </div>
+
+      {/* Category correction sheet */}
+      {correcting && (
+        <CategoryCorrectionSheet
+          transaction={correcting}
+          loading={correctionLoading}
+          onSelect={handleCorrection}
+          onClose={() => setCorrecting(null)}
+        />
+      )}
     </div>
   );
 }
@@ -615,7 +676,7 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
 
 // ─── Tab: Transacties ────────────────────────────────────────
 
-function TabTransacties({ transactions, selectedMonth }: { transactions: TransactionItem[]; selectedMonth: string }) {
+function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: TransactionItem[]; selectedMonth: string; onTap?: (tx: TransactionItem) => void }) {
   // Filter by selected month
   const filtered = transactions.filter(t => {
     if (!selectedMonth) return true;
@@ -649,7 +710,7 @@ function TabTransacties({ transactions, selectedMonth }: { transactions: Transac
             </p>
             <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
               {grouped[date].map(tx => (
-                <div key={tx.id} className="flex items-center justify-between py-3 px-3.5 active:bg-pw-bg/50 transition-colors">
+                <div key={tx.id} onClick={() => onTap?.(tx)} className="flex items-center justify-between py-3 px-3.5 active:bg-pw-bg/50 transition-colors cursor-pointer">
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     <div
                       className="h-2.5 w-2.5 rounded-full flex-shrink-0"
@@ -775,6 +836,92 @@ function TabAbonnementen({ subscriptions }: { subscriptions: SubscriptionItem[] 
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Category Correction Sheet ───────────────────────────────
+
+function CategoryCorrectionSheet({
+  transaction, loading, onSelect, onClose,
+}: {
+  transaction: TransactionItem;
+  loading: boolean;
+  onSelect: (category: string, subCategory: string | null, applyToAll: boolean) => void;
+  onClose: () => void;
+}) {
+  const [applyToAll, setApplyToAll] = useState(true);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
+
+      {/* Sheet */}
+      <div className="fixed bottom-0 left-0 right-0 z-[101] rounded-t-[20px] bg-pw-surface border-t border-pw-border max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200 safe-pb">
+        {/* Handle + header */}
+        <div className="sticky top-0 bg-pw-surface z-10 pt-3 pb-2 px-4 border-b border-pw-border/50">
+          <div className="mx-auto h-1 w-10 rounded-full bg-pw-border mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold text-pw-text truncate">{transaction.display_name}</p>
+              <p className="text-[12px] text-pw-muted mt-0.5">
+                {formatCents(transaction.amount)} &middot; {getCategoryLabel(transaction.pw_category)}
+              </p>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-pw-bg ml-2">
+              <X className="h-5 w-5 text-pw-muted" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+
+        {/* Category grid */}
+        <div className="px-4 py-4">
+          <p className="text-[11px] font-semibold text-pw-muted uppercase tracking-wider mb-3">Kies categorie</p>
+          <div className="grid grid-cols-3 gap-2">
+            {CORRECTABLE_CATEGORIES.map(cat => {
+              const Icon = ICON_MAP[cat.id] || HelpCircle;
+              const isActive = transaction.pw_category === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  disabled={loading}
+                  onClick={() => onSelect(cat.id, null, applyToAll)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-[12px] border transition-all ${
+                    isActive
+                      ? 'border-pw-blue bg-blue-50 dark:bg-blue-950/30'
+                      : 'border-pw-border hover:border-pw-blue/40 active:scale-95'
+                  } ${loading ? 'opacity-50' : ''}`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: getCategoryColor(cat.id) }} />
+                  <span className="text-[10px] font-medium text-pw-text leading-tight text-center">{cat.nl}</span>
+                  {isActive && <Check className="h-3 w-3 text-pw-blue" strokeWidth={2} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Apply to all toggle */}
+        {transaction.creditor_name && (
+          <div className="px-4 pb-5 pt-1">
+            <label className="flex items-center gap-3 p-3 rounded-[12px] border border-pw-border bg-pw-bg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={applyToAll}
+                onChange={e => setApplyToAll(e.target.checked)}
+                className="h-4 w-4 rounded border-pw-border text-pw-blue focus:ring-pw-blue"
+              />
+              <div>
+                <p className="text-[12px] font-medium text-pw-text">Pas toe op alle betalingen</p>
+                <p className="text-[10px] text-pw-muted">
+                  Ook eerdere en toekomstige betalingen van {transaction.creditor_name}
+                </p>
+              </div>
+            </label>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
