@@ -167,6 +167,6 @@ export async function GET(request: NextRequest) {
   } catch (e: unknown) {
     // Top-level catch — if ANYTHING uncaught happens
     await log('TOP_LEVEL_CATCH', e instanceof Error ? `${e.message}\n${e.stack}` : String(e));
-    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`, isNative);
+    return oauthRedirect(request, `${settingsUrl}?tab=sync&outlook=error`);
   }
 }
