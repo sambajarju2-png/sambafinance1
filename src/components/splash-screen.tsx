@@ -11,6 +11,12 @@ export default function SplashScreen() {
       setVisible(false);
       return;
     }
+    // Skip web splash on native — Capacitor splash already shown
+    if (document.documentElement.classList.contains('native-app')) {
+      setVisible(false);
+      sessionStorage.setItem('pw-splash-shown', '1');
+      return;
+    }
 
     const fadeTimer = setTimeout(() => setFadeOut(true), 1800);
     const hideTimer = setTimeout(() => {

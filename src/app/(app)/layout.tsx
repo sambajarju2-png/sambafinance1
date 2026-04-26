@@ -7,6 +7,7 @@ import AppTour from '@/components/app-tour';
 import FeedbackPopup from '@/components/feedback-popup';
 import PushPermissionPrompt from '@/components/push-permission-prompt';
 import PwaInstallDrawer from '@/components/pwa/install-prompt';
+import OfflineDetector from '@/components/offline-detector';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FeedbackPopup />
       <PwaInstallDrawer />
       <PushPermissionPrompt />
+      <OfflineDetector />
     </div>
   );
 }
