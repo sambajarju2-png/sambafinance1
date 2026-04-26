@@ -113,15 +113,21 @@ export function useNativeInit() {
         } catch {}
 
         // ─── Push notifications ───────────────────────────────
+        // Only REGISTER if already granted. Don't auto-request here —
+        // the push-permission-prompt banner handles first-time requests
+        // with proper context so users understand WHY they should allow.
         try {
           const { PushNotifications } = await import('@capacitor/push-notifications');
           
           const permResult = await PushNotifications.checkPermissions();
-          if (permResult.receive !== 'granted') {
-            await PushNotifications.requestPermissions();
+          
+          if (permResult.receive === 'granted') {
+            // Already granted — register and get token
+            await PushNotifications.register();
           }
-
-          await PushNotifications.register();
+          // If 'prompt' or 'denied' — do nothing here.
+          // The floating banner (push-permission-prompt.tsx) or
+          // settings page (push-permission.tsx) will handle the request.
 
           PushNotifications.addListener('registration', (token) => {
             console.log('[NativePush] Token:', token.value);
