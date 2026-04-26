@@ -31,6 +31,7 @@
     "@vercel/functions": "^3.4.3",
     "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
     "jose": "^6.2.2",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.469.0",

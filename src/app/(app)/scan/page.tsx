@@ -14,13 +14,34 @@ import {
   Link as LinkIcon,
   Sparkles,
   Globe,
+  Images,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
 } from 'lucide-react';
 import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
 import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
 import { detectGovBrand } from '@/lib/gov-brands';
 import QRScanner from '@/components/qr-scanner';
 
-type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching';
+type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching' | 'batch-processing' | 'batch-review' | 'batch-saving';
+
+interface BatchItem {
+  id: string;
+  fileName: string;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  extraction: {
+    vendor: string;
+    amount: string;
+    dueDate: string;
+    category: string;
+    iban: string;
+    reference: string;
+    escalationStage: string;
+  } | null;
+  error?: string;
+  expanded: boolean;
+}
 
 export default function CameraScanPage() {
   const t = useTranslations('cameraScan');
@@ -45,6 +66,8 @@ export default function CameraScanPage() {
   const [aiExtraction, setAiExtraction] = useState<Record<string, unknown> | null>(null);
   const [fileQueue, setFileQueue] = useState<File[]>([]);
   const [queueProgress, setQueueProgress] = useState({ current: 0, total: 0 });
+  const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Handle QR code scan result
   async function handleQRResult(data: string) {
@@ -136,22 +159,69 @@ export default function CameraScanPage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Limit to 5 files
     const fileList = Array.from(files).slice(0, 5);
-    const total = fileList.length;
 
-    // Queue remaining files (process first one now)
-    if (total > 1) {
-      setFileQueue(fileList.slice(1));
-      setQueueProgress({ current: 1, total });
+    if (fileList.length > 1) {
+      // BATCH MODE: process all images, then show batch review
+      const items: BatchItem[] = fileList.map((f, i) => ({
+        id: `batch-${i}-${Date.now()}`,
+        fileName: f.name,
+        status: 'pending' as const,
+        extraction: null,
+        expanded: i === 0,
+      }));
+      setBatchItems(items);
+      setBatchProgress({ current: 0, total: fileList.length });
+      setStep('batch-processing');
+
+      // Process all files sequentially
+      for (let i = 0; i < fileList.length; i++) {
+        setBatchProgress({ current: i + 1, total: fileList.length });
+        setBatchItems(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: 'processing' } : item
+        ));
+
+        try {
+          const compressed = await compressImage(fileList[i], 1600, 0.7);
+          const res = await fetch('/api/scan/camera', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressed.base64, mime_type: compressed.mimeType }),
+          });
+
+          if (!res.ok) throw new Error('Extraction failed');
+          const { extraction } = await res.json();
+
+          setBatchItems(prev => prev.map((item, idx) =>
+            idx === i ? {
+              ...item,
+              status: 'done',
+              extraction: {
+                vendor: extraction.vendor || '',
+                amount: extraction.amount_cents ? (extraction.amount_cents / 100).toFixed(2).replace('.', ',') : '',
+                dueDate: extraction.due_date || '',
+                category: extraction.category_hint || 'overig',
+                iban: extraction.iban || '',
+                reference: extraction.reference || '',
+                escalationStage: extraction.escalation_stage || 'factuur',
+              },
+            } : item
+          ));
+        } catch {
+          setBatchItems(prev => prev.map((item, idx) =>
+            idx === i ? { ...item, status: 'error', error: 'Extractie mislukt' } : item
+          ));
+        }
+      }
+
+      setStep('batch-review');
     } else {
+      // SINGLE FILE: keep existing flow
       setFileQueue([]);
       setQueueProgress({ current: 0, total: 0 });
+      await processFile(fileList[0]);
     }
 
-    // Process first file
-    await processFile(fileList[0]);
-    // Reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -266,6 +336,64 @@ export default function CameraScanPage() {
     setDueDateEstimated(false);
     setQrLinkCaptured(false);
     setAiExtraction(null);
+    setBatchItems([]);
+  }
+
+  function updateBatchItem(id: string, field: string, value: string) {
+    setBatchItems(prev => prev.map(item =>
+      item.id === id && item.extraction
+        ? { ...item, extraction: { ...item.extraction, [field]: value } }
+        : item
+    ));
+  }
+
+  function removeBatchItem(id: string) {
+    setBatchItems(prev => prev.filter(item => item.id !== id));
+  }
+
+  function toggleBatchExpand(id: string) {
+    setBatchItems(prev => prev.map(item =>
+      item.id === id ? { ...item, expanded: !item.expanded } : item
+    ));
+  }
+
+  async function handleBatchSave() {
+    const saveable = batchItems.filter(item => item.status === 'done' && item.extraction);
+    if (saveable.length === 0) return;
+
+    setStep('batch-saving');
+    let savedCount = 0;
+
+    for (const item of saveable) {
+      if (!item.extraction) continue;
+      const amountCents = parseToCents(item.extraction.amount);
+      if (!amountCents || !item.extraction.vendor.trim() || !item.extraction.dueDate) continue;
+
+      try {
+        const res = await fetch('/api/bills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vendor: item.extraction.vendor.trim(),
+            amount_cents: amountCents,
+            due_date: item.extraction.dueDate,
+            category: item.extraction.category,
+            iban: item.extraction.iban || null,
+            reference: item.extraction.reference || null,
+            escalation_stage: item.extraction.escalationStage,
+            source: 'camera_scan',
+          }),
+        });
+        if (res.ok) savedCount++;
+      } catch { /* continue with next */ }
+    }
+
+    if (savedCount > 0) {
+      router.push('/betalingen');
+    } else {
+      setError('Geen rekeningen opgeslagen. Controleer de gegevens.');
+      setStep('batch-review');
+    }
   }
 
   return (
@@ -559,6 +687,188 @@ export default function CameraScanPage() {
               <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
               {t('tryAgain')}
             </button>
+          </div>
+        )}
+
+        {/* STEP: BATCH PROCESSING */}
+        {step === 'batch-processing' && (
+          <div className="flex flex-col items-center py-12 text-center">
+            <div className="relative mb-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-pw-blue/10">
+                <Images className="h-8 w-8 text-pw-blue" strokeWidth={1.5} />
+              </div>
+              <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-pw-blue">
+                <Loader2 className="h-4 w-4 animate-spin text-white" strokeWidth={2} />
+              </div>
+            </div>
+            <h2 className="text-[16px] font-bold text-pw-navy">
+              {batchProgress.current} / {batchProgress.total} foto&apos;s verwerken...
+            </h2>
+            <p className="mt-2 text-[13px] text-pw-muted">AI leest de gegevens uit elke foto</p>
+
+            {/* Progress dots */}
+            <div className="mt-6 flex items-center gap-2">
+              {batchItems.map((item) => (
+                <div key={item.id} className={`h-2.5 w-2.5 rounded-full transition-all ${
+                  item.status === 'done' ? 'bg-pw-green scale-110' :
+                  item.status === 'processing' ? 'bg-pw-blue animate-pulse scale-125' :
+                  item.status === 'error' ? 'bg-pw-red' :
+                  'bg-pw-border'
+                }`} />
+              ))}
+            </div>
+
+            {/* File names */}
+            <div className="mt-4 space-y-1">
+              {batchItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-2 text-[11px]">
+                  {item.status === 'done' && <Check className="h-3 w-3 text-pw-green" strokeWidth={2} />}
+                  {item.status === 'processing' && <Loader2 className="h-3 w-3 animate-spin text-pw-blue" strokeWidth={2} />}
+                  {item.status === 'error' && <AlertCircle className="h-3 w-3 text-pw-red" strokeWidth={2} />}
+                  {item.status === 'pending' && <div className="h-3 w-3 rounded-full border border-pw-border" />}
+                  <span className={`truncate max-w-[200px] ${
+                    item.status === 'processing' ? 'text-pw-blue font-semibold' : 'text-pw-muted'
+                  }`}>{item.fileName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* STEP: BATCH REVIEW */}
+        {(step === 'batch-review' || step === 'batch-saving') && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Images className="h-5 w-5 text-pw-blue" strokeWidth={1.5} />
+                <h2 className="text-[16px] font-bold text-pw-navy">
+                  {batchItems.filter(i => i.status === 'done').length} rekeningen gevonden
+                </h2>
+              </div>
+              <span className="text-[11px] text-pw-muted">
+                {batchItems.filter(i => i.status === 'error').length > 0 &&
+                  `${batchItems.filter(i => i.status === 'error').length} mislukt`
+                }
+              </span>
+            </div>
+
+            <p className="text-[12px] text-pw-muted">Controleer de gegevens en pas aan indien nodig</p>
+
+            {/* Batch items */}
+            <div className="space-y-2">
+              {batchItems.filter(i => i.status === 'done' && i.extraction).map((item) => (
+                <div key={item.id} className="rounded-card border border-pw-border bg-pw-surface overflow-hidden">
+                  {/* Collapsed header */}
+                  <button
+                    onClick={() => toggleBatchExpand(item.id)}
+                    className="flex w-full items-center justify-between px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Check className="h-4 w-4 flex-shrink-0 text-pw-green" strokeWidth={2} />
+                      <div className="text-left min-w-0">
+                        <p className="text-[13px] font-semibold text-pw-text truncate">
+                          {item.extraction!.vendor || 'Onbekend'}
+                        </p>
+                        <p className="text-[11px] text-pw-muted">{item.extraction!.category}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[14px] font-bold text-pw-navy">
+                        {item.extraction!.amount ? `€ ${item.extraction!.amount}` : '—'}
+                      </span>
+                      {item.expanded
+                        ? <ChevronUp className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
+                        : <ChevronDown className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
+                      }
+                    </div>
+                  </button>
+
+                  {/* Expanded edit form */}
+                  {item.expanded && (
+                    <div className="border-t border-pw-border px-4 py-3 space-y-3">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Bedrijf</label>
+                        <input type="text" value={item.extraction!.vendor}
+                          onChange={(e) => updateBatchItem(item.id, 'vendor', e.target.value)}
+                          className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Bedrag</label>
+                          <input type="text" inputMode="decimal" value={item.extraction!.amount}
+                            onChange={(e) => updateBatchItem(item.id, 'amount', e.target.value)}
+                            className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Vervaldatum</label>
+                          <input type="date" value={item.extraction!.dueDate}
+                            onChange={(e) => updateBatchItem(item.id, 'dueDate', e.target.value)}
+                            className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">Categorie</label>
+                          <select value={item.extraction!.category}
+                            onChange={(e) => updateBatchItem(item.id, 'category', e.target.value)}
+                            className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none">
+                            {BILL_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[11px] font-semibold text-pw-muted">IBAN</label>
+                          <input type="text" value={item.extraction!.iban}
+                            onChange={(e) => updateBatchItem(item.id, 'iban', e.target.value.toUpperCase())}
+                            className="w-full rounded-input border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text focus:border-pw-blue focus:outline-none" />
+                        </div>
+                      </div>
+                      <button onClick={() => removeBatchItem(item.id)}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-pw-red mt-1">
+                        <Trash2 className="h-3 w-3" strokeWidth={1.5} />
+                        Verwijderen
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Error items */}
+              {batchItems.filter(i => i.status === 'error').map((item) => (
+                <div key={item.id} className="flex items-center gap-3 rounded-card border border-pw-red/20 bg-red-50/50 px-4 py-3">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 text-pw-red" strokeWidth={1.5} />
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-pw-red truncate">{item.fileName}</p>
+                    <p className="text-[10px] text-pw-red/70">{item.error || 'Extractie mislukt'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-input border border-red-200 bg-red-50 px-3 py-2.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-pw-red" strokeWidth={1.5} />
+                <p className="text-label text-pw-red">{error}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button onClick={handleRetry} disabled={step === 'batch-saving'}
+                className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text disabled:opacity-50">
+                <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
+                Opnieuw
+              </button>
+              <button onClick={handleBatchSave}
+                disabled={step === 'batch-saving' || batchItems.filter(i => i.status === 'done').length === 0}
+                className="btn-press flex flex-1 items-center justify-center gap-2 rounded-button bg-pw-blue px-4 py-3 text-[13px] font-semibold text-white disabled:opacity-50">
+                {step === 'batch-saving' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                ) : (
+                  <Check className="h-4 w-4" strokeWidth={1.5} />
+                )}
+                {batchItems.filter(i => i.status === 'done').length} opslaan
+              </button>
+            </div>
           </div>
         )}
       </main>

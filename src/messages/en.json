@@ -447,7 +447,20 @@
     "scanQrOption": "Scan QR code",
     "scanQrDesc": "Scan the payment QR on your invoice. We'll fetch the details automatically.",
     "mostBillsQr": "Most Dutch invoices have a payment QR code",
-    "fast": "FAST"
+    "fast": "FAST",
+    "batchProcessing": "Analyzing bills...",
+    "batchProcessingHint": "AI is extracting data from your photos",
+    "batchOf": "of",
+    "batchReviewTitle": "Review results",
+    "batchReviewDesc": "Check and adjust the extracted details",
+    "batchSaveAll": "Save all",
+    "batchSaving": "Saving...",
+    "batchExtracted": "Extracted",
+    "batchFailed": "Extraction failed",
+    "batchPending": "Waiting...",
+    "batchRemove": "Remove",
+    "batchSuccessCount": "bills recognized",
+    "batchErrorCount": "failed"
   },
   "draftLetter": {
     "title": "Draft letter",
@@ -612,7 +625,8 @@
         "desc": "First mood check done",
         "howTo": "Log your mood via the mood tracker"
       }
-    }
+    },
+    "share": "Share"
   },
   "helpResources": {
     "helpTitle": "Debt help",
@@ -802,5 +816,40 @@
     "cancelConfirm": "Are you sure you want to cancel this payment plan?",
     "completed": "Plan completed!",
     "uploadProof": "Upload proof of payment"
+  },
+  "recurring": {
+    "title": "Expected bills",
+    "analyze": "Analyze",
+    "noPatternsYet": "No patterns found yet. Scan more bills to see predictions.",
+    "runFirstAnalysis": "Run first analysis",
+    "expectedNext60": "Expected next 60 days",
+    "weekly": "Weekly",
+    "biWeekly": "Bi-weekly",
+    "monthly": "Monthly",
+    "biMonthly": "Bi-monthly",
+    "quarterly": "Quarterly",
+    "semiAnnual": "Semi-annual",
+    "yearly": "Yearly",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "morePatterns": "more patterns"
+  },
+  "diploma": {
+    "certifiedBy": "Certified by",
+    "awardedTo": "Awarded to",
+    "anonymousUser": "PayWatch User",
+    "titleMaster": "Financial Master",
+    "titleExpert": "Financial Expert",
+    "titleRising": "Rising Star",
+    "titleStarter": "Starter",
+    "badges": "Badges",
+    "billsPaid": "Bills paid",
+    "bestStreak": "Best streak",
+    "saved": "Saved",
+    "since": "Member since",
+    "share": "Share",
+    "shareTitle": "My PayWatch Certificate",
+    "shareText": "I earned {count} of {total} badges on PayWatch!"
   }
 }

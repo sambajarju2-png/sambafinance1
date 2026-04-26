@@ -384,7 +384,20 @@
     "reference": "Kenmerk",
     "save": "Opslaan",
     "paymentUrl": "Betaallink (optioneel)",
-    "paymentUrlHint": "iDEAL of betaalpagina URL"
+    "paymentUrlHint": "iDEAL of betaalpagina URL",
+    "batchProcessing": "Rekeningen analyseren...",
+    "batchProcessingHint": "AI extraheert gegevens uit je foto's",
+    "batchOf": "van",
+    "batchReviewTitle": "Controleer resultaten",
+    "batchReviewDesc": "Bekijk en pas de geëxtraheerde gegevens aan",
+    "batchSaveAll": "Alles opslaan",
+    "batchSaving": "Opslaan...",
+    "batchExtracted": "Geëxtraheerd",
+    "batchFailed": "Extractie mislukt",
+    "batchPending": "Wachten...",
+    "batchRemove": "Verwijderen",
+    "batchSuccessCount": "rekeningen herkend",
+    "batchErrorCount": "mislukt"
   },
   "draftLetter": {
     "title": "Brief opstellen",
@@ -549,7 +562,8 @@
         "desc": "Je eerste humeurcheck gedaan",
         "howTo": "Log je humeur via de mood tracker"
       }
-    }
+    },
+    "share": "Deel"
   },
   "helpResources": {
     "helpTitle": "Hulp bij schulden",
@@ -661,5 +675,40 @@
     "goToDashboard": "Bekijk dashboard",
     "invalidCode": "Uitnodiging niet gevonden of verlopen",
     "loginFirst": "Log eerst in om de uitnodiging te accepteren"
+  },
+  "recurring": {
+    "title": "Verwachte rekeningen",
+    "analyze": "Analyseer",
+    "noPatternsYet": "Nog geen patronen gevonden. Scan meer rekeningen om voorspellingen te zien.",
+    "runFirstAnalysis": "Start eerste analyse",
+    "expectedNext60": "Verwacht komende 60 dagen",
+    "weekly": "Wekelijks",
+    "biWeekly": "Tweewekelijks",
+    "monthly": "Maandelijks",
+    "biMonthly": "Tweemaandelijks",
+    "quarterly": "Per kwartaal",
+    "semiAnnual": "Halfjaarlijks",
+    "yearly": "Jaarlijks",
+    "overdue": "Te laat",
+    "today": "Vandaag",
+    "tomorrow": "Morgen",
+    "morePatterns": "meer patronen"
+  },
+  "diploma": {
+    "certifiedBy": "Certificaat van",
+    "awardedTo": "Uitgereikt aan",
+    "anonymousUser": "PayWatch Gebruiker",
+    "titleMaster": "Financieel Meester",
+    "titleExpert": "Financieel Expert",
+    "titleRising": "Opkomend Talent",
+    "titleStarter": "Starter",
+    "badges": "Badges",
+    "billsPaid": "Betaald",
+    "bestStreak": "Beste reeks",
+    "saved": "Bespaard",
+    "since": "Lid sinds",
+    "share": "Deel",
+    "shareTitle": "Mijn PayWatch Certificaat",
+    "shareText": "Ik heb {count} van de {total} badges behaald op PayWatch!"
   }
 }

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Trophy, X, ChevronRight } from 'lucide-react';
+import { Trophy, X, ChevronRight, Share2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const AchievementDiploma = dynamic(() => import('@/components/achievement-diploma'), { ssr: false });
 
 interface Achievement {
   key: string;
@@ -17,6 +20,7 @@ export default function AchievementsDisplay() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Achievement | null>(null);
+  const [showDiploma, setShowDiploma] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -52,9 +56,18 @@ export default function AchievementsDisplay() {
               <Trophy className="h-5 w-5 text-amber-500" strokeWidth={1.5} />
               <p className="text-[16px] font-bold text-pw-navy">{t('title')}</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1">
-              <span className="text-[13px] font-bold text-amber-600">{unlockedCount}</span>
-              <span className="text-[11px] text-amber-500">/ {achievements.length}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDiploma(true)}
+                className="flex items-center gap-1 rounded-full bg-pw-blue/10 px-2.5 py-1 text-[11px] font-semibold text-pw-blue"
+              >
+                <Share2 className="h-3 w-3" strokeWidth={2} />
+                {t('share')}
+              </button>
+              <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1">
+                <span className="text-[13px] font-bold text-amber-600">{unlockedCount}</span>
+                <span className="text-[11px] text-amber-500">/ {achievements.length}</span>
+              </div>
             </div>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-pw-border/50">
@@ -138,6 +151,8 @@ export default function AchievementsDisplay() {
           </div>
         </>
       )}
+
+      <AchievementDiploma open={showDiploma} onClose={() => setShowDiploma(false)} />
     </>
   );
 }

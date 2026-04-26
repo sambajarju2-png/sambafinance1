@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import MoodTracker from '@/components/mood-tracker';
 import AchievementsDisplay from '@/components/achievements';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
+import RecurringPredictions from '@/components/recurring-predictions';
 import MetricCard from '@/components/metric-card';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 import MatchCards from '@/components/bank/match-cards';
@@ -241,6 +242,9 @@ export default function OverzichtPage() {
               </div>
             </div>
           )}
+
+          {/* Recurring predictions */}
+          {!loading && bills.length >= 2 && <RecurringPredictions />}
 
           {/* Achievements */}
           {modules.home_rewards && <AchievementsDisplay />}
