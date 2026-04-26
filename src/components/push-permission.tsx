@@ -92,7 +92,9 @@ export default function PushPermission() {
     setSaving(true);
     try {
       if (isNative) {
-        setStatus('denied');
+        // Don't set to 'denied' — that's only for iOS Settings denial
+        // Set to 'prompt' so user can tap Inschakelen again
+        setStatus('prompt');
         await fetch('/api/settings/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

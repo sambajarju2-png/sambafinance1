@@ -105,8 +105,6 @@ function SettingsContent() {
         <h2 className="text-heading text-pw-navy">{t('notifications')}</h2>
         <NotificationPreferences />
         <PushPermission />
-        <TestNotification />
-        <TestEmailButtons />
         <AdminTestPanel />
       </div>
     );
