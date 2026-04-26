@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const has_bank_connection = (count || 0) > 0;
 
     // Fetch all analytics data in parallel
-    const [categoriesRes, cashflowRes, totalsRes, debtRes, uncatRes] = await Promise.all([
+    const [categoriesRes, cashflowRes, totalsRes, debtRes, uncatRes, txRes, subsRes] = await Promise.all([
       supabase
         .from('analytics_monthly_categories')
         .select('*')
@@ -69,6 +69,21 @@ export async function GET(req: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .is('pw_category', null),
+      // Recent transactions for Transacties tab
+      supabase
+        .from('bank_transactions')
+        .select('id, booking_date, amount, creditor_name, debtor_name, merchant_clean_name, pw_category, pw_sub_category, category_source, category_confidence, creditor_iban, is_internal_transfer')
+        .eq('user_id', user.id)
+        .or('is_internal_transfer.eq.false,is_internal_transfer.is.null')
+        .order('booking_date', { ascending: false })
+        .limit(50),
+      // Detected subscriptions
+      supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('annual_cost', { ascending: false }),
     ]);
 
     // Map monthly_totals to include debt_payments_cents as expected
@@ -95,6 +110,31 @@ export async function GET(req: NextRequest) {
         escalation_stage: b.escalation_stage,
       })),
       uncategorized_count: uncatRes.count || 0,
+      transactions: (txRes.data || []).map(t => ({
+        id: t.id,
+        booking_date: t.booking_date,
+        amount: t.amount,
+        display_name: t.merchant_clean_name || t.creditor_name || t.debtor_name || 'Onbekend',
+        creditor_name: t.creditor_name,
+        pw_category: t.pw_category || 'onbekend',
+        pw_sub_category: t.pw_sub_category,
+        category_source: t.category_source,
+        category_confidence: t.category_confidence,
+        creditor_iban: t.creditor_iban,
+      })),
+      subscriptions: (subsRes.data || []).map(s => ({
+        id: s.id,
+        creditor_name: s.creditor_name,
+        merchant_clean_name: s.merchant_clean_name,
+        pw_category: s.pw_category,
+        frequency: s.frequency,
+        avg_amount: s.avg_amount,
+        annual_cost: s.annual_cost,
+        occurrences: s.occurrences,
+        confidence: s.confidence,
+        last_paid: s.last_paid,
+        next_expected: s.next_expected,
+      })),
     });
   } catch (error) {
     console.error('[Analytics] Error:', error);

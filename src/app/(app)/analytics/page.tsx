@@ -14,10 +14,10 @@ import {
 } from 'recharts';
 import { formatCents } from '@/lib/bills';
 import { getCategoryLabel, getCategoryColor, DEBT_CATEGORY_IDS, FIXED_COST_IDS } from '@/lib/analytics/categories';
-import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem } from '@/lib/analytics/types';
+import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem, TransactionItem, SubscriptionItem } from '@/lib/analytics/types';
 import { haptic } from '@/lib/capacitor';
 
-type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld';
+type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld' | 'transacties' | 'abonnementen';
 
 const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'uitgaven', label: 'Uitgaven' },
@@ -25,6 +25,8 @@ const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'geldstroom', label: 'Geldstroom' },
   { id: 'trend', label: 'Trend' },
   { id: 'schuld', label: 'Schuld' },
+  { id: 'transacties', label: 'Transacties' },
+  { id: 'abonnementen', label: 'Abonnementen' },
 ];
 
 // Chart color palette
@@ -241,6 +243,8 @@ export default function AnalyticsPage() {
         {tab === 'geldstroom' && <TabGeldstroom data={data.weekly_cashflow} />}
         {tab === 'trend' && <TabTrend data={data.monthly_totals} />}
         {tab === 'schuld' && <TabSchuld debts={data.debt_summary} totals={data.monthly_totals} />}
+        {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} />}
+        {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} />}
       </div>
     </div>
   );
@@ -601,6 +605,171 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
             {monthsToFreedom && monthsToFreedom > 3 && (
               <> Als je <strong className="text-pw-text">{formatCents(Math.round(avgMonthlyPayment * 0.25))}</strong> extra per maand aflost,
               ben je <strong className="text-pw-green">~{Math.ceil(totalDebt / (avgMonthlyPayment * 1.25))} maanden</strong> eerder schuldenvrij.</>
+            )}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab: Transacties ────────────────────────────────────────
+
+function TabTransacties({ transactions, selectedMonth }: { transactions: TransactionItem[]; selectedMonth: string }) {
+  // Filter by selected month
+  const filtered = transactions.filter(t => {
+    if (!selectedMonth) return true;
+    return t.booking_date.startsWith(selectedMonth.slice(0, 7));
+  });
+
+  if (filtered.length === 0) {
+    return <EmptyState message="Geen transacties gevonden voor deze maand." />;
+  }
+
+  // Group by date
+  const grouped = filtered.reduce((acc, tx) => {
+    const dateKey = tx.booking_date;
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(tx);
+    return acc;
+  }, {} as Record<string, TransactionItem[]>);
+
+  const dateKeys = Object.keys(grouped).sort().reverse();
+
+  return (
+    <div className="space-y-1">
+      {dateKeys.map(date => {
+        const dayLabel = new Date(date + 'T00:00:00').toLocaleDateString('nl-NL', {
+          weekday: 'short', day: 'numeric', month: 'short',
+        });
+        return (
+          <div key={date}>
+            <p className="text-[10px] font-semibold text-pw-muted uppercase tracking-wider px-1 pt-3 pb-1.5">
+              {dayLabel}
+            </p>
+            <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
+              {grouped[date].map(tx => (
+                <div key={tx.id} className="flex items-center justify-between py-3 px-3.5 active:bg-pw-bg/50 transition-colors">
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div
+                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ background: getCategoryColor(tx.pw_category) }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-medium text-pw-text truncate">
+                        {tx.display_name}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            tx.pw_category === 'onbekend'
+                              ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400'
+                              : 'bg-pw-bg text-pw-muted'
+                          }`}
+                        >
+                          {tx.pw_category === 'onbekend' ? 'Categoriseer' : getCategoryLabel(tx.pw_category)}
+                        </span>
+                        {tx.category_source === 'ai' && tx.category_confidence != null && (
+                          <span className="text-[9px] text-pw-muted/60">
+                            AI {Math.round(tx.category_confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[13px] font-semibold ml-2 flex-shrink-0 ${
+                    tx.amount < 0 ? 'text-pw-text' : 'text-pw-green'
+                  }`}>
+                    {tx.amount >= 0 ? '+' : ''}{formatCents(tx.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Tab: Abonnementen ───────────────────────────────────────
+
+function TabAbonnementen({ subscriptions }: { subscriptions: SubscriptionItem[] }) {
+  if (subscriptions.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-12 text-center">
+        <Wallet className="mb-3 h-10 w-10 text-pw-muted/30" strokeWidth={1.2} />
+        <p className="text-[13px] text-pw-muted">Nog geen abonnementen gevonden</p>
+        <p className="text-[11px] text-pw-muted/70 mt-1 max-w-[240px]">
+          Zodra we terugkerende betalingen detecteren, verschijnen ze hier.
+          Dit vereist minimaal 2 maanden bankdata.
+        </p>
+      </div>
+    );
+  }
+
+  const monthlyTotal = subscriptions
+    .filter(s => s.frequency === 'maandelijks')
+    .reduce((a, s) => a + s.avg_amount, 0);
+  const yearlyTotal = subscriptions.reduce((a, s) => a + s.annual_cost, 0);
+
+  const FREQ_LABELS: Record<string, string> = {
+    maandelijks: 'Maandelijks',
+    kwartaal: 'Per kwartaal',
+    jaarlijks: 'Jaarlijks',
+    onregelmatig: 'Onregelmatig',
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Total cost card */}
+      <div className="rounded-card-lg border border-pw-border bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-pw-surface p-4">
+        <p className="text-[11px] text-pw-muted">Totaal per maand</p>
+        <div className="flex items-end justify-between mt-1">
+          <span className="text-[26px] font-extrabold text-pw-navy tracking-tight">
+            {formatCents(monthlyTotal)}
+          </span>
+          <span className="text-[12px] text-pw-muted">
+            {formatCents(yearlyTotal)} / jaar
+          </span>
+        </div>
+      </div>
+
+      {/* Subscription list */}
+      <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
+        {subscriptions.map(sub => {
+          const displayName = sub.merchant_clean_name || sub.creditor_name;
+          return (
+            <div key={sub.id} className="px-3.5 py-3 flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-pw-text truncate">{displayName}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-pw-muted">{FREQ_LABELS[sub.frequency] || sub.frequency}</span>
+                  {sub.pw_category && (
+                    <>
+                      <span className="text-[10px] text-pw-muted/40">&middot;</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-pw-bg text-pw-muted">{getCategoryLabel(sub.pw_category)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="text-right ml-3 flex-shrink-0">
+                <p className="text-[13px] font-semibold text-pw-text">{formatCents(sub.avg_amount)}</p>
+                <p className="text-[10px] text-pw-muted">{formatCents(sub.annual_cost)}/jr</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Insight block */}
+      {subscriptions.length >= 3 && (
+        <div className="rounded-card border border-pw-border bg-pw-bg p-3.5">
+          <p className="text-[12px] font-semibold text-pw-text mb-1">Inzicht</p>
+          <p className="text-[11px] text-pw-muted leading-relaxed">
+            Je betaalt {formatCents(yearlyTotal)} per jaar aan {subscriptions.length} terugkerende betalingen.
+            {subscriptions[0] && (
+              <> Je grootste kostenpost is <strong className="text-pw-text">{subscriptions[0].merchant_clean_name || subscriptions[0].creditor_name}</strong> ({formatCents(subscriptions[0].annual_cost)}/jr).</>
             )}
           </p>
         </div>

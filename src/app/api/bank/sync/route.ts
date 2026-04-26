@@ -166,6 +166,13 @@ export async function POST(req: NextRequest) {
       console.error('[Bank] Categorization error (non-blocking):', catErr)
     }
 
+    // Detect recurring subscriptions (non-blocking)
+    try {
+      await supabase.rpc('detect_recurring_payments', { p_user_id: user.id })
+    } catch (subErr) {
+      console.error('[Bank] Subscription detection error (non-blocking):', subErr)
+    }
+
     return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched, bill_matches: totalBillMatches })
   } catch (error) {
     console.error('[Bank] Sync error:', error)
