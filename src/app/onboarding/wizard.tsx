@@ -70,6 +70,10 @@ done:'Je bent klaar!',doneSub:'PayWatch houdt nu je rekeningen in de gaten. We w
 on:'Gekoppeld',off:'Nog niet',inv:'Uitgenodigd',noB:'Geen buddy',go:'Naar mijn dashboard',
 stat1:'1,4 miljoen',stat1x:'Nederlanders hebben problematische schulden',stat2:'€43.300',stat2x:'Gemiddelde schuld bij aanmelding schuldhulp',stat3:'73%',stat3x:'Wacht te lang met hulp zoeken',
 pw1:'Automatisch rekeningen scannen via je inbox',pw2:'Waarschuwingen voordat een factuur escaleert',pw3:'Overzicht van al je vaste lasten op één plek',
+factsT:'Wist je dit?',factsS:'Waarom vroeg handelen zo belangrijk is',
+f1:'Een onbetaalde factuur van €50 kan binnen 6 maanden oplopen tot €625+ door incassokosten, rente en deurwaarderskosten.',
+f2:'Hoe eerder je actie onderneemt, hoe meer opties je hebt. Na een dagvaarding heb je bijna geen onderhandelingsruimte meer.',
+f3:'PayWatch waarschuwt je in de herinnering-fase, voordat de echte kosten beginnen.',
 invC:'Uitnodiging accepteren',code:'Uitnodigingscode',conn:'Je bent verbonden!',connX:'Je kunt nu het overzicht bekijken',view:'Bekijk dashboard',
 org:'Organisatie',role:'Functie',sw:'Maatschappelijk werker',dc:'Schuldhulpverlener',bc:'Budgetcoach',
 how:'Zo werkt het',p1:'Je cliënten maken hun eigen account',p2:'Zij nodigen jou uit als buddy',p3:'Jij krijgt een read-only overzicht',p4:'Je monitort escalatierisico\'s',
@@ -98,6 +102,10 @@ done:"You're all set!",doneSub:'PayWatch is now watching your bills. We\'ll aler
 on:'Connected',off:'Not yet',inv:'Invited',noB:'No buddy',go:'Go to my dashboard',
 stat1:'1.4 million',stat1x:'Dutch people have problematic debts',stat2:'€43,300',stat2x:'Average debt at time of seeking help',stat3:'73%',stat3x:'Wait too long before seeking help',
 pw1:'Automatically scan bills from your inbox',pw2:'Warnings before an invoice escalates',pw3:'Overview of all fixed costs in one place',
+factsT:'Did you know?',factsS:'Why acting early matters so much',
+f1:'An unpaid €50 invoice can grow to €625+ within 6 months due to collection fees, interest and bailiff costs.',
+f2:'The sooner you take action, the more options you have. After a court summons, you have almost no negotiation room left.',
+f3:'PayWatch alerts you during the reminder phase, before the real costs begin.',
 invC:'Accept invitation',code:'Invite code',conn:"You're connected!",connX:'You can now view their bill overview',view:'View dashboard',
 org:'Organization',role:'Role',sw:'Social worker',dc:'Debt counselor',bc:'Budget coach',
 how:'How it works',p1:'Your clients create their own account',p2:'They invite you as their buddy',p3:'You get read-only access',p4:'You monitor escalation risks',
@@ -207,11 +215,13 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   const [invCode, setInvCode] = useState('');
   const [orgN, setOrgN] = useState('');
   const [proR, setProR] = useState('');
+  const [aiInsight, setAiInsight] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   // ── Steps ──
   const PATHS: Record<string,string[]> = {
     '':['welcome','branch'],
-    consumer:['welcome','branch','name','city','house','income','exp','scan','safe','summary'],
+    consumer:['welcome','branch','name','city','house','income','exp','scan','safe','facts','summary'],
     buddy:['welcome','branch','bName','bInv','bDone'],
     professional:['welcome','branch','pName','pCity','pHow','pDone'],
   };
@@ -230,7 +240,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
   const canNext = cur==='welcome'||cur==='branch'||
     (['name','bName','pName'].includes(cur)&&fn.trim().length>0)||
-    ['city','pCity','house','income','exp','scan','safe','summary','bInv','bDone','pHow','pDone'].includes(cur);
+    ['city','pCity','house','income','exp','scan','safe','facts','summary','bInv','bDone','pHow','pDone'].includes(cur);
 
   // ── Nav (CSS fade — inputs never unmount, keyboard stays on iOS) ──
   const go = useCallback((nextStep: number, d: 1|-1) => {
@@ -239,8 +249,22 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
       setDir(d);
       setStep(nextStep);
       setVis(true);
+      // Fetch AI insight when entering summary step
+      const nextCur = PATHS[userType||'']?.[nextStep];
+      if (nextCur === 'summary' && !aiInsight && tInc > 0) {
+        setAiLoading(true);
+        fetch('/api/ai/onboarding-insight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ income: tInc, expenses: tExp, disposable: disp, kids, hasPart, gemeente: gem, lang }),
+        })
+          .then(r => r.json())
+          .then(d => { if (d.insight) setAiInsight(d.insight); })
+          .catch(() => {})
+          .finally(() => setAiLoading(false));
+      }
     }, 120);
-  }, []);
+  }, [userType, aiInsight, tInc, tExp, disp, kids, hasPart, gem, lang]);
   function next() { go(Math.min(step+1,tot-1), 1); }
   function back() { if(!step)return; if(step===2&&userType){setUserType(null);go(1,-1);} else go(step-1,-1); }
   function pick(ut:UserType) { setUserType(ut); go(2,1); }
@@ -278,7 +302,12 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         for(const[cat,amt] of Object.entries(exps)){if(amt>0) await fetch('/api/expenses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat,name:cat,amount:amt*100,monthly_amount:amt*100,interval:'monthly'})});}
       }
       await fetch('/api/onboarding/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({first_name:fn.trim(),last_name:ln.trim(),language:lang,gemeente:gem||undefined,user_type:userType,scan_preference:[...scans].join(',')||'none'})});
-      window.location.href='/overzicht';
+      // Redirect to email settings if Gmail/Outlook was selected, otherwise dashboard
+      if (scans.has('gmail') || scans.has('outlook')) {
+        window.location.href='/instellingen/email';
+      } else {
+        window.location.href='/overzicht';
+      }
     } catch { setSaving(false); setErr(true); }
   }
 
@@ -412,14 +441,59 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <Inp label={t.budEmail} val={budE} set={setBudE} ph="naam@email.com" type="email"/>
       </>);
 
+      case 'facts': return (<>
+        <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center"><Shield className="w-8 h-8 text-amber-600" strokeWidth={1.5}/></div></div>
+        <h1 className="text-[24px] font-bold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.factsT}</h1>
+        <p className="text-[13px] text-pw-muted text-center mb-6">{t.factsS}</p>
+
+        {/* Debt statistics grid */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {[{v:t.stat1,x:t.stat1x},{v:t.stat2,x:t.stat2x},{v:t.stat3,x:t.stat3x}].map((s,i)=>(
+            <div key={i} className="rounded-xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-700 p-3 text-center">
+              <p className="text-[16px] font-extrabold text-pw-navy dark:text-white">{s.v}</p>
+              <p className="text-[10px] text-pw-muted leading-tight mt-1">{s.x}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Escalation facts */}
+        <div className="space-y-3">
+          {[t.f1,t.f2,t.f3].map((txt,i)=>(
+            <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-700">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold text-white ${i===2?'bg-pw-blue':'bg-amber-500'}`}>{i+1}</div>
+              <p className="text-[13px] text-pw-text dark:text-gray-200 leading-relaxed">{txt}</p>
+            </div>
+          ))}
+        </div>
+      </>);
+
       case 'summary': {
         return (<>
         <LottieHero step="summary"/>
         <h1 className="text-[26px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-1">{t.done}</h1>
         <p className="text-[13px] text-pw-muted text-center mb-6 px-4">{t.doneSub}</p>
 
-        {/* What PayWatch does for you */}
-        <div className="rounded-2xl bg-pw-blue/5 dark:bg-blue-900/15 border border-pw-blue/15 p-4 mb-4">
+        {/* AI personalized insight */}
+        {aiInsight ? (
+          <div className="rounded-2xl bg-gradient-to-br from-pw-blue/5 to-blue-100/20 dark:from-blue-900/20 dark:to-blue-950/10 border border-pw-blue/15 p-4 mb-4">
+            <p className="text-[13px] text-pw-text dark:text-gray-200 leading-relaxed">{aiInsight}</p>
+          </div>
+        ) : aiLoading ? (
+          <div className="rounded-2xl bg-pw-blue/5 border border-pw-blue/15 p-4 mb-4 flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-pw-blue"/>
+            <span className="text-[12px] text-pw-muted">{lang==='nl'?'Even kijken...':'Analyzing...'}</span>
+          </div>
+        ) : null}
+
+        {/* Financial summary */}
+        {tInc>0&&<div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50 mb-4">
+          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.inc}</span><span className="text-[16px] font-bold text-pw-text dark:text-gray-100">{fmt(tInc)}</span></div>
+          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.costs}</span><span className="text-[16px] font-semibold text-pw-text dark:text-gray-200">−{fmt(tExp)}</span></div>
+          <div className="flex justify-between items-center py-3"><span className="text-[14px] font-medium text-pw-text dark:text-gray-200">{t.free}</span><span className="text-[22px] font-extrabold text-pw-blue">{fmt(disp)}</span></div>
+        </div>}
+
+        {/* What PayWatch does */}
+        <div className="rounded-2xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-700 p-4 mb-4">
           <div className="space-y-2.5">
             {[t.pw1,t.pw2,t.pw3].map((txt,i)=>(
               <div key={i} className="flex items-center gap-2.5">
@@ -430,24 +504,9 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
           </div>
         </div>
 
-        {/* Financial summary */}
-        {tInc>0&&<div className="rounded-2xl border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 p-5 space-y-0 divide-y divide-pw-border/30 dark:divide-gray-700/50 mb-4">
-          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.inc}</span><span className="text-[16px] font-bold text-pw-text dark:text-gray-100">{fmt(tInc)}</span></div>
-          <div className="flex justify-between items-center py-2.5"><span className="text-[13px] text-pw-muted">{t.costs}</span><span className="text-[16px] font-semibold text-pw-text dark:text-gray-200">−{fmt(tExp)}</span></div>
-          <div className="flex justify-between items-center py-3"><span className="text-[14px] font-medium text-pw-text dark:text-gray-200">{t.free}</span><span className="text-[22px] font-extrabold text-pw-blue">{fmt(disp)}</span></div>
-        </div>}
-
-        {/* Debt statistics — why this matters */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {[{v:t.stat1,x:t.stat1x},{v:t.stat2,x:t.stat2x},{v:t.stat3,x:t.stat3x}].map((s,i)=>(
-            <div key={i} className="rounded-xl bg-pw-surface dark:bg-gray-800 border border-pw-border dark:border-gray-700 p-3 text-center">
-              <p className="text-[16px] font-extrabold text-pw-navy dark:text-white">{s.v}</p>
-              <p className="text-[10px] text-pw-muted leading-tight mt-1">{s.x}</p>
-            </div>
-          ))}
-        </div>
-
         {kids>0&&tInc>0&&<div className="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><p className="text-[12px] text-purple-700 dark:text-purple-300">{t.kidH}</p></div>}
+
+        {(scans.has('gmail')||scans.has('outlook'))&&<div className="mt-3 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20"><p className="text-[12px] text-pw-muted">{lang==='nl'?'Na het afronden koppelen we je e-mail zodat PayWatch direct kan beginnen met scannen.':'After finishing we\'ll connect your email so PayWatch can start scanning right away.'}</p></div>}
       </>);}
 
       case 'bInv': return (<>
