@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type ComponentType } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
@@ -38,7 +38,7 @@ const CHART_COLORS = [
 ];
 
 // Lucide icon components mapped by category
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+const ICON_MAP: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
   wonen: Home, vaste_lasten: Receipt, boodschappen: ShoppingCart,
   eten_drinken: UtensilsCrossed, vervoer: Train, winkelen: ShoppingBag,
   vrije_tijd: Music, zorg: HeartPulse, abonnementen: Repeat,

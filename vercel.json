@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/payday",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/spending-alerts",
+      "schedule": "0 17 * * 2"
     }
   ]
 }
