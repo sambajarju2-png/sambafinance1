@@ -101,7 +101,6 @@ export async function POST(req: NextRequest) {
           }
           // Non-410 errors: log but keep token
         }
-        }
       }
     }
 
