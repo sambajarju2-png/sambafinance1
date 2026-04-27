@@ -9,37 +9,48 @@ function BankCallbackContent() {
   const params = useSearchParams();
   const status = params.get('status');
   const error = params.get('error');
-  const [triedClose, setTriedClose] = useState(false);
+  const [showManualClose, setShowManualClose] = useState(false);
+
+  // The custom URL scheme registered in Info.plist
+  const appScheme = 'nl.paywatch.app://instellingen?tab=bank&bank=connected';
+  const appUrl = 'https://app.paywatch.app/instellingen?tab=bank&bank=connected';
 
   useEffect(() => {
-    // On native: try to auto-close the browser overlay after 2s
-    async function tryClose() {
+    // Try to auto-close the browser overlay (works when opened via Capacitor Browser plugin)
+    async function tryAutoClose() {
       try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser');
           setTimeout(async () => {
-            try {
-              const { Browser } = await import('@capacitor/browser');
-              await Browser.close();
-            } catch {
-              setTriedClose(true);
-            }
-          }, 2000);
+            try { await Browser.close(); } catch { setShowManualClose(true); }
+          }, 1500);
           return;
         }
       } catch {}
-      // On web: redirect after 2s
+      // Web fallback — redirect after 2s
       setTimeout(() => {
         window.location.href = status === 'error'
           ? `/instellingen?tab=bank&error=${error || 'callback_failed'}`
           : '/instellingen?tab=bank&bank=connected';
       }, 2000);
     }
-    tryClose();
+    tryAutoClose();
+
+    // Show manual close instructions after 3s regardless
+    setTimeout(() => setShowManualClose(true), 3000);
   }, [status, error]);
 
+  function handleBackToApp() {
+    // Try custom URL scheme first (opens the app directly from Safari)
+    window.location.href = appScheme;
+    // Fallback: if scheme doesn't work after 500ms, try the web URL
+    setTimeout(() => {
+      window.location.href = appUrl;
+    }, 500);
+  }
+
   const isError = status === 'error';
-  const appUrl = 'https://app.paywatch.app/instellingen?tab=bank&bank=connected';
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center px-6"
@@ -53,7 +64,7 @@ function BankCallbackContent() {
           </div>
           <h1 className="text-[22px] font-bold text-white mb-2">Verbinding mislukt</h1>
           <p className="text-[14px] text-white/60 text-center max-w-[280px] leading-relaxed">
-            Er ging iets mis bij het koppelen van je bank. Probeer het opnieuw vanuit de app.
+            Er ging iets mis bij het koppelen. Probeer het opnieuw vanuit de app.
           </p>
         </>
       ) : (
@@ -69,18 +80,27 @@ function BankCallbackContent() {
         </>
       )}
 
-      {/* Primary CTA — always visible */}
-      <a
-        href={appUrl}
+      {/* Primary CTA — opens app via custom URL scheme */}
+      <button
+        onClick={handleBackToApp}
         className="mt-8 w-full max-w-[280px] flex items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-bold text-white transition-transform active:scale-95"
         style={{ background: isError ? '#EF4444' : '#2563EB' }}
       >
         <ArrowLeft className="h-5 w-5" strokeWidth={2} />
-        Ga terug naar de app
-      </a>
+        Ga terug naar PayWatch
+      </button>
 
-      {/* Secondary info */}
-      <div className="mt-4 flex items-center gap-2 text-white/30">
+      {/* Manual close instructions — shown after 3s */}
+      {showManualClose && (
+        <div className="mt-6 text-center max-w-[260px] animate-in fade-in duration-300">
+          <p className="text-[12px] text-white/50 leading-relaxed">
+            Lukt het niet? Sluit dit venster en open de PayWatch app opnieuw.
+          </p>
+        </div>
+      )}
+
+      {/* Spinner */}
+      <div className="mt-4 flex items-center gap-2 text-white/25">
         <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
         <span className="text-[11px]">Wordt automatisch gesloten...</span>
       </div>

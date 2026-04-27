@@ -12,9 +12,13 @@ export default function SplashScreen() {
       return;
     }
 
-    // Skip web splash on native — Capacitor has its own native splash
-    // Check directly instead of relying on class (race condition with NativeShell)
-    const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+    // Detect native app via user agent — this is synchronous and reliable
+    // Capacitor WKWebView always contains these strings
+    const ua = navigator.userAgent || '';
+    const isNative = /Capacitor|PayWatch/i.test(ua) || 
+      (typeof navigator !== 'undefined' && (navigator as any).standalone === true) ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    
     if (isNative) {
       setVisible(false);
       sessionStorage.setItem('pw-splash-shown', '1');
