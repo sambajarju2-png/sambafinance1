@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { verifyCsrf } from '@/lib/csrf';
 
 /**
  * POST /api/gmail/disconnect
@@ -8,6 +9,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
  * Body: { account_id: string }
  */
 export async function POST(req: NextRequest) {
+  try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });

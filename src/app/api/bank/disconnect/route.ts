@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { deleteSession } from '@/lib/enablebanking'
+import { verifyCsrf } from '@/lib/csrf'
+import { log } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
+    await verifyCsrf()
     const { connection_id } = await req.json()
     if (!connection_id) {
       return NextResponse.json({ error: 'connection_id is verplicht' }, { status: 400 })

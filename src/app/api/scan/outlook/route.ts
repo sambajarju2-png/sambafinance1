@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getAuthUserId } from '@/lib/auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { getValidOutlookToken } from '@/lib/outlook-tokens'
 import {
   fetchEmails,
@@ -155,6 +156,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
       }
       userId = authUserId
+    }
+
+    // PW-10: Rate limit manual scans (not background self-chains)
+    if (!_background) {
+      const rlAllowed = await checkRateLimit(userId, 'outlook/scan', 10, 5)
+      if (!rlAllowed) return NextResponse.json({ error: 'Te veel verzoeken' }, { status: 429 })
     }
 
     const tokenResult = await getValidOutlookToken(accountId, userId)

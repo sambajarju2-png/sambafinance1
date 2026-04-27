@@ -30,6 +30,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
     }
 
+    // PW-10: Rate limit — 5 syncs per 5 minutes
+    const { checkRateLimit } = await import('@/lib/rate-limit')
+    const allowed = await checkRateLimit(user.id, 'bank/sync', 5, 5)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Te veel verzoeken. Probeer het over een paar minuten opnieuw.' }, { status: 429 })
+    }
+
     const body = await req.json().catch(() => ({}))
     const connectionId = body.connection_id
 

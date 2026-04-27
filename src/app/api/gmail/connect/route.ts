@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { verifyCsrf } from '@/lib/csrf';
 
 /**
  * POST /api/gmail/connect
  * Uses SERVICE ROLE client because gmail_oauth_states has RLS with no policies.
  */
 export async function POST(req: NextRequest) {
+  try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
   const userId = await getAuthUserId();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });

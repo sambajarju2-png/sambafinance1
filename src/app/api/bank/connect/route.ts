@@ -3,9 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { startAuth } from '@/lib/enablebanking'
 import { randomUUID } from 'crypto'
+import { verifyCsrf } from '@/lib/csrf'
+import { log } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
+    await verifyCsrf()
     const { institution_id, institution_name, institution_logo } = await req.json()
 
     if (!institution_id || !institution_name) {

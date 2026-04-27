@@ -9,11 +9,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getAuthUserId } from '@/lib/auth'
+import { verifyCsrf } from '@/lib/csrf'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    await verifyCsrf()
     const userId = await getAuthUserId()
     if (!userId) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })

@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { verifyCsrf } from '@/lib/csrf';
 
 /**
  * DELETE /api/account
  * Permanently deletes ALL user data from ALL tables.
- *
- * SECURITY FIX: 
- * - Now uses service role client (old version used anon client which silently
- *   failed on tables with service-role-only RLS policies like ai_usage_log, rate_limits)
- * - Now covers ALL 26 tables with user_id column (old version missed 13)
- * - Also handles user_buddies.buddy_user_id and community_reports.reporter_user_id
  */
 export async function DELETE() {
+  try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 

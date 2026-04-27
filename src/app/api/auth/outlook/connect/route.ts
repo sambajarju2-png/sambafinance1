@@ -11,10 +11,12 @@ import { randomBytes } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { getAuthUserId } from '@/lib/auth';
 import { getMicrosoftAuthUrl } from '@/lib/microsoft-graph';
+import { verifyCsrf } from '@/lib/csrf';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
   // Step-by-step with individual try/catch so we know EXACTLY where it fails
   
   // Step 1: Auth

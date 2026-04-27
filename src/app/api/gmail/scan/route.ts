@@ -6,6 +6,7 @@ import { listMessages, getMessageSnippets, getMessageDetail, findPdfAttachments,
 import { classifyEmail, extractBillFromEmail } from '@/lib/ai';
 import { computeBillHash, generateBillId } from '@/lib/bills-server';
 import { extractPdfText } from '@/lib/pdf-extract';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const BATCH_SIZE = 10;
 const MAX_EMAILS_FIRST_SCAN = 100;
@@ -96,6 +97,10 @@ export async function POST(req: NextRequest) {
 
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  // PW-10: Rate limit — 10 scans per 5 minutes
+  const allowed = await checkRateLimit(userId, 'gmail/scan', 10, 5);
+  if (!allowed) return NextResponse.json({ error: 'Te veel verzoeken' }, { status: 429, headers: NO_CACHE });
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch {
