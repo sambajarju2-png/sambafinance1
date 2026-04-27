@@ -124,44 +124,22 @@ cp widget-bridge.ts src/lib/widget-bridge.ts
 
 ---
 
-## Integration in Your Web App
+## Integration (ALREADY DONE — in repo)
 
-### Call updateWidget after data loads
+### Dashboard sync (overzicht/page.tsx)
+`syncWidgetFromBills(fresh)` is called after every bill fetch. It also fetches
+`/api/finances/overview` to enrich the widget with income/expenses/disposable data.
 
-In your dashboard page (wherever you fetch bills + analytics from Supabase), add:
+### Logout cleanup (sign-out-button.tsx)
+`clearWidget()` is called before `supabase.auth.signOut()` to wipe sensitive data.
 
-```typescript
-import { updateWidget, buildWidgetPayload } from '@/lib/widget-bridge';
+### Auth token for background refresh (overzicht/page.tsx)
+`storeWidgetAuth(accessToken)` stores the Supabase JWT in App Groups so the
+`BGAppRefreshTask` can fetch fresh data when the app is closed.
 
-// After your existing Supabase fetches:
-useEffect(() => {
-  if (bills && analytics && subscriptions) {
-    const payload = buildWidgetPayload(bills, analytics, subscriptions, finances);
-    updateWidget(payload);
-  }
-}, [bills, analytics, subscriptions, finances]);
-```
-
-### Call clearWidget on logout
-
-```typescript
-import { clearWidget } from '@/lib/widget-bridge';
-
-async function handleLogout() {
-  await clearWidget(); // Remove sensitive data from widget
-  await supabase.auth.signOut();
-  router.push('/login');
-}
-```
-
-### Call updateWidget after bill actions
-
-Anywhere the user marks a bill as paid, adds a bill, or changes a status:
-
-```typescript
-// After successful status update:
-await updateWidget(buildWidgetPayload(updatedBills, analytics, subscriptions, finances));
-```
+### Background refresh (/api/widget/data)
+Server endpoint that accepts `Authorization: Bearer <token>` and returns the
+full widget payload. Called by the native `BGAppRefreshTask` every 30 minutes.
 
 ---
 
@@ -194,10 +172,19 @@ Add `-com.apple.WidgetKit.debug.enable-timeline-debug 1` to bypass system timeli
 
 ---
 
-## Phase 2 (future)
+## Phase 2 (BUILT — in repo)
 
-- `.systemLarge` — Full bill list + financial overview + debt countdown
-- Interactive "Betaald" button via AppIntent (iOS 17+)
-- iOS 18 Control Center shortcut for "Scan Rekening" (ControlWidget API)
-- Configurable widget intents (choose "Bills only" vs "Budget overview")
-- `BGAppRefreshTask` for background data refresh when app is closed
+- `.systemLarge` — Bill list with interactive "Betaald" buttons + financial overview + debt countdown
+- Configurable widget mode — long-press → Edit → "Rekeningen" or "Financieel"
+- `BudgetMediumWidgetView` — Alternate medium view with income/expenses/vrij besteedbaar
+- Interactive "Betaald" button via `MarkBillAsPaidIntent` (iOS 17+)
+- Control Center shortcuts (iOS 18+): "Scan Rekening" + "PayWatch Status"
+- `BGAppRefreshTask` — Background data refresh every 30 min via `/api/widget/data`
+- Live Activity stub — Dynamic Island for payment tracking (structure ready)
+
+## Phase 3 (future)
+
+- Live Activity for bill payment flow (processing → completed → failed)
+- Apple Watch complication (if watchOS app is added)
+- Widget suggestions via Siri Shortcuts integration
+- Smart Stack relevance scoring (show widget when bills are due)

@@ -115,15 +115,10 @@ export async function storeWidgetAuth(accessToken: string): Promise<void> {
 // MARK: - Payload Builder
 
 /**
- * Quick sync — call from dashboard with just bills.
- * Matches the actual Bill type and status logic from @/lib/bills.
- *
- * Usage in overzicht/page.tsx:
- *   import { syncWidgetFromBills } from '@/lib/widget-bridge';
- *   // after setBills(fresh):
- *   syncWidgetFromBills(fresh);
+ * Quick sync — call from dashboard with bills + optional financial data.
+ * Fetches /api/finances/overview in the background to enrich the payload.
  */
-export function syncWidgetFromBills(
+export async function syncWidgetFromBills(
   bills: Array<{
     vendor: string;
     amount: number;
@@ -131,8 +126,34 @@ export function syncWidgetFromBills(
     status: string;
     escalation_stage: string;
   }>
-): void {
+): Promise<void> {
+  // Build base payload from bills immediately
   const payload = buildWidgetPayload(bills);
+
+  // Try to enrich with financial data (non-blocking)
+  try {
+    const res = await fetch('/api/finances/overview');
+    if (res.ok) {
+      const fin = await res.json();
+      if (fin.has_finances) {
+        payload.bank_income = fin.totaal_inkomen || 0;
+        payload.bank_expenses = (fin.totaal_vaste_lasten || 0) + (fin.totaal_betaald_deze_maand || 0);
+        payload.disposable = Math.max(0, fin.vrij_besteedbaar || 0);
+        payload.net = (fin.totaal_inkomen || 0) - payload.bank_expenses;
+      }
+    }
+  } catch {
+    // Financial data unavailable — widget still works with bills-only data
+  }
+
+  // Compute debt-free estimate with real financial data
+  if (payload.bank_income > 0 && payload.outstanding_amount > 0) {
+    const monthly = payload.bank_income - payload.bank_expenses;
+    if (monthly > 0) {
+      payload.debt_free_months = Math.ceil(payload.outstanding_amount / monthly);
+    }
+  }
+
   updateWidget(payload);
 }
 
