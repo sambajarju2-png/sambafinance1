@@ -60,11 +60,11 @@ export default function AnalyticsEntryCard() {
 
       <div className="mt-3 flex gap-3">
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">
-          <p className="text-[9px] text-pw-muted">Inkomen</p>
+          <p className="text-[9px] text-pw-muted">Bank inkomen</p>
           <p className="text-[13px] font-bold text-pw-green">{formatCents(data.income)}</p>
         </div>
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">
-          <p className="text-[9px] text-pw-muted">Uitgaven</p>
+          <p className="text-[9px] text-pw-muted">Bank uitgaven</p>
           <p className="text-[13px] font-bold text-pw-red">{formatCents(data.expenses)}</p>
         </div>
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">

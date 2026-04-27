@@ -3,76 +3,94 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
 function BankCallbackContent() {
   const params = useSearchParams();
-  const status = params.get('status'); // 'success' | 'error'
+  const status = params.get('status');
   const error = params.get('error');
-  const [closing, setClosing] = useState(false);
+  const [triedClose, setTriedClose] = useState(false);
 
   useEffect(() => {
-    async function handleCallback() {
-      // On native: close the SFSafariViewController overlay
+    // On native: try to auto-close the browser overlay after 2s
+    async function tryClose() {
       try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
-          const { Browser } = await import('@capacitor/browser');
-          setClosing(true);
-          // Small delay so user sees the success message
           setTimeout(async () => {
             try {
+              const { Browser } = await import('@capacitor/browser');
               await Browser.close();
             } catch {
-              // If Browser.close() fails, redirect normally
-              window.location.href = '/instellingen?tab=bank&bank=connected';
+              setTriedClose(true);
             }
-          }, 1200);
+          }, 2000);
           return;
         }
       } catch {}
-
-      // On web: redirect to settings after brief pause
+      // On web: redirect after 2s
       setTimeout(() => {
-        if (status === 'success') {
-          window.location.href = '/instellingen?tab=bank&bank=connected';
-        } else {
-          window.location.href = `/instellingen?tab=bank&error=${error || 'callback_failed'}`;
-        }
-      }, 1500);
+        window.location.href = status === 'error'
+          ? `/instellingen?tab=bank&error=${error || 'callback_failed'}`
+          : '/instellingen?tab=bank&bank=connected';
+      }, 2000);
     }
-
-    handleCallback();
+    tryClose();
   }, [status, error]);
 
   const isError = status === 'error';
+  const appUrl = 'https://app.paywatch.app/instellingen?tab=bank&bank=connected';
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0A2540] text-white px-6">
+    <div className="fixed inset-0 flex flex-col items-center justify-center px-6"
+      style={{ background: 'linear-gradient(to bottom, #0A2540, #0F3460)' }}>
+      
       {isError ? (
         <>
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 mb-4">
-            <AlertCircle className="h-8 w-8 text-red-400" strokeWidth={1.5} />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full mb-5"
+            style={{ background: 'rgba(239, 68, 68, 0.15)' }}>
+            <AlertCircle className="h-10 w-10 text-red-400" strokeWidth={1.5} />
           </div>
-          <h1 className="text-[20px] font-bold mb-2">Verbinding mislukt</h1>
-          <p className="text-[14px] text-white/60 text-center">
-            Er ging iets mis bij het koppelen. Probeer het opnieuw.
+          <h1 className="text-[22px] font-bold text-white mb-2">Verbinding mislukt</h1>
+          <p className="text-[14px] text-white/60 text-center max-w-[280px] leading-relaxed">
+            Er ging iets mis bij het koppelen van je bank. Probeer het opnieuw vanuit de app.
           </p>
         </>
       ) : (
         <>
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20 mb-4">
-            <Check className="h-8 w-8 text-green-400" strokeWidth={2} />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full mb-5"
+            style={{ background: 'rgba(34, 197, 94, 0.15)' }}>
+            <Check className="h-10 w-10 text-green-400" strokeWidth={2} />
           </div>
-          <h1 className="text-[20px] font-bold mb-2">Bank gekoppeld!</h1>
-          <p className="text-[14px] text-white/60 text-center">
-            Je bankrekening is succesvol verbonden.
+          <h1 className="text-[22px] font-bold text-white mb-2">Bank gekoppeld!</h1>
+          <p className="text-[14px] text-white/60 text-center max-w-[280px] leading-relaxed">
+            Je bankrekening is succesvol verbonden met PayWatch.
           </p>
         </>
       )}
-      <div className="mt-6 flex items-center gap-2 text-white/40">
-        <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-        <span className="text-[12px]">{closing ? 'Terug naar PayWatch...' : 'Even geduld...'}</span>
+
+      {/* Primary CTA — always visible */}
+      <a
+        href={appUrl}
+        className="mt-8 w-full max-w-[280px] flex items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-bold text-white transition-transform active:scale-95"
+        style={{ background: isError ? '#EF4444' : '#2563EB' }}
+      >
+        <ArrowLeft className="h-5 w-5" strokeWidth={2} />
+        Ga terug naar de app
+      </a>
+
+      {/* Secondary info */}
+      <div className="mt-4 flex items-center gap-2 text-white/30">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+        <span className="text-[11px]">Wordt automatisch gesloten...</span>
+      </div>
+
+      {/* PayWatch branding */}
+      <div className="absolute bottom-8 flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+        </svg>
+        <span className="text-[12px] font-semibold text-white/30">PayWatch</span>
       </div>
     </div>
   );
@@ -81,7 +99,7 @@ function BankCallbackContent() {
 export default function BankCallbackPage() {
   return (
     <Suspense fallback={
-      <div className="fixed inset-0 flex items-center justify-center bg-[#0A2540]">
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#0A2540' }}>
         <Loader2 className="h-6 w-6 animate-spin text-white" strokeWidth={1.5} />
       </div>
     }>
