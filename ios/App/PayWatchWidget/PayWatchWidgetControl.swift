@@ -13,6 +13,7 @@ import WidgetKit
 // Adds a "Scan Rekening" button to Control Center
 // Tapping it opens PayWatch directly to the camera scanner
 
+@available(iOS 18.0, *)
 struct PayWatchWidgetControl: ControlWidget {
     static let kind: String = "nl.paywatch.app.ScanControl"
 
@@ -28,8 +29,8 @@ struct PayWatchWidgetControl: ControlWidget {
 }
 
 // MARK: - Open Scanner Intent
-// Deep-links into the app's camera scan page
 
+@available(iOS 18.0, *)
 struct OpenScannerIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Scanner"
     static var description: IntentDescription = IntentDescription("Open PayWatch rekening scanner")
@@ -44,6 +45,7 @@ struct OpenScannerIntent: AppIntent {
 
 // MARK: - Quick Status Control (shows overdue count)
 
+@available(iOS 18.0, *)
 struct PayWatchStatusControl: ControlWidget {
     static let kind: String = "nl.paywatch.app.StatusControl"
 
@@ -63,6 +65,7 @@ struct PayWatchStatusControl: ControlWidget {
     }
 }
 
+@available(iOS 18.0, *)
 struct OpenAppIntent: AppIntent {
     static var title: LocalizedStringResource = "Open PayWatch"
     static var openAppWhenRun: Bool = true
@@ -73,6 +76,7 @@ struct OpenAppIntent: AppIntent {
 }
 
 // Helper to read data for control widgets
+@available(iOS 18.0, *)
 private func loadControlData() -> (overdueCount: Int, upcomingCount: Int) {
     let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
     guard let jsonString = defaults?.string(forKey: "widget_data"),

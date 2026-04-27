@@ -15,8 +15,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.bgTaskIdentifier,
             using: nil
-        ) { task in
-            self.handleWidgetRefresh(task: task as! BGAppRefreshTask)
+        ) { [weak self] task in
+            guard let bgTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self?.handleWidgetRefresh(task: bgTask)
         }
 
         return true
