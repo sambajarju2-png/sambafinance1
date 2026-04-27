@@ -1,107 +1,88 @@
+//
+//  PayWatchWidget.swift
+//  PayWatchWidget
+//
+//  Created by Samba on 27/04/2026.
+//
+
 import WidgetKit
 import SwiftUI
 
-// MARK: - Timeline Provider
-// Reads cached JSON from App Groups UserDefaults (written by Capacitor plugin)
-// No network calls here — data comes from the web app
-
-struct PayWatchWidgetProvider: TimelineProvider {
-    typealias Entry = PayWatchEntry
-
-    // MARK: Placeholder (widget gallery shimmer)
-    func placeholder(in context: Context) -> PayWatchEntry {
-        PayWatchEntry(date: Date(), data: .placeholder)
+struct Provider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> SimpleEntry {
+        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
     }
 
-    // MARK: Snapshot (widget gallery preview)
-    func getSnapshot(in context: Context, completion: @escaping (PayWatchEntry) -> Void) {
-        let data = loadWidgetData() ?? .placeholder
-        completion(PayWatchEntry(date: Date(), data: data))
+    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
+        SimpleEntry(date: Date(), configuration: configuration)
     }
+    
+    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
+        var entries: [SimpleEntry] = []
 
-    // MARK: Timeline (actual widget updates)
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PayWatchEntry>) -> Void) {
-        let data = loadWidgetData() ?? .placeholder
-        let entry = PayWatchEntry(date: Date(), data: data)
-
-        // Refresh every 30 minutes OR when the app triggers reloadAllTimelines()
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
-        let timeline = Timeline(entries: [entry], policy: .after(nextRefresh))
-
-        completion(timeline)
-    }
-
-    // MARK: Load from App Groups
-    private func loadWidgetData() -> WidgetData? {
-        let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
-        guard let jsonString = defaults?.string(forKey: "widget_data"),
-              let jsonData = jsonString.data(using: .utf8) else {
-            return nil
+        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
+        let currentDate = Date()
+        for hourOffset in 0 ..< 5 {
+            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
+            let entry = SimpleEntry(date: entryDate, configuration: configuration)
+            entries.append(entry)
         }
 
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try? decoder.decode(WidgetData.self, from: jsonData)
+        return Timeline(entries: entries, policy: .atEnd)
     }
+
+//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
+//        // Generate a list containing the contexts this widget is relevant in.
+//    }
 }
 
-// MARK: - Widget View Router
+struct SimpleEntry: TimelineEntry {
+    let date: Date
+    let configuration: ConfigurationAppIntent
+}
 
-struct PayWatchWidgetEntryView: View {
-    @Environment(\.widgetFamily) var family
-    let entry: PayWatchEntry
+struct PayWatchWidgetEntryView : View {
+    var entry: Provider.Entry
 
     var body: some View {
-        switch family {
-        // Home Screen
-        case .systemSmall:
-            SmallWidgetView(data: entry.data)
-        case .systemMedium:
-            MediumWidgetView(data: entry.data)
+        VStack {
+            Text("Time:")
+            Text(entry.date, style: .time)
 
-        // Lock Screen
-        case .accessoryRectangular:
-            LockScreenRectangularView(data: entry.data)
-        case .accessoryCircular:
-            LockScreenCircularView(data: entry.data)
-        case .accessoryInline:
-            LockScreenInlineView(data: entry.data)
-
-        default:
-            // Fallback for unsupported families
-            Text("PayWatch")
-                .font(.caption)
+            Text("Favorite Emoji:")
+            Text(entry.configuration.favoriteEmoji)
         }
     }
 }
 
-// MARK: - Widget Configuration
-
 struct PayWatchWidget: Widget {
-    let kind: String = "nl.paywatch.widget"
+    let kind: String = "PayWatchWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(
-            kind: kind,
-            provider: PayWatchWidgetProvider()
-        ) { entry in
-            if #available(iOS 17.0, *) {
-                PayWatchWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                PayWatchWidgetEntryView(entry: entry)
-            }
+        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+            PayWatchWidgetEntryView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("PayWatch")
-        .description("Bekijk je openstaande rekeningen en volgende betaling")
-        .supportedFamilies([
-            // Home Screen
-            .systemSmall,
-            .systemMedium,
-            // Lock Screen (iOS 16+)
-            .accessoryRectangular,
-            .accessoryCircular,
-            .accessoryInline
-        ])
     }
+}
+
+extension ConfigurationAppIntent {
+    fileprivate static var smiley: ConfigurationAppIntent {
+        let intent = ConfigurationAppIntent()
+        intent.favoriteEmoji = "😀"
+        return intent
+    }
+    
+    fileprivate static var starEyes: ConfigurationAppIntent {
+        let intent = ConfigurationAppIntent()
+        intent.favoriteEmoji = "🤩"
+        return intent
+    }
+}
+
+#Preview(as: .systemSmall) {
+    PayWatchWidget()
+} timeline: {
+    SimpleEntry(date: .now, configuration: .smiley)
+    SimpleEntry(date: .now, configuration: .starEyes)
 }

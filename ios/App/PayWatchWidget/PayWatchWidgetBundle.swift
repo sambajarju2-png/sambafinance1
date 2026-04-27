@@ -1,3 +1,10 @@
+//
+//  PayWatchWidgetBundle.swift
+//  PayWatchWidget
+//
+//  Created by Samba on 27/04/2026.
+//
+
 import WidgetKit
 import SwiftUI
 
@@ -5,8 +12,7 @@ import SwiftUI
 struct PayWatchWidgetBundle: WidgetBundle {
     var body: some Widget {
         PayWatchWidget()
-        // Future: add more widgets here
-        // PayWatchFinancialWidget()
-        // PayWatchDebtCountdownWidget()
+        PayWatchWidgetControl()
+        PayWatchWidgetLiveActivity()
     }
 }
