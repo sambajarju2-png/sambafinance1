@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendPushToUser } from '@/lib/push'
+import { verifyCronSecret } from '@/lib/verify-cron'
+import { log } from '@/lib/logger'
 
 /**
  * GET /api/cron/spending-alerts
  * Weekly cron (Tuesday 19:00 CET = 17:00 UTC)
- * Checks spending vs income for each user with a bank connection.
- * Sends max 1 alert per user per run, max 3 per week total.
- * 
- * Alert types:
- * - spending_high: spending > 80% of income before day 20
- * - debt_positive: debt repayment happening (positive reinforcement)
- * - category_spike: single category > 1.4× average
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

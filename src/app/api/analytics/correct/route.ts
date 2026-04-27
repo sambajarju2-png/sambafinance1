@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
+import { verifyCsrf } from '@/lib/csrf';
+import { log } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
+    // PW-06: CSRF protection
+    await verifyCsrf();
+
     const cookieHeader = req.headers.get('cookie');
     const userClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
