@@ -326,17 +326,21 @@ function BankSelectorModal({ onClose }: { onClose: () => void }) {
       }
 
       // Open bank authorization page
-      // Native: use SFSafariViewController (dismissible overlay)
+      // Native: use SFSafariViewController — callback page will close it
       // Web: direct navigation
       try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
           const { Browser } = await import('@capacitor/browser');
           await Browser.open({ url: data.link, presentationStyle: 'popover' });
-          // When user closes the browser, refresh connections
-          Browser.addListener('browserFinished', () => {
+          
+          // When browser closes (either by callback page or user), refresh
+          const listener = await Browser.addListener('browserFinished', async () => {
+            listener.remove();
             setConnecting(null);
-            // Reload the page to refresh bank connections
+            onClose(); // close the bank selector modal
+            // Give the callback API a moment to process
+            await new Promise(r => setTimeout(r, 500));
             window.location.reload();
           });
           return;

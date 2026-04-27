@@ -11,8 +11,11 @@ export default function SplashScreen() {
       setVisible(false);
       return;
     }
-    // Skip web splash on native — Capacitor splash already shown
-    if (document.documentElement.classList.contains('native-app')) {
+
+    // Skip web splash on native — Capacitor has its own native splash
+    // Check directly instead of relying on class (race condition with NativeShell)
+    const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+    if (isNative) {
       setVisible(false);
       sessionStorage.setItem('pw-splash-shown', '1');
       return;

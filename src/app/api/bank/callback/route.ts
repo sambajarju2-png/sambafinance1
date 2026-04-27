@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get('state')
 
     if (!code) {
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=no_code`)
+      return NextResponse.redirect(`${appUrl}/bank-callback?status=error&error=no_code`)
     }
 
     const supabase = createClient(
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
           .single()
 
     if (!connection) {
-      return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=connection_not_found`)
+      return NextResponse.redirect(`${appUrl}/bank-callback?status=error&error=connection_not_found`)
     }
 
     // Exchange code for session
@@ -53,9 +53,9 @@ export async function GET(req: NextRequest) {
       })
       .eq('id', connection.id)
 
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&bank=connected`)
+    return NextResponse.redirect(`${appUrl}/bank-callback?status=success`)
   } catch (error) {
     console.error('[Bank] Callback error:', error)
-    return NextResponse.redirect(`${appUrl}/instellingen?tab=bank&error=callback_failed`)
+    return NextResponse.redirect(`${appUrl}/bank-callback?status=error&error=callback_failed`)
   }
 }
