@@ -11,8 +11,14 @@ import SwiftUI
 @main
 struct PayWatchWidgetBundle: WidgetBundle {
     var body: some Widget {
+        // Home Screen + Lock Screen widget (configurable: Bills or Budget)
         PayWatchWidget()
+
+        // Control Center shortcuts (iOS 18+)
         PayWatchWidgetControl()
+        PayWatchStatusControl()
+
+        // Live Activity for payment tracking (future)
         PayWatchWidgetLiveActivity()
     }
 }

@@ -9,69 +9,80 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+// MARK: - Control Center Widget (iOS 18+)
+// Adds a "Scan Rekening" button to Control Center
+// Tapping it opens PayWatch directly to the camera scanner
+
 struct PayWatchWidgetControl: ControlWidget {
-    static let kind: String = "nl.paywatch.app.PayWatchWidget"
+    static let kind: String = "nl.paywatch.app.ScanControl"
 
     var body: some ControlWidgetConfiguration {
-        AppIntentControlConfiguration(
-            kind: Self.kind,
-            provider: Provider()
-        ) { value in
-            ControlWidgetToggle(
-                "Start Timer",
-                isOn: value.isRunning,
-                action: StartTimerIntent(value.name)
-            ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
+        StaticControlConfiguration(kind: Self.kind) {
+            ControlWidgetButton(action: OpenScannerIntent()) {
+                Label("Scan Rekening", systemImage: "camera.viewfinder")
             }
         }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+        .displayName("PayWatch Scan")
+        .description("Open de rekening scanner")
     }
 }
 
-extension PayWatchWidgetControl {
-    struct Value {
-        var isRunning: Bool
-        var name: String
-    }
+// MARK: - Open Scanner Intent
+// Deep-links into the app's camera scan page
 
-    struct Provider: AppIntentControlValueProvider {
-        func previewValue(configuration: TimerConfiguration) -> Value {
-            PayWatchWidgetControl.Value(isRunning: false, name: configuration.timerName)
-        }
-
-        func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
-            return PayWatchWidgetControl.Value(isRunning: isRunning, name: configuration.timerName)
-        }
-    }
-}
-
-struct TimerConfiguration: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Timer Name Configuration"
-
-    @Parameter(title: "Timer Name", default: "Timer")
-    var timerName: String
-}
-
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
-
-    @Parameter(title: "Timer Name")
-    var name: String
-
-    @Parameter(title: "Timer is running")
-    var value: Bool
-
-    init() {}
-
-    init(_ name: String) {
-        self.name = name
-    }
+struct OpenScannerIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Scanner"
+    static var description: IntentDescription = IntentDescription("Open PayWatch rekening scanner")
+    static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
-        // Start the timer…
+        // The deep link will be handled by the Capacitor app
+        // nl.paywatch.app://scan opens the camera scan page
         return .result()
     }
+}
+
+// MARK: - Quick Status Control (shows overdue count)
+
+struct PayWatchStatusControl: ControlWidget {
+    static let kind: String = "nl.paywatch.app.StatusControl"
+
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: Self.kind) {
+            ControlWidgetButton(action: OpenAppIntent()) {
+                let data = loadControlData()
+                Label {
+                    Text(data.overdueCount > 0 ? "\(data.overdueCount) achterstallig" : "Op tijd")
+                } icon: {
+                    Image(systemName: data.overdueCount > 0 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                }
+            }
+        }
+        .displayName("PayWatch Status")
+        .description("Snelle status van je rekeningen")
+    }
+}
+
+struct OpenAppIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open PayWatch"
+    static var openAppWhenRun: Bool = true
+
+    func perform() async throws -> some IntentResult {
+        return .result()
+    }
+}
+
+// Helper to read data for control widgets
+private func loadControlData() -> (overdueCount: Int, upcomingCount: Int) {
+    let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
+    guard let jsonString = defaults?.string(forKey: "widget_data"),
+          let jsonData = jsonString.data(using: .utf8) else {
+        return (0, 0)
+    }
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    if let data = try? decoder.decode(WidgetData.self, from: jsonData) {
+        return (data.overdueCount, data.upcomingCount)
+    }
+    return (0, 0)
 }

@@ -64,12 +64,3 @@ extension WidgetData {
         debtFreeMonths: 6
     )
 }
-
-// MARK: - Timeline Entry
-
-import WidgetKit
-
-struct PayWatchEntry: TimelineEntry {
-    let date: Date
-    let data: WidgetData
-}

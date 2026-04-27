@@ -9,72 +9,110 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
+// MARK: - Live Activity Attributes
+// Future: track bill payment progress in Dynamic Island
+// e.g. "Betaling aan Eneco — verwerkt..."
+
 struct PayWatchWidgetAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
+        var status: String      // "processing", "completed", "failed"
+        var vendor: String
+        var amountCents: Int
     }
 
-    // Fixed non-changing properties about your activity go here!
-    var name: String
+    var billId: String
+    var vendor: String
 }
+
+// MARK: - Live Activity Widget
 
 struct PayWatchWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PayWatchWidgetAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            VStack {
-                Text("Hello \(context.state.emoji)")
+            // Lock screen / notification banner
+            HStack(spacing: 12) {
+                // Status icon
+                Image(systemName: statusIcon(context.state.status))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(statusColor(context.state.status))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(context.state.vendor)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(statusText(context.state.status))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text(formatLiveActivityAmount(context.state.amountCents))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(statusColor(context.state.status))
             }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
+            .padding(16)
+            .activityBackgroundTint(Color(red: 0.039, green: 0.145, blue: 0.251)) // Navy
+            .activitySystemActionForegroundColor(.white)
 
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    Image(systemName: statusIcon(context.state.status))
+                        .foregroundColor(statusColor(context.state.status))
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+                    Text(formatLiveActivityAmount(context.state.amountCents))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
+                    Text("\(context.state.vendor) — \(statusText(context.state.status))")
+                        .font(.system(size: 13))
                 }
             } compactLeading: {
-                Text("L")
+                Image(systemName: statusIcon(context.state.status))
+                    .foregroundColor(statusColor(context.state.status))
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                Text(formatLiveActivityAmount(context.state.amountCents))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
             } minimal: {
-                Text(context.state.emoji)
+                Image(systemName: statusIcon(context.state.status))
+                    .foregroundColor(statusColor(context.state.status))
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
+            .widgetURL(URL(string: "nl.paywatch.app://overzicht"))
         }
     }
 }
 
-extension PayWatchWidgetAttributes {
-    fileprivate static var preview: PayWatchWidgetAttributes {
-        PayWatchWidgetAttributes(name: "World")
+// MARK: - Helpers
+
+private func statusIcon(_ status: String) -> String {
+    switch status {
+    case "processing": return "arrow.triangle.2.circlepath"
+    case "completed":  return "checkmark.circle.fill"
+    case "failed":     return "xmark.circle.fill"
+    default:           return "creditcard.fill"
     }
 }
 
-extension PayWatchWidgetAttributes.ContentState {
-    fileprivate static var smiley: PayWatchWidgetAttributes.ContentState {
-        PayWatchWidgetAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: PayWatchWidgetAttributes.ContentState {
-         PayWatchWidgetAttributes.ContentState(emoji: "🤩")
-     }
+private func statusColor(_ status: String) -> Color {
+    switch status {
+    case "processing": return .orange
+    case "completed":  return Color(red: 0.020, green: 0.588, blue: 0.412) // green
+    case "failed":     return Color(red: 0.863, green: 0.149, blue: 0.149) // red
+    default:           return .blue
+    }
 }
 
-#Preview("Notification", as: .content, using: PayWatchWidgetAttributes.preview) {
-   PayWatchWidgetLiveActivity()
-} contentStates: {
-    PayWatchWidgetAttributes.ContentState.smiley
-    PayWatchWidgetAttributes.ContentState.starEyes
+private func statusText(_ status: String) -> String {
+    switch status {
+    case "processing": return "Wordt verwerkt..."
+    case "completed":  return "Betaald"
+    case "failed":     return "Mislukt"
+    default:           return "Bezig..."
+    }
+}
+
+private func formatLiveActivityAmount(_ cents: Int) -> String {
+    let euros = cents / 100
+    return "€ \(euros)"
 }

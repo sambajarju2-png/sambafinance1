@@ -8,81 +8,113 @@
 import WidgetKit
 import SwiftUI
 
-struct Provider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
+// MARK: - Configurable Timeline Provider
+// Uses AppIntentTimelineProvider so users can choose Bills vs Budget mode
+
+struct PayWatchWidgetProvider: AppIntentTimelineProvider {
+    typealias Entry = PayWatchEntry
+    typealias Intent = PayWatchWidgetConfigIntent
+
+    // Widget gallery shimmer
+    func placeholder(in context: Context) -> PayWatchEntry {
+        PayWatchEntry(date: Date(), data: .placeholder, mode: .bills)
     }
 
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
+    // Widget gallery preview
+    func snapshot(for configuration: PayWatchWidgetConfigIntent, in context: Context) async -> PayWatchEntry {
+        let data = loadWidgetData() ?? .placeholder
+        return PayWatchEntry(date: Date(), data: data, mode: configuration.mode)
     }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
 
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
+    // Actual timeline for the live widget
+    func timeline(for configuration: PayWatchWidgetConfigIntent, in context: Context) async -> Timeline<PayWatchEntry> {
+        let data = loadWidgetData() ?? .placeholder
+        let entry = PayWatchEntry(date: Date(), data: data, mode: configuration.mode)
+
+        // Refresh every 30 min or when app triggers reloadAllTimelines()
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: Date())!
+        return Timeline(entries: [entry], policy: .after(nextRefresh))
+    }
+
+    // Read from App Groups shared container
+    private func loadWidgetData() -> WidgetData? {
+        let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
+        guard let jsonString = defaults?.string(forKey: "widget_data"),
+              let jsonData = jsonString.data(using: .utf8) else {
+            return nil
         }
-
-        return Timeline(entries: entries, policy: .atEnd)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try? decoder.decode(WidgetData.self, from: jsonData)
     }
-
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
 }
 
-struct SimpleEntry: TimelineEntry {
+// MARK: - Timeline Entry (now includes mode)
+
+struct PayWatchEntry: TimelineEntry {
     let date: Date
-    let configuration: ConfigurationAppIntent
+    let data: WidgetData
+    let mode: WidgetMode
 }
 
-struct PayWatchWidgetEntryView : View {
-    var entry: Provider.Entry
+// MARK: - View Router
+
+struct PayWatchWidgetEntryView: View {
+    @Environment(\.widgetFamily) var family
+    let entry: PayWatchEntry
 
     var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
+        switch family {
+        // Home Screen
+        case .systemSmall:
+            SmallWidgetView(data: entry.data)
+        case .systemMedium:
+            if entry.mode == .budget {
+                BudgetMediumWidgetView(data: entry.data)
+            } else {
+                MediumWidgetView(data: entry.data)
+            }
+        case .systemLarge:
+            LargeWidgetView(data: entry.data, mode: entry.mode)
 
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+        // Lock Screen
+        case .accessoryRectangular:
+            LockScreenRectangularView(data: entry.data)
+        case .accessoryCircular:
+            LockScreenCircularView(data: entry.data)
+        case .accessoryInline:
+            LockScreenInlineView(data: entry.data)
+
+        default:
+            Text("PayWatch")
+                .font(.caption)
         }
     }
 }
 
+// MARK: - Widget Configuration
+
 struct PayWatchWidget: Widget {
-    let kind: String = "PayWatchWidget"
+    let kind: String = "nl.paywatch.widget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        AppIntentConfiguration(
+            kind: kind,
+            intent: PayWatchWidgetConfigIntent.self,
+            provider: PayWatchWidgetProvider()
+        ) { entry in
             PayWatchWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
+        .configurationDisplayName("PayWatch")
+        .description("Bekijk je rekeningen en financieel overzicht")
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .systemLarge,
+            .accessoryRectangular,
+            .accessoryCircular,
+            .accessoryInline
+        ])
     }
-}
-
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
-    }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
-    }
-}
-
-#Preview(as: .systemSmall) {
-    PayWatchWidget()
-} timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
 }
