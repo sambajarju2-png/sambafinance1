@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { clearWidget } from '@/lib/widget-bridge';
 
 export default function SignOutButton() {
   const t = useTranslations('auth');
@@ -13,6 +14,7 @@ export default function SignOutButton() {
 
   async function handleSignOut() {
     setLoading(true);
+    await clearWidget(); // Remove financial data from widget
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/auth/login');

@@ -94,48 +94,51 @@ export async function clearWidget(): Promise<void> {
 // MARK: - Payload Builder
 
 /**
- * Build the widget payload from your existing Supabase data.
+ * Quick sync — call from dashboard with just bills.
+ * Matches the actual Bill type and status logic from @/lib/bills.
  *
- * Example integration in your dashboard page:
- *
- *   const bills = await fetchBills(userId);
- *   const analytics = await fetchAnalytics(userId);
- *   const subscriptions = await fetchSubscriptions(userId);
- *   const finances = await fetchUserFinances(userId);
- *
- *   const payload = buildWidgetPayload(bills, analytics, subscriptions, finances);
- *   await updateWidget(payload);
+ * Usage in overzicht/page.tsx:
+ *   import { syncWidgetFromBills } from '@/lib/widget-bridge';
+ *   // after setBills(fresh):
+ *   syncWidgetFromBills(fresh);
+ */
+export function syncWidgetFromBills(
+  bills: Array<{
+    vendor: string;
+    amount: number;
+    due_date: string;
+    status: string;
+    escalation_stage: string;
+  }>
+): void {
+  const payload = buildWidgetPayload(bills);
+  updateWidget(payload);
+}
+
+/**
+ * Build the widget payload from bills data.
+ * Status logic matches the dashboard:
+ *   - outstanding = status !== 'settled'
+ *   - overdue = outstanding + due_date < today
+ *   - upcoming = outstanding + due_date >= today
  */
 export function buildWidgetPayload(
   bills: Array<{
     vendor: string;
-    amount: number;          // already in cents
+    amount: number;          // cents
     due_date: string;
     status: string;
     escalation_stage: string;
-  }>,
-  analytics: {
-    income_cents: number;
-    expenses_cents: number;
-    net_cents: number;
-  } | null,
-  subscriptions: Array<{
-    merchant_clean_name: string;
-    avg_amount: number;      // cents
-  }>,
-  finances: {
-    netto_inkomen: number;   // cents
-  } | null
+  }>
 ): WidgetPayload {
   const now = new Date();
+  const today = now.toISOString().split('T')[0];
 
-  // Split bills by status
-  const outstanding = bills.filter(
-    (b) => b.status === 'outstanding' || b.status === 'overdue'
-  );
-  const overdue = bills.filter((b) => b.status === 'overdue');
-  const upcoming = bills.filter((b) => b.status === 'outstanding');
-  const paid = bills.filter((b) => b.status === 'paid');
+  // Split bills using same logic as overzicht/page.tsx
+  const outstanding = bills.filter((b) => b.status !== 'settled');
+  const overdue = outstanding.filter((b) => b.due_date < today);
+  const upcoming = outstanding.filter((b) => b.due_date >= today);
+  const settled = bills.filter((b) => b.status === 'settled');
 
   // Sort upcoming by due date (soonest first)
   const sortedUpcoming = [...upcoming].sort(
@@ -144,16 +147,15 @@ export function buildWidgetPayload(
 
   // Calculate days until due
   const daysUntil = (dateStr: string): number => {
-    const due = new Date(dateStr);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const due = new Date(dateStr + 'T00:00:00');
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diff = Math.ceil(
-      (dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      (due.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     return Math.max(0, diff);
   };
 
-  // Next bill
+  // Next bill (soonest upcoming)
   const nextBillRaw = sortedUpcoming[0] || null;
   const nextBill: WidgetBill | null = nextBillRaw
     ? {
@@ -165,7 +167,7 @@ export function buildWidgetPayload(
       }
     : null;
 
-  // Upcoming bills (top 5)
+  // Upcoming bills (top 5 for large widget later)
   const upcomingBills: WidgetBillSummary[] = sortedUpcoming
     .slice(0, 5)
     .map((b) => ({
@@ -177,37 +179,22 @@ export function buildWidgetPayload(
 
   // Totals
   const outstandingAmount = outstanding.reduce((sum, b) => sum + b.amount, 0);
-  const paidAmount = paid.reduce((sum, b) => sum + b.amount, 0);
-  const subscriptionTotal = subscriptions.reduce(
-    (sum, s) => sum + s.avg_amount,
-    0
-  );
-
-  // Financial snapshot
-  const income = analytics?.income_cents ?? finances?.netto_inkomen ?? 0;
-  const expenses = analytics?.expenses_cents ?? 0;
-  const net = analytics?.net_cents ?? income - expenses;
-
-  // Rough debt-free estimate (months)
-  const monthlyDisposable = income - expenses;
-  const debtFreeMonths =
-    monthlyDisposable > 0 && outstandingAmount > 0
-      ? Math.ceil(outstandingAmount / monthlyDisposable)
-      : null;
+  const settledAmount = settled.reduce((sum, b) => sum + b.amount, 0);
 
   return {
     updated_at: now.toISOString(),
     outstanding_amount: outstandingAmount,
     overdue_count: overdue.length,
     upcoming_count: upcoming.length,
-    paid_amount: paidAmount,
-    bank_income: income,
-    bank_expenses: expenses,
-    net: net,
-    disposable: Math.max(0, income - expenses - subscriptionTotal),
+    paid_amount: settledAmount,
+    // Analytics fields — 0 for now, enriched when bank sync data is available
+    bank_income: 0,
+    bank_expenses: 0,
+    net: 0,
+    disposable: 0,
     next_bill: nextBill,
     upcoming_bills: upcomingBills,
-    subscription_total_monthly: subscriptionTotal,
-    debt_free_months: debtFreeMonths,
+    subscription_total_monthly: 0,
+    debt_free_months: null,
   };
 }

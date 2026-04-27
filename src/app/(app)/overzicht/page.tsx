@@ -21,6 +21,7 @@ import AnalyticsEntryCard from '@/components/analytics/analytics-entry-card';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { presets } from '@/lib/motion';
 import { haptic } from '@/lib/capacitor';
+import { syncWidgetFromBills } from '@/lib/widget-bridge';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -44,6 +45,7 @@ export default function OverzichtPage() {
         const data = await res.json();
         const fresh = data.bills || [];
         setBills(fresh);
+        syncWidgetFromBills(fresh);
         try { sessionStorage.setItem('pw-bills-cache', JSON.stringify(fresh)); } catch {}
       }
     } catch {
