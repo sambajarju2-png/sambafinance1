@@ -42,6 +42,7 @@ const config = {
     preferredContentMode: 'mobile',
     scheme: 'PayWatch',
     allowsLinkPreview: false,
+    appendUserAgent: 'PayWatch-iOS',
   },
   android: {
     allowMixedContent: false,
