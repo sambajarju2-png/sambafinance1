@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { getTransactions, Transaction } from '@/lib/enablebanking'
 import { sendPushToUser } from '@/lib/push'
+import { log } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -157,21 +158,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Run transaction categorization pipeline
-    try {
-      const { categorizeUserTransactions } = await import('@/lib/analytics/categorizer')
-      const catResult = await categorizeUserTransactions(user.id)
-      console.log(`[Bank] Categorized ${catResult.categorized} transactions (${catResult.aiCalled} via AI)`)
-    } catch (catErr) {
-      console.error('[Bank] Categorization error (non-blocking):', catErr)
-    }
-
-    // Detect recurring subscriptions (non-blocking)
-    try {
-      await supabase.rpc('detect_recurring_payments', { p_user_id: user.id })
-    } catch (subErr) {
-      console.error('[Bank] Subscription detection error (non-blocking):', subErr)
-    }
+    // PW-09: Run categorization + subscription detection fire-and-forget
+    // Don't block the sync response — user sees transactions immediately
+    const userId = user.id
+    Promise.resolve().then(async () => {
+      try {
+        const { categorizeUserTransactions } = await import('@/lib/analytics/categorizer')
+        const catResult = await categorizeUserTransactions(userId)
+        log.info('Categorization complete', { userId, categorized: catResult.categorized, aiCalled: catResult.aiCalled })
+      } catch (catErr) {
+        log.error('Categorization error (background)', { error: catErr instanceof Error ? catErr.message : 'unknown' })
+      }
+      try {
+        await supabase.rpc('detect_recurring_payments', { p_user_id: userId })
+      } catch (subErr) {
+        log.error('Subscription detection error (background)', { error: subErr instanceof Error ? subErr.message : 'unknown' })
+      }
+    })
 
     return NextResponse.json({ success: true, new_transactions: totalNew, matched: totalMatched, bill_matches: totalBillMatches })
   } catch (error) {

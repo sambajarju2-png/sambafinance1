@@ -57,12 +57,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Start Enable Banking auth flow
-    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app'}/api/bank/callback`
     const state = randomUUID()
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app'}/api/bank/callback`
 
     const authResult = await startAuth(institution_name, 'NL', redirectUrl, state)
 
-    // Save connection
+    // PW-02: Store state bound to THIS user (expires in 10 minutes)
+    await supabase.from('pending_bank_auths').insert({
+      state,
+      user_id: user.id,
+      institution_name,
+    })
+
+    // Save connection with pending status
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + 90)
 

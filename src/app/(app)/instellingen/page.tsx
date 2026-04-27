@@ -220,6 +220,25 @@ function SettingsContent() {
       </div>
 
       <div className="pt-4 space-y-3">
+        {/* PW-18: GDPR data export */}
+        <button onClick={async () => {
+          try {
+            const res = await fetch('/api/settings/export', { method: 'POST' });
+            if (!res.ok) throw new Error('Export failed');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `paywatch-export-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          } catch { alert('Export mislukt. Probeer het later opnieuw.'); }
+        }}
+          className="btn-press flex w-full items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text transition-colors hover:bg-pw-bg">
+          <Shield className="h-4 w-4" strokeWidth={1.5} />
+          Download mijn gegevens (GDPR)
+        </button>
+
         <button onClick={handleSignOut} disabled={signingOut}
           className="btn-press flex w-full items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-red transition-colors hover:border-pw-red/30 hover:bg-red-50 disabled:opacity-50">
           {signingOut ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <LogOut className="h-4 w-4" strokeWidth={1.5} />}

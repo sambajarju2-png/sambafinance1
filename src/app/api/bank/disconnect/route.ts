@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
       try { await deleteSession(conn.agreement_id) } catch { /* best effort */ }
     }
 
-    await supabase.from('bank_transactions').delete().eq('connection_id', connection_id)
-    await supabase.from('bank_connections').delete().eq('id', connection_id)
+    await supabase.from('bank_transactions').delete().eq('connection_id', connection_id).eq('user_id', user.id)
+    await supabase.from('bank_connections').delete().eq('id', connection_id).eq('user_id', user.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
