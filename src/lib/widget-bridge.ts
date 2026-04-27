@@ -20,6 +20,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface WidgetBridgePlugin {
   updateWidgetData(options: { data: string }): Promise<{ success: boolean }>;
+  storeAuthToken(options: { token: string; apiBase?: string }): Promise<{ success: boolean }>;
   clearWidgetData(): Promise<{ success: boolean }>;
 }
 
@@ -88,6 +89,26 @@ export async function clearWidget(): Promise<void> {
     await WidgetBridge.clearWidgetData();
   } catch (e) {
     console.warn('[WidgetBridge] Clear failed:', e);
+  }
+}
+
+/**
+ * Store Supabase auth token in App Groups for background refresh.
+ * The BGAppRefreshTask reads this token to fetch fresh data
+ * from /api/widget/data when the app is closed.
+ *
+ * Call this after successful login or token refresh.
+ */
+export async function storeWidgetAuth(accessToken: string): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    await WidgetBridge.storeAuthToken({
+      token: accessToken,
+      apiBase: typeof window !== 'undefined' ? window.location.origin : 'https://app.paywatch.app',
+    });
+  } catch (e) {
+    console.warn('[WidgetBridge] Auth store failed:', e);
   }
 }
 

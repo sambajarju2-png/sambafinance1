@@ -21,7 +21,8 @@ import AnalyticsEntryCard from '@/components/analytics/analytics-entry-card';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { presets } from '@/lib/motion';
 import { haptic } from '@/lib/capacitor';
-import { syncWidgetFromBills } from '@/lib/widget-bridge';
+import { syncWidgetFromBills, storeWidgetAuth } from '@/lib/widget-bridge';
+import { createClient } from '@/lib/supabase/client';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -67,6 +68,15 @@ export default function OverzichtPage() {
     fetchBills();
     fetch('/api/streak').catch(() => {});
   }, [fetchBills]);
+
+  // Store auth token for background widget refresh (BGAppRefreshTask)
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data }) => {
+      if (data.session?.access_token) {
+        storeWidgetAuth(data.session.access_token);
+      }
+    });
+  }, []);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];

@@ -1,18 +1,56 @@
 import UIKit
 import Capacitor
+import BackgroundTasks
+import WidgetKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    static let bgTaskIdentifier = "nl.paywatch.app.widget-refresh"
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Register background task for widget data refresh
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.bgTaskIdentifier,
+            using: nil
+        ) { task in
+            self.handleWidgetRefresh(task: task as! BGAppRefreshTask)
+        }
+
         return true
     }
 
+    // ─── Background Widget Refresh ─────────────────────────
+    // Fetches fresh data from /api/widget/data and updates App Groups
+
+    private func handleWidgetRefresh(task: BGAppRefreshTask) {
+        // Schedule the next refresh
+        scheduleWidgetRefresh()
+
+        // Set expiration handler
+        task.expirationHandler = {
+            task.setTaskCompleted(success: false)
+        }
+
+        // Perform the refresh
+        WidgetBridgePlugin.performBackgroundRefresh { success in
+            task.setTaskCompleted(success: success)
+        }
+    }
+
+    func scheduleWidgetRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: Self.bgTaskIdentifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60) // 30 minutes
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            print("[PayWatch] BGTask scheduling failed: \(error)")
+        }
+    }
+
     // ─── Push Notifications ─────────────────────────────────
-    // Required: Forward APNs device token to Capacitor plugin
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
     }
@@ -25,6 +63,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        // Schedule widget refresh when app goes to background
+        scheduleWidgetRefresh()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
