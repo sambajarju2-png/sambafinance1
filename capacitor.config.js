@@ -36,7 +36,7 @@ const config = {
     },
   },
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     preferredContentMode: 'mobile',
     scheme: 'PayWatch',
     allowsLinkPreview: false,
