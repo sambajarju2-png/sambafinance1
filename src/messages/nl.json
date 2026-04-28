@@ -345,7 +345,9 @@
     "reauth": "Opnieuw verbinden",
     "disconnectConfirm": "Weet je zeker dat je dit Gmail-account wilt ontkoppelen?",
     "disconnected": "Account ontkoppeld",
-    "add": "Gmail toevoegen"
+    "add": "Gmail toevoegen",
+    "errorGeneral": "Er ging iets mis. Probeer het opnieuw.",
+    "errorConnect": "Kon niet verbinden. Probeer het opnieuw."
   },
   "scan": {
     "title": "Scan",

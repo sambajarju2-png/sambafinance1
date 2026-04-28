@@ -400,7 +400,8 @@
     "scanDaily": "After this first scan, we automatically scan the last 24 hours every day. No action needed on your end.",
     "startScanButton": "Start scan",
     "denied": "Permission denied. Please try again.",
-    "errorGeneral": "Something went wrong. Please try again."
+    "errorGeneral": "Something went wrong. Please try again.",
+    "errorConnect": "Could not connect. Please try again."
   },
   "scan": {
     "title": "Scan",

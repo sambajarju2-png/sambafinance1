@@ -8,8 +8,10 @@
           "/instellingen*",
           "/overzicht*",
           "/betalingen*",
-          "/api/gmail/callback*",
-          "/api/auth/outlook/callback*"
+          "/feed*",
+          "/stats*",
+          "/buddy*",
+          "NOT /api/*"
         ]
       }
     ]
