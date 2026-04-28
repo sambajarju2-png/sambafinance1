@@ -218,9 +218,9 @@ html.native-app {
 
 /* Edge-to-edge: background bleeds into safe areas */
 html.native-app body {
-  /* Extend content behind status bar and home indicator */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Components (topbar, bottom-nav) handle their own safe area insets.
+     Body should NOT add additional padding — that causes double spacing.
+     Background color fills behind safe areas via the root div's bg class. */
 }
 
 /* Glass effect on topbar in native mode */
