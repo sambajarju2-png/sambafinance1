@@ -11,6 +11,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     static let bgTaskIdentifier = "nl.paywatch.app.widget-refresh"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Force-register widget bridge plugin (SPM auto-discovery unreliable for in-app plugins)
+        CAPBridge.registerPlugin(WidgetBridgePlugin.self)
+
         // Register background task for widget data refresh
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.bgTaskIdentifier,
@@ -27,18 +30,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // ─── Background Widget Refresh ─────────────────────────
-    // Fetches fresh data from /api/widget/data and updates App Groups
 
     private func handleWidgetRefresh(task: BGAppRefreshTask) {
-        // Schedule the next refresh
         scheduleWidgetRefresh()
-
-        // Set expiration handler
         task.expirationHandler = {
             task.setTaskCompleted(success: false)
         }
-
-        // Perform the refresh
         WidgetBridgePlugin.performBackgroundRefresh { success in
             task.setTaskCompleted(success: success)
         }
@@ -46,11 +43,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func scheduleWidgetRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: Self.bgTaskIdentifier)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60) // 30 minutes
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
             print("[PayWatch] BGTask scheduling failed: \(error)")
+        }
+    }
+
+    // ─── Debug: verify App Groups data on each app open ─────
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
+        let hasData = defaults?.string(forKey: "widget_data") != nil
+        let updatedAt = defaults?.double(forKey: "widget_data_updated_at") ?? 0
+        print("[Widget Debug] App Group accessible: \(defaults != nil)")
+        print("[Widget Debug] widget_data exists: \(hasData)")
+        if updatedAt > 0 {
+            let date = Date(timeIntervalSince1970: updatedAt)
+            print("[Widget Debug] Last updated: \(date)")
         }
     }
 
@@ -67,14 +77,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // Schedule widget refresh when app goes to background
         scheduleWidgetRefresh()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

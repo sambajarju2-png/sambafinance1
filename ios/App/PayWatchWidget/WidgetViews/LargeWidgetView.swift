@@ -90,7 +90,7 @@ struct LargeWidgetView: View {
             // Bill rows (up to 4 with interactive Betaald button)
             VStack(spacing: 4) {
                 ForEach(Array(data.upcomingBills.prefix(4).enumerated()), id: \.offset) { _, bill in
-                    BillRow(bill: bill, textColor: txt, subColor: sub)
+                    BillRow(bill: bill, textColor: txt, subColor: sub, isRealData: !data.isPlaceholder)
                 }
             }
             .padding(.horizontal, 16)
@@ -223,6 +223,7 @@ struct BillRow: View {
     let bill: WidgetData.BillSummary
     let textColor: Color
     let subColor: Color
+    let isRealData: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -250,13 +251,15 @@ struct BillRow: View {
                 .foregroundColor(textColor)
                 .privacySensitive()
 
-            // Interactive Betaald button (iOS 17+)
-            Button(intent: MarkBillAsPaidIntent(vendor: bill.vendor, amountCents: bill.amount)) {
-                Image(systemName: "checkmark.circle")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(PayWatchColors.green.opacity(0.7))
+            // Interactive Betaald button — only for real data with valid ID
+            if isRealData, let billId = bill.id {
+                Button(intent: MarkBillAsPaidIntent(billId: billId)) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(PayWatchColors.green.opacity(0.7))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, 4)
     }

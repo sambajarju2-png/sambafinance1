@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     const [billsRes, analyticsRes, subsRes, financesRes] = await Promise.all([
       supabase
         .from('bills')
-        .select('vendor, amount, due_date, status, escalation_stage')
+        .select('id, vendor, amount, due_date, status, escalation_stage')
         .eq('user_id', userId)
         .order('due_date', { ascending: true })
         .limit(50),
@@ -119,6 +119,7 @@ export async function GET(req: NextRequest) {
       disposable: disposable,
       next_bill: nextBillRaw
         ? {
+            id: nextBillRaw.id,
             vendor: nextBillRaw.vendor,
             amount: nextBillRaw.amount,
             due_date: nextBillRaw.due_date,
@@ -127,6 +128,7 @@ export async function GET(req: NextRequest) {
           }
         : null,
       upcoming_bills: sortedUpcoming.slice(0, 5).map((b: any) => ({
+        id: b.id,
         vendor: b.vendor,
         amount: b.amount,
         due_date: b.due_date,

@@ -22,6 +22,8 @@ interface WidgetBridgePlugin {
   updateWidgetData(options: { data: string }): Promise<{ success: boolean }>;
   storeAuthToken(options: { token: string; apiBase?: string }): Promise<{ success: boolean }>;
   clearWidgetData(): Promise<{ success: boolean }>;
+  getWidgetState(): Promise<{ needsSync: boolean; widgetData: string }>;
+  clearSyncFlag(): Promise<{ success: boolean }>;
 }
 
 const WidgetBridge = registerPlugin<WidgetBridgePlugin>('WidgetBridge');
@@ -45,14 +47,16 @@ export interface WidgetPayload {
 }
 
 export interface WidgetBill {
+  id: string;                    // Supabase bill UUID
   vendor: string;
   amount: number;                // cents
   due_date: string;              // "2026-05-01"
   days_until: number;
-  stage: string;                 // "factuur" | "herinnering" | "aanmaning" | "incasso" | "deurwaarder"
+  stage: string;
 }
 
 export interface WidgetBillSummary {
+  id: string;                    // Supabase bill UUID
   vendor: string;
   amount: number;                // cents
   due_date: string;
@@ -112,6 +116,29 @@ export async function storeWidgetAuth(accessToken: string): Promise<void> {
   }
 }
 
+/**
+ * Check if the widget marked any bills as paid.
+ * Call this when app returns to foreground.
+ * Returns bill IDs that need to be updated in Supabase.
+ */
+export async function checkWidgetSync(): Promise<string[]> {
+  if (!Capacitor.isNativePlatform()) return [];
+
+  try {
+    const { needsSync } = await WidgetBridge.getWidgetState();
+    if (!needsSync) return [];
+
+    // Read pending paid bill IDs from App Groups
+    // (stored by MarkBillAsPaidIntent in Swift)
+    // For now, return flag so dashboard knows to re-fetch
+    await WidgetBridge.clearSyncFlag();
+    return ['_needs_refetch'];
+  } catch (e) {
+    console.warn('[WidgetBridge] Sync check failed:', e);
+    return [];
+  }
+}
+
 // MARK: - Payload Builder
 
 /**
@@ -120,6 +147,7 @@ export async function storeWidgetAuth(accessToken: string): Promise<void> {
  */
 export async function syncWidgetFromBills(
   bills: Array<{
+    id: string;
     vendor: string;
     amount: number;
     due_date: string;
@@ -166,6 +194,7 @@ export async function syncWidgetFromBills(
  */
 export function buildWidgetPayload(
   bills: Array<{
+    id: string;
     vendor: string;
     amount: number;          // cents
     due_date: string;
@@ -201,6 +230,7 @@ export function buildWidgetPayload(
   const nextBillRaw = sortedUpcoming[0] || null;
   const nextBill: WidgetBill | null = nextBillRaw
     ? {
+        id: nextBillRaw.id,
         vendor: nextBillRaw.vendor,
         amount: nextBillRaw.amount,
         due_date: nextBillRaw.due_date,
@@ -209,10 +239,11 @@ export function buildWidgetPayload(
       }
     : null;
 
-  // Upcoming bills (top 5 for large widget later)
+  // Upcoming bills (top 5 for large widget)
   const upcomingBills: WidgetBillSummary[] = sortedUpcoming
     .slice(0, 5)
     .map((b) => ({
+      id: b.id,
       vendor: b.vendor,
       amount: b.amount,
       due_date: b.due_date,

@@ -21,8 +21,9 @@ import AnalyticsEntryCard from '@/components/analytics/analytics-entry-card';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { presets } from '@/lib/motion';
 import { haptic } from '@/lib/capacitor';
-import { syncWidgetFromBills, storeWidgetAuth } from '@/lib/widget-bridge';
+import { syncWidgetFromBills, storeWidgetAuth, checkWidgetSync } from '@/lib/widget-bridge';
 import { createClient } from '@/lib/supabase/client';
+import { App as CapApp } from '@capacitor/app';
 
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -77,6 +78,20 @@ export default function OverzichtPage() {
       }
     });
   }, []);
+
+  // Sync-back: check if user marked bills as paid in widget
+  useEffect(() => {
+    const listener = CapApp.addListener('appStateChange', async ({ isActive }) => {
+      if (isActive) {
+        const changed = await checkWidgetSync();
+        if (changed.length > 0) {
+          // Widget had changes — re-fetch fresh data from server
+          fetchBills();
+        }
+      }
+    });
+    return () => { listener.then(l => l.remove()); };
+  }, [fetchBills]);
 
   const today = new Date().toISOString().split('T')[0];
   const threeDaysFromNow = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];

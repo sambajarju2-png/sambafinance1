@@ -40,17 +40,13 @@ struct MarkBillAsPaidIntent: AppIntent {
     static var title: LocalizedStringResource = "Markeer als betaald"
     static var description: IntentDescription = IntentDescription("Markeer een rekening als betaald")
 
-    @Parameter(title: "Leverancier")
-    var vendor: String
-
-    @Parameter(title: "Bedrag")
-    var amountCents: Int
+    @Parameter(title: "Bill ID")
+    var billId: String
 
     init() {}
 
-    init(vendor: String, amountCents: Int) {
-        self.vendor = vendor
-        self.amountCents = amountCents
+    init(billId: String) {
+        self.billId = billId
     }
 
     func perform() async throws -> some IntentResult {
@@ -66,15 +62,20 @@ struct MarkBillAsPaidIntent: AppIntent {
             return .result()
         }
 
-        // Remove bill from upcoming, adjust totals
-        if let idx = data.upcomingBills.firstIndex(where: { $0.vendor == vendor && $0.amount == amountCents }) {
+        // Find by ID first, fall back to vendor match
+        if let idx = data.upcomingBills.firstIndex(where: { $0.id == billId }) {
             let bill = data.upcomingBills.remove(at: idx)
             data.outstandingAmount = max(0, data.outstandingAmount - bill.amount)
             data.upcomingCount = max(0, data.upcomingCount - 1)
             data.paidAmount += bill.amount
             data.nextBill = data.upcomingBills.first.map {
-                MutableWidgetData.NextBill(vendor: $0.vendor, amount: $0.amount, dueDate: $0.dueDate, daysUntil: 0, stage: $0.stage)
+                MutableWidgetData.NextBill(id: $0.id, vendor: $0.vendor, amount: $0.amount, dueDate: $0.dueDate, daysUntil: 0, stage: $0.stage)
             }
+
+            // Track which bills were marked paid
+            var paidIds = defaults?.stringArray(forKey: "pending_paid_bills") ?? []
+            paidIds.append(billId)
+            defaults?.set(paidIds, forKey: "pending_paid_bills")
 
             let encoder = JSONEncoder()
             encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -84,7 +85,6 @@ struct MarkBillAsPaidIntent: AppIntent {
             }
         }
 
-        // Flag for full sync when app opens
         defaults?.set(true, forKey: "widget_needs_sync")
         defaults?.synchronize()
         WidgetCenter.shared.reloadAllTimelines()
@@ -111,6 +111,7 @@ private struct MutableWidgetData: Codable {
     var debtFreeMonths: Int?
 
     struct NextBill: Codable {
+        let id: String?
         let vendor: String
         let amount: Int
         let dueDate: String
@@ -119,6 +120,7 @@ private struct MutableWidgetData: Codable {
     }
 
     struct BillSummary: Codable {
+        let id: String?
         let vendor: String
         let amount: Int
         let dueDate: String

@@ -20,18 +20,25 @@ struct WidgetData: Codable {
     let debtFreeMonths: Int?
 
     struct NextBill: Codable {
+        let id: String?              // Supabase bill UUID
         let vendor: String
         let amount: Int              // cents
         let dueDate: String          // "2026-05-01"
         let daysUntil: Int
-        let stage: String            // "factuur" | "herinnering" | "aanmaning" | "incasso" | "deurwaarder"
+        let stage: String
     }
 
     struct BillSummary: Codable {
+        let id: String?              // Supabase bill UUID
         let vendor: String
         let amount: Int              // cents
         let dueDate: String
         let stage: String
+    }
+
+    // Check if this is placeholder data (never written by the app)
+    var isPlaceholder: Bool {
+        return updatedAt == "2026-04-27T09:00:00Z" && outstandingAmount == 98174
     }
 }
 
@@ -49,6 +56,7 @@ extension WidgetData {
         net: 68300,
         disposable: 145604,
         nextBill: NextBill(
+            id: nil,
             vendor: "Eneco",
             amount: 21600,
             dueDate: "2026-05-01",
@@ -56,9 +64,9 @@ extension WidgetData {
             stage: "factuur"
         ),
         upcomingBills: [
-            BillSummary(vendor: "Eneco", amount: 21600, dueDate: "2026-05-01", stage: "factuur"),
-            BillSummary(vendor: "KPN", amount: 8900, dueDate: "2026-05-03", stage: "factuur"),
-            BillSummary(vendor: "CJIB", amount: 35000, dueDate: "2026-05-10", stage: "aanmaning")
+            BillSummary(id: nil, vendor: "Eneco", amount: 21600, dueDate: "2026-05-01", stage: "factuur"),
+            BillSummary(id: nil, vendor: "KPN", amount: 8900, dueDate: "2026-05-03", stage: "factuur"),
+            BillSummary(id: nil, vendor: "CJIB", amount: 35000, dueDate: "2026-05-10", stage: "aanmaning")
         ],
         subscriptionTotalMonthly: 137400,
         debtFreeMonths: 6

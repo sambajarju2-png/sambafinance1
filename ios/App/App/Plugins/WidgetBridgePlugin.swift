@@ -12,7 +12,9 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "updateWidgetData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "storeAuthToken", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clearWidgetData", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "clearWidgetData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getWidgetState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearSyncFlag", returnType: CAPPluginReturnPromise)
     ]
 
     static let suiteName = "group.nl.paywatch.app"
@@ -23,16 +25,21 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Update Widget Data
     @objc func updateWidgetData(_ call: CAPPluginCall) {
+        print("[WidgetBridge] updateWidgetData CALLED")
+
         guard let jsonString = call.getString("data") else {
+            print("[WidgetBridge] ERROR: Missing 'data' parameter")
             call.reject("Missing 'data' parameter")
             return
         }
         guard let jsonData = jsonString.data(using: .utf8),
               (try? JSONSerialization.jsonObject(with: jsonData)) != nil else {
+            print("[WidgetBridge] ERROR: Invalid JSON")
             call.reject("Invalid JSON string")
             return
         }
         guard let defaults = UserDefaults(suiteName: Self.suiteName) else {
+            print("[WidgetBridge] ERROR: Cannot access App Group \(Self.suiteName)")
             call.reject("Could not access App Group")
             return
         }
@@ -40,6 +47,8 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.set(jsonString, forKey: Self.dataKey)
         defaults.set(Date().timeIntervalSince1970, forKey: Self.updatedAtKey)
         defaults.synchronize()
+
+        print("[WidgetBridge] SUCCESS: Wrote \(jsonString.count) chars to App Group")
 
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve(["success": true])
@@ -79,6 +88,25 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         defaults.synchronize()
 
         WidgetCenter.shared.reloadAllTimelines()
+        call.resolve(["success": true])
+    }
+
+    // MARK: - Get Widget State (for sync-back when app opens)
+    @objc func getWidgetState(_ call: CAPPluginCall) {
+        let defaults = UserDefaults(suiteName: Self.suiteName)
+        let needsSync = defaults?.bool(forKey: "widget_needs_sync") ?? false
+        let widgetData = defaults?.string(forKey: Self.dataKey) ?? ""
+        call.resolve([
+            "needsSync": needsSync,
+            "widgetData": widgetData
+        ])
+    }
+
+    // MARK: - Clear Sync Flag (after app processes widget changes)
+    @objc func clearSyncFlag(_ call: CAPPluginCall) {
+        let defaults = UserDefaults(suiteName: Self.suiteName)
+        defaults?.set(false, forKey: "widget_needs_sync")
+        defaults?.synchronize()
         call.resolve(["success": true])
     }
 

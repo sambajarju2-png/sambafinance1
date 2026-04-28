@@ -41,11 +41,20 @@ struct PayWatchWidgetProvider: AppIntentTimelineProvider {
         let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
         guard let jsonString = defaults?.string(forKey: "widget_data"),
               let jsonData = jsonString.data(using: .utf8) else {
+            print("[Widget] loadWidgetData: NO DATA in App Group")
             return nil
         }
+        print("[Widget] loadWidgetData: Found \(jsonString.count) chars")
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try? decoder.decode(WidgetData.self, from: jsonData)
+        do {
+            let data = try decoder.decode(WidgetData.self, from: jsonData)
+            print("[Widget] loadWidgetData: Decoded OK — outstanding=\(data.outstandingAmount) overdue=\(data.overdueCount)")
+            return data
+        } catch {
+            print("[Widget] loadWidgetData: DECODE FAILED — \(error)")
+            return nil
+        }
     }
 }
 
