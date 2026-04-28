@@ -11,8 +11,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     static let bgTaskIdentifier = "nl.paywatch.app.widget-refresh"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Force-register widget bridge plugin (SPM auto-discovery unreliable for in-app plugins)
-        CAPBridge.registerPlugin(WidgetBridgePlugin.self)
+        // Capacitor 8 auto-discovers plugins via @objc + CAPBridgedPlugin conformance.
+        // No manual registration needed.
 
         // Register background task for widget data refresh
         BGTaskScheduler.shared.register(
