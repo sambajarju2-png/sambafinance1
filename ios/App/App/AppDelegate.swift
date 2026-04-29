@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 import BackgroundTasks
 import WidgetKit
 
@@ -9,11 +10,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     static let bgTaskIdentifier = "nl.paywatch.app.widget-refresh"
+    static let suiteName = "group.nl.paywatch.app"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Capacitor 8 auto-discovers plugins via @objc + CAPBridgedPlugin conformance.
-        // No manual registration needed.
-
         // Register background task for widget data refresh
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.bgTaskIdentifier,
@@ -26,17 +25,72 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             self?.handleWidgetRefresh(task: bgTask)
         }
 
+        // Listen for Capacitor bridge ready -> inject widget bridge into webview
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(onBridgeReady(_:)),
+            name: NSNotification.Name.capacitorDidLoad,
+            object: nil
+        )
+
         return true
     }
 
-    // ─── Background Widget Refresh ─────────────────────────
+    // --- Widget Bridge via WKScriptMessageHandler ---
+    // Bypasses Capacitor plugin discovery entirely.
+    // JS calls: window.webkit.messageHandlers.widgetData.postMessage(jsonString)
+
+    @objc func onBridgeReady(_ notification: Notification) {
+        print("[WidgetBridge] Capacitor bridge loaded - injecting widget handlers")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard let rootVC = self.window?.rootViewController,
+                  let bridgeVC = rootVC as? CAPBridgeViewController,
+                  let webView = bridgeVC.webView else {
+                print("[WidgetBridge] ERROR: Could not find webView")
+                return
+            }
+
+            // Register native message handlers on the webview
+            let handler = WidgetMessageHandler()
+            webView.configuration.userContentController.add(handler, name: "widgetData")
+            webView.configuration.userContentController.add(handler, name: "widgetClear")
+            webView.configuration.userContentController.add(handler, name: "widgetAuth")
+            print("[WidgetBridge] Message handlers registered on webView")
+
+            // Inject JS bridge so the web app can call it
+            let js = """
+            window.PayWatchNativeBridge = {
+                updateWidgetData: function(jsonString) {
+                    window.webkit.messageHandlers.widgetData.postMessage(jsonString);
+                },
+                clearWidgetData: function() {
+                    window.webkit.messageHandlers.widgetClear.postMessage("clear");
+                },
+                storeAuthToken: function(token) {
+                    window.webkit.messageHandlers.widgetAuth.postMessage(token);
+                }
+            };
+            console.log('[WidgetBridge] Native bridge injected');
+            """
+            webView.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("[WidgetBridge] JS injection error: \\(error)")
+                } else {
+                    print("[WidgetBridge] JS bridge injected successfully")
+                }
+            }
+        }
+    }
+
+    // --- Background Widget Refresh ---
 
     private func handleWidgetRefresh(task: BGAppRefreshTask) {
         scheduleWidgetRefresh()
         task.expirationHandler = {
             task.setTaskCompleted(success: false)
         }
-        WidgetBridgePlugin.performBackgroundRefresh { success in
+        Self.performBackgroundRefresh { success in
             task.setTaskCompleted(success: success)
         }
     }
@@ -47,24 +101,49 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            print("[PayWatch] BGTask scheduling failed: \(error)")
+            print("[PayWatch] BGTask scheduling failed: \\(error)")
         }
     }
 
-    // ─── Debug: verify App Groups data on each app open ─────
+    static func performBackgroundRefresh(completion: @escaping (Bool) -> Void) {
+        let defaults = UserDefaults(suiteName: suiteName)
+        guard let token = defaults?.string(forKey: "widget_auth_token"),
+              let apiBase = defaults?.string(forKey: "widget_api_base"),
+              let url = URL(string: "\(apiBase)/api/widget/data") else {
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 25
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let jsonString = String(data: data, encoding: .utf8),
+                  (try? JSONSerialization.jsonObject(with: data)) != nil else {
+                completion(false)
+                return
+            }
+            defaults?.set(jsonString, forKey: "widget_data")
+            defaults?.set(Date().timeIntervalSince1970, forKey: "widget_data_updated_at")
+            defaults?.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
+            completion(true)
+        }.resume()
+    }
+
+    // --- Debug ---
     func applicationDidBecomeActive(_ application: UIApplication) {
-        let defaults = UserDefaults(suiteName: "group.nl.paywatch.app")
+        let defaults = UserDefaults(suiteName: Self.suiteName)
         let hasData = defaults?.string(forKey: "widget_data") != nil
-        let updatedAt = defaults?.double(forKey: "widget_data_updated_at") ?? 0
         print("[Widget Debug] App Group accessible: \(defaults != nil)")
         print("[Widget Debug] widget_data exists: \(hasData)")
-        if updatedAt > 0 {
-            let date = Date(timeIntervalSince1970: updatedAt)
-            print("[Widget Debug] Last updated: \(date)")
-        }
     }
 
-    // ─── Push Notifications ─────────────────────────────────
+    // --- Push Notifications ---
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
     }
@@ -73,18 +152,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-    }
+    func applicationWillResignActive(_ application: UIApplication) {}
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         scheduleWidgetRefresh()
     }
 
-    func applicationWillEnterForeground(_ application: UIApplication) {
-    }
-
-    func applicationWillTerminate(_ application: UIApplication) {
-    }
+    func applicationWillEnterForeground(_ application: UIApplication) {}
+    func applicationWillTerminate(_ application: UIApplication) {}
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
@@ -93,5 +168,53 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
+}
 
+// --- WKScriptMessageHandler - receives data from web app ---
+
+class WidgetMessageHandler: NSObject, WKScriptMessageHandler {
+
+    let suiteName = "group.nl.paywatch.app"
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        switch message.name {
+
+        case "widgetData":
+            guard let jsonString = message.body as? String else {
+                print("[WidgetBridge] ERROR: widgetData body is not a string")
+                return
+            }
+            guard let data = jsonString.data(using: .utf8),
+                  (try? JSONSerialization.jsonObject(with: data)) != nil else {
+                print("[WidgetBridge] ERROR: Invalid JSON")
+                return
+            }
+            let defaults = UserDefaults(suiteName: suiteName)
+            defaults?.set(jsonString, forKey: "widget_data")
+            defaults?.set(Date().timeIntervalSince1970, forKey: "widget_data_updated_at")
+            defaults?.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
+            print("[WidgetBridge] SUCCESS: Wrote \(jsonString.count) chars -> reloading timelines")
+
+        case "widgetClear":
+            let defaults = UserDefaults(suiteName: suiteName)
+            defaults?.removeObject(forKey: "widget_data")
+            defaults?.removeObject(forKey: "widget_data_updated_at")
+            defaults?.removeObject(forKey: "widget_auth_token")
+            defaults?.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
+            print("[WidgetBridge] Cleared widget data")
+
+        case "widgetAuth":
+            guard let token = message.body as? String else { return }
+            let defaults = UserDefaults(suiteName: suiteName)
+            defaults?.set(token, forKey: "widget_auth_token")
+            defaults?.set("https://app.paywatch.app", forKey: "widget_api_base")
+            defaults?.synchronize()
+            print("[WidgetBridge] Auth token stored")
+
+        default:
+            break
+        }
+    }
 }
