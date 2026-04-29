@@ -71,6 +71,18 @@ export default function InviteClient({
           setLoading(false);
           return;
         }
+
+        // Supabase signUp may not auto-login if email confirmation is enabled
+        // Sign in immediately with the same credentials
+        if (!data.session) {
+          const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+          if (loginError) {
+            setError("Account aangemaakt, maar kon niet automatisch inloggen. Probeer in te loggen.");
+            setMode("login");
+            setLoading(false);
+            return;
+          }
+        }
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
         if (loginError) {
