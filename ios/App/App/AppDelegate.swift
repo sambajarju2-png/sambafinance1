@@ -12,6 +12,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     static let bgTaskIdentifier = "nl.paywatch.app.widget-refresh"
     static let suiteName = "group.nl.paywatch.app"
 
+    private var widgetBridgeInjected = false
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Register background task for widget data refresh
         BGTaskScheduler.shared.register(
@@ -25,62 +27,50 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             self?.handleWidgetRefresh(task: bgTask)
         }
 
-        // Listen for Capacitor bridge ready -> inject widget bridge into webview
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(onBridgeReady(_:)),
-            name: NSNotification.Name.capacitorDidLoad,
-            object: nil
-        )
-
         return true
     }
 
     // --- Widget Bridge via WKScriptMessageHandler ---
-    // Bypasses Capacitor plugin discovery entirely.
-    // JS calls: window.webkit.messageHandlers.widgetData.postMessage(jsonString)
 
-    @objc func onBridgeReady(_ notification: Notification) {
-        print("[WidgetBridge] Capacitor bridge loaded - injecting widget handlers")
+    private func injectWidgetBridge() {
+        guard !widgetBridgeInjected else { return }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            guard let rootVC = self.window?.rootViewController,
-                  let bridgeVC = rootVC as? CAPBridgeViewController,
-                  let webView = bridgeVC.webView else {
-                print("[WidgetBridge] ERROR: Could not find webView")
-                return
+        guard let rootVC = self.window?.rootViewController,
+              let bridgeVC = rootVC as? CAPBridgeViewController,
+              let webView = bridgeVC.webView else {
+            print("[WidgetBridge] WebView not ready yet")
+            return
+        }
+
+        let handler = WidgetMessageHandler()
+        webView.configuration.userContentController.add(handler, name: "widgetData")
+        webView.configuration.userContentController.add(handler, name: "widgetClear")
+        webView.configuration.userContentController.add(handler, name: "widgetAuth")
+
+        let js = """
+        window.PayWatchNativeBridge = {
+            updateWidgetData: function(jsonString) {
+                window.webkit.messageHandlers.widgetData.postMessage(jsonString);
+            },
+            clearWidgetData: function() {
+                window.webkit.messageHandlers.widgetClear.postMessage("clear");
+            },
+            storeAuthToken: function(token) {
+                window.webkit.messageHandlers.widgetAuth.postMessage(token);
             }
-
-            // Register native message handlers on the webview
-            let handler = WidgetMessageHandler()
-            webView.configuration.userContentController.add(handler, name: "widgetData")
-            webView.configuration.userContentController.add(handler, name: "widgetClear")
-            webView.configuration.userContentController.add(handler, name: "widgetAuth")
-            print("[WidgetBridge] Message handlers registered on webView")
-
-            // Inject JS bridge so the web app can call it
-            let js = """
-            window.PayWatchNativeBridge = {
-                updateWidgetData: function(jsonString) {
-                    window.webkit.messageHandlers.widgetData.postMessage(jsonString);
-                },
-                clearWidgetData: function() {
-                    window.webkit.messageHandlers.widgetClear.postMessage("clear");
-                },
-                storeAuthToken: function(token) {
-                    window.webkit.messageHandlers.widgetAuth.postMessage(token);
-                }
-            };
-            console.log('[WidgetBridge] Native bridge injected');
-            """
-            webView.evaluateJavaScript(js) { _, error in
-                if let error = error {
-                    print("[WidgetBridge] JS injection error: \\(error)")
-                } else {
-                    print("[WidgetBridge] JS bridge injected successfully")
-                }
+        };
+        console.log('[WidgetBridge] Native bridge injected');
+        """
+        webView.evaluateJavaScript(js) { _, error in
+            if let error = error {
+                print("[WidgetBridge] JS injection error: \(error)")
+            } else {
+                print("[WidgetBridge] JS bridge injected successfully")
             }
         }
+
+        widgetBridgeInjected = true
+        print("[WidgetBridge] Message handlers registered")
     }
 
     // --- Background Widget Refresh ---
@@ -101,7 +91,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            print("[PayWatch] BGTask scheduling failed: \\(error)")
+            print("[PayWatch] BGTask scheduling failed: \(error)")
         }
     }
 
@@ -137,6 +127,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // --- Debug ---
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // Inject widget bridge on first activation (webview is ready by now)
+        injectWidgetBridge()
+
         let defaults = UserDefaults(suiteName: Self.suiteName)
         let hasData = defaults?.string(forKey: "widget_data") != nil
         print("[Widget Debug] App Group accessible: \(defaults != nil)")
