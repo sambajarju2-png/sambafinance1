@@ -264,6 +264,9 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const sentToChatRef = useRef(0);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+  // Resolver for request_photo clientTool — waits for scan result before returning to ElevenLabs
+  const photoResolverRef = useRef<((result: string) => void) | null>(null);
   const nl = lang === 'nl';
 
   // Voice call has dark background — light status bar text
@@ -415,10 +418,22 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         }
       },
 
-      // ── Request photo (opens camera during call) ──
-      request_photo: async () => {
+      // ── Request photo — opens camera, waits for Mistral Vision scan, returns result to PayBuddy ──
+      request_photo: async (): Promise<string> => {
         setShowCamera(true);
-        return 'Camera geopend. De gebruiker kan nu een foto maken van de rekening.';
+        // Return a promise that resolves when the photo is scanned
+        // ElevenLabs holds the tool call open until this resolves
+        return new Promise<string>((resolve) => {
+          photoResolverRef.current = resolve;
+          // Safety timeout: if user doesn't take photo in 60s, cancel
+          setTimeout(() => {
+            if (photoResolverRef.current === resolve) {
+              photoResolverRef.current = null;
+              setShowCamera(false);
+              resolve(nl ? 'De gebruiker heeft geen foto gemaakt.' : 'No photo taken.');
+            }
+          }, 60000);
+        });
       },
 
       // ── Get schuldhulp info for user's gemeente ──
@@ -650,23 +665,52 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           const file = e.target.files?.[0];
           if (!file) return;
           setShowCamera(false);
-          // Upload photo to chat for AI processing
-          const formData = new FormData();
-          formData.append('file', file);
+          setProcessingPhoto(true);
+
           try {
-            await fetch('/api/voice/send-to-chat', {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('/api/voice/scan-image', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message: 'De gebruiker heeft een foto gemaakt van een rekening. Deze wordt verwerkt via de chat.',
-                type: 'photo_received',
-              }),
+              body: formData,
             });
+
+            const data = await res.json();
+            const spoken: string = data.spoken || (nl ? 'Ik heb de foto bekeken.' : 'I looked at the photo.');
+
+            // Resolve the request_photo promise — PayBuddy gets the result and can speak it
+            if (photoResolverRef.current) {
+              photoResolverRef.current(spoken);
+              photoResolverRef.current = null;
+            }
+
             sentToChatRef.current += 1;
-          } catch {}
-          if (photoInputRef.current) photoInputRef.current.value = '';
+            sounds.sentToChat();
+          } catch {
+            const fallback = nl ? 'Kon de foto niet analyseren. Probeer opnieuw.' : 'Could not scan the photo.';
+            if (photoResolverRef.current) {
+              photoResolverRef.current(fallback);
+              photoResolverRef.current = null;
+            }
+          } finally {
+            setProcessingPhoto(false);
+            if (photoInputRef.current) photoInputRef.current.value = '';
+          }
         }}
       />
+
+      {/* Photo processing indicator */}
+      {processingPhoto && (
+        <div className="absolute inset-x-0 bottom-28 flex justify-center z-10 px-6">
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 px-5 py-3">
+            <div className="w-4 h-4 border-2 border-pw-blue border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <p className="text-[13px] text-white/80">
+              {nl ? 'Foto analyseren...' : 'Analysing photo...'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Camera prompt overlay */}
       {showCamera && (
