@@ -24,11 +24,13 @@ export default function InviteClient({
   token, inviteId, orgName, orgColor, orgLogo, introText, prefillEmail, isAlreadyActivated,
 }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+  // Default to login — most invitees will either have an account or should confirm email
+  const [mode, setMode] = useState<"signup" | "login">("login");
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
 
   if (isAlreadyActivated) {
     return (
@@ -57,13 +59,21 @@ export default function InviteClient({
         const { data, error: signupError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { invite_token: token } },
+          options: {
+            data: { invite_token: token },
+            // After email confirmation, redirect back here so page.tsx auto-activates invite
+            emailRedirectTo: `${window.location.origin}/invite/${token}`,
+          },
         });
 
         if (signupError) {
-          if (signupError.message.includes("already registered")) {
-            setError("Dit e-mailadres heeft al een account. Probeer in te loggen.");
+          if (
+            signupError.message.toLowerCase().includes("already registered") ||
+            signupError.message.toLowerCase().includes("user already registered")
+          ) {
+            // Switch to login silently
             setMode("login");
+            setError("Dit e-mailadres heeft al een account. Log hieronder in.");
             setLoading(false);
             return;
           }
@@ -72,16 +82,11 @@ export default function InviteClient({
           return;
         }
 
-        // Supabase signUp may not auto-login if email confirmation is enabled
-        // Sign in immediately with the same credentials
         if (!data.session) {
-          const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) {
-            setError("Account aangemaakt, maar kon niet automatisch inloggen. Probeer in te loggen.");
-            setMode("login");
-            setLoading(false);
-            return;
-          }
+          // Email confirmation required — show success screen, don't show error
+          setEmailConfirmationSent(true);
+          setLoading(false);
+          return;
         }
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
@@ -110,6 +115,29 @@ export default function InviteClient({
       setError(err.message || "Er ging iets mis");
     }
     setLoading(false);
+  }
+
+  // Show email confirmation screen after successful signup
+  if (emailConfirmationSent) {
+    return (
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo}>
+        <div style={{ textAlign: "center", padding: "8px 0" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Bevestig je e-mail</h2>
+          <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>
+            We hebben een bevestigingsmail gestuurd naar <strong>{email}</strong>.
+            Klik op de link in de mail om je account te activeren en verder te gaan.
+          </p>
+          <p style={{ fontSize: 12, color: "#94A3B8" }}>
+            Geen mail ontvangen? Controleer ook je spammap.
+          </p>
+        </div>
+      </Shell>
+    );
   }
 
   return (
