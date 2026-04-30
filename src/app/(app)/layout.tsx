@@ -23,6 +23,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!settings?.onboarding_complete) redirect('/onboarding');
 
+  // Update last_active_at for B2B coach visibility (fire-and-forget, non-blocking)
+  supabase.from('user_settings').update({ last_active_at: new Date().toISOString() }).eq('user_id', user.id).then(() => {});
+
   return (
     <div className="flex min-h-dvh flex-col bg-pw-bg">
       <Topbar notificationCount={0} />
