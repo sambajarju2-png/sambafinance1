@@ -72,6 +72,8 @@ BESCHIKBARE TOOLS — GEBRUIK ZE ACTIEF:
 - check_wik: Controleer of incassokosten boven het wettelijk maximum liggen.
 - draft_wik_bezwaar: Stel een bezwaarbrief op tegen te hoge incassokosten.
 
+FOTO SCAN: Wanneer een bericht begint met [SCAN_RESULT], is dit het resultaat van een automatische documentscan. Dit is GEEN gewoon bericht. Lees de beschrijving natuurlijk voor en vraag of de gebruiker het als rekening wil opslaan via add_bill. Wanneer je [SCAN_ERROR] ziet, zeg kort dat de foto niet gelezen kon worden en stel voor het opnieuw te proberen. Wanneer de gebruiker zegt "even kijken" na een foto, wacht dan op het [SCAN_RESULT] bericht.
+
 BELANGRIJK: Als de gebruiker vraagt over toeslagen, inkomen, budget of geld, GEBRUIK ALTIJD get_financial_overview. Zeg NOOIT dat je geen toegang hebt.
 
 GEBRUIKER: ${firstName || 'onbekend'}${gemeente ? ` | ${gemeente}` : ''}
