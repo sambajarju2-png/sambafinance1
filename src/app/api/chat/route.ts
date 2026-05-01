@@ -3,9 +3,148 @@ import { getAuthUserId } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { streamChat } from '@/lib/ai/chat-stream';
-import { extractBillFromPhoto } from '@/lib/ai/pipeline';
 import { extractPdfText } from '@/lib/pdf-extract';
 import { formatCents } from '@/lib/bills';
+import { logAiUsage } from '@/lib/ai/usage-log';
+
+const SCALEWAY_API_URL = 'https://api.scaleway.ai/v1/chat/completions';
+const VISION_MODEL = 'mistral-small-3.2-24b-instruct-2506';
+
+/**
+ * Analyse an image with Mistral Vision (Scaleway EU, data stays in Europe).
+ * Returns a rich extractionContext string that PayBuddy can present naturally.
+ * Handles bills, letters, fines, and any other document type.
+ */
+async function extractImageForChat(base64: string, mimeType: string, userId: string): Promise<string> {
+  const apiKey = process.env.SCW_SECRET_KEY;
+  if (!apiKey) {
+    console.error('[Chat Vision] SCW_SECRET_KEY not set');
+    return '\n\nDE GEBRUIKER HEEFT EEN FOTO GEÜPLOAD maar ik kon deze niet analyseren. Vraag de gebruiker om de details handmatig in te voeren.';
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(SCALEWAY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: VISION_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: `data:${mimeType};base64,${base64}` },
+              },
+              {
+                type: 'text',
+                text: `Je bent een expert in het lezen van Nederlandse rekeningen, brieven en officiële documenten.
+
+Analyseer deze afbeelding en geef je antwoord in dit EXACTE JSON-formaat (geen andere tekst):
+{
+  "document_type": "factuur/herinnering/aanmaning/incasso/deurwaarder/brief/boete/overig",
+  "uitleg": "Een duidelijke uitleg in gewoon Nederlands (2-4 zinnen) die uitlegt wat dit document is, van wie het komt, wat er van de ontvanger wordt verwacht en wat de gevolgen zijn als er niet op tijd wordt betaald.",
+  "vendor": "naam van afzender of null",
+  "amount_cents": getal in eurocenten of null,
+  "due_date": "YYYY-MM-DD of null",
+  "iban": "IBAN of null",
+  "reference": "kenmerk/referentienummer of null",
+  "escalation_stage": "factuur/herinnering/aanmaning/incasso/deurwaarder of null",
+  "urgentie": "laag/middel/hoog/kritiek",
+  "actie_nodig": "Wat de gebruiker nu concreet moet doen (1 zin)"
+}
+
+VANDAAG: ${new Date().toISOString().split('T')[0]}
+Bedragen: €149,50 = 14950 cent. €1.234,00 = 123400 cent. Gebruik altijd INTEGER centen.
+Als het geen financieel document is, geef toch een uitleg van wat je ziet.`,
+              },
+            ],
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 600,
+      }),
+    });
+
+    const durationMs = Date.now() - startTime;
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('[Chat Vision] Mistral error:', response.status, err);
+      return '\n\nDE GEBRUIKER HEEFT EEN FOTO GEÜPLOAD maar ik kon deze niet lezen. Vraag de gebruiker om de details te beschrijven.';
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+
+    const tokensIn = data.usage?.prompt_tokens || 0;
+    const tokensOut = data.usage?.completion_tokens || 0;
+    const costCents = tokensIn * 0.000015 + tokensOut * 0.000035;
+
+    await logAiUsage({ userId, model: VISION_MODEL, operation: 'chat_image_scan', tokensIn, tokensOut, costCents, durationMs });
+
+    // Parse JSON from response
+    let parsed: Record<string, unknown> = {};
+    try {
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        parsed = JSON.parse(content.slice(jsonStart, jsonEnd + 1));
+      }
+    } catch {
+      // JSON parse failed — use raw content as explanation
+      return `\n\nDE GEBRUIKER HEEFT EEN FOTO GEÜPLOAD. Mistral beschrijving: ${content.trim().slice(0, 800)}\n\nBeschrijf dit aan de gebruiker in gewoon Nederlands.`;
+    }
+
+    const uitleg = String(parsed.uitleg || 'Ik heb de foto bekeken maar kon niet alle details herleiden.');
+    const vendor = parsed.vendor ? String(parsed.vendor) : null;
+    const amountCents = parsed.amount_cents ? Number(parsed.amount_cents) : null;
+    const dueDate = parsed.due_date ? String(parsed.due_date) : null;
+    const iban = parsed.iban ? String(parsed.iban) : null;
+    const reference = parsed.reference ? String(parsed.reference) : null;
+    const escalationStage = parsed.escalation_stage ? String(parsed.escalation_stage) : null;
+    const documentType = String(parsed.document_type || 'onbekend');
+    const urgentie = String(parsed.urgentie || 'middel');
+    const actieNodig = parsed.actie_nodig ? String(parsed.actie_nodig) : null;
+
+    const amountStr = amountCents ? `€${(amountCents / 100).toFixed(2).replace('.', ',')}` : 'onbekend';
+    const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : 'onbekend';
+
+    // Build rich context for PayBuddy
+    return `
+
+DE GEBRUIKER HEEFT ZOJUIST EEN FOTO VAN EEN DOCUMENT GEÜPLOAD. Mistral Vision heeft het geanalyseerd.
+
+DOCUMENTTYPE: ${documentType}
+UITLEG VAN HET DOCUMENT: ${uitleg}
+
+GEËXTRAHEERDE GEGEVENS:
+- Afzender: ${vendor || 'onbekend'}
+- Bedrag: ${amountStr}
+- Vervaldatum: ${dueDateStr}
+- IBAN: ${iban || 'niet gevonden'}
+- Kenmerk: ${reference || 'niet gevonden'}
+- Escalatiefase: ${escalationStage || 'onbekend'}
+- Urgentie: ${urgentie}
+- Actie nodig: ${actieNodig || 'controleer het document'}
+
+INSTRUCTIES VOOR PAYBUDDY:
+1. Begin met de uitleg in gewone taal — beschrijf wat dit document is en wat de gebruiker moet doen.
+2. Noem het bedrag en de vervaldatum duidelijk.
+3. ${urgentie === 'kritiek' || urgentie === 'hoog' ? 'DIT IS URGENT — benadruk de urgentie en geef direct actieadvies.' : 'Blijf kalm en informatief.'}
+4. Vraag daarna of de gebruiker dit document wil opslaan als rekening.
+5. Als de gebruiker wil opslaan, gebruik dan het PENDING_BILL format met de geëxtraheerde gegevens.`;
+
+  } catch (err) {
+    console.error('[Chat Vision] Unexpected error:', err);
+    return '\n\nDE GEBRUIKER HEEFT EEN FOTO GEÜPLOAD maar er trad een fout op. Vraag de gebruiker om de details handmatig in te voeren.';
+  }
+}
 
 export const maxDuration = 55;
 
@@ -37,18 +176,9 @@ export async function POST(req: NextRequest) {
         const buffer = Buffer.from(bytes);
 
         if (file.type.startsWith('image/')) {
-          // Image → Gemini Flash extraction
+          // Image → Mistral Vision (Scaleway EU) — extracts fields + produces Dutch explanation
           const base64 = buffer.toString('base64');
-          const result = await extractBillFromPhoto(base64, file.type, userId);
-          extractionContext = `\n\nDE GEBRUIKER HEEFT ZOJUIST EEN FOTO GEÜPLOAD. Dit is wat ik heb geëxtraheerd:\n${JSON.stringify({
-            vendor: result.vendor,
-            amount: result.amount_cents ? `€${(result.amount_cents / 100).toFixed(2)}` : 'onbekend',
-            due_date: result.due_date || 'onbekend',
-            iban: result.iban || 'niet gevonden',
-            reference: result.reference || 'niet gevonden',
-            escalation_stage: result.escalation_stage || 'factuur',
-            category: result.category_hint || 'overig',
-          }, null, 2)}\n\nPresenteer dit aan de gebruiker en vraag of het klopt. Toon het overzichtelijk met de bedragen en data. Vraag of ze willen bewerken of bevestigen.`;
+          extractionContext = await extractImageForChat(base64, file.type, userId);
         } else if (file.type === 'application/pdf') {
           // PDF → unpdf text extraction
           const text = await extractPdfText(buffer);
