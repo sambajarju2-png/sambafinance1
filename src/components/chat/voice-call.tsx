@@ -655,11 +655,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           setShowCamera(false);
           setProcessingPhoto(true);
 
-          // Immediately tell PayBuddy we're processing (fills the silence)
-          conversation.sendUserMessage(
-            nl ? 'Ik heb een foto gemaakt, even kijken...' : 'I took a photo, checking...'
-          );
-
           try {
             const formData = new FormData();
             formData.append('file', file);
@@ -670,18 +665,23 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             });
 
             const data = await res.json();
-            const spoken: string = data.spoken || (nl ? 'Ik heb de foto bekeken.' : 'I looked at the photo.');
+            const spoken: string = data.spoken || (nl ? 'Ik heb de foto bekeken maar kon geen details vinden.' : 'I looked at the photo but could not find details.');
+            const docType: string = data.document_type || 'onbekend';
+            const isBill: boolean = data.is_bill || false;
 
-            // Inject scan result — PayBuddy responds naturally
-            conversation.sendUserMessage(
-              nl ? `[SCAN_RESULT] ${spoken}` : `[SCAN_RESULT] ${spoken}`
-            );
+            // Build context-rich message for the agent
+            // Include document type so agent knows whether to offer add_bill or just explain
+            let prefix = '[SCAN_RESULT]';
+            if (isBill) prefix += ' [TYPE:REKENING]';
+            else prefix += ` [TYPE:${docType.toUpperCase()}]`;
+
+            conversation.sendUserMessage(`${prefix} ${spoken}`);
 
             sentToChatRef.current += 1;
             sounds.sentToChat();
           } catch {
             conversation.sendUserMessage(
-              nl ? '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw.' : '[SCAN_ERROR] Could not scan the photo.'
+              nl ? '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw met betere belichting.' : '[SCAN_ERROR] Could not scan the photo. Try again with better lighting.'
             );
           } finally {
             setProcessingPhoto(false);

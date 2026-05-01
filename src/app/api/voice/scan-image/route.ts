@@ -61,19 +61,25 @@ export async function POST(req: NextRequest) {
               },
               {
                 type: 'text',
-                text: `Beschrijf dit document in maximaal 2 korte zinnen voor een spraakassistent. Geen Markdown, geen opsommingstekens. Start direct met de inhoud.
+                text: `Je bent een document-analist voor een spraakassistent die Nederlandse huishoudens helpt met financiën. Analyseer dit document grondig.
 
-Als het een rekening/brief/factuur is, geef dan ook de gestructureerde data.
+REGELS:
+- Schrijf de "spoken" tekst alsof je het uitlegt aan iemand die de brief niet goed begrijpt. Wees duidelijk en menselijk.
+- Leg uit WIE het stuurt, WAAROM, WAT er verwacht wordt, en WANNEER.
+- Als er een dreigend taalgebruik is (aanmaning, incasso, deurwaarder), benoem dat expliciet.
+- Maximaal 4 zinnen. Geen Markdown, geen opsommingstekens. Direct beginnen.
 
 Antwoord ALLEEN in dit JSON-formaat:
 {
-  "spoken": "Korte beschrijving voor spraak, max 2 zinnen",
+  "spoken": "Uitgebreide uitleg van het document in begrijpelijk Nederlands, max 4 zinnen",
+  "document_type": "factuur/herinnering/aanmaning/incasso/deurwaarder/brief/informatie/onbekend",
   "vendor": "afzender of null",
   "amount_cents": getal of null,
   "due_date": "YYYY-MM-DD of null",
   "escalation_stage": "factuur/herinnering/aanmaning/incasso/deurwaarder of null",
   "is_bill": true of false,
-  "reference": "kenmerk of null"
+  "reference": "kenmerk of null",
+  "summary": "Korte samenvatting van de kern van het document in 1 zin"
 }`,
               },
             ],
@@ -81,7 +87,7 @@ Antwoord ALLEEN in dit JSON-formaat:
         ],
         // Note: no response_format: json_object — vision + JSON mode can conflict
         temperature: 0.1,
-        max_tokens: 200,
+        max_tokens: 300,
       }),
     });
 
@@ -125,12 +131,14 @@ Antwoord ALLEEN in dit JSON-formaat:
 
     return NextResponse.json({
       spoken,
+      document_type: parsed.document_type || 'onbekend',
       vendor: parsed.vendor || null,
       amount_cents: parsed.amount_cents || null,
       due_date: parsed.due_date || null,
       escalation_stage: parsed.escalation_stage || null,
       is_bill: parsed.is_bill || false,
       reference: parsed.reference || null,
+      summary: parsed.summary || null,
     }, { headers: NO_CACHE });
 
   } catch (err) {
