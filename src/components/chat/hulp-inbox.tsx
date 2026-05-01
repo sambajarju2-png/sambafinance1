@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Building2, Users, CircleDot } from 'lucide-react';
+import { ArrowLeft, Send, Building2, Users, CircleDot, UserCheck } from 'lucide-react';
 
 interface Thread {
   thread_id: string;
@@ -36,12 +36,14 @@ function timeAgo(date: string, nl: boolean): string {
 function senderIcon(type: string) {
   if (type === 'gemeente') return <Building2 className="h-4 w-4" strokeWidth={1.5} />;
   if (type === 'hulpinstantie') return <Users className="h-4 w-4" strokeWidth={1.5} />;
+  if (type === 'coach') return <UserCheck className="h-4 w-4" strokeWidth={1.5} />;
   return <Users className="h-4 w-4" strokeWidth={1.5} />;
 }
 
 function senderColor(type: string) {
   if (type === 'gemeente') return 'bg-pw-blue/10 text-pw-blue';
   if (type === 'hulpinstantie') return 'bg-pw-green/10 text-pw-green';
+  if (type === 'coach') return 'bg-purple-100 text-purple-600';
   return 'bg-purple-100 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
 }
 
@@ -89,6 +91,11 @@ function ThreadList({ threads, onOpen, nl }: {
             <div className="flex items-center justify-between">
               <p className="text-[13px] font-semibold text-pw-text dark:text-white truncate">
                 {thread.sender_name}
+                {thread.sender_type === 'coach' && (
+                  <span className="ml-1.5 inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-medium text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                    Coach
+                  </span>
+                )}
               </p>
               <span className="ml-2 flex-shrink-0 text-[11px] text-pw-muted">
                 {timeAgo(thread.last_at, nl)}

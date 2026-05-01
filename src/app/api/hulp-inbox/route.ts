@@ -211,6 +211,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to send' }, { status: 500, headers: NO_CACHE });
     }
 
+    // ── Reverse bridge: if replying to a coach thread, also write to b2b_buddy_messages ──
+    if (thread_id.startsWith('coach:')) {
+      try {
+        const buddyLinkId = thread_id.replace('coach:', '');
+        const serviceClient = createServiceRoleClient();
+        await serviceClient.from('b2b_buddy_messages').insert({
+          buddy_link_id: buddyLinkId,
+          sender_id: userId,
+          content: content.trim(),
+          is_read: false,
+        });
+      } catch (bridgeErr) {
+        console.error('[HulpInbox] b2b bridge error:', bridgeErr);
+      }
+    }
+
     return NextResponse.json({ message }, { status: 201, headers: NO_CACHE });
   } catch (error) {
     console.error('Hulp inbox POST error:', error);
