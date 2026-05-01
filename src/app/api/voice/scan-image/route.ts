@@ -61,17 +61,14 @@ export async function POST(req: NextRequest) {
               },
               {
                 type: 'text',
-                text: `Dit is een foto die een gebruiker heeft gedeeld tijdens een gesprek met een financiële assistent.
+                text: `Beschrijf dit document in maximaal 2 korte zinnen voor een spraakassistent. Geen Markdown, geen opsommingstekens. Start direct met de inhoud.
 
-Analyseer de afbeelding en geef:
-1. Een korte, gesproken beschrijving in het Nederlands (max 2-3 zinnen) die de assistent hardop kan voorlezen. Begin met wat je ziet.
-2. Als het een rekening/brief/factuur is: extraheer afzender, bedrag, vervaldatum en type document.
-3. Als het geen financieel document is: beschrijf kort wat je ziet.
+Als het een rekening/brief/factuur is, geef dan ook de gestructureerde data.
 
-Geef je antwoord in dit EXACTE JSON-formaat (geen andere tekst):
+Antwoord ALLEEN in dit JSON-formaat:
 {
-  "spoken": "De gesproken beschrijving die voorgelezen wordt",
-  "vendor": "naam afzender of null",
+  "spoken": "Korte beschrijving voor spraak, max 2 zinnen",
+  "vendor": "afzender of null",
   "amount_cents": getal of null,
   "due_date": "YYYY-MM-DD of null",
   "escalation_stage": "factuur/herinnering/aanmaning/incasso/deurwaarder of null",
@@ -84,7 +81,7 @@ Geef je antwoord in dit EXACTE JSON-formaat (geen andere tekst):
         ],
         // Note: no response_format: json_object — vision + JSON mode can conflict
         temperature: 0.1,
-        max_tokens: 500,
+        max_tokens: 200,
       }),
     });
 

@@ -265,8 +265,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [processingPhoto, setProcessingPhoto] = useState(false);
-  // Resolver for request_photo clientTool — waits for scan result before returning to ElevenLabs
-  const photoResolverRef = useRef<((result: string) => void) | null>(null);
   const nl = lang === 'nl';
 
   // Voice call has dark background — light status bar text
@@ -418,22 +416,12 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         }
       },
 
-      // ── Request photo — opens camera, waits for Mistral Vision scan, returns result to PayBuddy ──
-      request_photo: async (): Promise<string> => {
+      // ── Request photo — opens camera, returns instantly. Scan result injected via sendUserMessage ──
+      request_photo: () => {
         setShowCamera(true);
-        // Return a promise that resolves when the photo is scanned
-        // ElevenLabs holds the tool call open until this resolves
-        return new Promise<string>((resolve) => {
-          photoResolverRef.current = resolve;
-          // Safety timeout: if user doesn't take photo in 60s, cancel
-          setTimeout(() => {
-            if (photoResolverRef.current === resolve) {
-              photoResolverRef.current = null;
-              setShowCamera(false);
-              resolve(nl ? 'De gebruiker heeft geen foto gemaakt.' : 'No photo taken.');
-            }
-          }, 60000);
-        });
+        return nl
+          ? 'Camera geopend. Maak een foto van je rekening.'
+          : 'Camera opened. Take a photo of your bill.';
       },
 
       // ── Get schuldhulp info for user's gemeente ──
@@ -667,6 +655,11 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           setShowCamera(false);
           setProcessingPhoto(true);
 
+          // Immediately tell PayBuddy we're processing (fills the silence)
+          conversation.sendUserMessage(
+            nl ? 'Ik heb een foto gemaakt, even kijken...' : 'I took a photo, checking...'
+          );
+
           try {
             const formData = new FormData();
             formData.append('file', file);
@@ -679,20 +672,17 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             const data = await res.json();
             const spoken: string = data.spoken || (nl ? 'Ik heb de foto bekeken.' : 'I looked at the photo.');
 
-            // Resolve the request_photo promise — PayBuddy gets the result and can speak it
-            if (photoResolverRef.current) {
-              photoResolverRef.current(spoken);
-              photoResolverRef.current = null;
-            }
+            // Inject scan result — PayBuddy responds naturally
+            conversation.sendUserMessage(
+              nl ? `[SCAN_RESULT] ${spoken}` : `[SCAN_RESULT] ${spoken}`
+            );
 
             sentToChatRef.current += 1;
             sounds.sentToChat();
           } catch {
-            const fallback = nl ? 'Kon de foto niet analyseren. Probeer opnieuw.' : 'Could not scan the photo.';
-            if (photoResolverRef.current) {
-              photoResolverRef.current(fallback);
-              photoResolverRef.current = null;
-            }
+            conversation.sendUserMessage(
+              nl ? '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw.' : '[SCAN_ERROR] Could not scan the photo.'
+            );
           } finally {
             setProcessingPhoto(false);
             if (photoInputRef.current) photoInputRef.current.value = '';
