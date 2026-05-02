@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
     children_ages, has_kinderopvang,
   });
 
+  // Preserve existing toeslagen_actueel if not provided in this request
+  // (income-form saves don't send toeslagen_actueel — upsert must not clear it)
+  let effectiveToeslag = toeslagen_actueel;
+  if (!effectiveToeslag || typeof effectiveToeslag !== 'object') {
+    const { data: existing } = await supabase
+      .from('user_finances').select('toeslagen_actueel').eq('user_id', userId).single();
+    if (existing?.toeslagen_actueel) effectiveToeslag = existing.toeslagen_actueel;
+  }
+
   const record = {
     user_id: userId, netto_inkomen, partner_inkomen, duo_inkomen,
     uitkering_inkomen, toeslagen_inkomen, overig_inkomen,
@@ -57,7 +66,7 @@ export async function POST(req: NextRequest) {
     has_partner, num_children, children_ages,
     monthly_rent: effectiveRent, has_kinderopvang, vermogen,
     toeslagen_eligible: toeslagenResult,
-    ...(toeslagen_actueel && typeof toeslagen_actueel === 'object' ? { toeslagen_actueel } : {}),
+    ...(effectiveToeslag && typeof effectiveToeslag === 'object' ? { toeslagen_actueel: effectiveToeslag } : {}),
   };
 
   const { data, error } = await supabase
