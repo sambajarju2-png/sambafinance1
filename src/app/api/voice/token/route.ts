@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { formatCents } from '@/lib/bills';
+import { getPlan, isVoiceLimitExceeded, voiceSecondsRemaining, formatDuration } from '@/lib/plans';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
+
+// Set ENFORCE_VOICE_LIMITS=true in Vercel env when ready to monetise.
+// Leave unset (or false) during free-access period.
+const ENFORCE = process.env.ENFORCE_VOICE_LIMITS === 'true';
 
 /**
  * GET /api/voice/token
@@ -25,12 +30,33 @@ export async function GET(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
 
     const [settingsRes, billsRes, plansRes] = await Promise.all([
-      supabase.from('user_settings').select('first_name, gemeente, language, onboarding_profile').eq('user_id', userId).single(),
+      supabase.from('user_settings').select('first_name, gemeente, language, onboarding_profile, plan, voice_seconds_used, voice_seconds_reset_at').eq('user_id', userId).single(),
       supabase.from('bills').select('vendor, amount, due_date, status, escalation_stage, category').eq('user_id', userId).order('due_date', { ascending: true }).limit(30),
       supabase.from('payment_plans').select('vendor, total_amount, paid_amount, status').eq('user_id', userId).eq('status', 'active'),
     ]);
 
     const settings = settingsRes.data;
+
+    // ── Plan limit check ──────────────────────────────────────
+    const userPlan = settings?.plan || 'gratis';
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const needsReset = settings?.voice_seconds_reset_at
+      ? new Date(settings.voice_seconds_reset_at) < monthStart
+      : true;
+    const secondsUsed = needsReset ? 0 : (settings?.voice_seconds_used || 0);
+
+    if (isVoiceLimitExceeded(userPlan, secondsUsed, ENFORCE)) {
+      const plan = getPlan(userPlan);
+      return NextResponse.json({
+        error: 'voice_limit_reached',
+        plan: userPlan,
+        limit_seconds: plan.voiceSecondsPerMonth,
+        used_seconds: secondsUsed,
+        message: `Je hebt je ${formatDuration(plan.voiceSecondsPerMonth)} PayBuddy belt-tegoed voor deze maand gebruikt. Upgrade naar Pro voor meer beltijd.`,
+      }, { status: 403, headers: NO_CACHE });
+    }
+
+    const remainingSeconds = voiceSecondsRemaining(userPlan, secondsUsed);
     const bills = billsRes.data || [];
     const plans = plansRes.data || [];
     const lang = settings?.language || 'nl';
@@ -110,6 +136,8 @@ WIK: 15% eerste €2.500 (min €40). Schuldhulp: 0800-8115.`;
     return NextResponse.json({
       signedUrl: signed_url,
       agentId, // fallback
+      remainingSeconds,
+      plan: userPlan,
       overrides: {
         agent: {
           prompt: { prompt: voicePrompt },

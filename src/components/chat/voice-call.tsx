@@ -257,6 +257,8 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [billsAdded, setBillsAdded] = useState<Array<{ vendor: string; amount: number }>>([]);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [limitReached, setLimitReached] = useState<string | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const callActionsRef = useRef<CallAction[]>([]);
@@ -292,6 +294,15 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
       // Build post-call data
       const duration = Math.floor((Date.now() - callStartRef.current) / 1000);
+
+      // Log voice usage (fire-and-forget — don't block UI)
+      if (duration >= 5) {
+        fetch('/api/voice/log-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seconds: duration }),
+        }).catch(() => {});
+      }
       const postCallData: PostCallData = {
         duration,
         billsAdded: callActionsRef.current
@@ -549,9 +560,20 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle plan limit reached specifically
+        if (data.error === 'voice_limit_reached') {
+          setLimitReached(data.message || 'Je beltegoed is op voor deze maand.');
+          setStatus('error');
+          return;
+        }
         setErrorDetail(`Token ${res.status}: ${JSON.stringify(data)}`);
         setStatus('error');
         return;
+      }
+
+      // Store remaining time so UI can show it
+      if (typeof data.remainingSeconds === 'number') {
+        setRemainingSeconds(data.remainingSeconds);
       }
 
       if (data.signedUrl) {
@@ -601,6 +623,23 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         </p>
 
         {debugInfo && <p className="mt-1 text-[11px] text-white/20">{debugInfo}</p>}
+
+        {/* Remaining voice time indicator */}
+        {status === 'active' && remainingSeconds !== null && remainingSeconds < 300 && (
+          <div className="mt-3 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30">
+            <p className="text-[11px] text-amber-300 font-medium">
+              {Math.floor(remainingSeconds / 60)} min {remainingSeconds % 60}s beltijd resterend
+            </p>
+          </div>
+        )}
+
+        {/* Plan limit reached */}
+        {limitReached && (
+          <div className="mx-6 mt-4 max-w-sm rounded-2xl bg-amber-500/10 border border-amber-500/20 px-5 py-4 text-center">
+            <p className="text-[13px] text-amber-300 font-semibold mb-1">Beltegoed op</p>
+            <p className="text-[11px] text-white/50 leading-relaxed">{limitReached}</p>
+          </div>
+        )}
 
         {/* Bills added badges */}
         {billsAdded.length > 0 && (
