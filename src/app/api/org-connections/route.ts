@@ -23,15 +23,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ orgs: [], pending_invites: 0 }, { headers: NO_CACHE });
   }
 
-  const orgIds = userOrgs.map(o => o.organization_id);
+  const orgIds = userOrgs.map((o: any) => o.organization_id);
   const { data: orgs } = await supabase
     .from('organizations')
     .select('id, name, type, logo_url, primary_color, city')
     .in('id', orgIds);
 
-  const orgMap = new Map((orgs || []).map(o => [o.id, o]));
+  const orgMap = new Map((orgs || []).map((o: any) => [o.id, o]));
 
-  const result = userOrgs.map(uo => ({
+  const result = userOrgs.map((uo: any) => ({
     ...uo,
     org: orgMap.get(uo.organization_id) || null,
   })).filter(uo => uo.org);
