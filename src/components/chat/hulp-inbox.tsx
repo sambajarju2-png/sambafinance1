@@ -248,20 +248,59 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   const [loading, setLoading] = useState(true);
   const nl = lang === 'nl';
 
+  // Org connections state
+  const [orgs, setOrgs] = useState<Array<{ organization_id: string; status: string; org: { id: string; name: string; type: string; city?: string; primary_color?: string } | null }>>([]);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeSuccess, setCodeSuccess] = useState<string | null>(null);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/hulp-inbox');
-        if (res.ok) {
-          const data = await res.json();
+        const [inboxRes, orgsRes] = await Promise.all([
+          fetch('/api/hulp-inbox'),
+          fetch('/api/org-connections'),
+        ]);
+        if (inboxRes.ok) {
+          const data = await inboxRes.json();
           setThreads(data.threads || []);
           setTotalUnread(data.total_unread || 0);
+        }
+        if (orgsRes.ok) {
+          const d = await orgsRes.json();
+          setOrgs(d.orgs || []);
         }
       } catch {}
       setLoading(false);
     }
     load();
-  }, [activeThread]); // Reload when coming back from thread
+  }, [activeThread]);
+
+  async function connectCode() {
+    if (!codeInput.trim()) return;
+    setCodeLoading(true); setCodeError(null); setCodeSuccess(null);
+    try {
+      const res = await fetch('/api/org-connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_code: codeInput.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setCodeSuccess(d.org?.name || 'Organisatie');
+        setCodeInput('');
+        setShowCodeInput(false);
+        // Reload orgs
+        const orgsRes = await fetch('/api/org-connections');
+        if (orgsRes.ok) setOrgs((await orgsRes.json()).orgs || []);
+      } else {
+        setCodeError(d.error || 'Onbekende fout');
+      }
+    } catch { setCodeError('Verbinding mislukt'); }
+    setCodeLoading(false);
+  }
 
   if (activeThread) {
     return (
@@ -307,6 +346,71 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
           </div>
         ) : (
           <ThreadList threads={threads} onOpen={setActiveThread} nl={nl} />
+        )}
+      </div>
+
+      {/* ── Mijn organisaties ─────────────────── */}
+      <div className="border-t border-pw-border/40 px-4 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[12px] font-semibold text-pw-text dark:text-white">
+            {nl ? 'Mijn organisaties' : 'My organisations'}
+          </p>
+          <button
+            onClick={() => { setShowCodeInput(v => !v); setCodeError(null); setCodeSuccess(null); }}
+            className="text-[11px] font-semibold text-pw-blue"
+          >
+            {nl ? '+ Code invoeren' : '+ Enter code'}
+          </button>
+        </div>
+
+        {/* Connected orgs */}
+        {orgs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {orgs.map(uo => (
+              <div key={uo.organization_id} className="flex items-center gap-1.5 bg-pw-bg dark:bg-white/5 rounded-lg px-2.5 py-1.5 border border-pw-border/50">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                  style={{ background: uo.org?.primary_color || '#2563EB' }}>
+                  {(uo.org?.name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-pw-text dark:text-white leading-none">{uo.org?.name}</p>
+                  {uo.org?.city && <p className="text-[10px] text-pw-muted leading-none mt-0.5">{uo.org.city}</p>}
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full bg-pw-green ml-1 flex-shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {orgs.length === 0 && !showCodeInput && (
+          <p className="text-[11px] text-pw-muted">
+            {nl ? 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.' : 'No organisation connected yet. Have an invite code? Enter it above.'}
+          </p>
+        )}
+
+        {/* Code input */}
+        {showCodeInput && (
+          <div className="mt-1">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={codeInput}
+                onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && connectCode()}
+                placeholder={nl ? 'Voer uitnodigingscode in' : 'Enter invite code'}
+                className="flex-1 px-3 py-2 text-[13px] rounded-xl border border-pw-border bg-pw-bg dark:bg-white/5 dark:text-white outline-none focus:border-pw-blue"
+              />
+              <button
+                onClick={connectCode}
+                disabled={codeLoading || !codeInput.trim()}
+                className="px-4 py-2 bg-pw-blue text-white text-[12px] font-semibold rounded-xl disabled:opacity-50"
+              >
+                {codeLoading ? '...' : (nl ? 'Verbind' : 'Connect')}
+              </button>
+            </div>
+            {codeError && <p className="text-[11px] text-pw-red mt-1">{codeError}</p>}
+            {codeSuccess && <p className="text-[11px] text-pw-green mt-1">✓ Verbonden met {codeSuccess}</p>}
+          </div>
         )}
       </div>
 

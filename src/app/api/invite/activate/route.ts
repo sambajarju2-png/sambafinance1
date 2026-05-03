@@ -66,6 +66,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: linkError.message }, { status: 500 });
   }
 
+  // Auto-grant consent — accepting the invite IS consent
+  const consentScopes = ["full_access", "aggregated", "payment_plans", "financial_overview"];
+  await supabase.from("b2b_consents").upsert(
+    consentScopes.map(scope => ({
+      user_id: user.id,
+      organization_id: invite.organization_id,
+      scope,
+      granted: true,
+      granted_at: new Date().toISOString(),
+    })),
+    { onConflict: "user_id,organization_id,scope" }
+  );
+
   // Mark invite as activated
   await supabase.from("b2b_invites").update({
     status: "activated",
