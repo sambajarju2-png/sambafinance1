@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   const { data: invite, error: inviteError } = await supabase
     .from("b2b_invites")
     .select("id, organization_id, external_id, status, expires_at")
-    .eq("token", token)
+    .or(`token.eq.${token},short_code.eq.${token.toUpperCase()}`)
     .single();
 
   if (inviteError || !invite) {

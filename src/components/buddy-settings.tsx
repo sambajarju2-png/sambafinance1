@@ -59,14 +59,29 @@ export default function BuddySettings() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [codeSuccess, setCodeSuccess] = useState(false);
 
+  // Org connection state (gemeente / incasso / hulporg)
+  const [orgs, setOrgs] = useState<Array<{ organization_id: string; status: string; org: { id: string; name: string; type: string; city?: string; primary_color?: string } | null }>>([]);
+  const [orgCode, setOrgCode] = useState('');
+  const [orgCodeLoading, setOrgCodeLoading] = useState(false);
+  const [orgCodeError, setOrgCodeError] = useState<string | null>(null);
+  const [orgCodeSuccess, setOrgCodeSuccess] = useState<string | null>(null);
+  const [showOrgCode, setShowOrgCode] = useState(false);
+
   async function loadBuddies() {
     try {
-      const res = await fetch('/api/buddies');
-      if (res.ok) {
-        const data = await res.json();
+      const [buddyRes, orgRes] = await Promise.all([
+        fetch('/api/buddies'),
+        fetch('/api/org-connections'),
+      ]);
+      if (buddyRes.ok) {
+        const data = await buddyRes.json();
         setBuddies(data.buddies || []);
         setBuddyOf(data.buddy_of || []);
         setStatuses(data.statuses || {});
+      }
+      if (orgRes.ok) {
+        const d = await orgRes.json();
+        setOrgs(d.orgs || []);
       }
     } catch {} finally { setLoading(false); }
   }
@@ -158,6 +173,33 @@ export default function BuddySettings() {
       setCodeError(err instanceof Error ? err.message : 'Er ging iets mis');
     } finally {
       setCodeLoading(false);
+    }
+  }
+
+  async function connectOrg() {
+    if (!orgCode.trim()) return;
+    setOrgCodeLoading(true);
+    setOrgCodeError(null);
+    setOrgCodeSuccess(null);
+    try {
+      const res = await fetch('/api/org-connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_code: orgCode.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setOrgCodeSuccess(d.org?.name || 'Organisatie');
+        setOrgCode('');
+        setShowOrgCode(false);
+        loadBuddies();
+      } else {
+        setOrgCodeError(d.error || 'Code niet gevonden of verlopen');
+      }
+    } catch {
+      setOrgCodeError('Verbinding mislukt');
+    } finally {
+      setOrgCodeLoading(false);
     }
   }
 
@@ -495,6 +537,125 @@ export default function BuddySettings() {
           </p>
         </div>
       )}
+
+      {/* ── Gemeente / Incasso / Hulporg section ── */}
+      <div className="rounded-card border border-pw-border bg-pw-surface p-4">
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-input bg-pw-navy/10">
+              <LayoutDashboard className="h-4 w-4 text-pw-navy" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold text-pw-text">Gemeente & hulporganisaties</p>
+              <p className="text-[11px] text-pw-muted">Koppel aan schuldhulp, incasso of gemeente</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setShowOrgCode(v => !v); setOrgCodeError(null); setOrgCodeSuccess(null); }}
+            className="flex items-center gap-1 text-[12px] font-semibold text-pw-blue"
+          >
+            <KeyRound className="h-3.5 w-3.5" strokeWidth={1.5} />
+            Code invoeren
+          </button>
+        </div>
+
+        {/* Code input */}
+        {showOrgCode && (
+          <div className="mb-3 rounded-input border border-pw-blue/30 bg-pw-blue/5 p-3">
+            <p className="text-[11px] text-pw-muted mb-2">
+              Ontvangen een uitnodiging van een gemeente of schuldhulpverlener? Voer hier de code in.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={orgCode}
+                onChange={e => setOrgCode(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && connectOrg()}
+                placeholder="Bijv. PW-ABC123"
+                className="flex-1 rounded-input border border-pw-border bg-pw-surface px-3 py-2 text-[13px] outline-none focus:border-pw-blue"
+              />
+              <button
+                onClick={connectOrg}
+                disabled={orgCodeLoading || !orgCode.trim()}
+                className="flex items-center gap-1.5 rounded-button bg-pw-blue px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+              >
+                {orgCodeLoading
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+                  : 'Verbind'
+                }
+              </button>
+            </div>
+            {orgCodeError && (
+              <p className="mt-1.5 text-[11px] text-pw-red">{orgCodeError}</p>
+            )}
+            {orgCodeSuccess && (
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-pw-green font-medium">
+                <Check className="h-3 w-3" strokeWidth={2} />
+                Verbonden met {orgCodeSuccess}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Connected orgs */}
+        {orgs.length > 0 ? (
+          <div className="space-y-2">
+            {orgs.map(uo => {
+              const typeLabel: Record<string, string> = {
+                gemeente: 'Gemeente',
+                incasso: 'Incassobureau',
+                hulporg: 'Hulporganisatie',
+                hulporganisatie: 'Hulporganisatie',
+                kredietbank: 'Kredietbank',
+              };
+              const typeColor: Record<string, string> = {
+                gemeente: 'text-pw-blue bg-pw-blue/10',
+                incasso: 'text-pw-amber bg-pw-amber/10',
+                hulporg: 'text-pw-green bg-pw-green/10',
+                hulporganisatie: 'text-pw-green bg-pw-green/10',
+                kredietbank: 'text-pw-purple bg-pw-purple/10',
+              };
+              const org = uo.org;
+              if (!org) return null;
+              return (
+                <div key={uo.organization_id}
+                  className="flex items-center justify-between rounded-input border border-pw-border bg-pw-bg p-3">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                      style={{ background: org.primary_color || '#0A2540' }}
+                    >
+                      {org.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-pw-text leading-tight">{org.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {org.type && (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${typeColor[org.type] || 'text-pw-muted bg-pw-border'}`}>
+                            {typeLabel[org.type] || org.type}
+                          </span>
+                        )}
+                        {org.city && <span className="text-[10px] text-pw-muted">{org.city}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-pw-green" />
+                    <span className="text-[11px] text-pw-green font-medium">Verbonden</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center py-5 text-center">
+            <p className="text-[12px] text-pw-muted max-w-[240px]">
+              Nog geen gemeente of hulporganisatie gekoppeld. Je ontvangt een uitnodigingslink via e-mail of voer een code in.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

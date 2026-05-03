@@ -48,11 +48,12 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceRoleClient();
 
-  // Look up invite by token
+  // Look up invite by token OR short_code
+  const code = invite_code.trim();
   const { data: invite } = await supabase
     .from('b2b_invites')
     .select('id, organization_id, external_id, status, expires_at')
-    .eq('token', invite_code.trim())
+    .or(`token.eq.${code},short_code.eq.${code.toUpperCase()}`)
     .single();
 
   if (!invite) return NextResponse.json({ error: 'Code niet gevonden of ongeldig' }, { status: 404, headers: NO_CACHE });
