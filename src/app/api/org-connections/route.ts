@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const result = userOrgs.map((uo: any) => ({
     ...uo,
     org: orgMap.get(uo.organization_id) || null,
-  })).filter(uo => uo.org);
+  })).filter((uo: any) => uo.org);
 
   return NextResponse.json({ orgs: result }, { headers: NO_CACHE });
 }
