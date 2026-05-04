@@ -106,7 +106,24 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
 
   async function subscribe(planId: string) {
     if (isNative) {
-      if (typeof window !== 'undefined') window.location.href = 'itms-apps://apps.apple.com/app/id6739605790';
+      // iOS: use RevenueCat paywall
+      setActionLoading(true);
+      const { presentPaywall } = await import('@/lib/revenuecat');
+      const purchased = await presentPaywall();
+      if (purchased) {
+        // Reload subscription status after purchase
+        const subRes = await fetch('/api/stripe/subscription');
+        if (subRes.ok) {
+          const d = await subRes.json();
+          setSubscription(d.subscription || null);
+        }
+        const planRes = await fetch('/api/settings/plan');
+        if (planRes.ok) {
+          const d = await planRes.json();
+          setCurrentPlan(d.plan || 'gratis');
+        }
+      }
+      setActionLoading(false);
       return;
     }
     setActionLoading(true);

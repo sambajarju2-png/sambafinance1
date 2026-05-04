@@ -2,7 +2,7 @@
   "name": "paywatch-v2",
   "version": "2.0.0",
   "private": true,
-  "description": "PayWatch v2 \u2014 Dutch household bill tracker and debt protection tool",
+  "description": "PayWatch v2 — Dutch household bill tracker and debt protection tool",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -25,6 +25,8 @@
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-native-biometric": "^8.4.2",
     "@elevenlabs/react": "^1.1.1",
+    "@revenuecat/purchases-capacitor": "^13.0.1",
+    "@revenuecat/purchases-capacitor-ui": "^13.0.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.101.1",
     "@types/canvas-confetti": "^1.9.0",
@@ -44,11 +46,11 @@
     "react-is": "^19.2.5",
     "recharts": "^3.8.1",
     "resend": "^6.9.4",
+    "stripe": "^17.0.0",
     "tesseract.js": "^7.0.0",
     "unpdf": "^1.4.0",
     "vaul": "^1.1.2",
-    "web-push": "^3.6.7",
-    "stripe": "^17.0.0"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.1",
