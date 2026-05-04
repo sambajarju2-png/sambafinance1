@@ -164,7 +164,9 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
 
   const trialDaysLeft = isTrialing ? daysUntil(subscription?.trial_end ?? null) : null;
   const trialEndDate = formatDate(subscription?.trial_end ?? null);
-  const nextPaymentDate = formatDate(subscription?.period_end ?? null);
+  // During trial, period_end may be null — fall back to trial_end
+  const effectivePeriodEnd = subscription?.period_end ?? subscription?.trial_end ?? null;
+  const nextPaymentDate = formatDate(effectivePeriodEnd);
 
   if (loading) {
     return (
