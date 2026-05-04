@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   let event: any;
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' as const });
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error('[Stripe webhook] Signature verification failed:', err.message);

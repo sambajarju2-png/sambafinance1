@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, Zap, Crown, Loader2, ExternalLink, CreditCard, ArrowRight } from 'lucide-react';
 
-declare const window: any;
+
 
 interface PlanRule {
   plan_id: string;
@@ -53,12 +53,13 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
   const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
-    // Detect Capacitor
-    try {
-      if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
-        setIsNative(true);
-      }
-    } catch {}
+    // Detect Capacitor native platform
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) setIsNative(true);
+      } catch {}
+    })();
 
     async function load() {
       try {
@@ -87,7 +88,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
 
   async function openPortal() {
     if (isNative) {
-      window.location.href = 'itms-apps://apps.apple.com/account/subscriptions';
+      if (typeof window !== 'undefined') window.location.href = 'itms-apps://apps.apple.com/account/subscriptions';
       return;
     }
     setPortalLoading(true);
@@ -95,7 +96,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
       const res = await fetch('/api/stripe/create-portal-session', { method: 'POST' });
       if (res.ok) {
         const d = await res.json();
-        window.location.href = d.url;
+        if (typeof window !== 'undefined') window.location.href = d.url;
       }
     } catch {}
     setPortalLoading(false);
@@ -103,8 +104,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
 
   async function subscribe(planId: string) {
     if (isNative) {
-      // Native: open App Store subscriptions
-      window.location.href = 'itms-apps://apps.apple.com/app/id6739605790';
+      if (typeof window !== 'undefined') window.location.href = 'itms-apps://apps.apple.com/app/id6739605790';
       return;
     }
     setPortalLoading(true);
@@ -116,7 +116,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
       });
       if (res.ok) {
         const d = await res.json();
-        window.location.href = d.url;
+        if (typeof window !== 'undefined') window.location.href = d.url;
       }
     } catch {}
     setPortalLoading(false);
