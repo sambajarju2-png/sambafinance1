@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from('paywatch_subscriptions')
-    .select('plan_id, sub_status, period_end, cancel_at_end, payment_provider')
+    .select('plan_id, sub_status, period_end, trial_end, cancel_at_end, payment_provider')
     .eq('user_id', userId)
     .in('sub_status', ['active', 'trialing', 'past_due'])
     .order('created_at', { ascending: false })
