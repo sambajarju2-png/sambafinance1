@@ -211,6 +211,8 @@ function SettingsContent() {
   }
 
   return (
+    <div className="space-y-4">
+      <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />

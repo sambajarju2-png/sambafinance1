@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const email = user?.email;
 
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' as const });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as const });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
 

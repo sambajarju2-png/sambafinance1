@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   // Dynamic import to avoid build error when stripe not installed
   const Stripe = (await import('stripe')).default;
-  const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' as const });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as const });
 
   const session = await stripe.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
