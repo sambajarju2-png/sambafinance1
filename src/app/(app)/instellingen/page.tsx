@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid, CreditCard } from 'lucide-react';
+import SubscriptionPage from '@/components/subscription-page';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
 import DarkModeToggle from '@/components/dark-mode-toggle';
@@ -27,7 +28,7 @@ import BankConnectCard from '@/components/bank/bank-connect-card';
 import DashboardModulesSettings from '@/components/dashboard-modules-settings';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -46,7 +47,7 @@ function SettingsContent() {
     if (tab === 'sync' || tab === 'gmail') {
       setActiveTab('gmail');
       // Don't clean URL yet — gmail-settings reads ?outlook= params
-    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security'].includes(tab)) {
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security', 'abonnement'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       window.history.replaceState(null, '', '/instellingen');
     }
@@ -200,9 +201,16 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'abonnement') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <SubscriptionPage lang="nl" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
@@ -212,6 +220,7 @@ function SettingsContent() {
         <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
         <BiometricMenuLink onClick={() => setActiveTab('security')} />
         <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
+        <SettingsLink icon={CreditCard} label="Mijn abonnement" description="Plan, upgrade of annuleer je abonnement" onClick={() => setActiveTab('abonnement')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
