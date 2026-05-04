@@ -26,10 +26,10 @@ interface Subscription {
 }
 
 const PRICES = {
-  pro_monthly: 4.99,
-  pro_yearly: 49.90,
-  premium_monthly: 9.99,
-  premium_yearly: 99.90,
+  pro_monthly: 4.00,
+  pro_yearly: 40.00,
+  premium_monthly: 8.00,
+  premium_yearly: 80.00,
 };
 
 function voiceLabel(secs: number) {
@@ -219,7 +219,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
             '2 min PayBuddy/maand',
             'AI chat (5 berichten/dag)',
             '1 e-mailaccount koppelen',
-            '1 AI inzicht/week',
+            '5 bezwaarschriften/maand',
             'Rekeningen & facturen bijhouden',
           ]}
           onUpgrade={() => {}}
@@ -241,7 +241,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
             'Onbeperkte AI chat',
             'Onbeperkte e-mailaccounts',
             'AI inzichten (dagelijks)',
-            '3 bezwaarschriften/maand',
+            '10 bezwaarschriften/maand',
             'Rapporten exporteren',
           ]}
           onUpgrade={() => subscribe(proId)}

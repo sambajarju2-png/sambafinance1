@@ -44,10 +44,8 @@ export async function POST(req: NextRequest) {
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    // iDEAL for subscriptions requires SEPA Debit activated in Stripe Dashboard
-    // → https://dashboard.stripe.com/account/payments/settings
-    // Once activated, add 'ideal' back here. For now: card only.
-    payment_method_types: ['card'],
+    // iDEAL for subscriptions requires SEPA Debit — now activated in Stripe Dashboard
+    payment_method_types: ['card', 'ideal'],
     line_items: [{ price: priceId, quantity: 1 }],
     customer_email: email,
     metadata: { user_id: userId, plan_id },
