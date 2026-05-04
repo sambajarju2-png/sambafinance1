@@ -216,10 +216,11 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           isCurrent={currentPlan === 'gratis'}
           isHighlight={false}
           features={[
-            '10 min PayBuddy/maand',
-            'AI chat (20 berichten/dag)',
+            '2 min PayBuddy/maand',
+            'AI chat (5 berichten/dag)',
+            '1 e-mailaccount koppelen',
+            '1 AI inzicht/week',
             'Rekeningen & facturen bijhouden',
-            'Schuldhulp verwijzingen',
           ]}
           onUpgrade={() => {}}
           isDowngrade={isPaid}
@@ -236,15 +237,16 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           isHighlight={true}
           trialEligible={trialEligible}
           features={[
-            '1 uur PayBuddy/maand',
+            '15 min PayBuddy/maand',
             'Onbeperkte AI chat',
-            'AI inzichten & analyses',
-            'Bezwaarschriften opstellen',
+            'Onbeperkte e-mailaccounts',
+            'AI inzichten (dagelijks)',
+            '3 bezwaarschriften/maand',
             'Rapporten exporteren',
           ]}
           onUpgrade={() => subscribe(proId)}
           isDowngrade={isPremium}
-          ctaLabel={isPro ? 'Huidig plan' : isPremium ? 'Downgraden' : trialEligible ? '7 dagen gratis proberen' : 'Upgraden naar Pro'}
+          ctaLabel={isPro ? 'Huidig plan' : isPremium ? 'Downgraden' : trialEligible ? '14 dagen gratis proberen' : 'Upgraden naar Pro'}
           loading={portalLoading}
         />
 
@@ -259,14 +261,15 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           isPremium={true}
           trialEligible={trialEligible}
           features={[
-            'Onbeperkte PayBuddy',
+            '30 min PayBuddy/maand',
             'Alles van Pro',
+            'Onbeperkte bezwaarschriften',
             'Bankrekening synchroniseren',
             'Prioriteit ondersteuning',
           ]}
           onUpgrade={() => subscribe(premiumId)}
           isDowngrade={false}
-          ctaLabel={isPremium ? 'Huidig plan' : trialEligible ? '7 dagen gratis proberen' : 'Upgraden naar Premium'}
+          ctaLabel={isPremium ? 'Huidig plan' : trialEligible ? '14 dagen gratis proberen' : 'Upgraden naar Premium'}
           loading={portalLoading}
         />
       </div>
@@ -287,7 +290,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
 
       <p className="text-center text-[11px] text-pw-muted px-4">
         {trialEligible
-          ? 'Eerste week gratis, daarna automatisch verlengd. Opzeggen kan altijd.'
+          ? 'Eerste 14 dagen gratis, daarna automatisch verlengd. Opzeggen kan altijd.'
           : `Betaling via ${isNative ? 'de App Store' : 'Stripe'}. Opzeggen kan altijd vóór de volgende verlengingsdatum.`
         }
       </p>
