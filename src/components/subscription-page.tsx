@@ -51,6 +51,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [isNative, setIsNative] = useState(false);
+  const [trialEligible, setTrialEligible] = useState(false);
 
   useEffect(() => {
     // Detect Capacitor native platform
@@ -79,6 +80,8 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
         if (subRes.ok) {
           const d = await subRes.json();
           setSubscription(d.subscription || null);
+          // Trial eligible if user has never subscribed
+          setTrialEligible(!d.subscription);
         }
       } catch {}
       setLoading(false);
@@ -231,6 +234,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           billing={billing}
           isCurrent={isPro}
           isHighlight={true}
+          trialEligible={trialEligible}
           features={[
             '1 uur PayBuddy/maand',
             'Onbeperkte AI chat',
@@ -240,7 +244,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           ]}
           onUpgrade={() => subscribe(proId)}
           isDowngrade={isPremium}
-          ctaLabel={isPro ? 'Huidig plan' : isPremium ? 'Downgraden' : 'Upgraden naar Pro'}
+          ctaLabel={isPro ? 'Huidig plan' : isPremium ? 'Downgraden' : trialEligible ? '7 dagen gratis proberen' : 'Upgraden naar Pro'}
           loading={portalLoading}
         />
 
@@ -253,6 +257,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           isCurrent={isPremium}
           isHighlight={false}
           isPremium={true}
+          trialEligible={trialEligible}
           features={[
             'Onbeperkte PayBuddy',
             'Alles van Pro',
@@ -261,7 +266,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
           ]}
           onUpgrade={() => subscribe(premiumId)}
           isDowngrade={false}
-          ctaLabel={isPremium ? 'Huidig plan' : 'Upgraden naar Premium'}
+          ctaLabel={isPremium ? 'Huidig plan' : trialEligible ? '7 dagen gratis proberen' : 'Upgraden naar Premium'}
           loading={portalLoading}
         />
       </div>
@@ -281,14 +286,17 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
       )}
 
       <p className="text-center text-[11px] text-pw-muted px-4">
-        Betaling via {isNative ? 'de App Store' : 'Stripe'}. Opzeggen kan altijd vóór de volgende verlengingsdatum.
+        {trialEligible
+          ? 'Eerste week gratis, daarna automatisch verlengd. Opzeggen kan altijd.'
+          : `Betaling via ${isNative ? 'de App Store' : 'Stripe'}. Opzeggen kan altijd vóór de volgende verlengingsdatum.`
+        }
       </p>
     </div>
   );
 }
 
 function PlanCard({
-  name, icon, price, billing, isCurrent, isHighlight, isPremium, features,
+  name, icon, price, billing, isCurrent, isHighlight, isPremium, trialEligible, features,
   onUpgrade, isDowngrade, ctaLabel, loading,
 }: {
   name: string;
@@ -298,6 +306,7 @@ function PlanCard({
   isCurrent: boolean;
   isHighlight: boolean;
   isPremium?: boolean;
+  trialEligible?: boolean;
   features: string[];
   onUpgrade: () => void;
   isDowngrade: boolean;
@@ -322,7 +331,14 @@ function PlanCard({
             </div>
           )}
           <div>
-            <p className="text-[14px] font-bold text-pw-navy dark:text-white">{name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[14px] font-bold text-pw-navy dark:text-white">{name}</p>
+              {trialEligible && price > 0 && !isCurrent && (
+                <span className="rounded-full bg-pw-green/15 px-2 py-0.5 text-[10px] font-bold text-pw-green">
+                  7 dagen gratis
+                </span>
+              )}
+            </div>
             {isCurrent && (
               <span className="text-[10px] font-semibold text-pw-blue">Huidig plan</span>
             )}

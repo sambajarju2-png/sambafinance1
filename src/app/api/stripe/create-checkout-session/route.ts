@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 const PRICE_MAP: Record<string, string | undefined> = {
   pro_monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
@@ -20,10 +20,22 @@ export async function POST(req: NextRequest) {
   const priceId = PRICE_MAP[plan_id];
   if (!priceId) return NextResponse.json({ error: 'Ongeldig plan' }, { status: 400, headers: NO_CACHE });
 
-  // Get user email
   const supabase = await createServerSupabaseClient();
+  const serviceClient = createServiceRoleClient();
+
+  // Get user email
   const { data: { user } } = await supabase.auth.getUser();
   const email = user?.email;
+
+  // Check if user has ever had a paid subscription (to determine trial eligibility)
+  const { data: existingSub } = await serviceClient
+    .from('paywatch_subscriptions')
+    .select('id, sub_status')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+
+  const isTrialEligible = !existingSub; // Never had any subscription → eligible for trial
 
   const Stripe = (await import('stripe')).default;
   const stripe = new Stripe(stripeKey, { apiVersion: '2025-02-24.acacia' as const });
@@ -36,10 +48,25 @@ export async function POST(req: NextRequest) {
     line_items: [{ price: priceId, quantity: 1 }],
     customer_email: email,
     metadata: { user_id: userId, plan_id },
+    // 7-day free trial for first-time subscribers
+    subscription_data: isTrialEligible
+      ? { trial_period_days: 7, metadata: { user_id: userId, plan_id } }
+      : { metadata: { user_id: userId, plan_id } },
     success_url: `${appUrl}/instellingen?tab=abonnement&success=1`,
     cancel_url: `${appUrl}/instellingen?tab=abonnement`,
     locale: 'nl',
+    // Show trial info prominently in checkout
+    ...(isTrialEligible && {
+      custom_text: {
+        submit: {
+          message: 'Je begint met een gratis proefperiode van 7 dagen. Je wordt niet eerder dan na 7 dagen in rekening gebracht.',
+        },
+      },
+    }),
   });
 
-  return NextResponse.json({ url: session.url }, { headers: NO_CACHE });
+  return NextResponse.json({
+    url: session.url,
+    trial_eligible: isTrialEligible,
+  }, { headers: NO_CACHE });
 }
