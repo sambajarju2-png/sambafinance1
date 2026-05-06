@@ -394,7 +394,7 @@
     "disconnectConfirm": "Are you sure you want to disconnect this account?",
     "disconnected": "Account disconnected",
     "add": "Add Gmail",
-    "scanTitle": "Scan inbox",
+    "scanTitle": "Gmail scan",
     "scanDescription": "Scan your inbox for bills",
     "scanInfo": "We'll scan your emails from the last 7 days (up to 200 emails). This usually takes 2–5 minutes.",
     "scanLeave": "You can leave the app while scanning. The scan continues on the server and you'll get a notification when it's done.",
@@ -402,7 +402,8 @@
     "startScanButton": "Start scan",
     "denied": "Permission denied. Please try again.",
     "errorGeneral": "Something went wrong. Please try again.",
-    "errorConnect": "Could not connect. Please try again."
+    "errorConnect": "Could not connect. Please try again.",
+    "scanError": "Something went wrong while scanning. Reconnect Gmail."
   },
   "scan": {
     "title": "Scan",

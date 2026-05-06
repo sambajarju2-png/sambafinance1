@@ -348,7 +348,9 @@
     "disconnected": "Account ontkoppeld",
     "add": "Gmail toevoegen",
     "errorGeneral": "Er ging iets mis. Probeer het opnieuw.",
-    "errorConnect": "Kon niet verbinden. Probeer het opnieuw."
+    "errorConnect": "Kon niet verbinden. Probeer het opnieuw.",
+    "scanTitle": "Gmail scan",
+    "scanError": "Er ging iets mis bij het scannen. Verbind Gmail opnieuw."
   },
   "scan": {
     "title": "Scan",

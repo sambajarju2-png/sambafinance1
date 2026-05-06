@@ -151,7 +151,29 @@ export async function POST(req: NextRequest) {
 
     // Fetch messages
     guard();
-    const messageList = await listMessages(tokens.accessToken, BATCH_SIZE, page_token);
+    let messageList;
+    try {
+      messageList = await listMessages(tokens.accessToken, BATCH_SIZE, page_token);
+    } catch (gmailErr) {
+      const errMsg = gmailErr instanceof Error ? gmailErr.message : 'Gmail error';
+      console.error('[Gmail scan] listMessages failed:', errMsg);
+
+      // 403 = permission revoked or Gmail API not enabled → mark for re-auth
+      if (errMsg.includes('403')) {
+        await (await createServerSupabaseClient())
+          .from('gmail_accounts')
+          .update({ needs_reauth: true })
+          .eq('id', account_id)
+          .eq('user_id', userId);
+
+        return NextResponse.json(
+          { error: 'Gmail toegang geweigerd. Verbind je Gmail-account opnieuw.', needs_reauth: true },
+          { status: 401, headers: NO_CACHE }
+        );
+      }
+
+      throw gmailErr; // re-throw other errors
+    }
 
     if (!messageList.messages || messageList.messages.length === 0) {
       console.log('[Gmail scan] No more messages');

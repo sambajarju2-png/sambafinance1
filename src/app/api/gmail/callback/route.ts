@@ -15,12 +15,16 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.paywatch.app';
 
   if (error) {
+    console.error('[Gmail callback] OAuth error from Google:', error);
     return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=denied`);
   }
 
   if (!code || !state) {
+    console.error('[Gmail callback] Missing params: code=', !!code, 'state=', !!state);
     return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=missing_params`);
   }
+
+  console.log('[Gmail callback] Hit — code=', !!code, 'state=', state?.slice(0, 8));
 
   try {
     const supabase = createServiceRoleClient();
@@ -47,6 +51,7 @@ export async function GET(req: NextRequest) {
 
     // Exchange code for tokens
     const redirectUri = `${appUrl}/api/gmail/callback`;
+    console.log(`[Gmail callback] Exchanging code for tokens, redirectUri=${redirectUri}`);
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -61,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errBody = await tokenResponse.text();
-      console.error('Token exchange failed:', errBody);
+      console.error('[Gmail callback] Token exchange failed:', tokenResponse.status, errBody);
       return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=token_exchange`, isNative);
     }
 
