@@ -124,7 +124,7 @@
     "markAsPaid": "Markeer als betaald",
     "markAsPaidDesc": "Markeer deze rekening als betaald",
     "draftLetter": "Brief opstellen",
-    "draftLetterDesc": "Laat AI een brief opstellen",
+    "draftLetterDesc": "Schrijf een bezwaarbrief op maat",
     "addFavorite": "Favoriet maken",
     "removeFavorite": "Favoriet verwijderen",
     "favoriteDesc": "Markeer als belangrijk",
@@ -174,7 +174,8 @@
       "incasso": "Incasso"
     },
     "paymentUrl": "Betaallink (optioneel)",
-    "paymentUrlHint": "iDEAL of betaalpagina URL"
+    "paymentUrlHint": "iDEAL of betaalpagina URL",
+    "stage": "Fase"
   },
   "escalation": {
     "factuur": "Factuur",

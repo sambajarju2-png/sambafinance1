@@ -426,12 +426,11 @@ export default function CameraScanPage() {
               <div className="flex-1">
                 <p className="text-[15px] font-bold text-pw-navy">Maak een foto</p>
                 <p className="mt-0.5 text-[12px] text-pw-muted leading-relaxed">
-                  Fotografeer je factuur of brief. AI leest de gegevens automatisch.
+                  Fotografeer je factuur of brief. We scannen en analyseren de gegevens automatisch.
                 </p>
               </div>
               <div className="flex items-center gap-1 rounded-full bg-pw-blue/10 px-2 py-1">
-                <Sparkles className="h-3 w-3 text-pw-blue" strokeWidth={1.5} />
-                <span className="text-[9px] font-bold text-pw-blue">AI</span>
+                <span className="text-[9px] font-bold text-pw-blue">SNEL</span>
               </div>
             </button>
 
@@ -452,7 +451,7 @@ export default function CameraScanPage() {
             </button>
 
             <p className="text-[11px] text-pw-muted text-center pt-2">
-              We gebruiken je foto of QR-code alleen om betaalgegevens te lezen. De afbeelding wordt daarna verwijderd. <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a>
+              Je foto wordt alleen gebruikt om betaalgegevens te lezen en daarna direct verwijderd. We zien je afbeelding zelf niet. <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a>
             </p>
           </div>
         )}

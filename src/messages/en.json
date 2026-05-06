@@ -154,7 +154,7 @@
     "markAsPaid": "Mark as paid",
     "markAsPaidDesc": "Mark this bill as paid",
     "draftLetter": "Draft letter",
-    "draftLetterDesc": "Let AI draft a letter",
+    "draftLetterDesc": "Write a custom dispute letter",
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
     "favoriteDesc": "Mark as important",
@@ -210,7 +210,8 @@
       "incasso": "Collection"
     },
     "paymentUrl": "Payment link (optional)",
-    "paymentUrlHint": "iDEAL or payment page URL"
+    "paymentUrlHint": "iDEAL or payment page URL",
+    "stage": "Stage"
   },
   "escalation": {
     "factuur": "Invoice",
