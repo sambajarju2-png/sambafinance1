@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
 
         const { data: member } = await serviceClient
           .from('organization_members')
-          .select('invite_email')
+          .select('invite_email, full_name')
           .eq('id', buddy.buddy_member_id)
           .single();
 
@@ -132,7 +132,8 @@ export async function GET(req: NextRequest) {
           .single();
 
         if (member && org) {
-          const coachName = member.invite_email?.split('@')[0] || 'Coach';
+          // Prefer full_name, fall back to email prefix
+          const coachName = member.full_name || member.invite_email?.split('@')[0] || 'Coach';
           await serviceClient.from('hulp_messages').insert({
             user_id: userId,
             thread_id: coachThreadId,

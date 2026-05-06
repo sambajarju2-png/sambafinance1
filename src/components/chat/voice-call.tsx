@@ -549,7 +549,10 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       // In WKWebView, navigator.mediaDevices may be undefined until 
       // the WebView is on a secure origin with proper Info.plist permissions
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request permission — then immediately stop the stream so ElevenLabs SDK
+        // can open its own clean stream. Holding the stream open blocks the SDK on iOS.
+        const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        permStream.getTracks().forEach(t => t.stop());
       } else {
         // On iOS WKWebView, getUserMedia might not be available
         // ElevenLabs SDK handles microphone access internally via WebSocket
@@ -594,7 +597,20 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     await conversation.endSession();
   }, [conversation]);
 
-  useEffect(() => { startCall(); }, []);
+  // Stable ref to conversation so cleanup can always access the latest instance
+  const conversationRef = useRef(conversation);
+  useEffect(() => { conversationRef.current = conversation; }, [conversation]);
+
+  // Start call on mount; clean up on unmount (releases microphone indicator in iOS status bar)
+  useEffect(() => {
+    startCall();
+    return () => {
+      // End session when component unmounts (user navigates away without hanging up)
+      conversationRef.current.endSession().catch(() => {});
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [transcript]);
 
   const isActive = conversation.status === 'connected';
