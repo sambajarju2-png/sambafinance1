@@ -606,7 +606,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     startCall();
     return () => {
       // End session when component unmounts (user navigates away without hanging up)
-      conversationRef.current.endSession().catch(() => {});
+      try { conversationRef.current.endSession(); } catch { /* ignore */ }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
