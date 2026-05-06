@@ -549,13 +549,13 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       // In WKWebView, navigator.mediaDevices may be undefined until 
       // the WebView is on a secure origin with proper Info.plist permissions
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Request permission — then immediately stop the stream so ElevenLabs SDK
-        // can open its own clean stream. Holding the stream open blocks the SDK on iOS.
+        // Get permission, stop immediately, then give iOS audio hardware 150ms to release
+        // before ElevenLabs SDK calls getUserMedia internally. Without the delay,
+        // iOS sometimes gives the SDK a silent/blocked audio track.
         const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         permStream.getTracks().forEach(t => t.stop());
+        await new Promise(resolve => setTimeout(resolve, 150));
       } else {
-        // On iOS WKWebView, getUserMedia might not be available
-        // ElevenLabs SDK handles microphone access internally via WebSocket
         console.warn('[VoiceCall] getUserMedia not available — relying on ElevenLabs SDK');
       }
 
