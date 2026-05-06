@@ -44,8 +44,9 @@ export async function getRevenueCatEntitlement(): Promise<'pro' | 'premium' | nu
     const { Purchases } = await import('@revenuecat/purchases-capacitor');
     const { customerInfo } = await Purchases.getCustomerInfo();
 
-    if (customerInfo.entitlements.active['premium']) return 'premium';
-    if (customerInfo.entitlements.active['pro']) return 'pro';
+    // RevenueCat entitlement identifiers (must match exactly what's in RC dashboard)
+    if (customerInfo.entitlements.active['Paywatch_premium']) return 'premium';
+    if (customerInfo.entitlements.active['Paywatch_Pro']) return 'pro';
     return null;
   } catch {
     return null;
@@ -74,7 +75,7 @@ export async function presentPaywall(): Promise<boolean> {
   }
 }
 
-/** Show paywall for a specific offering (e.g. "pro" or "premium") */
+/** Show paywall for a specific offering (e.g. "Paywatch_Pro" or "Paywatch_premium") */
 export async function presentPaywallIfNeeded(requiredEntitlement: string): Promise<boolean> {
   try {
     const { Capacitor } = await import('@capacitor/core');
@@ -100,3 +101,9 @@ export async function presentPaywallIfNeeded(requiredEntitlement: string): Promi
     return false;
   }
 }
+
+/** RevenueCat entitlement identifiers — must match exactly what's in RC dashboard */
+export const RC_ENTITLEMENTS = {
+  pro: 'Paywatch_Pro',
+  premium: 'Paywatch_premium',
+} as const;

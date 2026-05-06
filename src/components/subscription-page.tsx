@@ -12,7 +12,7 @@ interface Subscription {
   payment_provider: string;
 }
 
-const PRICES = { pro_monthly: 4.00, pro_yearly: 40.00, premium_monthly: 8.00, premium_yearly: 80.00 };
+const PRICES = { pro_monthly: 4.99, pro_yearly: 44.99, premium_monthly: 8.99, premium_yearly: 79.99 };
 
 // ── Actual limits from plan_rules table ──────────────────────────────────────
 const PLANS = [
@@ -39,8 +39,8 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     icon: Zap,
-    priceMonthly: 4.00,
-    priceYearly: 40.00,
+    priceMonthly: 4.99,
+    priceYearly: 44.99,
     color: 'text-pw-blue',
     bg: 'bg-pw-blue/5',
     border: 'border-pw-blue/30',
@@ -59,8 +59,8 @@ const PLANS = [
     id: 'premium',
     name: 'Premium',
     icon: Crown,
-    priceMonthly: 8.00,
-    priceYearly: 80.00,
+    priceMonthly: 8.99,
+    priceYearly: 79.99,
     color: 'text-amber-500',
     bg: 'bg-amber-50/50 dark:bg-amber-500/5',
     border: 'border-amber-200 dark:border-amber-500/30',
