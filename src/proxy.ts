@@ -2,14 +2,14 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Supabase session refresh middleware.
+ * Supabase session refresh proxy (Next.js 16 — previously "middleware").
  *
  * This is REQUIRED by @supabase/ssr. Without it, JWTs expire after ~1 hour
  * and ALL server-side auth checks (getUser, getAuthUserId) return null → 401.
  *
  * DO NOT add business logic here. Just refresh the session and pass through.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
