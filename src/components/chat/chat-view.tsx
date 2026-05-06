@@ -9,6 +9,7 @@ const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
 const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
 const HulpInbox = dynamic(() => import('./hulp-inbox'), { ssr: false });
 const BuddyChat = dynamic(() => import('../buddy-chat'), { ssr: false });
+const LimitReachedModal = dynamic(() => import('../ui/limit-reached-modal'), { ssr: false });
 
 interface Message {
   id: string;
@@ -88,6 +89,8 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
   const [buddyUnread, setBuddyUnread] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [postCallData, setPostCallData] = useState<any>(null);
+  const [limitModal, setLimitModal] = useState<{ type: import('../ui/limit-reached-modal').LimitType; plan: string } | null>(null);
+  const [currentPlan, setCurrentPlan] = useState('gratis');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -232,6 +235,21 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Fout' }));
+
+        // Plan limit reached — show upgrade modal
+        if (err.error === 'limit_reached' && err.limit_type) {
+          setLimitModal({ type: err.limit_type, plan: err.plan || currentPlan });
+          setCurrentPlan(err.plan || currentPlan);
+          const limitContent = isNl
+            ? (err.message || 'Je hebt je limiet bereikt. Upgrade om verder te gaan.')
+            : 'You've reached your limit. Upgrade to continue.';
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId ? { ...m, content: limitContent } : m
+          ));
+          setIsStreaming(false);
+          return;
+        }
+
         const errorContent = err.error === 'Rate limited'
           ? (isNl ? 'Even rustig aan! Probeer het over een minuutje opnieuw.' : 'Slow down! Try again in a minute.')
           : (isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.');
@@ -782,6 +800,20 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             setBuddyUnread(total);
           }).catch(() => {});
         }} />
+      )}
+
+      {/* Limit reached upgrade prompt */}
+      {limitModal && (
+        <LimitReachedModal
+          limitType={limitModal.type}
+          currentPlan={limitModal.plan}
+          lang={lang}
+          onClose={() => setLimitModal(null)}
+          onUpgrade={() => {
+            setLimitModal(null);
+            window.location.href = '/abonnement';
+          }}
+        />
       )}
     </div>
   );

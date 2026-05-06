@@ -158,8 +158,41 @@ export async function POST(req: NextRequest) {
     const userId = await getAuthUserId(req);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
-    const allowed = await checkRateLimit(userId, 'chat', 20, 60);
-    if (!allowed) return NextResponse.json({ error: 'Rate limited' }, { status: 429, headers: NO_CACHE });
+    // Plan-aware rate limiting: check chat_messages_per_day from plan_rules
+    const supabaseForLimits = await createServerSupabaseClient();
+    const { data: userSettings } = await supabaseForLimits
+      .from('user_settings')
+      .select('plan')
+      .eq('user_id', userId)
+      .single();
+
+    const userPlan = userSettings?.plan || 'gratis';
+
+    // Read plan limit from plan_rules table
+    const { data: planRule } = await supabaseForLimits
+      .from('plan_rules')
+      .select('chat_messages_per_day')
+      .eq('plan_id', userPlan)
+      .single();
+
+    const dailyLimit = planRule?.chat_messages_per_day ?? 15;
+
+    // -1 means unlimited
+    if (dailyLimit !== -1) {
+      const allowed = await checkRateLimit(userId, 'chat', dailyLimit, 1440); // 1440 min = 24 hours
+      if (!allowed) {
+        return NextResponse.json({
+          error: 'limit_reached',
+          limit_type: 'chat',
+          plan: userPlan,
+          limit: dailyLimit,
+          message: userPlan === 'gratis'
+            ? `Je hebt je dagelijkse limiet van ${dailyLimit} chatberichten bereikt. Upgrade naar Pro voor meer.`
+            : `Je hebt je dagelijkse limiet van ${dailyLimit} chatberichten bereikt.`,
+          upgrade_target: userPlan === 'gratis' ? 'pro' : 'premium',
+        }, { status: 429, headers: NO_CACHE });
+      }
+    }
 
     // Parse request — either JSON or multipart
     let message = '';

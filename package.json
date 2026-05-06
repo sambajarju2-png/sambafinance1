@@ -24,7 +24,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-native-biometric": "^8.4.2",
-    "@elevenlabs/react": "^1.1.1",
+    "@elevenlabs/react": "1.1.1",
     "@revenuecat/purchases-capacitor": "^13.0.1",
     "@revenuecat/purchases-capacitor-ui": "^13.0.1",
     "@supabase/ssr": "^0.8.0",

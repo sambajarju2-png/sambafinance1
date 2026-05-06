@@ -545,18 +545,21 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     setDebugInfo('');
 
     try {
-      // Request microphone permission
-      // In WKWebView, navigator.mediaDevices may be undefined until 
-      // the WebView is on a secure origin with proper Info.plist permissions
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Get permission, stop immediately, then give iOS audio hardware 150ms to release
-        // before ElevenLabs SDK calls getUserMedia internally. Without the delay,
-        // iOS sometimes gives the SDK a silent/blocked audio track.
-        const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        permStream.getTracks().forEach(t => t.stop());
-        await new Promise(resolve => setTimeout(resolve, 150));
-      } else {
-        console.warn('[VoiceCall] getUserMedia not available — relying on ElevenLabs SDK');
+      // Pre-check: verify mic permission is not denied (non-blocking, doesn't acquire hardware).
+      // The SDK will call getUserMedia internally — do NOT acquire & release the stream here
+      // because the rapid acquire/release/acquire cycle breaks audio on iOS WKWebView and
+      // some Android browsers (the SDK gets a silent or blocked track).
+      if (navigator.permissions) {
+        try {
+          const perm = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (perm.state === 'denied') {
+            setErrorDetail('Microfoon geblokkeerd. Ga naar instellingen om toegang te geven.');
+            setStatus('error');
+            return;
+          }
+        } catch {
+          // permissions.query('microphone') not supported on all browsers — that's OK
+        }
       }
 
       const res = await fetch('/api/voice/token');
