@@ -242,7 +242,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           setCurrentPlan(err.plan || currentPlan);
           const limitContent = isNl
             ? (err.message || 'Je hebt je limiet bereikt. Upgrade om verder te gaan.')
-            : 'You've reached your limit. Upgrade to continue.';
+            : "You've reached your limit. Upgrade to continue.";
           setMessages(prev => prev.map(m =>
             m.id === assistantId ? { ...m, content: limitContent } : m
           ));
