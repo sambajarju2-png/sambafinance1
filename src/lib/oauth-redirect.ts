@@ -21,7 +21,9 @@ export function oauthRedirect(req: NextRequest, url: string, isNative?: boolean)
   // Parse status from the redirect URL
   const parsed = new URL(url);
   const status = parsed.searchParams.get('status') || '';
-  const isSuccess = status === 'connected';
+  const outlookStatus = parsed.searchParams.get('outlook') || '';
+  // Gmail uses ?status=connected; Outlook uses ?outlook=connected
+  const isSuccess = status === 'connected' || outlookStatus === 'connected';
 
   const title = isSuccess ? 'Verbonden!' : 'Er ging iets mis';
   const message = isSuccess
