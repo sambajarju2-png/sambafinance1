@@ -582,7 +582,11 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         setRemainingSeconds(data.remainingSeconds);
       }
 
-      if (data.signedUrl) {
+      if (data.conversationToken) {
+        // WebRTC — lower latency on web browsers
+        await conversation.startSession({ conversationToken: data.conversationToken, overrides: data.overrides });
+      } else if (data.signedUrl) {
+        // WebSocket — stable on iOS WKWebView
         await conversation.startSession({ signedUrl: data.signedUrl, overrides: data.overrides });
       } else if (data.agentId) {
         await conversation.startSession({ agentId: data.agentId, overrides: data.overrides, connectionType: 'websocket' });

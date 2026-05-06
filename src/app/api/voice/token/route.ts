@@ -119,22 +119,54 @@ WIK: 15% eerste €2.500 (min €40). Schuldhulp: 0800-8115.`;
       ? `Hoi ${firstName}! Fijn dat je belt. Waar kan ik je mee helpen?`
       : 'Hoi! Fijn dat je belt. Waar kan ik je mee helpen?';
 
-    // Generate signed URL — forces WebSocket transport (stable on iOS Safari PWA)
-    const signedUrlRes = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
-      { headers: { 'xi-api-key': apiKey } }
-    );
+    // Detect platform — iOS needs WebSocket (stable in WKWebView), web uses WebRTC (lower latency)
+    const ua = req.headers.get('user-agent') || '';
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in globalThis);
 
-    if (!signedUrlRes.ok) {
-      const err = await signedUrlRes.text();
-      console.error('ElevenLabs signed URL error:', err);
-      return NextResponse.json({ error: 'Failed to get voice token', details: err }, { status: 500, headers: NO_CACHE });
+    let signed_url: string | null = null;
+    let conversation_token: string | null = null;
+
+    if (isIOS) {
+      // iOS: signed URL → WebSocket transport (stable in WKWebView Safari PWA)
+      const signedUrlRes = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+        { headers: { 'xi-api-key': apiKey } }
+      );
+      if (!signedUrlRes.ok) {
+        const err = await signedUrlRes.text();
+        console.error('ElevenLabs signed URL error:', err);
+        return NextResponse.json({ error: 'Failed to get voice token', details: err }, { status: 500, headers: NO_CACHE });
+      }
+      const data = await signedUrlRes.json();
+      signed_url = data.signed_url;
+    } else {
+      // Web: conversation token → WebRTC transport (lower latency)
+      const tokenRes = await fetch(
+        `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agentId}`,
+        { headers: { 'xi-api-key': apiKey } }
+      );
+      if (!tokenRes.ok) {
+        // Fallback to signed URL if token endpoint fails
+        const signedUrlRes = await fetch(
+          `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+          { headers: { 'xi-api-key': apiKey } }
+        );
+        if (!signedUrlRes.ok) {
+          const err = await signedUrlRes.text();
+          console.error('ElevenLabs token error:', err);
+          return NextResponse.json({ error: 'Failed to get voice token', details: err }, { status: 500, headers: NO_CACHE });
+        }
+        const data = await signedUrlRes.json();
+        signed_url = data.signed_url;
+      } else {
+        const data = await tokenRes.json();
+        conversation_token = data.token;
+      }
     }
-
-    const { signed_url } = await signedUrlRes.json();
 
     return NextResponse.json({
       signedUrl: signed_url,
+      conversationToken: conversation_token,
       agentId, // fallback
       remainingSeconds,
       plan: userPlan,
