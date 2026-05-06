@@ -12,7 +12,12 @@ interface Subscription {
   payment_provider: string;
 }
 
-const PRICES = { pro_monthly: 4.99, pro_yearly: 44.99, premium_monthly: 8.99, premium_yearly: 79.99 };
+// App Store prices (iOS only — set by Apple price tier)
+const APP_STORE_PRICES = { pro_monthly: 4.99, pro_yearly: 44.99, premium_monthly: 8.99, premium_yearly: 79.99 };
+// Stripe prices (web only)
+const STRIPE_PRICES = { pro_monthly: 4.00, pro_yearly: 40.00, premium_monthly: 8.00, premium_yearly: 80.00 };
+// Keep PRICES as fallback (unused directly — resolved per-platform below)
+const PRICES = APP_STORE_PRICES;
 
 // ── Actual limits from plan_rules table ──────────────────────────────────────
 const PLANS = [
@@ -39,8 +44,8 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     icon: Zap,
-    priceMonthly: 4.99,
-    priceYearly: 44.99,
+    priceMonthly: 4.99,   // App Store; Stripe: 4.00
+    priceYearly: 44.99,   // App Store; Stripe: 40.00
     color: 'text-pw-blue',
     bg: 'bg-pw-blue/5',
     border: 'border-pw-blue/30',
@@ -59,8 +64,8 @@ const PLANS = [
     id: 'premium',
     name: 'Premium',
     icon: Crown,
-    priceMonthly: 8.99,
-    priceYearly: 79.99,
+    priceMonthly: 8.99,   // App Store; Stripe: 8.00
+    priceYearly: 79.99,   // App Store; Stripe: 80.00
     color: 'text-amber-500',
     bg: 'bg-amber-50/50 dark:bg-amber-500/5',
     border: 'border-amber-200 dark:border-amber-500/30',
@@ -313,7 +318,10 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
       <div className="space-y-3">
         {PLANS.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id || (plan.id === 'pro' && isPro) || (plan.id === 'premium' && isPremium);
-          const price = plan.id === 'gratis' ? 0 : billing === 'monthly' ? plan.priceMonthly : plan.priceYearly;
+          // Show App Store prices on iOS, Stripe prices on web
+          const prices = isNative ? APP_STORE_PRICES : STRIPE_PRICES;
+          const priceKey = `${plan.id}_${billing}` as keyof typeof prices;
+          const price = plan.id === 'gratis' ? 0 : (prices[priceKey] ?? 0);
           const planId = plan.id === 'pro' ? (billing === 'monthly' ? 'pro_monthly' : 'pro_yearly') : (billing === 'monthly' ? 'premium_monthly' : 'premium_yearly');
 
           return (
@@ -342,6 +350,11 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
                     <>
                       <p className="text-[18px] font-extrabold text-pw-navy dark:text-white">€{price.toFixed(2).replace('.', ',')}</p>
                       <p className="text-[10px] text-pw-muted">{billing === 'yearly' ? '/jaar' : '/maand'}</p>
+                      {plan.id !== 'gratis' && (
+                        <p className="text-[9px] text-pw-muted/60 mt-0.5">
+                          {isNative ? 'App Store' : 'Stripe'}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
