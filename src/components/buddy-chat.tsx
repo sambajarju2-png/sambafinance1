@@ -145,7 +145,7 @@ export default function BuddyChat({ onClose }: BuddyChatProps) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-pw-bg dark:bg-pw-navy">
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-pw-border/40 px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-pw-border/40 px-4 py-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
           <button
             onClick={() => { setActiveConvo(null); fetchConversations(); }}
             className="rounded-lg p-1.5 hover:bg-pw-border/30"
@@ -227,7 +227,7 @@ export default function BuddyChat({ onClose }: BuddyChatProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-pw-bg dark:bg-pw-navy">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-pw-border/30">
             <ChevronLeft className="h-5 w-5 text-pw-text dark:text-white" strokeWidth={1.5} />

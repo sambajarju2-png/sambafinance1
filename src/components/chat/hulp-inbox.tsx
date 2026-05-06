@@ -174,7 +174,7 @@ function ThreadView({ threadId, onBack, nl }: {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-pw-border/40 px-3 py-2.5">
+      <div className="flex items-center gap-3 border-b border-pw-border/40 px-3 py-2.5" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
         <button onClick={onBack} className="rounded-lg p-1.5 hover:bg-pw-border/30">
           <ArrowLeft className="h-5 w-5 text-pw-text dark:text-white" strokeWidth={1.5} />
         </button>
@@ -317,7 +317,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-pw-bg dark:bg-pw-navy">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-pw-border/30">
             <ArrowLeft className="h-5 w-5 text-pw-text dark:text-white" strokeWidth={1.5} />
