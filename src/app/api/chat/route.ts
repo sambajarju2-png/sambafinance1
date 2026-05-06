@@ -233,13 +233,19 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createServerSupabaseClient();
 
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
     // Load user context in parallel
-    const [settingsRes, billsRes, plansRes, moodRes, historyRes] = await Promise.all([
+    const [settingsRes, billsRes, plansRes, moodRes, historyRes, bankCatsRes, bankTotalsRes] = await Promise.all([
       supabase.from('user_settings').select('first_name, gemeente, language, onboarding_profile, scan_preference').eq('user_id', userId).single(),
       supabase.from('bills').select('vendor, amount, due_date, status, escalation_stage, category').eq('user_id', userId).order('due_date', { ascending: true }).limit(50),
       supabase.from('payment_plans').select('id, vendor, total_amount, paid_amount, installment_count, status').eq('user_id', userId).eq('status', 'active'),
       supabase.from('mood_log').select('mood, logged_at').eq('user_id', userId).order('logged_at', { ascending: false }).limit(7),
       supabase.from('chat_messages').select('role, content').eq('user_id', userId).order('created_at', { ascending: false }).limit(10),
+      // Bank spending categories this month
+      supabase.from('analytics_monthly_categories').select('category, total_cents, transaction_count').eq('user_id', userId).eq('month', currentMonth).order('total_cents', { ascending: true }),
+      // Bank monthly totals this month
+      supabase.from('analytics_monthly_totals').select('income_cents, expenses_cents, net_cents').eq('user_id', userId).eq('month', currentMonth).single(),
     ]);
 
     const settings = settingsRes.data;
@@ -302,7 +308,25 @@ STEMMING (laatste 7 dagen):
 ${moods.length > 0 ? moods.map((m: { logged_at: string; mood: string }) => `- ${new Date(m.logged_at).toLocaleDateString('nl-NL')}: ${m.mood}`).join('\n') : 'Geen stemmingsdata'}
 
 LOKALE HULP${gemeente ? ` (${gemeente})` : ''}:
-${schuldhulpInfo || 'Geen lokale hulpdata beschikbaar'}`;
+${schuldhulpInfo || 'Geen lokale hulpdata beschikbaar'}
+
+BANKGEGEVENS (${currentMonth}):
+${(() => {
+  const bankTotals = bankTotalsRes.data;
+  const bankCats = (bankCatsRes.data || []).filter((c: { total_cents: number }) => c.total_cents < 0).slice(0, 8);
+  if (!bankTotals && bankCats.length === 0) return 'Geen bankrekening gekoppeld of geen transacties deze maand.';
+  const parts: string[] = [];
+  if (bankTotals) {
+    parts.push(`Inkomen: ${formatCents(bankTotals.income_cents || 0)} | Uitgaven: ${formatCents(Math.abs(bankTotals.expenses_cents || 0))} | Netto: ${formatCents(bankTotals.net_cents || 0)}`);
+  }
+  if (bankCats.length > 0) {
+    parts.push('Uitgaven per categorie:');
+    bankCats.forEach((c: { category: string; total_cents: number; transaction_count: number }) => {
+      parts.push(`- ${c.category.replace(/_/g, ' ')}: ${formatCents(Math.abs(c.total_cents))} (${c.transaction_count} transacties)`);
+    });
+  }
+  return parts.join('\n');
+})()}`;
 
     // System prompt
     const systemPrompt = `Je bent PayBuddy, de persoonlijke financiële maat in PayWatch. Je voelt als een rustige, slimme vriend die Nederlands schuldrecht snapt en écht om de gebruiker geeft.

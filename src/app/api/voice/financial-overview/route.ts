@@ -24,11 +24,22 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
-    const [financesRes, expensesRes, billsRes, settingsRes] = await Promise.all([
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const prevMonth = (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      return d.toISOString().slice(0, 7);
+    })();
+
+    const [financesRes, expensesRes, billsRes, settingsRes, bankCategoriesRes, bankTotalsRes] = await Promise.all([
       supabase.from('user_finances').select('netto_inkomen, partner_inkomen, duo_inkomen, uitkering_inkomen, toeslagen_inkomen, overig_inkomen, has_partner, num_children, children_ages, monthly_rent, has_kinderopvang, vermogen').eq('user_id', userId).single(),
       supabase.from('user_expenses').select('monthly_amount').eq('user_id', userId).eq('is_active', true),
       supabase.from('bills').select('amount, escalation_stage, status').eq('user_id', userId),
       supabase.from('user_settings').select('gemeente, first_name').eq('user_id', userId).single(),
+      // Bank spending by category this month + last month
+      supabase.from('analytics_monthly_categories').select('month, category, total_cents, transaction_count').eq('user_id', userId).in('month', [currentMonth, prevMonth]).order('total_cents', { ascending: true }),
+      // Bank income/expenses totals
+      supabase.from('analytics_monthly_totals').select('month, income_cents, expenses_cents, net_cents').eq('user_id', userId).in('month', [currentMonth, prevMonth]).order('month', { ascending: false }),
     ]);
 
     const finances = financesRes.data;
@@ -108,6 +119,46 @@ export async function GET(req: NextRequest) {
     lines.push(openBills.length + ' openstaande rekeningen voor ' + formatCents(totalOpen) + '.');
     if (escalated.length > 0) lines.push(escalated.length + ' in escalatie (incasso of deurwaarder).');
     lines.push(toeslagenSummary);
+
+    // Bank spending context — from PSD2 transaction analysis
+    const bankCategories = bankCategoriesRes.data || [];
+    const bankTotals = bankTotalsRes.data || [];
+
+    const thisMonthTotals = bankTotals.find(t => t.month === currentMonth);
+    const lastMonthTotals = bankTotals.find(t => t.month === prevMonth);
+
+    if (thisMonthTotals) {
+      lines.push(`BANKGEGEVENS deze maand (${currentMonth}): Inkomsten ${formatCents(thisMonthTotals.income_cents || 0)}, Uitgaven ${formatCents(Math.abs(thisMonthTotals.expenses_cents || 0))}, Netto ${formatCents(thisMonthTotals.net_cents || 0)}.`);
+    }
+
+    // Top spending categories this month
+    const thisMonthCats = bankCategories
+      .filter(c => c.month === currentMonth && c.total_cents < 0)
+      .sort((a, b) => a.total_cents - b.total_cents) // most negative first = biggest spending
+      .slice(0, 6);
+
+    if (thisMonthCats.length > 0) {
+      const catParts = thisMonthCats.map(c =>
+        `${c.category.replace(/_/g, ' ')}: ${formatCents(Math.abs(c.total_cents))} (${c.transaction_count}x)`
+      );
+      lines.push('Uitgaven per categorie: ' + catParts.join(', ') + '.');
+    }
+
+    // Month-over-month comparison
+    if (thisMonthTotals && lastMonthTotals) {
+      const thisExp = Math.abs(thisMonthTotals.expenses_cents || 0);
+      const lastExp = Math.abs(lastMonthTotals.expenses_cents || 0);
+      if (lastExp > 0) {
+        const diff = thisExp - lastExp;
+        const pct = Math.round((diff / lastExp) * 100);
+        if (Math.abs(pct) >= 5) {
+          lines.push(diff > 0
+            ? `Je geeft deze maand ${formatCents(diff)} (${pct}%) meer uit dan vorige maand.`
+            : `Je geeft deze maand ${formatCents(Math.abs(diff))} (${Math.abs(pct)}%) minder uit dan vorige maand.`
+          );
+        }
+      }
+    }
 
     return NextResponse.json({ summary: lines.join(' ') }, { headers: NO_CACHE });
   } catch (error) {
