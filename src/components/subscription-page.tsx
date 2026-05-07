@@ -30,7 +30,15 @@ const PLANS = [
     color: 'text-pw-muted',
     bg: 'bg-pw-bg',
     border: 'border-pw-border',
-    features: [
+    featuresMonthly: [
+      '5 min PayBuddy/maand',
+      '15 AI chats per dag',
+      '2 bezwaarschriften/maand',
+      '2 AI inzichten/maand',
+      '10 scans per maand',
+      '1 e-mail inbox',
+    ],
+    featuresYearly: [
       '5 min PayBuddy/maand',
       '15 AI chats per dag',
       '2 bezwaarschriften/maand',
@@ -50,11 +58,20 @@ const PLANS = [
     bg: 'bg-pw-blue/5',
     border: 'border-pw-blue/30',
     highlight: true,
-    features: [
+    featuresMonthly: [
       '15 min PayBuddy/maand',
       '30 AI chats per dag',
       '8 bezwaarschriften/maand',
       '6 AI inzichten/maand',
+      'Onbeperkt scannen',
+      '2 e-mail inboxen',
+      '1 bankrekening koppelen',
+    ],
+    featuresYearly: [
+      '25 min PayBuddy/maand',
+      '40 AI chats per dag',
+      '12 bezwaarschriften/maand',
+      '8 AI inzichten/maand',
       'Onbeperkt scannen',
       '2 e-mail inboxen',
       '1 bankrekening koppelen',
@@ -70,12 +87,20 @@ const PLANS = [
     color: 'text-amber-500',
     bg: 'bg-amber-50/50 dark:bg-amber-500/5',
     border: 'border-amber-200 dark:border-amber-500/30',
-    features: [
+    featuresMonthly: [
       '40 min PayBuddy/maand',
       'Onbeperkt AI chatten',
       'Onbeperkte bezwaarschriften',
       '12 AI inzichten/maand',
       '4 e-mail inboxen',
+      'Onbeperkt bankrekeningen',
+    ],
+    featuresYearly: [
+      '60 min PayBuddy/maand',
+      'Onbeperkt AI chatten',
+      'Onbeperkte bezwaarschriften',
+      '15 AI inzichten/maand',
+      '6 e-mail inboxen',
       'Onbeperkt bankrekeningen',
     ],
     notIncluded: [],
@@ -363,7 +388,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
               </div>
 
               <ul className="space-y-1.5 mb-4">
-                {plan.features.map((f, i) => (
+                {(billing === 'yearly' ? plan.featuresYearly : plan.featuresMonthly).map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-[12px] text-pw-text dark:text-white/80">
                     <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-pw-green" strokeWidth={2.5} /> {f}
                   </li>
