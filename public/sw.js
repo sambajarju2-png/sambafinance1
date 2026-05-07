@@ -1,16 +1,15 @@
-/// PayWatch Service Worker v3
-/// Multi-strategy caching for instant page loads on iOS + web
+/// PayWatch Service Worker v4
+/// Multi-strategy caching for instant page loads
 ///
 /// Strategies:
-///   Static assets (_next/static, fonts, icons) -> Cache-First (immutable, hashed URLs)
-///   Pages (navigation requests)                -> Stale-While-Revalidate (instant + fresh)
-///   Read API (/api/bills, /api/analytics, etc) -> Stale-While-Revalidate (cached data + bg refresh)
-///   Auth + mutations                           -> Network-Only (never cache)
+///   Static assets (_next/static, fonts, icons) -> Cache-First (immutable)
+///   Pages (navigation requests)                -> Stale-While-Revalidate (instant + bg refresh)
+///   API routes                                 -> Network-Only (HTTP cache headers handle this)
+///   External origins                           -> Pass-through
 
-const CACHE_STATIC = 'pw-static-v3';
-const CACHE_PAGES  = 'pw-pages-v3';
-const CACHE_API    = 'pw-api-v3';
-const ALL_CACHES   = [CACHE_STATIC, CACHE_PAGES, CACHE_API];
+const CACHE_STATIC = 'pw-static-v4';
+const CACHE_PAGES  = 'pw-pages-v4';
+const ALL_CACHES   = [CACHE_STATIC, CACHE_PAGES];
 
 const PRECACHE = [
   '/',
@@ -18,30 +17,6 @@ const PRECACHE = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
-];
-
-// API routes safe to cache (GET only, user-specific read data)
-const CACHEABLE_API = [
-  '/api/bills',
-  '/api/analytics',
-  '/api/streak',
-  '/api/community/posts',
-  '/api/settings',
-  '/api/notifications',
-];
-
-// API routes to NEVER cache
-const NEVER_CACHE_API = [
-  '/api/auth',
-  '/api/chat',
-  '/api/voice',
-  '/api/revenuecat',
-  '/api/stripe',
-  '/api/bank/connect',
-  '/api/bank/callback',
-  '/api/gmail',
-  '/api/outlook',
-  '/api/push',
 ];
 
 // ============================================================
@@ -57,7 +32,7 @@ self.addEventListener('install', (event) => {
 });
 
 // ============================================================
-// ACTIVATE — clean old caches
+// ACTIVATE — clean old caches (including v3 API cache)
 // ============================================================
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -71,7 +46,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================================
-// FETCH — route to right strategy
+// FETCH
 // ============================================================
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -79,49 +54,49 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never intercept auth routes
   if (url.pathname.startsWith('/auth/')) return;
 
-  // Static assets: Cache-First (hashed filenames = immutable)
+  // API routes: Network-Only. Browser HTTP cache (SHORT_CACHE headers) handles
+  // short-lived caching. SW does NOT cache API responses because cached user data
+  // would leak between accounts if someone logs out and another user logs in.
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Static assets: Cache-First
+  // _next/static files have content hashes — immutable, safe to serve forever
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/_next/image') ||
-    /\.(woff2?|ttf|otf|png|jpg|jpeg|webp|avif|svg|ico|css|js)$/.test(url.pathname)
+    /\.(woff2?|ttf|otf|png|jpg|jpeg|webp|avif|svg|ico|css)$/.test(url.pathname)
   ) {
     event.respondWith(cacheFirst(request, CACHE_STATIC));
     return;
   }
 
-  // API routes
-  if (url.pathname.startsWith('/api/')) {
-    if (NEVER_CACHE_API.some((p) => url.pathname.startsWith(p))) return;
-    if (CACHEABLE_API.some((p) => url.pathname.startsWith(p))) {
-      event.respondWith(staleWhileRevalidate(request, CACHE_API));
-      return;
-    }
-    return;
-  }
-
-  // Page navigations: Stale-While-Revalidate (instant load from cache + bg refresh)
+  // Pages: Stale-While-Revalidate
+  // Show cached page instantly, fetch fresh version in background
   if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
-    event.respondWith(staleWhileRevalidate(request, CACHE_PAGES));
+    event.respondWith(swr(request, CACHE_PAGES, event));
     return;
   }
 
-  // Everything else
-  event.respondWith(staleWhileRevalidate(request, CACHE_STATIC));
+  // Other same-origin assets (JS bundles loaded dynamically, etc.)
+  event.respondWith(cacheFirst(request, CACHE_STATIC));
 });
 
 // ============================================================
-// Cache-First: serve cached, only fetch on miss
+// Cache-First: serve from cache, fetch only on miss
 // ============================================================
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);
   if (cached) return cached;
+
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const c = await caches.open(cacheName);
-      c.put(request, response.clone());
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
     }
     return response;
   } catch {
@@ -130,27 +105,32 @@ async function cacheFirst(request, cacheName) {
 }
 
 // ============================================================
-// Stale-While-Revalidate: serve cached instantly, refresh in background
+// Stale-While-Revalidate: cached instant + background refresh
+// Uses event.waitUntil to keep SW alive during background fetch
 // ============================================================
-async function staleWhileRevalidate(request, cacheName) {
+async function swr(request, cacheName, event) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
-  const networkFetch = fetch(request)
+  // Background fetch: always run, updates cache for next visit
+  const networkPromise = fetch(request)
     .then((response) => {
       if (response.ok) cache.put(request, response.clone());
       return response;
     })
     .catch(() => null);
 
-  // Have cache? Return it now. Network updates cache in background for next visit.
-  if (cached) return cached;
+  if (cached) {
+    // Return cached immediately. Keep SW alive for background fetch via waitUntil.
+    event.waitUntil(networkPromise);
+    return cached;
+  }
 
   // No cache — must wait for network
-  const response = await networkFetch;
+  const response = await networkPromise;
   if (response) return response;
 
-  // Network failed, no cache — offline fallback
+  // Network failed + no cache — offline fallback
   if (request.mode === 'navigate') {
     const fallback = await cache.match('/');
     if (fallback) return fallback;

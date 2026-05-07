@@ -582,16 +582,34 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         setRemainingSeconds(data.remainingSeconds);
       }
 
+      // Try connection methods in order: conversationToken (WebRTC) → signedUrl (WebSocket) → agentId
+      let connected = false;
+
       if (data.conversationToken) {
-        // WebRTC — lower latency on web browsers
-        await conversation.startSession({ conversationToken: data.conversationToken, overrides: data.overrides });
-      } else if (data.signedUrl) {
-        // WebSocket — stable on iOS WKWebView
-        await conversation.startSession({ signedUrl: data.signedUrl, overrides: data.overrides });
-      } else if (data.agentId) {
+        try {
+          await conversation.startSession({ conversationToken: data.conversationToken, overrides: data.overrides });
+          connected = true;
+        } catch (e) {
+          console.warn('[VoiceCall] conversationToken failed, falling back to signedUrl:', e);
+        }
+      }
+
+      if (!connected && data.signedUrl) {
+        try {
+          await conversation.startSession({ signedUrl: data.signedUrl, overrides: data.overrides });
+          connected = true;
+        } catch (e) {
+          console.warn('[VoiceCall] signedUrl failed, falling back to agentId:', e);
+        }
+      }
+
+      if (!connected && data.agentId) {
         await conversation.startSession({ agentId: data.agentId, overrides: data.overrides, connectionType: 'websocket' });
-      } else {
-        setErrorDetail('No connection data');
+        connected = true;
+      }
+
+      if (!connected) {
+        setErrorDetail('No connection method available');
         setStatus('error');
       }
     } catch (err) {

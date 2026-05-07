@@ -10,6 +10,26 @@ import { logAiUsage } from '@/lib/ai/usage-log';
 const SCALEWAY_API_URL = 'https://api.scaleway.ai/v1/chat/completions';
 const VISION_MODEL = 'mistral-small-3.2-24b-instruct-2506';
 
+// In-memory cache for plan_rules — only 5 rows, rarely change
+// Eliminates one DB query per chat message
+let planRulesCache: Map<string, number> | null = null;
+let planRulesCacheTime = 0;
+const PLAN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedPlanLimit(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, planId: string): Promise<number> {
+  if (!planRulesCache || Date.now() - planRulesCacheTime > PLAN_CACHE_TTL) {
+    const { data } = await supabase.from('plan_rules').select('plan_id, chat_messages_per_day');
+    planRulesCache = new Map();
+    if (data) {
+      for (const row of data) {
+        planRulesCache.set(row.plan_id, row.chat_messages_per_day ?? 15);
+      }
+    }
+    planRulesCacheTime = Date.now();
+  }
+  return planRulesCache.get(planId) ?? 15;
+}
+
 /**
  * Analyse an image with Mistral Vision (Scaleway EU, data stays in Europe).
  * Returns a rich extractionContext string that PayBuddy can present naturally.
@@ -158,8 +178,11 @@ export async function POST(req: NextRequest) {
     const userId = await getAuthUserId(req);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
-    // Plan-aware rate limiting: check chat_messages_per_day from plan_rules
+    // Plan-aware rate limiting with in-memory plan rules cache
     const supabaseForLimits = await createServerSupabaseClient();
+
+    // Fetch user plan + plan rules in optimized way
+    // Plan rules are cached in memory (only 5 rows, rarely change)
     const { data: userSettings } = await supabaseForLimits
       .from('user_settings')
       .select('plan')
@@ -167,15 +190,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     const userPlan = userSettings?.plan || 'gratis';
-
-    // Read plan limit from plan_rules table
-    const { data: planRule } = await supabaseForLimits
-      .from('plan_rules')
-      .select('chat_messages_per_day')
-      .eq('plan_id', userPlan)
-      .single();
-
-    const dailyLimit = planRule?.chat_messages_per_day ?? 15;
+    const dailyLimit = await getCachedPlanLimit(supabaseForLimits, userPlan);
 
     // -1 means unlimited
     if (dailyLimit !== -1) {

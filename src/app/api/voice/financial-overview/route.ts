@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const prevMonth = (() => {
       const d = new Date();
+      d.setDate(1); // Prevent month overflow (e.g. Mar 31 → setMonth(1) → Mar 3, not Feb)
       d.setMonth(d.getMonth() - 1);
       return d.toISOString().slice(0, 7);
     })();
