@@ -809,8 +809,18 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           currentPlan={limitModal.plan}
           lang={lang}
           onClose={() => setLimitModal(null)}
-          onUpgrade={() => {
+          onUpgrade={async () => {
             setLimitModal(null);
+            try {
+              const { Capacitor } = await import('@capacitor/core');
+              if (Capacitor.isNativePlatform()) {
+                // iOS: show RevenueCat paywall directly
+                const { presentPaywall } = await import('@/lib/revenuecat');
+                await presentPaywall();
+                return;
+              }
+            } catch {}
+            // Web: navigate to Stripe subscription page
             window.location.href = '/abonnement';
           }}
         />
