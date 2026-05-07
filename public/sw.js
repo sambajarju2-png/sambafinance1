@@ -1,38 +1,19 @@
-/// PayWatch Service Worker v4
-/// Multi-strategy caching for instant page loads
-///
-/// Strategies:
-///   Static assets (_next/static, fonts, icons) -> Cache-First (immutable)
-///   Pages (navigation requests)                -> Stale-While-Revalidate (instant + bg refresh)
-///   API routes                                 -> Network-Only (HTTP cache headers handle this)
-///   External origins                           -> Pass-through
+/// PayWatch Service Worker v5
+/// Fixed: Safari rejects cached redirects for navigation requests
+/// Strategy: Cache-First for static only, Network-First for pages
 
-const CACHE_STATIC = 'pw-static-v4';
-const CACHE_PAGES  = 'pw-pages-v4';
-const ALL_CACHES   = [CACHE_STATIC, CACHE_PAGES];
-
-const PRECACHE = [
-  '/',
-  '/overzicht',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-];
+const CACHE_STATIC = 'pw-static-v5';
+const ALL_CACHES = [CACHE_STATIC];
 
 // ============================================================
 // INSTALL
 // ============================================================
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_PAGES).then((cache) =>
-      Promise.allSettled(PRECACHE.map((url) => cache.add(url).catch(() => {})))
-    )
-  );
   self.skipWaiting();
 });
 
 // ============================================================
-// ACTIVATE — clean old caches (including v3 API cache)
+// ACTIVATE — clean ALL old caches
 // ============================================================
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -46,7 +27,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================================
-// FETCH
+// FETCH — minimal, safe strategy
 // ============================================================
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -55,87 +36,50 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never intercept auth routes
+  // NEVER intercept navigation requests — Safari throws
+  // "Response served by service worker has redirections" if we cache
+  // a redirect (e.g. / → /overzicht, / → /auth/login). Let the
+  // browser handle all page navigations natively.
+  if (request.mode === 'navigate') return;
+
+  // NEVER intercept API or auth routes
+  if (url.pathname.startsWith('/api/')) return;
   if (url.pathname.startsWith('/auth/')) return;
 
-  // API routes: Network-Only. Browser HTTP cache (SHORT_CACHE headers) handles
-  // short-lived caching. SW does NOT cache API responses because cached user data
-  // would leak between accounts if someone logs out and another user logs in.
-  if (url.pathname.startsWith('/api/')) return;
-
-  // Static assets: Cache-First
-  // _next/static files have content hashes — immutable, safe to serve forever
-  if (
-    url.pathname.startsWith('/_next/static/') ||
-    url.pathname.startsWith('/_next/image') ||
-    /\.(woff2?|ttf|otf|png|jpg|jpeg|webp|avif|svg|ico|css)$/.test(url.pathname)
-  ) {
-    event.respondWith(cacheFirst(request, CACHE_STATIC));
+  // Static assets only: Cache-First
+  // _next/static has content-hashed filenames (immutable)
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(cacheFirst(request));
     return;
   }
 
-  // Pages: Stale-While-Revalidate
-  // Show cached page instantly, fetch fresh version in background
-  if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
-    event.respondWith(swr(request, CACHE_PAGES, event));
+  // Other static files (fonts, icons, images in /public)
+  if (/\.(woff2?|ttf|png|jpg|jpeg|webp|avif|svg|ico|css)$/.test(url.pathname)) {
+    event.respondWith(cacheFirst(request));
     return;
   }
 
-  // Other same-origin assets (JS bundles loaded dynamically, etc.)
-  event.respondWith(cacheFirst(request, CACHE_STATIC));
+  // Everything else: let browser handle normally
 });
 
 // ============================================================
-// Cache-First: serve from cache, fetch only on miss
+// Cache-First for immutable static assets only
 // ============================================================
-async function cacheFirst(request, cacheName) {
+async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
 
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
+    // Only cache successful, non-redirect responses
+    if (response.ok && !response.redirected) {
+      const cache = await caches.open(CACHE_STATIC);
       cache.put(request, response.clone());
     }
     return response;
   } catch {
     return new Response('Offline', { status: 503 });
   }
-}
-
-// ============================================================
-// Stale-While-Revalidate: cached instant + background refresh
-// Uses event.waitUntil to keep SW alive during background fetch
-// ============================================================
-async function swr(request, cacheName, event) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-
-  // Background fetch: always run, updates cache for next visit
-  const networkPromise = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-
-  if (cached) {
-    // Return cached immediately. Keep SW alive for background fetch via waitUntil.
-    event.waitUntil(networkPromise);
-    return cached;
-  }
-
-  // No cache — must wait for network
-  const response = await networkPromise;
-  if (response) return response;
-
-  // Network failed + no cache — offline fallback
-  if (request.mode === 'navigate') {
-    const fallback = await cache.match('/');
-    if (fallback) return fallback;
-  }
-  return new Response('Offline', { status: 503 });
 }
 
 // ============================================================
