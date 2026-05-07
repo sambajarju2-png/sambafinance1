@@ -3,14 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Topbar from '@/components/app-shell/topbar';
 import BottomNav from '@/components/app-shell/bottom-nav';
 import PageTransition from '@/components/page-transition';
-import dynamic from 'next/dynamic';
-
-// Lazy-load: none of these are needed for the initial paint
-const AppTour = dynamic(() => import('@/components/app-tour'), { ssr: false });
-const FeedbackPopup = dynamic(() => import('@/components/feedback-popup'), { ssr: false });
-const PushPermissionPrompt = dynamic(() => import('@/components/push-permission-prompt'), { ssr: false });
-const PwaInstallDrawer = dynamic(() => import('@/components/pwa/install-prompt'), { ssr: false });
-const RevenueCatInit = dynamic(() => import('@/components/revenuecat-init'), { ssr: false });
+import AppTour from '@/components/app-tour';
+import FeedbackPopup from '@/components/feedback-popup';
+import PushPermissionPrompt from '@/components/push-permission-prompt';
+import PwaInstallDrawer from '@/components/pwa/install-prompt';
+import RevenueCatInit from '@/components/revenuecat-init';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();

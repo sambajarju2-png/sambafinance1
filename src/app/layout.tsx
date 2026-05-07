@@ -5,13 +5,10 @@ import { getLocale, getMessages } from 'next-intl/server';
 import ServiceWorkerRegistration from '@/components/pwa/sw-register';
 import { ThemeProvider } from '@/components/theme-provider';
 import SplashScreen from '@/components/splash-screen';
-import dynamic from 'next/dynamic';
+import NativeShell from '@/components/native-shell';
+import BiometricLock from '@/components/biometric-lock';
+import OfflineDetector from '@/components/offline-detector';
 import './globals.css';
-
-// Lazy-load components not needed for initial render — saves ~230 lines of JS from main bundle
-const NativeShell = dynamic(() => import('@/components/native-shell'), { ssr: false });
-const BiometricLock = dynamic(() => import('@/components/biometric-lock'), { ssr: false });
-const OfflineDetector = dynamic(() => import('@/components/offline-detector'), { ssr: false });
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
