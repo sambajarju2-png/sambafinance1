@@ -8,6 +8,7 @@ import SplashScreen from '@/components/splash-screen';
 import NativeShell from '@/components/native-shell';
 import BiometricLock from '@/components/biometric-lock';
 import OfflineDetector from '@/components/offline-detector';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -66,6 +67,7 @@ export default async function RootLayout({
             <BiometricLock />
             <OfflineDetector />
             {children}
+            <SpeedInsights />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

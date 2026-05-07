@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE, SHORT_CACHE } from '@/lib/auth';
+import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { computeBillHash, generateBillId, smartDedup } from '@/lib/bills-server';
 import { BILL_CATEGORIES } from '@/lib/bills';
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: 'Failed to fetch bills' }, { status: 500, headers: NO_CACHE });
 
-    return NextResponse.json({ bills: data || [] }, { headers: SHORT_CACHE });
+    return NextResponse.json({ bills: data || [] }, { headers: NO_CACHE });
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT_ABORT') {
       return NextResponse.json({ error: 'Request timeout' }, { status: 504, headers: NO_CACHE });
