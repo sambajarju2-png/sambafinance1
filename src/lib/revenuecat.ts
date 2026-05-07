@@ -1,7 +1,13 @@
 /**
  * RevenueCat helper — initializes Purchases SDK and exposes helpers.
  * Only runs on native (iOS) — web uses Stripe.
+ *
+ * DEBUG MODE: API key hardcoded temporarily to rule out env var issues.
+ * TODO: Revert to process.env after confirming paywall works.
  */
+
+// TEMPORARY HARDCODE — remove after debugging Error 23
+const RC_API_KEY = 'appl_ZHqiMWfBOzDrOGpOVMpuinRfOYW';
 
 let initialized = false;
 
@@ -13,25 +19,45 @@ export async function initRevenueCat(userId: string) {
 
     const { Purchases, LOG_LEVEL } = await import('@revenuecat/purchases-capacitor');
 
-    if (process.env.NODE_ENV === 'development') {
-      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
-    }
+    // Always enable debug logs until paywall is confirmed working
+    await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
 
-    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
-    if (!apiKey) {
-      console.warn('[RevenueCat] NEXT_PUBLIC_REVENUECAT_IOS_API_KEY not set');
-      return;
-    }
+    // Debug: log which key we're using
+    const envKey = process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
+    console.log('[RevenueCat] Env key present:', !!envKey, envKey ? envKey.substring(0, 10) + '...' : 'UNDEFINED');
+    console.log('[RevenueCat] Using hardcoded key:', RC_API_KEY.substring(0, 10) + '...');
 
-    await Purchases.configure({ apiKey });
-
-    // Link RevenueCat user to Supabase user_id
-    await Purchases.logIn({ appUserID: userId });
+    // Single configure call with appUserID (recommended over configure + logIn)
+    await Purchases.configure({
+      apiKey: RC_API_KEY,
+      appUserID: userId,
+    });
 
     initialized = true;
     console.log('[RevenueCat] Initialized for user:', userId);
-  } catch (err) {
+
+    // Immediately test if offerings load
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current) {
+        console.log('[RevenueCat] Offerings loaded:', offerings.current.identifier);
+        const pkgs = offerings.current.availablePackages?.map((p: { identifier: string }) => p.identifier).join(', ');
+        console.log('[RevenueCat] Packages:', pkgs);
+      } else {
+        console.error('[RevenueCat] No current offering — offerings.current is null');
+        console.error('[RevenueCat] Full offerings:', JSON.stringify(offerings, null, 2));
+      }
+    } catch (offerErr) {
+      console.error('[RevenueCat] Failed to fetch offerings:', offerErr);
+    }
+  } catch (err: unknown) {
     console.error('[RevenueCat] Init error:', err);
+    if (err && typeof err === 'object') {
+      const e = err as Record<string, unknown>;
+      console.error('[RevenueCat] code:', e.code, 'message:', e.message);
+      console.error('[RevenueCat] underlying:', e.underlyingErrorMessage);
+      console.error('[RevenueCat] full:', JSON.stringify(err, null, 2));
+    }
   }
 }
 
@@ -44,7 +70,6 @@ export async function getRevenueCatEntitlement(): Promise<'pro' | 'premium' | nu
     const { Purchases } = await import('@revenuecat/purchases-capacitor');
     const { customerInfo } = await Purchases.getCustomerInfo();
 
-    // RevenueCat entitlement identifiers (must match exactly what's in RC dashboard)
     if (customerInfo.entitlements.active['Paywatch_premium']) return 'premium';
     if (customerInfo.entitlements.active['Paywatch_Pro']) return 'pro';
     return null;
@@ -59,8 +84,21 @@ export async function presentPaywall(): Promise<boolean> {
     const { Capacitor } = await import('@capacitor/core');
     if (!Capacitor.isNativePlatform()) return false;
 
+    const { Purchases } = await import('@revenuecat/purchases-capacitor');
+
+    // Pre-check: can we fetch offerings?
+    const offerings = await Purchases.getOfferings();
+    if (!offerings.current) {
+      console.error('[RevenueCat] Cannot present paywall — no current offering');
+      console.error('[RevenueCat] Offerings:', JSON.stringify(offerings, null, 2));
+      return false;
+    }
+    console.log('[RevenueCat] Offering ready, presenting paywall...');
+
     const { RevenueCatUI, PAYWALL_RESULT } = await import('@revenuecat/purchases-capacitor-ui');
     const { result } = await RevenueCatUI.presentPaywall();
+
+    console.log('[RevenueCat] Paywall result:', result);
 
     switch (result) {
       case PAYWALL_RESULT.PURCHASED:
@@ -69,13 +107,19 @@ export async function presentPaywall(): Promise<boolean> {
       default:
         return false;
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[RevenueCat] Paywall error:', err);
+    if (err && typeof err === 'object') {
+      const e = err as Record<string, unknown>;
+      console.error('[RevenueCat] code:', e.code, 'msg:', e.message);
+      console.error('[RevenueCat] underlying:', e.underlyingErrorMessage);
+      console.error('[RevenueCat] full:', JSON.stringify(err, null, 2));
+    }
     return false;
   }
 }
 
-/** Show paywall for a specific offering (e.g. "Paywatch_Pro" or "Paywatch_premium") */
+/** Show paywall only if user doesn't have the required entitlement */
 export async function presentPaywallIfNeeded(requiredEntitlement: string): Promise<boolean> {
   try {
     const { Capacitor } = await import('@capacitor/core');
@@ -86,23 +130,27 @@ export async function presentPaywallIfNeeded(requiredEntitlement: string): Promi
       requiredEntitlementIdentifier: requiredEntitlement,
     });
 
+    console.log('[RevenueCat] PaywallIfNeeded result:', result);
+
     switch (result) {
       case PAYWALL_RESULT.PURCHASED:
       case PAYWALL_RESULT.RESTORED:
         return true;
       case PAYWALL_RESULT.NOT_PRESENTED:
-        // User already has the entitlement — no paywall shown
         return true;
       default:
         return false;
     }
-  } catch (err) {
-    console.error('[RevenueCat] Paywall error:', err);
+  } catch (err: unknown) {
+    console.error('[RevenueCat] PaywallIfNeeded error:', err);
+    if (err && typeof err === 'object') {
+      const e = err as Record<string, unknown>;
+      console.error('[RevenueCat] underlying:', e.underlyingErrorMessage);
+    }
     return false;
   }
 }
 
-/** RevenueCat entitlement identifiers — must match exactly what's in RC dashboard */
 export const RC_ENTITLEMENTS = {
   pro: 'Paywatch_Pro',
   premium: 'Paywatch_premium',
