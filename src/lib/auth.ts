@@ -54,3 +54,10 @@ export const NO_CACHE = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   'Pragma': 'no-cache',
 } as const;
+
+// Use for GET endpoints that return user-specific data (bills, analytics, settings).
+// Allows the browser to serve cached data for 10s, then refresh in background for 30s.
+// Safe because: private (no CDN caching), user-specific (behind auth), 10s staleness is fine.
+export const SHORT_CACHE = {
+  'Cache-Control': 'private, max-age=10, stale-while-revalidate=30',
+} as const;

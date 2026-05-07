@@ -3,18 +3,26 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Topbar from '@/components/app-shell/topbar';
 import BottomNav from '@/components/app-shell/bottom-nav';
 import PageTransition from '@/components/page-transition';
-import AppTour from '@/components/app-tour';
-import FeedbackPopup from '@/components/feedback-popup';
-import PushPermissionPrompt from '@/components/push-permission-prompt';
-import PwaInstallDrawer from '@/components/pwa/install-prompt';
-import OfflineDetector from '@/components/offline-detector';
-import RevenueCatInit from '@/components/revenuecat-init';
+import dynamic from 'next/dynamic';
+
+// Lazy-load: none of these are needed for the initial paint
+const AppTour = dynamic(() => import('@/components/app-tour'), { ssr: false });
+const FeedbackPopup = dynamic(() => import('@/components/feedback-popup'), { ssr: false });
+const PushPermissionPrompt = dynamic(() => import('@/components/push-permission-prompt'), { ssr: false });
+const PwaInstallDrawer = dynamic(() => import('@/components/pwa/install-prompt'), { ssr: false });
+const RevenueCatInit = dynamic(() => import('@/components/revenuecat-init'), { ssr: false });
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect('/auth/login');
+  // Use getSession() here — NOT getUser() — because proxy.ts already verified
+  // and refreshed the JWT on this request. getSession() reads the cookie locally
+  // (no network call), while getUser() would make a redundant HTTP call to
+  // Supabase Auth on every single page navigation.
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session?.user) redirect('/auth/login');
+  const user = session.user;
 
   const { data: settings } = await supabase
     .from('user_settings')
@@ -38,7 +46,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FeedbackPopup />
       <PwaInstallDrawer />
       <PushPermissionPrompt />
-      <OfflineDetector />
       {/* Initialize RevenueCat SDK on iOS (no-op on web) */}
       <RevenueCatInit userId={user.id} />
     </div>

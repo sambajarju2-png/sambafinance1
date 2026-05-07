@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
+import { getAuthUserId, NO_CACHE, SHORT_CACHE } from '@/lib/auth';
 import { recalculateStreak } from '@/lib/streak';
 
 export async function GET() {
@@ -9,7 +9,7 @@ export async function GET() {
   }
   try {
     const streak = await recalculateStreak(userId);
-    return NextResponse.json({ streak }, { headers: NO_CACHE });
+    return NextResponse.json({ streak }, { headers: SHORT_CACHE });
   } catch (err) {
     console.error('Streak error:', err);
     return NextResponse.json({ streak: 0 }, { headers: NO_CACHE });
