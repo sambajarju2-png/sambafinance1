@@ -301,18 +301,16 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
         </div>
       )}
 
-      {/* ── Billing toggle (only for non-paid users) ── */}
-      {!isPaid && (
-        <div className="flex items-center justify-center gap-1 rounded-2xl bg-pw-bg dark:bg-white/5 p-1">
-          {(['monthly', 'yearly'] as const).map(b => (
-            <button key={b} onClick={() => setBilling(b)}
-              className={`flex-1 rounded-xl py-2 text-[13px] font-semibold transition-all ${billing === b ? 'bg-white dark:bg-white/20 text-pw-text dark:text-white shadow-sm' : 'text-pw-muted'}`}>
-              {b === 'monthly' ? 'Maandelijks' : 'Jaarlijks'}
-              {b === 'yearly' && <span className="ml-1.5 rounded-full bg-pw-green/15 px-1.5 py-0.5 text-[10px] font-bold text-pw-green">-17%</span>}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Billing toggle — always visible ── */}
+      <div className="flex items-center justify-center gap-1 rounded-2xl bg-pw-bg dark:bg-white/5 p-1">
+        {(['monthly', 'yearly'] as const).map(b => (
+          <button key={b} onClick={() => setBilling(b)}
+            className={`flex-1 rounded-xl py-2 text-[13px] font-semibold transition-all ${billing === b ? 'bg-white dark:bg-white/20 text-pw-text dark:text-white shadow-sm' : 'text-pw-muted'}`}>
+            {b === 'monthly' ? 'Maandelijks' : 'Jaarlijks'}
+            {b === 'yearly' && <span className="ml-1.5 rounded-full bg-pw-green/15 px-1.5 py-0.5 text-[10px] font-bold text-pw-green">Bespaar 25%</span>}
+          </button>
+        ))}
+      </div>
 
       {/* ── Plan cards ── */}
       <div className="space-y-3">
@@ -350,11 +348,14 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
                     <>
                       <p className="text-[18px] font-extrabold text-pw-navy dark:text-white">€{price.toFixed(2).replace('.', ',')}</p>
                       <p className="text-[10px] text-pw-muted">{billing === 'yearly' ? '/jaar' : '/maand'}</p>
-                      {plan.id !== 'gratis' && (
-                        <p className="text-[9px] text-pw-muted/60 mt-0.5">
-                          {isNative ? 'App Store' : 'Stripe'}
+                      {billing === 'yearly' && (
+                        <p className="text-[10px] text-pw-green font-semibold mt-0.5">
+                          €{(price / 12).toFixed(2).replace('.', ',')}/maand
                         </p>
                       )}
+                      <p className="text-[9px] text-pw-muted/60 mt-0.5 flex items-center justify-end gap-1">
+                        {isNative ? <><Smartphone className="h-2.5 w-2.5" /> App Store</> : <><Globe className="h-2.5 w-2.5" /> Stripe</>}
+                      </p>
                     </>
                   )}
                 </div>
