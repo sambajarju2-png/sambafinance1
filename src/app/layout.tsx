@@ -14,7 +14,8 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-plus-jakarta',
   display: 'swap',
-  weight: ['400', '600', '800'],
+  // No weight array = variable font. One file covers ALL weights (400-800).
+  // Smaller than even 3 individual static weight files.
 });
 
 export const metadata: Metadata = {
