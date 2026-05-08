@@ -566,14 +566,14 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
       // Use pre-warmed token if available (avoids 600ms–1.5s ElevenLabs API call)
       const cached = getCachedVoiceToken();
-      let data: Record<string, unknown>;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any;
       if (cached) {
-        data = cached as unknown as Record<string, unknown>;
+        data = cached;
       } else {
         const res = await fetch('/api/voice/token');
         data = await res.json();
         if (!res.ok) {
-          // Handle plan limit reached specifically
           if (data.error === 'voice_limit_reached') {
             setLimitReached(data.message as string || 'Je beltegoed is op voor deze maand.');
             setStatus('error');
