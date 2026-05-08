@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Building2, Lock, ArrowRight, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 import LimitReachedModal from '@/components/ui/limit-reached-modal';
 import type { FinancesData } from '@/hooks/useDashboardData';
@@ -21,6 +22,7 @@ interface Props {
 
 export default function BankAwareFinancialSection({ initialData }: Props = {}) {
   const router = useRouter();
+  const t = useTranslations('finance');
   const [loading, setLoading] = useState(!initialData);
   const [hasBankConnected, setHasBankConnected] = useState(initialData?.has_bank ?? false);
   const [plan, setPlan] = useState<PlanId>((initialData?.plan as PlanId) ?? 'gratis');
@@ -74,9 +76,9 @@ export default function BankAwareFinancialSection({ initialData }: Props = {}) {
             <Building2 className="h-5 w-5 text-pw-blue" strokeWidth={1.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold text-pw-navy">Koppel je bankrekening</p>
+            <p className="text-[14px] font-semibold text-pw-navy">{t("connectBankAccount")}</p>
             <p className="text-[12px] text-pw-muted mt-0.5 leading-snug">
-              Zie automatisch welke rekeningen betaald zijn en hoeveel vrij besteedbaar
+              {t("connectBankDesc")}
             </p>
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-pw-blue" strokeWidth={2} />
@@ -84,7 +86,7 @@ export default function BankAwareFinancialSection({ initialData }: Props = {}) {
         <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-pw-blue/10 px-3 py-1.5">
           <div className="h-1.5 w-1.5 rounded-full bg-pw-blue animate-pulse" />
           <span className="text-[11px] font-semibold text-pw-blue">
-            Inbegrepen in je {plan.startsWith('premium') ? 'Premium' : 'Pro'}-abonnement
+            {t('includedIn')} {plan.startsWith('premium') ? 'Premium' : 'Pro'}{t('subscription')}
           </span>
         </div>
       </button>
@@ -106,9 +108,9 @@ export default function BankAwareFinancialSection({ initialData }: Props = {}) {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold text-pw-navy">Financieel overzicht</p>
+            <p className="text-[14px] font-semibold text-pw-navy">{t("financialOverview")}</p>
             <p className="text-[12px] text-pw-muted mt-0.5 leading-snug">
-              Koppel je bank om transacties automatisch bij te houden
+              {t("connectBankTracking")}
             </p>
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-pw-muted" strokeWidth={2} />
@@ -130,7 +132,7 @@ export default function BankAwareFinancialSection({ initialData }: Props = {}) {
         <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-pw-blue/20 bg-pw-blue/5 px-3 py-2">
           <Zap className="h-3.5 w-3.5 text-pw-blue" strokeWidth={2} />
           <span className="text-[12px] font-semibold text-pw-blue">
-            Beschikbaar vanaf Pro — Tik om te upgraden
+            {t("availableFromPro")}
           </span>
         </div>
       </button>

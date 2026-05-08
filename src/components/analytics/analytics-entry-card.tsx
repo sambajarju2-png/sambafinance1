@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { BarChart3, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { haptic } from '@/lib/capacitor';
@@ -23,6 +24,7 @@ interface Props {
 
 export default function AnalyticsEntryCard({ initialData }: Props = {}) {
   const router = useRouter();
+  const t = useTranslations('finance');
 
   const seedFromProps = (): MiniSummary | null => {
     if (!initialData) return null;
@@ -83,8 +85,8 @@ export default function AnalyticsEntryCard({ initialData }: Props = {}) {
             <BarChart3 className="h-4 w-4 text-pw-blue" strokeWidth={1.8} />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-pw-navy">Financieel inzicht</p>
-            <p className="text-[11px] text-pw-blue">Koppel je bank voor uitgaven-analyse →</p>
+            <p className="text-[13px] font-semibold text-pw-navy">{t("insight")}</p>
+            <p className="text-[11px] text-pw-blue">{t("connectBankPrompt")}</p>
           </div>
         </div>
       </button>
@@ -104,8 +106,8 @@ export default function AnalyticsEntryCard({ initialData }: Props = {}) {
               <BarChart3 className="h-4 w-4 text-pw-blue" strokeWidth={1.8} />
             </div>
             <div>
-              <p className="text-[13px] font-semibold text-pw-navy">Financieel inzicht</p>
-              <p className="text-[11px] text-pw-muted">Bank gekoppeld — data wordt verwerkt</p>
+              <p className="text-[13px] font-semibold text-pw-navy">{t("insight")}</p>
+              <p className="text-[11px] text-pw-muted">{t("bankConnectedProcessing")}</p>
             </div>
           </div>
           <ChevronRight className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
@@ -125,8 +127,8 @@ export default function AnalyticsEntryCard({ initialData }: Props = {}) {
             <BarChart3 className="h-4 w-4 text-pw-blue" strokeWidth={1.8} />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-pw-navy">Financieel inzicht</p>
-            <p className="text-[11px] text-pw-muted">Deze maand</p>
+            <p className="text-[13px] font-semibold text-pw-navy">{t("insight")}</p>
+            <p className="text-[11px] text-pw-muted">{t("thisMonth")}</p>
           </div>
         </div>
         <ChevronRight className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
@@ -134,15 +136,15 @@ export default function AnalyticsEntryCard({ initialData }: Props = {}) {
 
       <div className="mt-3 flex gap-3">
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">
-          <p className="text-[9px] text-pw-muted">Bank inkomen</p>
+          <p className="text-[9px] text-pw-muted">{t("bankIncome")}</p>
           <p className="text-[13px] font-bold text-pw-green">{formatCents(data.income)}</p>
         </div>
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">
-          <p className="text-[9px] text-pw-muted">Bank uitgaven</p>
+          <p className="text-[9px] text-pw-muted">{t("bankExpenses")}</p>
           <p className="text-[13px] font-bold text-pw-red">{formatCents(data.expenses)}</p>
         </div>
         <div className="flex-1 rounded-[8px] bg-pw-surface/80 dark:bg-pw-surface/40 px-2.5 py-1.5">
-          <p className="text-[9px] text-pw-muted">Netto</p>
+          <p className="text-[9px] text-pw-muted">{t("net")}</p>
           <div className="flex items-center gap-1">
             {data.net >= 0 ? (
               <TrendingUp className="h-3 w-3 text-pw-green" strokeWidth={2} />

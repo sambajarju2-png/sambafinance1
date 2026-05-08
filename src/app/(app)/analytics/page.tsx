@@ -21,15 +21,11 @@ import { haptic } from '@/lib/capacitor';
 
 type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld' | 'transacties' | 'abonnementen';
 
-const TABS: { id: AnalyticsTab; label: string }[] = [
-  { id: 'uitgaven', label: 'Uitgaven' },
-  { id: 'inkomen', label: 'Inkomen' },
-  { id: 'geldstroom', label: 'Geldstroom' },
-  { id: 'trend', label: 'Trend' },
-  { id: 'schuld', label: 'Schuld' },
-  { id: 'transacties', label: 'Transacties' },
-  { id: 'abonnementen', label: 'Abonnementen' },
-];
+const TAB_IDS: AnalyticsTab[] = ['uitgaven', 'inkomen', 'geldstroom', 'trend', 'schuld', 'transacties', 'abonnementen'];
+const TAB_KEYS: Record<AnalyticsTab, string> = {
+  uitgaven: 'tabExpenses', inkomen: 'tabIncome', geldstroom: 'tabCashflow',
+  trend: 'tabTrend', schuld: 'tabDebt', transacties: 'tabTransactions', abonnementen: 'tabSubscriptions',
+};
 
 // Chart color palette
 const CHART_COLORS = [
@@ -65,6 +61,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function AnalyticsPage() {
   const router = useRouter();
+  const t = useTranslations('analytics');
   const [tab, setTab] = useState<AnalyticsTab>('uitgaven');
   const [data, setData] = useState<AnalyticsBundle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,15 +208,15 @@ export default function AnalyticsPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <BarChart3 className="mb-4 h-14 w-14 text-pw-muted/40" strokeWidth={1.2} />
-        <h2 className="text-[18px] font-bold text-pw-navy">Financieel inzicht</h2>
+        <h2 className="text-[18px] font-bold text-pw-navy">{t("connectTitle")}</h2>
         <p className="mt-2 text-[13px] text-pw-muted leading-relaxed max-w-[280px]">
-          Koppel je bankrekening om een volledig overzicht van je inkomsten, uitgaven en schulden te zien.
+          {t("connectDesc")}
         </p>
         <button
           onClick={() => router.push('/instellingen')}
           className="btn-press mt-6 rounded-button bg-pw-blue px-6 py-2.5 text-[13px] font-semibold text-white"
         >
-          Bank koppelen
+          {t('connectButton')}
         </button>
       </div>
     );
@@ -231,9 +228,9 @@ export default function AnalyticsPage() {
       <div className="px-4 pt-2 pb-3">
         <button onClick={() => router.back()} className="mb-3 flex items-center gap-1 text-[13px] text-pw-muted">
           <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
-          Terug
+          {t("back")}
         </button>
-        <h1 className="text-heading text-pw-navy">Financieel inzicht</h1>
+        <h1 className="text-heading text-pw-navy">{t("title")}</h1>
 
         {/* Month navigation */}
         <div className="mt-3 flex items-center justify-between">
@@ -252,9 +249,9 @@ export default function AnalyticsPage() {
         {currentTotal && (
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[
-              { label: 'Inkomen', value: currentTotal.income_cents, color: 'text-pw-green' },
-              { label: 'Uitgaven', value: currentTotal.expenses_cents, color: 'text-pw-red' },
-              { label: 'Netto', value: currentTotal.net_cents, color: currentTotal.net_cents >= 0 ? 'text-pw-green' : 'text-pw-red' },
+              { label: t('income'), value: currentTotal.income_cents, color: 'text-pw-green' },
+              { label: t('expenses'), value: currentTotal.expenses_cents, color: 'text-pw-red' },
+              { label: t('net'), value: currentTotal.net_cents, color: currentTotal.net_cents >= 0 ? 'text-pw-green' : 'text-pw-red' },
             ].map(m => (
               <div key={m.label} className="rounded-[10px] border border-pw-border bg-pw-surface p-2.5 text-center">
                 <p className="text-[10px] text-pw-muted">{m.label}</p>
@@ -267,18 +264,18 @@ export default function AnalyticsPage() {
 
       {/* Tab bar */}
       <div ref={tabsRef} className="flex overflow-x-auto border-b border-pw-border px-4 scrollbar-hide">
-        {TABS.map(t => (
+        {TAB_IDS.map(tabId => (
           <button
-            key={t.id}
-            onClick={() => { setTab(t.id); haptic('tap'); }}
+            key={tabId}
+            onClick={() => { setTab(tabId); haptic('tap'); }}
             className={`flex-none whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors
-              ${tab === t.id
+              ${tab === tabId
                 ? 'border-b-2 border-pw-blue text-pw-blue font-semibold'
                 : 'border-b-2 border-transparent text-pw-muted'
               }`}
           >
-            {t.label}
-            {t.id === 'schuld' && data.debt_summary.length > 0 && (
+            {t(TAB_KEYS[tabId])}
+            {tabId === 'schuld' && data.debt_summary.length > 0 && (
               <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-pw-red text-[9px] font-bold text-white">
                 {data.debt_summary.length}
               </span>
@@ -314,10 +311,11 @@ export default function AnalyticsPage() {
 // ─── Tab: Uitgaven ────────────────────────────────────────────
 
 function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
+  const t = useTranslations('analytics');
   const total = data.reduce((a, c) => a + c.total_cents, 0);
 
   if (data.length === 0) {
-    return <EmptyState message="Geen uitgaven gevonden voor deze maand." />;
+    return <EmptyState message={t("noExpenses")} />;
   }
 
   const chartData = data.map(d => ({
@@ -339,7 +337,7 @@ function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">Totaal</text>
+            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("total")}</text>
             <text x="50%" y="58%" textAnchor="middle" className="fill-pw-navy text-[18px] font-bold">{formatCents(total)}</text>
           </PieChart>
         </ResponsiveContainer>
@@ -377,10 +375,11 @@ function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
 // ─── Tab: Inkomen ─────────────────────────────────────────────
 
 function TabInkomen({ data }: { data: MonthlyCategoryItem[] }) {
+  const t = useTranslations('analytics');
   const total = data.reduce((a, c) => a + c.total_cents, 0);
 
   if (data.length === 0) {
-    return <EmptyState message="Geen inkomen gevonden voor deze maand." />;
+    return <EmptyState message={t("noIncome")} />;
   }
 
   const chartData = data.map(d => ({
@@ -402,7 +401,7 @@ function TabInkomen({ data }: { data: MonthlyCategoryItem[] }) {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">Inkomen</text>
+            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("income")}</text>
             <text x="50%" y="58%" textAnchor="middle" className="fill-pw-green text-[18px] font-bold">{formatCents(total)}</text>
           </PieChart>
         </ResponsiveContainer>
@@ -434,8 +433,9 @@ function TabInkomen({ data }: { data: MonthlyCategoryItem[] }) {
 // ─── Tab: Geldstroom ──────────────────────────────────────────
 
 function TabGeldstroom({ data }: { data: WeeklyCashflowItem[] }) {
+  const t = useTranslations('analytics');
   if (!data || data.length === 0) {
-    return <EmptyState message="Nog geen cashflow data beschikbaar." />;
+    return <EmptyState message={t("noCashflow")} />;
   }
 
   const sorted = [...data].sort((a, b) => a.week_start.localeCompare(b.week_start)).slice(-8);
@@ -444,18 +444,18 @@ function TabGeldstroom({ data }: { data: WeeklyCashflowItem[] }) {
   const net = totalIncome - totalExpenses;
 
   const chartData = sorted.map(w => ({
-    week: `Wk ${getWeekNumber(w.week_start)}`,
-    Inkomen: w.income_cents,
-    Uitgaven: w.expenses_cents,
+    week: `${t('week')} ${getWeekNumber(w.week_start)}`,
+    [t('income')]: w.income_cents,
+    [t('expenses')]: w.expenses_cents,
   }));
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: 'Inkomen', value: totalIncome, color: 'text-pw-green' },
-          { label: 'Uitgaven', value: totalExpenses, color: 'text-pw-red' },
-          { label: 'Netto', value: net, color: net >= 0 ? 'text-pw-green' : 'text-pw-red' },
+          { label: t('income'), value: totalIncome, color: 'text-pw-green' },
+          { label: t('expenses'), value: totalExpenses, color: 'text-pw-red' },
+          { label: t('net'), value: net, color: net >= 0 ? 'text-pw-green' : 'text-pw-red' },
         ].map(m => (
           <div key={m.label} className="rounded-[10px] border border-pw-border bg-pw-surface p-2.5 text-center">
             <p className="text-[10px] text-pw-muted">{m.label}</p>
@@ -471,12 +471,12 @@ function TabGeldstroom({ data }: { data: WeeklyCashflowItem[] }) {
             <XAxis dataKey="week" tick={{ fontSize: 10 }} className="fill-pw-muted" axisLine={false} tickLine={false} />
             <YAxis tickFormatter={v => `€${Math.round(v / 100)}`} tick={{ fontSize: 9 }} className="fill-pw-muted" axisLine={false} tickLine={false} width={40} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="Inkomen" fill="#059669" radius={[4, 4, 0, 0]} opacity={0.9} />
-            <Bar dataKey="Uitgaven" fill="#2563EB" radius={[4, 4, 0, 0]} opacity={0.9} />
+            <Bar dataKey={t("income")} fill="#059669" radius={[4, 4, 0, 0]} opacity={0.9} />
+            <Bar dataKey={t("expenses")} fill="#2563EB" radius={[4, 4, 0, 0]} opacity={0.9} />
           </BarChart>
         </ResponsiveContainer>
         <div className="flex justify-center gap-5 mt-2">
-          {[['Inkomen', '#059669'], ['Uitgaven', '#2563EB']].map(([l, c]) => (
+          {[[t('income'), '#059669'], [t('expenses'), '#2563EB']].map(([l, c]) => (
             <div key={l} className="flex items-center gap-1.5">
               <div className="h-2.5 w-2.5 rounded-sm" style={{ background: c as string }} />
               <span className="text-[10px] text-pw-muted">{l}</span>
@@ -491,8 +491,9 @@ function TabGeldstroom({ data }: { data: WeeklyCashflowItem[] }) {
 // ─── Tab: Trend ───────────────────────────────────────────────
 
 function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
+  const t = useTranslations('analytics');
   if (!data || data.length < 2) {
-    return <EmptyState message="Minimaal 2 maanden data nodig voor trends." />;
+    return <EmptyState message={t("needMoreData")} />;
   }
 
   const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
@@ -504,8 +505,8 @@ function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
 
   const chartData = sorted.map(m => ({
     month: new Date(m.month + 'T00:00:00').toLocaleDateString('nl-NL', { month: 'short' }),
-    Uitgaven: m.expenses_cents,
-    Gemiddelde: avg,
+    [t('expenses')]: m.expenses_cents,
+    [t('average')]: avg,
   }));
 
   return (
@@ -526,12 +527,12 @@ function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
           </p>
         </div>
         <p className="text-[11px] text-pw-muted mt-1">
-          {diff > 0 ? 'Meer uitgegeven' : 'Minder uitgegeven'} dan vorige maand
+          {diff > 0 ? t('moreSpent') : t('lessSpent')} {t('thanLastMonth')}
         </p>
       </div>
 
       <div className="rounded-card border border-pw-border bg-pw-surface p-3">
-        <p className="text-[11px] text-pw-muted mb-2 px-1">Uitgaven per maand</p>
+        <p className="text-[11px] text-pw-muted mb-2 px-1">{t("expensesPerMonth")}</p>
         <ResponsiveContainer width="100%" height={190}>
           <AreaChart data={chartData}>
             <defs>
@@ -544,13 +545,13 @@ function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
             <XAxis dataKey="month" tick={{ fontSize: 10 }} className="fill-pw-muted" axisLine={false} tickLine={false} />
             <YAxis tickFormatter={v => `€${Math.round(v / 100)}`} tick={{ fontSize: 9 }} className="fill-pw-muted" axisLine={false} tickLine={false} width={40} />
             <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="Gemiddelde" stroke="#94A3B8" strokeWidth={1} strokeDasharray="4 4" fill="none" dot={false} />
-            <Area type="monotone" dataKey="Uitgaven" stroke="#3B82F6" strokeWidth={2}
+            <Area type="monotone" dataKey={t("average")} stroke="#94A3B8" strokeWidth={1} strokeDasharray="4 4" fill="none" dot={false} />
+            <Area type="monotone" dataKey={t("expenses")} stroke="#3B82F6" strokeWidth={2}
               fill="url(#areaGrad)" dot={{ fill: '#3B82F6', r: 3, strokeWidth: 0 }} />
           </AreaChart>
         </ResponsiveContainer>
         <p className="text-center text-[10px] text-pw-muted mt-1">
-          --- Gemiddelde {formatCents(avg)}/mnd
+          --- {t('average')} {formatCents(avg)}{t('perMonth')}
         </p>
       </div>
     </div>
@@ -559,15 +560,16 @@ function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
 
 // ─── Tab: Schuld ──────────────────────────────────────────────
 
-const STAGE_CONFIG: Record<string, { label: string; color: string; order: number }> = {
-  factuur: { label: 'Factuur', color: '#64748B', order: 0 },
-  herinnering: { label: 'Herinnering', color: '#059669', order: 1 },
-  aanmaning: { label: 'Aanmaning', color: '#D97706', order: 2 },
-  incasso: { label: 'Incasso', color: '#DC2626', order: 3 },
-  deurwaarder: { label: 'Deurwaarder', color: '#991B1B', order: 4 },
+const STAGE_CONFIG: Record<string, { labelKey: string; color: string; order: number }> = {
+  factuur: { labelKey: 'stageFactuur', color: '#64748B', order: 0 },
+  herinnering: { labelKey: 'stageHerinnering', color: '#059669', order: 1 },
+  aanmaning: { labelKey: 'stageAanmaning', color: '#D97706', order: 2 },
+  incasso: { labelKey: 'stageIncasso', color: '#DC2626', order: 3 },
+  deurwaarder: { labelKey: 'stageDeurwaarder', color: '#991B1B', order: 4 },
 };
 
 function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalItem[] }) {
+  const t = useTranslations('analytics');
   const totalDebt = debts.reduce((a, d) => a + d.amount, 0);
 
   // Calculate debt ratio from latest month
@@ -596,8 +598,8 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
     return (
       <div className="flex flex-col items-center py-12 text-center">
         <Target className="mb-3 h-12 w-12 text-pw-green/40" strokeWidth={1.2} />
-        <h3 className="text-[16px] font-bold text-pw-green">Geen openstaande schulden</h3>
-        <p className="mt-1 text-[12px] text-pw-muted">Je hebt op dit moment geen achterstallige rekeningen.</p>
+        <h3 className="text-[16px] font-bold text-pw-green">{t('noDebts')}</h3>
+        <p className="mt-1 text-[12px] text-pw-muted">{t('noDebtsDesc')}</p>
       </div>
     );
   }
@@ -606,12 +608,12 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
     <div className="space-y-4">
       {/* Header metric */}
       <div className="rounded-card-lg border border-pw-red/20 bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-pw-surface p-4">
-        <p className="text-[11px] text-pw-muted">Totale schuld</p>
+        <p className="text-[11px] text-pw-muted">{t('totalDebt')}</p>
         <p className="text-[26px] font-extrabold text-pw-navy tracking-tight">{formatCents(totalDebt)}</p>
         {debtRatio > 0 && (
           <>
             <p className="text-[12px] text-pw-muted mt-2">
-              <span className="text-pw-amber font-semibold">{debtRatio}%</span> van je uitgaven gaat naar schuldaflossing
+              <span className="text-pw-amber font-semibold">{debtRatio}%</span> {t('debtRatio')}
             </p>
             <div className="mt-2 h-1.5 w-full rounded-full bg-pw-border/60 overflow-hidden">
               <div className="h-full rounded-full bg-pw-amber transition-all duration-700" style={{ width: `${Math.min(debtRatio, 100)}%` }} />
@@ -620,9 +622,9 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
         )}
         {monthsToFreedom && (
           <p className="mt-3 text-[12px] text-pw-muted">
-            Schuldenvrij in{' '}
-            <span className="font-bold text-pw-green">~{monthsToFreedom} maanden</span>
-            {' '}bij huidig tempo
+            {t('debtFreeIn')}{' '}
+            <span className="font-bold text-pw-green">~{monthsToFreedom} {t('months')}</span>
+            {' '}{t('atCurrentPace')}
           </p>
         )}
       </div>
@@ -642,11 +644,11 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-pw-text truncate">{d.vendor}</p>
                   <p className="text-[11px] mt-0.5" style={{ color: stage.color }}>
-                    {stage.label} &middot;{' '}
+                    {t(stage.labelKey)} &middot;{' '}
                     {overdue ? (
-                      <span className="text-pw-red">{Math.abs(daysLeft)}d verlopen</span>
+                      <span className="text-pw-red">{Math.abs(daysLeft)}{t('daysOverdue')}</span>
                     ) : (
-                      <span>nog {daysLeft}d</span>
+                      <span>{daysLeft}{t('daysLeft')}</span>
                     )}
                   </p>
                 </div>
@@ -660,12 +662,12 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
       {/* AI insight card */}
       {avgMonthlyPayment > 0 && (
         <div className="rounded-card border border-pw-green/20 bg-gradient-to-br from-green-50/50 to-white dark:from-green-950/20 dark:to-pw-surface p-4">
-          <p className="text-[12px] font-bold text-pw-green mb-1">Inzicht</p>
+          <p className="text-[12px] font-bold text-pw-green mb-1">{t('insight')}</p>
           <p className="text-[12px] text-pw-muted leading-relaxed">
-            Je betaalt gemiddeld <strong className="text-pw-text">{formatCents(avgMonthlyPayment)}</strong> per maand aan schulden.
+            {t('avgDebtPayment')} <strong className="text-pw-text">{formatCents(avgMonthlyPayment)}</strong> {t('perMonthDebt')}
             {monthsToFreedom && monthsToFreedom > 3 && (
-              <> Als je <strong className="text-pw-text">{formatCents(Math.round(avgMonthlyPayment * 0.25))}</strong> extra per maand aflost,
-              ben je <strong className="text-pw-green">~{Math.ceil(totalDebt / (avgMonthlyPayment * 1.25))} maanden</strong> eerder schuldenvrij.</>
+              <> Als je <strong className="text-pw-text">{formatCents(Math.round(avgMonthlyPayment * 0.25))}</strong> {t('extraPayment')}
+              {t('youllBe')} <strong className="text-pw-green">~{Math.ceil(totalDebt / (avgMonthlyPayment * 1.25))} maanden</strong> {t('debtFreeEarlier')}</>
             )}
           </p>
         </div>
@@ -677,6 +679,7 @@ function TabSchuld({ debts, totals }: { debts: DebtItem[]; totals: MonthlyTotalI
 // ─── Tab: Transacties ────────────────────────────────────────
 
 function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: TransactionItem[]; selectedMonth: string; onTap?: (tx: TransactionItem) => void }) {
+  const t = useTranslations('analytics');
   // Filter by selected month
   const filtered = transactions.filter(t => {
     if (!selectedMonth) return true;
@@ -684,7 +687,7 @@ function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: 
   });
 
   if (filtered.length === 0) {
-    return <EmptyState message="Geen transacties gevonden voor deze maand." />;
+    return <EmptyState message={t('noTransactions')} />;
   }
 
   // Group by date
@@ -728,7 +731,7 @@ function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: 
                               : 'bg-pw-bg text-pw-muted'
                           }`}
                         >
-                          {tx.pw_category === 'onbekend' ? 'Categoriseer' : getCategoryLabel(tx.pw_category)}
+                          {tx.pw_category === 'onbekend' ? t('categorize') : getCategoryLabel(tx.pw_category)}
                         </span>
                         {tx.category_source === 'ai' && tx.category_confidence != null && (
                           <span className="text-[9px] text-pw-muted/60">
@@ -756,14 +759,14 @@ function TabTransacties({ transactions, selectedMonth, onTap }: { transactions: 
 // ─── Tab: Abonnementen ───────────────────────────────────────
 
 function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: SubscriptionItem[]; showVergelijk?: boolean }) {
+  const t = useTranslations('analytics');
   if (subscriptions.length === 0) {
     return (
       <div className="flex flex-col items-center py-12 text-center">
         <Wallet className="mb-3 h-10 w-10 text-pw-muted/30" strokeWidth={1.2} />
-        <p className="text-[13px] text-pw-muted">Nog geen abonnementen gevonden</p>
+        <p className="text-[13px] text-pw-muted">{t('noSubscriptions')}</p>
         <p className="text-[11px] text-pw-muted/70 mt-1 max-w-[240px]">
-          Zodra we terugkerende betalingen detecteren, verschijnen ze hier.
-          Dit vereist minimaal 2 maanden bankdata.
+          {t('noSubscriptionsDesc')}
         </p>
       </div>
     );
@@ -775,10 +778,10 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
   const yearlyTotal = subscriptions.reduce((a, s) => a + s.annual_cost, 0);
 
   const FREQ_LABELS: Record<string, string> = {
-    maandelijks: 'Maandelijks',
-    kwartaal: 'Per kwartaal',
-    jaarlijks: 'Jaarlijks',
-    onregelmatig: 'Onregelmatig',
+    maandelijks: t('monthly'),
+    kwartaal: t('quarterly'),
+    jaarlijks: t('yearly'),
+    onregelmatig: t('irregular'),
   };
 
   // Provider detection for Vergelijk CTAs (admin only)
@@ -807,13 +810,13 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
     <div className="space-y-4">
       {/* Total cost card */}
       <div className="rounded-card-lg border border-pw-border bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-pw-surface p-4">
-        <p className="text-[11px] text-pw-muted">Totaal per maand</p>
+        <p className="text-[11px] text-pw-muted">{t('totalPerMonth')}</p>
         <div className="flex items-end justify-between mt-1">
           <span className="text-[26px] font-extrabold text-pw-navy tracking-tight">
             {formatCents(monthlyTotal)}
           </span>
           <span className="text-[12px] text-pw-muted">
-            {formatCents(yearlyTotal)} / jaar
+            {formatCents(yearlyTotal)} {t('perYear')}
           </span>
         </div>
       </div>
@@ -850,10 +853,10 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-[11px] font-semibold text-green-800 dark:text-green-300">
-                        Bespaar op {provider.sector}
+                        {t('saveOn')} {provider.sector}
                       </p>
                       <p className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">
-                        Vergelijk aanbieders — bespaar {provider.saving}
+                        {t('compareProviders')} — {t('save')} {provider.saving}
                       </p>
                     </div>
                     <button
@@ -864,7 +867,7 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
                     </button>
                   </div>
                   <p className="text-[9px] text-green-600/60 dark:text-green-500/40 mt-1.5">
-                    Admin preview — PayWatch ontvangt een vergoeding bij overstap
+                    {t('adminPreview')}
                   </p>
                 </div>
               )}
@@ -876,10 +879,9 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
       {/* Vergelijk summary card — admin only */}
       {showVergelijk && subscriptions.some(s => detectProvider(s.merchant_clean_name || s.creditor_name)) && (
         <div className="rounded-card border border-green-200 dark:border-green-800/40 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4">
-          <p className="text-[13px] font-semibold text-green-900 dark:text-green-200">Vergelijk & Bespaar</p>
+          <p className="text-[13px] font-semibold text-green-900 dark:text-green-200">{t('compareAndSave')}</p>
           <p className="text-[11px] text-green-700 dark:text-green-400 mt-1 leading-relaxed">
-            Op basis van je abonnementen kun je mogelijk besparen op energie, telecom en verzekeringen.
-            Vergelijk aanbieders en ontdek goedkopere opties.
+            {t('compareDesc')}
           </p>
           <button
             onClick={() => haptic('tap')}
@@ -888,7 +890,7 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
             Bekijk alle bespaarmogelijkheden
           </button>
           <p className="text-[9px] text-green-600/50 dark:text-green-500/30 mt-2 text-center">
-            Admin preview — wordt afgeleverd via Daisycon affiliate links
+            {t('adminPreview')}
           </p>
         </div>
       )}
@@ -896,11 +898,11 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
       {/* Insight block */}
       {subscriptions.length >= 3 && (
         <div className="rounded-card border border-pw-border bg-pw-bg p-3.5">
-          <p className="text-[12px] font-semibold text-pw-text mb-1">Inzicht</p>
+          <p className="text-[12px] font-semibold text-pw-text mb-1">{t('insight')}</p>
           <p className="text-[11px] text-pw-muted leading-relaxed">
-            Je betaalt {formatCents(yearlyTotal)} per jaar aan {subscriptions.length} terugkerende betalingen.
+            {t('youPay')} {formatCents(yearlyTotal)} {t('perYearAt')} {subscriptions.length} {t('recurringPayments')}.
             {subscriptions[0] && (
-              <> Je grootste kostenpost is <strong className="text-pw-text">{subscriptions[0].merchant_clean_name || subscriptions[0].creditor_name}</strong> ({formatCents(subscriptions[0].annual_cost)}/jr).</>
+              <> {t('biggestCost')} <strong className="text-pw-text">{subscriptions[0].merchant_clean_name || subscriptions[0].creditor_name}</strong> ({formatCents(subscriptions[0].annual_cost)}/jr).</>
             )}
           </p>
         </div>
@@ -920,6 +922,7 @@ function CategoryCorrectionSheet({
   onClose: () => void;
 }) {
   const [applyToAll, setApplyToAll] = useState(true);
+  const t = useTranslations('analytics');
 
   return (
     <>
@@ -946,7 +949,7 @@ function CategoryCorrectionSheet({
 
         {/* Category grid */}
         <div className="px-4 py-4">
-          <p className="text-[11px] font-semibold text-pw-muted uppercase tracking-wider mb-3">Kies categorie</p>
+          <p className="text-[11px] font-semibold text-pw-muted uppercase tracking-wider mb-3">{t('chooseCategory')}</p>
           <div className="grid grid-cols-3 gap-2">
             {CORRECTABLE_CATEGORIES.map(cat => {
               const Icon = ICON_MAP[cat.id] || HelpCircle;
@@ -982,9 +985,9 @@ function CategoryCorrectionSheet({
                 className="h-4 w-4 rounded border-pw-border text-pw-blue focus:ring-pw-blue"
               />
               <div>
-                <p className="text-[12px] font-medium text-pw-text">Pas toe op alle betalingen</p>
+                <p className="text-[12px] font-medium text-pw-text">{t('applyToAll')}</p>
                 <p className="text-[10px] text-pw-muted">
-                  Ook eerdere en toekomstige betalingen van {transaction.creditor_name}
+                  {t('applyToAllDesc')} {transaction.creditor_name}
                 </p>
               </div>
             </label>

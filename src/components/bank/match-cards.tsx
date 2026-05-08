@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Check, X, Building2, ArrowRight, CreditCard, Loader2 } from 'lucide-react';
 import type { MatchItem } from '@/hooks/useDashboardData';
+import { useTranslations } from 'next-intl';
 
 interface Props {
   initialMatches?: MatchItem[];
 }
 
 export default function MatchCards({ initialMatches }: Props = {}) {
+  const t = useTranslations('matchCards');
   const [matches, setMatches] = useState<MatchItem[]>(initialMatches || []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swiping, setSwiping] = useState<'left' | 'right' | null>(null);
@@ -69,10 +71,10 @@ export default function MatchCards({ initialMatches }: Props = {}) {
         </div>
         <div>
           <h3 className="text-[13px] font-semibold text-pw-navy">
-            {remaining} betaling{remaining !== 1 ? 'en' : ''} gevonden
+            {remaining} {remaining !== 1 ? t('paymentsFoundPlural') : t('paymentsFound')}
           </h3>
           <p className="text-[11px] text-pw-muted">
-            {match.match_type === 'partial' ? 'Bedrag verschilt — controleer of dit klopt' : 'Bevestig of de rekening betaald is'}
+            {match.match_type === 'partial' ? t('amountDiffers') : t('confirmPaid')}
           </p>
         </div>
       </div>
@@ -93,7 +95,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
               <Building2 className="h-5 w-5 text-pw-blue" strokeWidth={1.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-pw-blue">{match.bank_name} transactie</p>
+              <p className="text-[11px] font-medium text-pw-blue">{match.bank_name} {t('transaction')}</p>
               <p className="text-[14px] font-semibold text-pw-navy truncate">{match.creditor_name}</p>
               <p className="text-[12px] text-pw-muted font-mono">{match.creditor_iban}</p>
               <div className="flex items-center gap-2 mt-1">
@@ -110,7 +112,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
           <div className="flex justify-center py-2">
             <div className="flex items-center gap-1 text-pw-muted">
               <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span className="text-[10px] font-medium uppercase tracking-wider">Matcht met</span>
+              <span className="text-[10px] font-medium uppercase tracking-wider">{t('matchesWith')}</span>
               <ArrowRight className="h-3.5 w-3.5 rotate-180" strokeWidth={1.5} />
             </div>
           </div>
@@ -120,7 +122,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
               <CreditCard className="h-5 w-5 text-orange-500" strokeWidth={1.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-orange-600">Open rekening</p>
+              <p className="text-[11px] font-medium text-orange-600">{t('openBill')}</p>
               <p className="text-[14px] font-semibold text-pw-navy truncate">{match.bill_vendor}</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[15px] font-bold text-pw-navy">
@@ -128,7 +130,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
                 </span>
                 {match.bill_due_date && (
                   <span className="text-[11px] text-pw-muted">
-                    vervaldatum {new Date(match.bill_due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                    {t('dueDate')} {new Date(match.bill_due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                   </span>
                 )}
               </div>
@@ -144,10 +146,10 @@ export default function MatchCards({ initialMatches }: Props = {}) {
           {match.match_type === 'partial' && (
             <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200/50 px-3 py-2.5">
               <p className="text-[12px] font-semibold text-amber-700">
-                Bedrag verschilt — betalingsregeling?
+                {t("amountDiffersShort")}
               </p>
               <p className="text-[11px] text-amber-600 mt-0.5">
-                Betaald: € {(Math.abs(match.tx_amount) / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
+                {t('paid')} € {(Math.abs(match.tx_amount) / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
                 {' '}· Rekening: € {(match.bill_amount / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
                 {' '}(verschil: € {(Math.abs(Math.abs(match.tx_amount) - match.bill_amount) / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2 })})
               </p>
@@ -161,7 +163,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
               className="btn-press flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-pw-border bg-white py-3 text-[13px] font-semibold text-pw-muted transition-colors hover:bg-red-50 hover:text-pw-red hover:border-red-200 disabled:opacity-50"
             >
               <X className="h-4 w-4" strokeWidth={2} />
-              Geen match
+              {t('noMatch')}
             </button>
             <button
               onClick={() => handleAction('confirm')}
@@ -173,7 +175,7 @@ export default function MatchCards({ initialMatches }: Props = {}) {
               ) : (
                 <Check className="h-4 w-4" strokeWidth={2} />
               )}
-              {match.match_type === 'partial' ? 'Termijn betaald' : 'Betaald'}
+              {match.match_type === 'partial' ? t('installmentPaid') : t('confirmed')}
             </button>
           </div>
         </div>
