@@ -50,6 +50,7 @@ function CentsField({
 }
 
 export default function BeslagvrijeVoetPage() {
+  const t = useTranslations("beslagvrijeVoet");
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [showLetter, setShowLetter] = useState(false);
