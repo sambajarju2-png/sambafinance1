@@ -31,11 +31,11 @@ interface Buddy {
   accepted_at: string | null;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  partner: t('rolePartner'),
-  ouder: t('roleParent'),
-  schuldhulpmaatje: t('roleDebtHelper'),
-  anders: t('roleOther'),
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  partner: 'rolePartner',
+  ouder: 'roleParent',
+  schuldhulpmaatje: 'roleDebtHelper',
+  anders: 'roleOther',
 };
 
 export default function BuddySettings() {
@@ -325,7 +325,7 @@ export default function BuddySettings() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-pw-text truncate">{b.owner_name}</p>
-                  <p className="text-[10px] text-pw-muted capitalize">{ROLE_LABELS[b.role] || b.role}</p>
+                  <p className="text-[10px] text-pw-muted capitalize">{t(ROLE_LABEL_KEYS[b.role] || b.role) || b.role}</p>
                 </div>
                 <button onClick={() => setViewingDashboard(b.user_id)}
                   className="btn-press flex items-center gap-1.5 rounded-button bg-pw-blue px-3 py-2 text-[11px] font-semibold text-white">
@@ -357,7 +357,7 @@ export default function BuddySettings() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-pw-text truncate">{b.buddy_name || 'Onbekend'}</p>
-                    <p className="text-[10px] text-pw-muted">{ROLE_LABELS[b.role] || b.role}</p>
+                    <p className="text-[10px] text-pw-muted">{t(ROLE_LABEL_KEYS[b.role] || b.role) || b.role}</p>
                   </div>
                   <button onClick={() => setShowChat(true)}
                     className="flex h-7 w-7 items-center justify-center rounded-full text-pw-blue hover:bg-pw-blue/10 transition-colors">
@@ -399,7 +399,7 @@ export default function BuddySettings() {
                 <UserPlus className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-pw-text">{ROLE_LABELS[b.role] || b.role}</p>
+                <p className="text-[12px] font-semibold text-pw-text">{t(ROLE_LABEL_KEYS[b.role] || b.role) || b.role}</p>
                 <p className="text-[10px] text-pw-muted font-mono">{b.invite_code}</p>
               </div>
               <div className="flex gap-1.5">
@@ -439,7 +439,7 @@ export default function BuddySettings() {
             {['partner', 'ouder', 'schuldhulpmaatje', 'anders'].map((r) => (
               <button key={r} onClick={() => setInviteRole(r)}
                 className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all ${inviteRole === r ? 'bg-pw-blue text-white' : 'bg-pw-surface border border-pw-border text-pw-muted'}`}>
-                {ROLE_LABELS[r]}
+                {t(ROLE_LABEL_KEYS[r] || r)}
               </button>
             ))}
           </div>

@@ -13,10 +13,10 @@ import { useRouter } from 'next/navigation';
 
 type HuishoudType = 'alleenstaand' | 'alleenstaand_ouder' | 'samenwonend';
 
-const HUISHOUD_OPTIONS: { value: HuishoudType; label: string; icon: typeof Users }[] = [
-  { value: 'alleenstaand', label: t('single'), icon: Users },
-  { value: 'samenwonend', label: t('cohabiting'), icon: Users },
-  { value: 'alleenstaand_ouder', label: t('singleParent'), icon: Users },
+const HUISHOUD_OPTIONS: { value: HuishoudType; labelKey: string; icon: typeof Users }[] = [
+  { value: 'alleenstaand', labelKey: 'single', icon: Users },
+  { value: 'samenwonend', labelKey: 'cohabiting', icon: Users },
+  { value: 'alleenstaand_ouder', labelKey: 'singleParent', icon: Users },
 ];
 
 function CentsField({
@@ -163,7 +163,7 @@ export default function BeslagvrijeVoetPage() {
                 <opt.icon className={`h-4 w-4 ${huishoudType === opt.value ? 'text-pw-blue' : 'text-pw-muted'}`} />
               </div>
               <span className={`text-[14px] font-medium ${huishoudType === opt.value ? 'text-pw-blue' : 'text-pw-text'}`}>
-                {opt.label}
+                {t(opt.labelKey)}
               </span>
             </button>
           ))}

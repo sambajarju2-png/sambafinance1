@@ -25,7 +25,7 @@ const PRICES = APP_STORE_PRICES;
 const PLANS = [
   {
     id: 'gratis',
-    name: t('freePlanName'),
+    name: 'freePlanName',
     icon: null,
     priceMonthly: 0,
     priceYearly: 0,
@@ -48,11 +48,11 @@ const PLANS = [
       '10 scans per maand',
       '1 e-mail inbox',
     ],
-    notIncluded: [t('noBankConnection')],
+    notIncluded: ['noBankConnection'],
   },
   {
     id: 'pro',
-    name: t('proPlanName'),
+    name: 'proPlanName',
     icon: Zap,
     priceMonthly: 4.99,   // App Store; Stripe: 4.00
     priceYearly: 44.99,   // App Store; Stripe: 40.00
@@ -65,7 +65,7 @@ const PLANS = [
       '30 AI chats per dag',
       '8 bezwaarschriften/maand',
       '6 AI inzichten/maand',
-      t('unlimitedScanning'),
+      'unlimitedScanning',
       '2 e-mail inboxen',
       '1 bankrekening koppelen',
     ],
@@ -74,7 +74,7 @@ const PLANS = [
       '40 AI chats per dag',
       '12 bezwaarschriften/maand',
       '8 AI inzichten/maand',
-      t('unlimitedScanning'),
+      'unlimitedScanning',
       '2 e-mail inboxen',
       '1 bankrekening koppelen',
     ],
@@ -82,7 +82,7 @@ const PLANS = [
   },
   {
     id: 'premium',
-    name: t('premiumPlanName'),
+    name: 'premiumPlanName',
     icon: Crown,
     priceMonthly: 8.99,   // App Store; Stripe: 8.00
     priceYearly: 79.99,   // App Store; Stripe: 80.00
@@ -91,19 +91,19 @@ const PLANS = [
     border: 'border-amber-200 dark:border-amber-500/30',
     featuresMonthly: [
       '40 min PayBuddy/maand',
-      t('unlimitedChat'),
-      t('unlimitedDisputes'),
+      'unlimitedChat',
+      'unlimitedDisputes',
       '12 AI inzichten/maand',
       '4 e-mail inboxen',
-      t('unlimitedBankAccounts'),
+      'unlimitedBankAccounts',
     ],
     featuresYearly: [
       '60 min PayBuddy/maand',
-      t('unlimitedChat'),
-      t('unlimitedDisputes'),
+      'unlimitedChat',
+      'unlimitedDisputes',
       '15 AI inzichten/maand',
       '6 e-mail inboxen',
-      t('unlimitedBankAccounts'),
+      'unlimitedBankAccounts',
     ],
     notIncluded: [],
   },
@@ -120,6 +120,11 @@ function daysUntil(iso: string | null) {
 
 export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
   const t = useTranslations('settings');
+  // Resolve plan names/features from translation keys
+  const tr = (key: string) => {
+    // If key matches a known translation key, translate it. Otherwise return as-is.
+    try { const v = t(key); return v !== key ? v : key; } catch { return key; }
+  };
   const [currentPlan, setCurrentPlan] = useState<string>('gratis');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
@@ -365,7 +370,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-bold text-pw-navy dark:text-white">{plan.name}</p>
+                    <p className="text-[14px] font-bold text-pw-navy dark:text-white">{tr(plan.name)}</p>
                     {isCurrentPlan && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${plan.id === 'gratis' ? 'bg-pw-muted/15 text-pw-muted' : plan.id === 'premium' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600' : 'bg-pw-blue/10 text-pw-blue'}`}>Huidig</span>}
                     {!isPaid && plan.id !== 'gratis' && trialEligible && <span className="rounded-full bg-pw-green/15 px-2 py-0.5 text-[10px] font-bold text-pw-green">14 dagen gratis</span>}
                   </div>
@@ -398,7 +403,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
                 ))}
                 {plan.notIncluded.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-[12px] text-pw-muted line-through">
-                    <X className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" strokeWidth={2} /> {f}
+                    <X className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" strokeWidth={2} /> {tr(f)}
                   </li>
                 ))}
               </ul>
@@ -410,7 +415,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
                     plan.id === 'premium' ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm' : 'bg-pw-blue text-white shadow-sm'
                   }`}>
                   {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                    <>{trialEligible ? '14 dagen gratis proberen' : `Upgraden naar ${plan.name}`}<ArrowRight className="h-3.5 w-3.5" /></>
+                    <>{trialEligible ? '14 dagen gratis proberen' : `Upgraden naar ${tr(plan.name)}`}<ArrowRight className="h-3.5 w-3.5" /></>
                   )}
                 </button>
               )}

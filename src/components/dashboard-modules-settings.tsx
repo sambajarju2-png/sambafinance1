@@ -146,7 +146,7 @@ export default function DashboardModulesSettings() {
       <ModuleSection
         icon={<TrendingUp className="h-4 w-4 text-pw-green" strokeWidth={1.5} />}
         title="Statistieken"
-        description="Onderdelen op de prestatie tab"
+        description={t("categoryOverviewDesc")}
         options={STATS_MODULES}
         modules={modules}
         onToggle={handleToggle}
@@ -156,7 +156,7 @@ export default function DashboardModulesSettings() {
       <ModuleSection
         icon={<ArrowDownUp className="h-4 w-4 text-pw-amber" strokeWidth={1.5} />}
         title="Cashflow"
-        description="Onderdelen op de cashflow tab"
+        description={t("monthlyOverviewDesc")}
         options={CASHFLOW_MODULES}
         modules={modules}
         onToggle={handleToggle}
