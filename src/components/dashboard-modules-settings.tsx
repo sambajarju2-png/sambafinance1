@@ -180,6 +180,7 @@ function ModuleSection({
   modules: DashboardModules;
   onToggle: (key: keyof DashboardModules) => void | Promise<void>;
 }) {
+  const t = useTranslations('modules');
   return (
     <div className="rounded-card border border-pw-border bg-pw-surface">
       {/* Section header */}
