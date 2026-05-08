@@ -165,8 +165,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // PW-09: Run categorization + aggregation + subscription detection fire-and-forget
-    // Don't block the sync response — user sees transactions immediately
+    // Always refresh analytics synchronously before returning so the dashboard
+    // shows real data immediately — not stuck on "data wordt verwerkt"
+    try {
+      await supabase.rpc('refresh_user_analytics', { p_user_id: user.id })
+    } catch (rpcErr) {
+      console.error('[Bank] Analytics refresh failed (non-fatal):', rpcErr)
+    }
+
+    // PW-09: Run categorization + re-aggregation fire-and-forget
+    // Categorization may take >10s (AI batch) — don't block the response
+    // After categorization completes, it calls refresh_user_analytics again to update categories
     const userId = user.id
     Promise.resolve().then(async () => {
       try {

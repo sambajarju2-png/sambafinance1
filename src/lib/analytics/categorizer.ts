@@ -125,10 +125,11 @@ const KEYWORD_RULES: KeywordRule[] = [
   { patterns: ['mcdonalds', 'burger king', 'kfc', 'subway', 'febo'], category: 'eten_drinken', sub_category: 'restaurant' },
 
   // Transport
-  { patterns: ['ns reizigers', 'ns groep', 'ov-chipkaart', 'translink', 'ret', 'gvb', 'htm', 'connexxion', 'arriva', 'bravo', 'u-ov', 'qbuzz'], category: 'vervoer', sub_category: 'ov', wholeWord: true },
+  { patterns: ['ns reizigers', 'ns groep', 'ns internationaal', 'ov-chipkaart', 'translink', 'ret', 'gvb', 'htm', 'connexxion', 'arriva', 'bravo', 'u-ov', 'qbuzz'], category: 'vervoer', sub_category: 'ov', wholeWord: true },
   { patterns: ['shell', 'bp', 'esso', 'total energies', 'tinq', 'tango', 'gulf'], category: 'vervoer', sub_category: 'brandstof' },
   { patterns: ['swapfiets', 'vanmoof'], category: 'vervoer', sub_category: 'fiets' },
   { patterns: ['parkmobile', 'yellowbrick', 'q-park', 'interparking'], category: 'vervoer', sub_category: 'parkeren' },
+  { patterns: ['uber', 'ubr*', 'lyft', 'bolt.eu', 'taxi'], category: 'vervoer', sub_category: 'taxi' },
 
   // Shopping
   { patterns: ['bol.com', 'amazon', 'coolblue', 'mediamarkt', 'action', 'hema', 'primark', 'h&m', 'zara', 'wehkamp'], category: 'winkelen' },
@@ -150,6 +151,21 @@ const KEYWORD_RULES: KeywordRule[] = [
 
   // Cash
   { patterns: ['geldautomaat', 'geldopname', 'atm', 'pinopname', 'cash withdrawal'], category: 'pin_opname' },
+
+  // International money transfers (outgoing)
+  { patterns: ['remitly', 'wise', 'transferwise', 'western union', 'moneygram', 'worldremit'], category: 'overig', sub_category: 'internationale_overboeking', direction: 'out' },
+
+  // P2P payments received (Tikkie, Spesa, etc.)
+  { patterns: ['spesa payment', 'spesa'], category: 'overig_inkomen', sub_category: 'betaalverzoek', direction: 'in' },
+
+  // Convenience stores & food shops
+  { patterns: ['avondwinkel', 'nachtwacht', 'zabka', 'xenos', 'kruidvat', 'etos'], category: 'boodschappen' },
+
+  // Business / services
+  { patterns: ['kvk', 'kamer van koophandel', 'applaunchpad', 'appstore', 'google workspace', 'adobe', 'dropbox', 'notion', 'github'], category: 'zakelijk' },
+
+  // Healthcare supplements
+  { patterns: ['ggz', 'geestelijke gezondheidszorg', 'riagg'], category: 'zorg', sub_category: 'zorginstelling' },
 ];
 
 // ─── Bank transaction code mapping ───────────────────────────
@@ -217,10 +233,13 @@ export function categorizeByRules(
   const infoLower = info.toLowerCase().trim();
   if (
     infoLower === 'to eur' ||
+    infoLower.startsWith('to flexible cash funds') ||
     infoLower.startsWith('from flexible cash funds') ||
-    infoLower.startsWith('aanvulling saldotekort') ||
+    infoLower.startsWith('to savings vault') ||
     infoLower.startsWith('from savings vault') ||
-    infoLower.startsWith('to savings vault')
+    infoLower.startsWith('aanvulling saldotekort') ||
+    infoLower.startsWith('to pocket') ||
+    infoLower.startsWith('from pocket')
   ) {
     return {
       category: 'eigen_rekening',
@@ -331,7 +350,7 @@ Je krijgt banktransacties en categoriseert ze ALLEEN in de gegeven categorieën.
 Retourneer ALLEEN valide JSON. Geen uitleg, geen markdown.
 
 Categorieën:
-wonen | vaste_lasten | boodschappen | eten_drinken | vervoer | winkelen | vrije_tijd | zorg | abonnementen | schuld | salaris | overheid | overig_inkomen | eigen_rekening | pin_opname | onbekend
+wonen | vaste_lasten | boodschappen | eten_drinken | vervoer | winkelen | vrije_tijd | zorg | abonnementen | schuld | salaris | overheid | overig_inkomen | eigen_rekening | pin_opname | zakelijk | overig | onbekend
 
 Subcategorieën (optioneel):
 wonen: huur, hypotheek, energie, water, gemeentebelasting
