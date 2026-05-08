@@ -8,6 +8,7 @@ import FeedbackPopup from '@/components/feedback-popup';
 import PushPermissionPrompt from '@/components/push-permission-prompt';
 import PwaInstallDrawer from '@/components/pwa/install-prompt';
 import RevenueCatInit from '@/components/revenuecat-init';
+import PostHogIdentify from '@/components/providers/posthog-identify';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -23,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: settings } = await supabase
     .from('user_settings')
-    .select('language, onboarding_complete')
+    .select('language, onboarding_complete, plan, gemeente')
     .eq('user_id', user.id)
     .single();
 
@@ -35,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col bg-pw-bg">
       <Topbar notificationCount={0} />
+      <PostHogIdentify userId={user.id} plan={settings?.plan} gemeente={settings?.gemeente} />
       <main className="flex-1 px-4 pb-24 pt-4">
         <PageTransition>{children}</PageTransition>
       </main>
