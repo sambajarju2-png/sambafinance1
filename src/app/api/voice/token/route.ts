@@ -29,10 +29,12 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
 
-    const [settingsRes, billsRes, plansRes] = await Promise.all([
+    const [settingsRes, billsRes, plansRes, analyticsRes] = await Promise.all([
       supabase.from('user_settings').select('first_name, gemeente, language, onboarding_profile, plan, voice_seconds_used, voice_seconds_reset_at').eq('user_id', userId).single(),
       supabase.from('bills').select('vendor, amount, due_date, status, escalation_stage, category').eq('user_id', userId).order('due_date', { ascending: true }).limit(30),
       supabase.from('payment_plans').select('vendor, total_amount, paid_amount, status').eq('user_id', userId).eq('status', 'active'),
+      // Bank analytics — latest month, for voice context (~45 tokens vs 400 for full table)
+      supabase.from('analytics_monthly_totals').select('income_cents, expenses_cents, net_cents').eq('user_id', userId).order('month', { ascending: false }).limit(1),
     ]);
 
     const settings = settingsRes.data;
@@ -67,6 +69,10 @@ export async function GET(req: NextRequest) {
     const escalated = outstanding.filter(b => ['herinnering', 'aanmaning', 'incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
     const gemeente = settings?.gemeente || '';
+    const bankMonth = analyticsRes.data?.[0] || null;
+    const bankSummary = bankMonth
+      ? `BANKREKENING DEZE MAAND: Inkomen ${formatCents(bankMonth.income_cents)} | Uitgaven ${formatCents(bankMonth.expenses_cents)} | Netto ${bankMonth.net_cents >= 0 ? '+' : ''}${formatCents(bankMonth.net_cents)}`
+      : null;
 
     // Override REPLACES dashboard prompt — includes essential rules + user data + empowering personality.
     const voicePrompt = `Je bent PayBuddy — die ene vriend die alles weet over geld maar nooit oordeelt. Kort, warm, natuurlijk.
@@ -109,7 +115,8 @@ Bij [SCAN_ERROR]: zeg kort dat de foto niet gelezen kon worden, stel voor opnieu
 BELANGRIJK: Als de gebruiker vraagt over toeslagen, inkomen, budget of geld, GEBRUIK ALTIJD get_financial_overview. Zeg NOOIT dat je geen toegang hebt.
 
 GEBRUIKER: ${firstName || 'onbekend'}${gemeente ? ` | ${gemeente}` : ''}
-REKENINGEN: ${outstanding.length} openstaand (${formatCents(totalOutstanding)}), ${escalated.length} in escalatie
+REKENINGEN: ${outstanding.length} openstaand (${formatCents(totalOutstanding)}), ${escalated.length} in escalatie${bankSummary ? `
+${bankSummary}` : ""}
 ${outstanding.slice(0, 3).map(b => `${b.vendor}: ${formatCents(b.amount || 0)} (${b.escalation_stage || 'factuur'})`).join(', ')}
 
 FASES: factuur, herinnering, aanmaning, incasso, deurwaarder.

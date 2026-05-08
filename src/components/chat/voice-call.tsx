@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationProvider, useConversation } from '@elevenlabs/react';
 import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, Camera } from 'lucide-react';
 import { sounds } from '@/lib/sounds';
+import { getCachedVoiceToken, clearVoiceTokenCache } from '@/lib/voice-token-cache';
 import { useStatusBar } from '@/lib/use-status-bar';
 
 interface VoiceCallProps {
@@ -281,6 +282,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
     },
     onDisconnect: async () => {
       sounds.callEnded();
+      clearVoiceTokenCache(); // Force fresh token for next call
       // Save transcript
       if (transcriptRef.current.length > 0) {
         try {
@@ -562,20 +564,28 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         }
       }
 
-      const res = await fetch('/api/voice/token');
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Handle plan limit reached specifically
-        if (data.error === 'voice_limit_reached') {
-          setLimitReached(data.message || 'Je beltegoed is op voor deze maand.');
+      // Use pre-warmed token if available (avoids 600ms–1.5s ElevenLabs API call)
+      const cached = getCachedVoiceToken();
+      let data: Record<string, unknown>;
+      if (cached) {
+        data = cached as unknown as Record<string, unknown>;
+      } else {
+        const res = await fetch('/api/voice/token');
+        data = await res.json();
+        if (!res.ok) {
+          // Handle plan limit reached specifically
+          if (data.error === 'voice_limit_reached') {
+            setLimitReached(data.message as string || 'Je beltegoed is op voor deze maand.');
+            setStatus('error');
+            return;
+          }
+          setErrorDetail(`Token ${res.status}: ${JSON.stringify(data)}`);
           setStatus('error');
           return;
         }
-        setErrorDetail(`Token ${res.status}: ${JSON.stringify(data)}`);
-        setStatus('error');
-        return;
       }
+
+
 
       // Store remaining time so UI can show it
       if (typeof data.remainingSeconds === 'number') {

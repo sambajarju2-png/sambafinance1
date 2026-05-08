@@ -6,6 +6,7 @@ import { Send, Paperclip, Mic, MicOff, Loader2, Check, Pencil, RotateCcw, Extern
 import dynamic from 'next/dynamic';
 
 const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
+import { prewarmVoiceToken } from '@/lib/voice-token-cache';
 const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
 const HulpInbox = dynamic(() => import('./hulp-inbox'), { ssr: false });
 const BuddyChat = dynamic(() => import('../buddy-chat'), { ssr: false });
@@ -127,6 +128,9 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             setBuddyUnread(total);
           }
         } catch {}
+
+        // Pre-warm voice token in background so tapping call is instant
+        prewarmVoiceToken().catch(() => {});
 
         if (continueFrom) {
           // Loading a specific past conversation
