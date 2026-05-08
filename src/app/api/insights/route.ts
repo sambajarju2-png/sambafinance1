@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Parallel fetch: settings + auth + bills (independent queries)
     const [settingsResult, authResult, billsResult] = await Promise.all([
-      supabase.from('user_settings').select('language, insight_count').eq('user_id', userId).single(),
+      supabase.from('user_settings').select('language, insight_count, plan').eq('user_id', userId).single(),
       supabase.auth.getUser(),
       supabase.from('bills')
         .select('id, vendor, amount, due_date, status, escalation_stage, category, paid_date, is_recurring')
