@@ -6,6 +6,7 @@ import {
   Baby, Home, Briefcase, Loader2, Check, Plus, Minus, Heart, ChevronDown
 } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
+import { useTranslations } from 'next-intl';
 
 interface FinancesData {
   netto_inkomen: number;
@@ -95,6 +96,7 @@ function SectionCard({ icon, title, children, defaultOpen = true }: {
 }
 
 export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
+  const t = useTranslations('incomeForm');
   const [data, setData] = useState<FinancesData>(INITIAL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -182,31 +184,31 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
       {/* Section 1: Inkomen */}
       <SectionCard
         icon={<Wallet className="h-4 w-4 text-pw-blue" />}
-        title="Inkomen"
+        title={t("income")}
         defaultOpen={true}
       >
         <CentsInput
           icon={<Wallet className="h-4 w-4" />}
-          label="Netto inkomen per maand"
+          label={t("netIncomePerMonth")}
           value={data.netto_inkomen}
           onChange={v => updateField('netto_inkomen', v)}
           placeholder="bijv. 2200"
         />
         <CentsInput
           icon={<GraduationCap className="h-4 w-4" />}
-          label="DUO / Studiefinanciering"
+          label={t("duoStudyFinance")}
           value={data.duo_inkomen}
           onChange={v => updateField('duo_inkomen', v)}
         />
         <CentsInput
           icon={<HandCoins className="h-4 w-4" />}
-          label="Uitkering (bijstand, WW, etc.)"
+          label={t("benefitIncome")}
           value={data.uitkering_inkomen}
           onChange={v => updateField('uitkering_inkomen', v)}
         />
         <CentsInput
           icon={<Gift className="h-4 w-4" />}
-          label="Overig inkomen"
+          label={t("otherIncome")}
           value={data.overig_inkomen}
           onChange={v => updateField('overig_inkomen', v)}
         />
@@ -215,7 +217,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
       {/* Section 2: Salarisbetaling */}
       <SectionCard
         icon={<CalendarDays className="h-4 w-4 text-pw-blue" />}
-        title="Salarisbetaling"
+        title={t("salaryPayment")}
         defaultOpen={data.salary_day_from !== null}
       >
         <p className="text-[12px] text-pw-muted">Tussen welke dagen van de maand krijg je betaald?</p>
@@ -247,7 +249,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
       {/* Section 3: Huishouden */}
       <SectionCard
         icon={<Users className="h-4 w-4 text-pw-blue" />}
-        title="Huishouden"
+        title={t("household")}
         defaultOpen={data.has_partner || data.num_children > 0}
       >
         {/* Partner */}
@@ -270,7 +272,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
         {data.has_partner && (
           <CentsInput
             icon={<Briefcase className="h-4 w-4" />}
-            label="Netto inkomen partner per maand"
+            label={t("netIncomePartner")}
             value={data.partner_inkomen}
             onChange={v => updateField('partner_inkomen', v)}
           />
@@ -298,7 +300,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
                 className="flex-1 rounded-lg border border-pw-border bg-pw-surface px-3 py-1.5 text-[14px] outline-none focus:border-pw-blue"
                 value={age}
                 onChange={e => setChildAge(idx, parseInt(e.target.value) || 0)}
-                placeholder="Leeftijd"
+                placeholder={t("age")}
               />
               <span className="text-[11px] text-pw-muted">jaar</span>
               <button
@@ -315,7 +317,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
       {/* Section 4: Toeslagen check */}
       <SectionCard
         icon={<Heart className="h-4 w-4 text-pw-blue" />}
-        title="Toeslagen check"
+        title={t("benefitsCheck")}
         defaultOpen={data.monthly_rent > 0 || data.vermogen > 0}
       >
         <p className="text-[12px] text-pw-muted mb-2">
@@ -324,7 +326,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
         </p>
         <CentsInput
           icon={<Home className="h-4 w-4" />}
-          label="Kale huur per maand (optioneel — auto-detectie uit vaste lasten)"
+          label={t("bareRent")}
           value={data.monthly_rent}
           onChange={v => updateField('monthly_rent', v)}
         />
@@ -379,7 +381,7 @@ export default function IncomeForm({ onSaved }: { onSaved?: () => void }) {
         ) : saved ? (
           <><Check className="h-4 w-4" /> Opgeslagen</>
         ) : (
-          'Opslaan'
+          t('save')
         )}
       </button>
     </div>

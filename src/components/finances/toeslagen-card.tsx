@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, Home, Baby, Sun, ExternalLink, X, Gift, AlertTriangle, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
+import { useTranslations } from 'next-intl';
 
 interface ToeslagResult {
   naam: string;
@@ -41,11 +42,12 @@ const TOESLAG_COLORS: Record<string, string> = {
   kinderopvangtoeslag: 'text-amber-500 bg-amber-50 dark:bg-amber-500/10',
 };
 
-const TOESLAG_LABELS: Record<string, string> = {
-  zorgtoeslag: 'Zorgtoeslag',
-  huurtoeslag: 'Huurtoeslag',
-  kindgebonden_budget: 'Kindgebonden budget',
-  kinderopvangtoeslag: 'Kinderopvangtoeslag',
+// Labels resolved via t() inside component — keys map to translation IDs
+const TOESLAG_LABEL_KEYS: Record<string, string> = {
+  zorgtoeslag: 'zorgtoeslag',
+  huurtoeslag: 'huurtoeslag',
+  kindgebonden_budget: 'kindgebondenBudget',
+  kinderopvangtoeslag: 'kinderopvangtoeslag',
 };
 
 const DEFAULT_ACTUEEL: ToeslagenActueel = {
@@ -56,6 +58,7 @@ const DEFAULT_ACTUEEL: ToeslagenActueel = {
 };
 
 export default function ToeslagenCard() {
+  const t = useTranslations('toeslagen');
   const [data, setData] = useState<ToeslagenData | null>(null);
   const [actueel, setActueel] = useState<ToeslagenActueel>(DEFAULT_ACTUEEL);
   const [loading, setLoading] = useState(true);
@@ -186,13 +189,13 @@ export default function ToeslagenCard() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Gift className="h-4 w-4 text-pw-blue" />
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-pw-muted">Toeslagen check</h3>
+        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-pw-muted">{t('title')}</h3>
       </div>
 
       {eligible.length > 0 && (
         <div className="rounded-xl border border-pw-green/20 bg-pw-green/[0.04] p-4">
           <p className="mb-3 text-[13px] font-medium text-pw-green">
-            Je komt mogelijk in aanmerking voor {eligible.length} toeslag{eligible.length > 1 ? 'en' : ''}
+            {eligible.length > 1 ? t('eligiblePlural', { count: eligible.length }) : t('eligible', { count: eligible.length })}
           </p>
           <div className="space-y-2.5">
             {eligible.map(toeslag => {
@@ -218,7 +221,7 @@ export default function ToeslagenCard() {
                         )}
                         {act > 0 && (
                           <p className={`text-[10px] ${isOver ? 'font-semibold text-amber-600' : 'text-pw-muted'}`}>
-                            Ontvangt: {formatCents(act)}/mnd
+                            {t('receives')} {formatCents(act)}{t('perMonth')}
                           </p>
                         )}
                       </div>
@@ -227,7 +230,7 @@ export default function ToeslagenCard() {
                     {isOver && (
                       <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600">
                         <AlertTriangle className="h-3 w-3" />
-                        Mogelijk {formatCents(act - toeslag.geschat_bedrag)}/mnd te veel — check je beschikking
+                        {t('possiblyTooMuch', { amount: formatCents(act - toeslag.geschat_bedrag) })}
                       </p>
                     )}
                   </div>
@@ -237,7 +240,7 @@ export default function ToeslagenCard() {
           </div>
           {data.totaal_geschat > 0 && (
             <div className="mt-3 flex items-center justify-between border-t border-pw-green/10 pt-3">
-              <span className="text-[12px] text-pw-muted">Geschat totaal per maand</span>
+              <span className="text-[12px] text-pw-muted">{t('estimatedTotal')}</span>
               <span className="text-[16px] font-bold text-pw-green">+{formatCents(data.totaal_geschat)}</span>
             </div>
           )}
@@ -247,7 +250,7 @@ export default function ToeslagenCard() {
             rel="noopener"
             className="mt-3 flex items-center gap-1.5 text-[12px] font-medium text-pw-blue"
           >
-            Doe een exacte proefberekening op toeslagen.nl
+            {t('doCalculation')}
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -258,10 +261,10 @@ export default function ToeslagenCard() {
         <div className="rounded-xl border border-amber-300/40 bg-amber-50/60 dark:bg-amber-500/[0.06] p-3">
           <p className="flex items-center gap-1.5 text-[12px] font-semibold text-amber-700">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Je ontvangt mogelijk te veel toeslagen
+            {t('tooMuchWarningTitle')}
           </p>
           <p className="mt-1 text-[11px] text-amber-600/80">
-            Te veel ontvangen toeslagen moet je terugbetalen aan de Belastingdienst. Controleer je beschikkingen of doe een proefberekening.
+            {t('tooMuchWarningDesc')}
           </p>
         </div>
       )}
@@ -272,11 +275,11 @@ export default function ToeslagenCard() {
         className="flex w-full items-center justify-between rounded-xl border border-pw-border bg-pw-surface p-3 text-left"
       >
         <div>
-          <p className="text-[13px] font-medium text-pw-navy">Mijn huidige toeslagen</p>
+          <p className="text-[13px] font-medium text-pw-navy">{t('myCurrentBenefits')}</p>
           <p className="text-[11px] text-pw-muted">
             {totaalActueel > 0
-              ? `Je ontvangt ${formatCents(totaalActueel)}/mnd`
-              : 'Vul in wat je nu ontvangt om te controleren'}
+              ? t('youReceive', { amount: formatCents(totaalActueel) })
+              : t('fillInToCheck')}
           </p>
         </div>
         {showControl ? (
@@ -289,7 +292,7 @@ export default function ToeslagenCard() {
       {showControl && (
         <div className="rounded-xl border border-pw-border bg-pw-surface p-4 space-y-3">
           <p className="text-[11px] text-pw-muted">
-            Vul per toeslag in wat je maandelijks ontvangt. Dit staat op je beschikking van de Belastingdienst.
+            {t('fillInDesc')}
           </p>
 
           {(['zorgtoeslag', 'huurtoeslag', 'kindgebonden_budget', 'kinderopvangtoeslag'] as const).map(key => {
@@ -303,7 +306,7 @@ export default function ToeslagenCard() {
                   <Icon className={`h-3.5 w-3.5 ${textColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <label className="text-[12px] font-medium text-pw-text">{TOESLAG_LABELS[key]}</label>
+                  <label className="text-[12px] font-medium text-pw-text">{t(TOESLAG_LABEL_KEYS[key])}</label>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-[12px] text-pw-muted">€</span>
@@ -327,14 +330,14 @@ export default function ToeslagenCard() {
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
              saved ? <Check className="h-3.5 w-3.5" /> : null}
-            {saved ? 'Opgeslagen' : 'Opslaan'}
+            {saved ? t('saved') : t('save')}
           </button>
         </div>
       )}
 
       {notEligible.length > 0 && (
         <div className="rounded-xl border border-pw-border/60 bg-pw-bg p-3">
-          <p className="mb-2 text-[11px] text-pw-muted">Niet in aanmerking:</p>
+          <p className="mb-2 text-[11px] text-pw-muted">{t('notEligible')}</p>
           {notEligible.map(toeslag => (
             <div key={toeslag.key} className="flex items-center gap-2 py-1">
               <X className="h-3 w-3 text-pw-muted" />

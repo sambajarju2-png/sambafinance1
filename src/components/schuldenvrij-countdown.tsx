@@ -3,12 +3,14 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Target, X, Info, Settings } from 'lucide-react';
 import { type Bill, formatCents } from '@/lib/bills';
+import { useTranslations } from 'next-intl';
 
 interface SchuldenvrijCountdownProps {
   bills: Bill[];
 }
 
 export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownProps) {
+  const t = useTranslations('countdown');
   const [showExplainer, setShowExplainer] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,8 +70,8 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
             <Target className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
           </div>
           <div>
-            <p className="text-[14px] font-bold text-pw-green">Schuldenvrij!</p>
-            <p className="text-[12px] text-pw-muted">Alle rekeningen zijn betaald</p>
+            <p className="text-[14px] font-bold text-pw-green">{t('debtFree')}</p>
+            <p className="text-[12px] text-pw-muted">{t('allPaid')}</p>
           </div>
         </div>
       </div>
@@ -86,8 +88,8 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
           <Target className="h-5 w-5 text-pw-amber" strokeWidth={1.5} />
         </div>
         <div className="flex-1">
-          <p className="text-[13px] font-semibold text-pw-navy">Stel je maandbudget in</p>
-          <p className="text-[11px] text-pw-muted">Dan berekenen we wanneer je schuldenvrij bent</p>
+          <p className="text-[13px] font-semibold text-pw-navy">{t('setMonthlyBudget')}</p>
+          <p className="text-[11px] text-pw-muted">{t('setMonthlyBudgetDesc')}</p>
         </div>
         <Settings className="h-4 w-4 text-pw-muted" strokeWidth={1.5} />
       </a>
@@ -107,15 +109,15 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-1.5">
-              <p className="text-[11px] font-medium text-pw-muted">Schuldenvrij countdown</p>
+              <p className="text-[11px] font-medium text-pw-muted">{t('debtFreeCountdown')}</p>
               <Info className="h-3 w-3 text-pw-muted/50" strokeWidth={1.5} />
             </div>
             <p className="text-[24px] font-extrabold tracking-tight text-pw-navy">
-              {weeksRemaining} <span className="text-[14px] font-semibold text-pw-muted">{weeksRemaining === 1 ? 'week' : 'weken'}</span>
+              {weeksRemaining} <span className="text-[14px] font-semibold text-pw-muted">{weeksRemaining === 1 ? t('week') : t('weeks')}</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-pw-muted">Resterend</p>
+            <p className="text-[11px] text-pw-muted">{t('remaining')}</p>
             <p className="text-[14px] font-bold text-pw-text">{formatCents(totalOutstanding)}</p>
           </div>
         </div>
@@ -123,8 +125,8 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
         {/* Progress bar */}
         <div className="mt-3">
           <div className="flex items-center justify-between text-[10px] text-pw-muted">
-            <span>{progressPercent}% betaald</span>
-            <span>o.b.v. {formatCents(monthlyBudget)}/maand</span>
+            <span>{progressPercent}% {t('paid')}</span>
+            <span>{t('basedOn')} {formatCents(monthlyBudget)}{t('perMonth')}</span>
           </div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-pw-border">
             <div
@@ -148,7 +150,7 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pw-blue/10">
                     <Target className="h-5 w-5 text-pw-blue" strokeWidth={1.5} />
                   </div>
-                  <h2 className="text-[18px] font-bold text-pw-navy">Hoe werkt dit?</h2>
+                  <h2 className="text-[18px] font-bold text-pw-navy">{t('howDoesThisWork')}</h2>
                 </div>
                 <button onClick={() => setShowExplainer(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-pw-muted hover:bg-pw-border/50">
                   <X className="h-5 w-5" strokeWidth={1.5} />
@@ -157,40 +159,40 @@ export default function SchuldenvrijCountdown({ bills }: SchuldenvrijCountdownPr
 
               <div className="space-y-4">
                 <div className="rounded-card border border-pw-border bg-pw-surface p-4">
-                  <p className="text-[14px] font-semibold text-pw-navy mb-2">De countdown berekent hoeveel weken je nodig hebt om schuldenvrij te worden.</p>
+                  <p className="text-[14px] font-semibold text-pw-navy mb-2">{t('explainerTitle')}</p>
                   <p className="text-[13px] text-pw-muted leading-relaxed">
-                    We nemen je totale openstaande bedrag en delen dit door wat je maandelijks kunt betalen. Zo weet je precies wanneer je klaar bent.
+                    {t('explainerDesc')}
                   </p>
                 </div>
 
                 <div className="rounded-card border border-pw-border bg-pw-surface p-4">
-                  <p className="text-[13px] font-semibold text-pw-navy mb-2">Jouw berekening:</p>
+                  <p className="text-[13px] font-semibold text-pw-navy mb-2">{t('yourCalculation')}</p>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-pw-muted">Openstaand bedrag</span>
+                      <span className="text-[13px] text-pw-muted">{t('outstandingAmount')}</span>
                       <span className="text-[13px] font-bold text-pw-text">{formatCents(totalOutstanding)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-pw-muted">Maandelijks budget</span>
+                      <span className="text-[13px] text-pw-muted">{t('monthlyBudget')}</span>
                       <span className="text-[13px] font-bold text-pw-text">{formatCents(monthlyBudget)}</span>
                     </div>
                     <div className="border-t border-pw-border pt-2 flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-pw-navy">Geschatte tijd</span>
-                      <span className="text-[16px] font-extrabold text-pw-blue">{weeksRemaining} {weeksRemaining === 1 ? 'week' : 'weken'}</span>
+                      <span className="text-[13px] font-semibold text-pw-navy">{t('estimatedTime')}</span>
+                      <span className="text-[16px] font-extrabold text-pw-blue">{weeksRemaining} {weeksRemaining === 1 ? t('week') : t('weeks')}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="rounded-card border border-pw-green/20 bg-green-50/50 p-4">
-                  <p className="text-[13px] font-semibold text-pw-green mb-1">Tip</p>
+                  <p className="text-[13px] font-semibold text-pw-green mb-1">{t('tip')}</p>
                   <p className="text-[12px] text-pw-muted leading-relaxed">
-                    Hoe meer je per maand betaalt, hoe sneller de countdown daalt. Betaal je op tijd? Dan voorkom je ook extra incassokosten.
+                    {t('tipText')}
                   </p>
                 </div>
 
                 <a href="/instellingen?tab=budget" className="flex items-center justify-center gap-2 text-[12px] font-semibold text-pw-blue">
                   <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Budget aanpassen
+                  {t('adjustBudget')}
                 </a>
               </div>
             </div>
