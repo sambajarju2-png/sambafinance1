@@ -175,10 +175,10 @@ function ModuleSection({
 }: {
   icon: React.ReactNode;
   title: string;
-  descKey: string;
+  description: string;
   options: ModuleOption[];
   modules: DashboardModules;
-  onToggle: (key: keyof DashboardModules) => void;
+  onToggle: (key: keyof DashboardModules) => void | Promise<void>;
 }) {
   return (
     <div className="rounded-card border border-pw-border bg-pw-surface">
