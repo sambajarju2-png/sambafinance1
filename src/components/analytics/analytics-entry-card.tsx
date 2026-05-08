@@ -13,11 +13,31 @@ interface MiniSummary {
   net: number;
 }
 
-export default function AnalyticsEntryCard() {
+interface Props {
+  initialData?: {
+    has_bank: boolean;
+    plan: string;
+    analytics: { income: number; expenses: number; net: number } | null;
+  };
+}
+
+export default function AnalyticsEntryCard({ initialData }: Props = {}) {
   const router = useRouter();
-  const [data, setData] = useState<MiniSummary | null>(null);
+
+  const seedFromProps = (): MiniSummary | null => {
+    if (!initialData) return null;
+    if (initialData.has_bank && initialData.analytics) {
+      return { has_bank_connection: true, income: initialData.analytics.income, expenses: initialData.analytics.expenses, net: initialData.analytics.net };
+    }
+    if (initialData.has_bank) return { has_bank_connection: true, income: 0, expenses: 0, net: 0 };
+    if (initialData.plan !== 'gratis') return { has_bank_connection: false, income: 0, expenses: 0, net: 0 };
+    return null;
+  };
+
+  const [data, setData] = useState<MiniSummary | null>(seedFromProps);
 
   useEffect(() => {
+    if (initialData) return; // skip fetch — data came from composite route
     async function load() {
       try {
         const res = await fetch('/api/analytics');
@@ -32,10 +52,8 @@ export default function AnalyticsEntryCard() {
               net: latest.net_cents,
             });
           } else if (d.has_bank_connection) {
-            // Bank connected but no aggregated data yet — still show the card
             setData({ has_bank_connection: true, income: 0, expenses: 0, net: 0 });
           } else {
-            // No bank connection — check if user has a paid plan (show connect prompt)
             const profileRes = await fetch('/api/settings/profile');
             if (profileRes.ok) {
               const p = await profileRes.json();
@@ -49,7 +67,7 @@ export default function AnalyticsEntryCard() {
       } catch { /* silent */ }
     }
     load();
-  }, []);
+  }, [initialData]);
 
   if (!data) return null;
 

@@ -5,19 +5,29 @@ import { Building2, Lock, ArrowRight, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import FinancialOverviewCard from '@/components/finances/financial-overview-card';
 import LimitReachedModal from '@/components/ui/limit-reached-modal';
+import type { FinancesData } from '@/hooks/useDashboardData';
 
 type PlanId = 'gratis' | 'pro_monthly' | 'pro_yearly' | 'premium_monthly' | 'premium_yearly';
 
 const PAID_PLANS: PlanId[] = ['pro_monthly', 'pro_yearly', 'premium_monthly', 'premium_yearly'];
 
-export default function BankAwareFinancialSection() {
+interface Props {
+  initialData?: {
+    has_bank: boolean;
+    plan: string;
+    finances: FinancesData | null;
+  };
+}
+
+export default function BankAwareFinancialSection({ initialData }: Props = {}) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [hasBankConnected, setHasBankConnected] = useState(false);
-  const [plan, setPlan] = useState<PlanId>('gratis');
+  const [loading, setLoading] = useState(!initialData);
+  const [hasBankConnected, setHasBankConnected] = useState(initialData?.has_bank ?? false);
+  const [plan, setPlan] = useState<PlanId>((initialData?.plan as PlanId) ?? 'gratis');
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
+    if (initialData) return; // skip fetch — data came from composite route
     Promise.all([
       fetch('/api/bank/accounts').then(r => r.json()).catch(() => ({ connections: [] })),
       fetch('/api/settings/plan').then(r => r.json()).catch(() => ({ plan: 'gratis' })),
@@ -26,9 +36,8 @@ export default function BankAwareFinancialSection() {
       setHasBankConnected(connections.some(c => c.status === 'linked'));
       setPlan((planData.plan as PlanId) || 'gratis');
     }).finally(() => setLoading(false));
-  }, []);
+  }, [initialData]);
 
-  // Loading skeleton
   if (loading) {
     return (
       <div className="rounded-[14px] border border-pw-border/60 bg-pw-surface p-4 animate-pulse">
@@ -48,7 +57,7 @@ export default function BankAwareFinancialSection() {
 
   // ── State 1: Bank connected → show full financial overview ──
   if (hasBankConnected) {
-    return <FinancialOverviewCard />;
+    return <FinancialOverviewCard initialData={initialData?.finances} />;
   }
 
   const isPaid = PAID_PLANS.includes(plan);
@@ -105,7 +114,6 @@ export default function BankAwareFinancialSection() {
           <ArrowRight className="h-4 w-4 shrink-0 text-pw-muted" strokeWidth={2} />
         </div>
 
-        {/* Blurred preview rows */}
         <div className="mt-3 space-y-1.5 select-none pointer-events-none">
           {[
             { label: 'Vrij besteedbaar', value: '€ •••' },
@@ -119,7 +127,6 @@ export default function BankAwareFinancialSection() {
           ))}
         </div>
 
-        {/* Upgrade pill */}
         <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-pw-blue/20 bg-pw-blue/5 px-3 py-2">
           <Zap className="h-3.5 w-3.5 text-pw-blue" strokeWidth={2} />
           <span className="text-[12px] font-semibold text-pw-blue">

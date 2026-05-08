@@ -4,33 +4,25 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, ArrowRight, Wallet, Receipt, Home as HomeIcon, AlertTriangle, Check } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { useRouter } from 'next/navigation';
+import type { FinancesData } from '@/hooks/useDashboardData';
 
-interface OverviewData {
-  has_finances: boolean;
-  totaal_inkomen: number;
-  totaal_vaste_lasten: number;
-  totaal_open_rekeningen: number;
-  totaal_betaald_deze_maand: number;
-  vrij_besteedbaar: number;
-  expenses_count: number;
-  bills_count: number;
-  expenses_in_incasso: Array<{ id: string; name: string; amount: number }>;
-  toeslagen: unknown;
-  salary_window: { from: number; to: number } | null;
+interface Props {
+  initialData?: FinancesData | null;
 }
 
-export default function FinancialOverviewCard() {
-  const [data, setData] = useState<OverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function FinancialOverviewCard({ initialData }: Props = {}) {
+  const [data, setData] = useState<FinancesData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const router = useRouter();
 
   useEffect(() => {
+    if (initialData !== undefined) return; // skip fetch — data came from composite route
     fetch('/api/finances/overview')
       .then(r => r.json())
       .then(d => setData(d))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialData]);
 
   if (loading) {
     return (
@@ -72,7 +64,7 @@ export default function FinancialOverviewCard() {
   }
 
   const isNegative = data.vrij_besteedbaar < 0;
-  const isLow = data.vrij_besteedbaar > 0 && data.vrij_besteedbaar < 10000; // less than €100
+  const isLow = data.vrij_besteedbaar > 0 && data.vrij_besteedbaar < 10000;
 
   return (
     <div className={`rounded-[14px] border p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] ${
@@ -82,7 +74,6 @@ export default function FinancialOverviewCard() {
         ? 'border-amber-400/20 bg-amber-50/30 dark:bg-amber-500/[0.05]'
         : 'border-pw-border/60 bg-pw-surface'
     }`}>
-      {/* Main amount */}
       <div className="mb-3 flex items-start justify-between">
         <div>
           <p className="text-[11.5px] font-medium text-pw-muted">Vrij besteedbaar deze maand</p>
@@ -103,7 +94,6 @@ export default function FinancialOverviewCard() {
         </div>
       </div>
 
-      {/* Breakdown */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[12px]">
           <span className="flex items-center gap-1.5 text-pw-muted">
@@ -135,7 +125,6 @@ export default function FinancialOverviewCard() {
         )}
       </div>
 
-      {/* Warnings */}
       {data.expenses_in_incasso && data.expenses_in_incasso.length > 0 && (
         <div className="mt-3 rounded-lg bg-pw-red/[0.06] px-3 py-2">
           <p className="flex items-center gap-1 text-[11px] font-medium text-pw-red">
@@ -145,7 +134,6 @@ export default function FinancialOverviewCard() {
         </div>
       )}
 
-      {/* Salary window hint */}
       {data.salary_window && (
         <p className="mt-2 text-[10.5px] text-pw-muted">
           Salarisbetaling verwacht: dag {data.salary_window.from}–{data.salary_window.to}

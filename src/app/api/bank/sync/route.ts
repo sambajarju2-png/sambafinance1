@@ -82,10 +82,17 @@ export async function POST(req: NextRequest) {
         try {
           const dateFrom = conn.last_synced_at
             ? new Date(new Date(conn.last_synced_at).getTime() - 2 * 86400000).toISOString().split('T')[0]
-            : new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+            : new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]  // 90 days on first sync (PSD2 max)
 
-          const txData = await getTransactions(accountUid, dateFrom)
-          const txs = txData.transactions || []
+          // Paginate with continuation_key — without this, accounts with many transactions silently lose data
+          const txs: Transaction[] = []
+          let continuationKey: string | undefined
+          do {
+            const txData = await getTransactions(accountUid, dateFrom, undefined, continuationKey)
+            txs.push(...(txData.transactions || []))
+            continuationKey = txData.continuation_key || undefined
+            if (continuationKey) await new Promise(r => setTimeout(r, 200)) // courtesy rate-limit delay
+          } while (continuationKey)
 
           const records = []
           for (const tx of txs) {

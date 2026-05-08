@@ -2,27 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Check, X, Building2, ArrowRight, CreditCard, Loader2 } from 'lucide-react';
+import type { MatchItem } from '@/hooks/useDashboardData';
 
-interface Match {
-  transaction_id: string;
-  bill_id: string;
-  bank_name: string;
-  creditor_name: string;
-  creditor_iban: string;
-  tx_amount: number;
-  tx_date: string;
-  tx_description: string;
-  bill_vendor: string;
-  bill_amount: number;
-  bill_due_date: string;
-  match_type: 'exact' | 'partial';
+interface Props {
+  initialMatches?: MatchItem[];
 }
 
-export default function MatchCards() {
-  const [matches, setMatches] = useState<Match[]>([]);
+export default function MatchCards({ initialMatches }: Props = {}) {
+  const [matches, setMatches] = useState<MatchItem[]>(initialMatches || []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swiping, setSwiping] = useState<'left' | 'right' | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialMatches);
   const [acting, setActing] = useState(false);
 
   const fetchMatches = useCallback(async () => {
@@ -34,7 +24,10 @@ export default function MatchCards() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchMatches(); }, [fetchMatches]);
+  useEffect(() => {
+    if (initialMatches) return; // skip fetch — data came from composite route
+    fetchMatches();
+  }, [initialMatches, fetchMatches]);
 
   async function handleAction(action: 'confirm' | 'dismiss') {
     const match = matches[currentIndex];
@@ -55,7 +48,6 @@ export default function MatchCards() {
       });
     } catch { /* silent */ }
 
-    // Wait for animation
     setTimeout(() => {
       setSwiping(null);
       setCurrentIndex(i => i + 1);
@@ -71,7 +63,6 @@ export default function MatchCards() {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pw-blue/10">
           <CreditCard className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
@@ -86,20 +77,17 @@ export default function MatchCards() {
         </div>
       </div>
 
-      {/* Card stack (show shadow card behind) */}
       <div className="relative">
         {remaining > 1 && (
           <div className="absolute inset-0 top-2 rounded-xl border border-pw-border/30 bg-pw-surface/60 scale-[0.97]" />
         )}
 
-        {/* Main card */}
         <div
           className={`relative rounded-xl border border-pw-border bg-pw-surface p-4 shadow-sm transition-all duration-300 ${
             swiping === 'right' ? 'translate-x-[120%] rotate-6 opacity-0' :
             swiping === 'left' ? '-translate-x-[120%] -rotate-6 opacity-0' : ''
           }`}
         >
-          {/* Bank transaction */}
           <div className="flex items-start gap-3 pb-3 border-b border-pw-border/50">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pw-blue/10 shrink-0">
               <Building2 className="h-5 w-5 text-pw-blue" strokeWidth={1.5} />
@@ -119,7 +107,6 @@ export default function MatchCards() {
             </div>
           </div>
 
-          {/* Arrow connector */}
           <div className="flex justify-center py-2">
             <div className="flex items-center gap-1 text-pw-muted">
               <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -128,7 +115,6 @@ export default function MatchCards() {
             </div>
           </div>
 
-          {/* Bill */}
           <div className="flex items-start gap-3 pt-1">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 shrink-0">
               <CreditCard className="h-5 w-5 text-orange-500" strokeWidth={1.5} />
@@ -155,7 +141,6 @@ export default function MatchCards() {
             </p>
           )}
 
-          {/* Partial match warning */}
           {match.match_type === 'partial' && (
             <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200/50 px-3 py-2.5">
               <p className="text-[12px] font-semibold text-amber-700">
@@ -169,7 +154,6 @@ export default function MatchCards() {
             </div>
           )}
 
-          {/* Action buttons */}
           <div className="flex gap-3 mt-4">
             <button
               onClick={() => handleAction('dismiss')}
