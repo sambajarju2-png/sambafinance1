@@ -237,13 +237,26 @@ function SettingsContent() {
             const res = await fetch('/api/settings/export', { method: 'POST' });
             if (!res.ok) throw new Error('Export failed');
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `paywatch-export-${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-          } catch { alert('Export mislukt. Probeer het later opnieuw.'); }
+            const fileName = `paywatch-export-${new Date().toISOString().slice(0, 10)}.json`;
+
+            // iOS WKWebView: a.download doesn't work. Use share sheet instead.
+            if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName)] })) {
+              await navigator.share({
+                title: 'PayWatch Data Export',
+                files: [new File([blob], fileName, { type: 'application/json' })],
+              });
+            } else {
+              // Desktop/Android: standard download
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              a.click();
+              URL.revokeObjectURL(url);
+            }
+          } catch (e) {
+            if ((e as Error).name !== 'AbortError') alert('Export mislukt. Probeer het later opnieuw.');
+          }
         }}
           className="btn-press flex w-full items-center justify-center gap-2 rounded-button border border-pw-border bg-pw-surface px-4 py-3 text-[13px] font-semibold text-pw-text transition-colors hover:bg-pw-bg">
           <Shield className="h-4 w-4" strokeWidth={1.5} />

@@ -16,8 +16,8 @@ function BankCallbackContent() {
   const appUrl = 'https://app.paywatch.app/instellingen?tab=bank&bank=connected';
 
   useEffect(() => {
-    // Try to auto-close the browser overlay (works when opened via Capacitor Browser plugin)
     async function tryAutoClose() {
+      // Step 1: Try Capacitor Browser.close() (works if opened via Browser plugin)
       try {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.isNativePlatform()) {
@@ -28,16 +28,26 @@ function BankCallbackContent() {
           return;
         }
       } catch {}
-      // Web fallback — redirect after 2s
+
+      // Step 2: We're in Safari/SFSafariViewController (not WKWebView).
+      // Try the custom URL scheme to jump back into the app.
       setTimeout(() => {
-        window.location.href = status === 'error'
-          ? `/instellingen?tab=bank&error=${error || 'callback_failed'}`
-          : '/instellingen?tab=bank&bank=connected';
-      }, 2000);
+        const targetPath = status === 'error'
+          ? `instellingen?tab=bank&error=${error || 'callback_failed'}`
+          : 'instellingen?tab=bank&bank=connected';
+
+        // Try URL scheme first (opens the native app from Safari)
+        window.location.href = `nl.paywatch.app://${targetPath}`;
+
+        // Fallback after 1s: if URL scheme didn't work (e.g. web browser, app not installed),
+        // redirect to the web URL
+        setTimeout(() => {
+          window.location.href = `https://app.paywatch.app/${targetPath}`;
+        }, 1000);
+      }, 1500);
     }
     tryAutoClose();
 
-    // Show manual close instructions after 3s regardless
     setTimeout(() => setShowManualClose(true), 3000);
   }, [status, error]);
 
