@@ -8,8 +8,7 @@ import SplashScreen from '@/components/splash-screen';
 import NativeShell from '@/components/native-shell';
 import BiometricLock from '@/components/biometric-lock';
 import OfflineDetector from '@/components/offline-detector';
-import { Suspense } from 'react';
-import { PostHogProviderDynamic, PostHogPageViewDynamic } from '@/components/providers/posthog-dynamic';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -53,7 +52,6 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
-        <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
       </head>
       <body className={`${plusJakarta.variable} font-sans`} suppressHydrationWarning>
         <ThemeProvider
@@ -68,10 +66,8 @@ export default async function RootLayout({
             <NativeShell />
             <BiometricLock />
             <OfflineDetector />
-            <PostHogProviderDynamic>
-              <Suspense fallback={null}><PostHogPageViewDynamic /></Suspense>
-              {children}
-            </PostHogProviderDynamic>
+            {children}
+            <SpeedInsights />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>
