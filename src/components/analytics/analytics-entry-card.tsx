@@ -31,6 +31,16 @@ export default function AnalyticsEntryCard() {
               expenses: latest.expenses_cents,
               net: latest.net_cents,
             });
+          } else {
+            // No bank connection — check if user has a paid plan (show connect prompt)
+            const profileRes = await fetch('/api/settings/profile');
+            if (profileRes.ok) {
+              const p = await profileRes.json();
+              const plan = p.profile?.plan || 'gratis';
+              if (plan !== 'gratis') {
+                setData({ has_bank_connection: false, income: 0, expenses: 0, net: 0 });
+              }
+            }
           }
         }
       } catch { /* silent */ }
@@ -38,7 +48,27 @@ export default function AnalyticsEntryCard() {
     load();
   }, []);
 
-  if (!data?.has_bank_connection) return null;
+  if (!data) return null;
+
+  // Paid user without bank connection — show connect prompt
+  if (!data.has_bank_connection) {
+    return (
+      <button
+        onClick={() => { haptic('tap'); router.push('/instellingen?tab=bank'); }}
+        className="btn-press w-full rounded-card-lg border border-dashed border-pw-blue/30 bg-blue-50/30 dark:bg-blue-950/10 p-4 text-left transition-all active:scale-[0.98]"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-pw-blue/10">
+            <BarChart3 className="h-4 w-4 text-pw-blue" strokeWidth={1.8} />
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold text-pw-navy">Financieel inzicht</p>
+            <p className="text-[11px] text-pw-blue">Koppel je bank voor uitgaven-analyse →</p>
+          </div>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <button

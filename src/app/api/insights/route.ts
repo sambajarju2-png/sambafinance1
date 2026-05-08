@@ -48,17 +48,31 @@ export async function POST(req: NextRequest) {
         .eq('referrer_id', userId)
         .eq('status', 'completed');
 
-      const completedReferrals = referrals?.length || 0;
       const currentCount = settings?.insight_count || 0;
-      let maxInsights: number;
-      if (completedReferrals >= 3) { maxInsights = 999999; }
-      else { maxInsights = 2 + (completedReferrals * 10); }
+
+      // Read plan-based limit from plan_rules
+      const userPlan = settings?.plan || 'gratis';
+      const { data: planRule } = await supabase
+        .from('plan_rules')
+        .select('ai_insights_per_month')
+        .eq('plan_id', userPlan)
+        .single();
+
+      let maxInsights = planRule?.ai_insights_per_month ?? 2;
+
+      // -1 means unlimited
+      if (maxInsights === -1) maxInsights = 999999;
+
+      // Bonus: referrals still add extra insights on top of plan limit
+      const completedReferrals = referrals?.length || 0;
+      if (completedReferrals > 0) maxInsights += completedReferrals * 5;
 
       if (currentCount >= maxInsights) {
         return NextResponse.json({
           error: 'insight_limit',
           current: currentCount,
           max: maxInsights,
+          plan: userPlan,
         }, { status: 403, headers: NO_CACHE });
       }
     }
