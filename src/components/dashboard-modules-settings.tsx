@@ -201,7 +201,7 @@ function ModuleSection({
             className="flex items-center justify-between px-4 py-3"
           >
             <div className="flex-1 pr-4">
-              <p className="text-[13px] font-medium text-pw-text">{t(t(opt.labelKey)Key)}</p>
+              <p className="text-[13px] font-medium text-pw-text">{t(opt.labelKey)}</p>
               <p className="mt-0.5 text-[11px] text-pw-muted">{t(opt.descKey)}</p>
             </div>
             <IOSSwitch
