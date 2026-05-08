@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useState, useEffect, useMemo } from 'react';
 import {
   Shield, ChevronLeft, Users, Home, Heart, Gift,
@@ -12,9 +14,9 @@ import { useRouter } from 'next/navigation';
 type HuishoudType = 'alleenstaand' | 'alleenstaand_ouder' | 'samenwonend';
 
 const HUISHOUD_OPTIONS: { value: HuishoudType; label: string; icon: typeof Users }[] = [
-  { value: 'alleenstaand', label: 'Alleenstaand', icon: Users },
-  { value: 'samenwonend', label: 'Samenwonend / getrouwd', icon: Users },
-  { value: 'alleenstaand_ouder', label: 'Alleenstaande ouder', icon: Users },
+  { value: 'alleenstaand', label: t('single'), icon: Users },
+  { value: 'samenwonend', label: t('cohabiting'), icon: Users },
+  { value: 'alleenstaand_ouder', label: t('singleParent'), icon: Users },
 ];
 
 function CentsField({
@@ -171,28 +173,28 @@ export default function BeslagvrijeVoetPage() {
       {/* Input fields */}
       <div className="space-y-3 rounded-2xl border border-pw-border/60 bg-pw-surface p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <CentsField
-          label="Netto inkomen per maand"
+          label={t("netIncome")}
           value={nettoloon}
           onChange={setNettoloon}
           placeholder="bijv. 2200"
           icon={<Gift className="h-4 w-4" />}
         />
         <CentsField
-          label="Kale huur per maand"
+          label={t("bareRent")}
           value={huur}
           onChange={setHuur}
           placeholder="bijv. 750"
           icon={<Home className="h-4 w-4" />}
         />
         <CentsField
-          label="Zorgverzekeringspremie per maand"
+          label={t("healthInsurance")}
           value={zorgpremie}
           onChange={setZorgpremie}
           placeholder="bijv. 140"
           icon={<Heart className="h-4 w-4" />}
         />
         <CentsField
-          label="Totaal ontvangen toeslagen per maand"
+          label={t("totalBenefits")}
           value={toeslagen}
           onChange={setToeslagen}
           placeholder="bijv. 200"
@@ -291,7 +293,7 @@ export default function BeslagvrijeVoetPage() {
                   <label className="mb-1 block text-[12px] font-medium text-pw-muted">Jouw naam</label>
                   <input
                     type="text" value={userName} onChange={e => setUserName(e.target.value)}
-                    placeholder="Vul je naam in"
+                    placeholder={t("enterName")}
                     className="w-full rounded-xl border border-pw-border bg-pw-bg px-3 py-2 text-[14px] outline-none focus:border-pw-blue"
                   />
                 </div>
@@ -313,7 +315,7 @@ export default function BeslagvrijeVoetPage() {
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-pw-blue py-2.5 text-[14px] font-semibold text-white"
                 >
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Gekopieerd' : 'Kopieer brief'}
+                  {copied ? t('copied') : t('copyLetter')}
                 </button>
               </div>
             )}

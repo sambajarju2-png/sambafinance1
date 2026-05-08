@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useState, useEffect } from 'react';
 import { Shield, UserPlus, Trash2, Copy, Check, Loader2, Share2, Users, Bell, Eye, EyeOff, ChevronRight, ExternalLink, LayoutDashboard, KeyRound, MessageCircle } from 'lucide-react';
 import BuddyDashboardView from '@/components/buddy-dashboard-view';
@@ -30,13 +32,14 @@ interface Buddy {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  partner: 'Partner',
-  ouder: 'Ouder',
-  schuldhulpmaatje: 'Schuldhulpmaatje',
-  anders: 'Anders',
+  partner: t('rolePartner'),
+  ouder: t('roleParent'),
+  schuldhulpmaatje: t('roleDebtHelper'),
+  anders: t('roleOther'),
 };
 
 export default function BuddySettings() {
+  const t = useTranslations('buddy');
   const [buddies, setBuddies] = useState<Buddy[]>([]);
   const [buddyOf, setBuddyOf] = useState<BuddyOf[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,9 +143,9 @@ export default function BuddySettings() {
 
   async function handleShare(code: string) {
     const url = `${window.location.origin}/buddy/accept/${code}`;
-    const text = 'Ik nodig je uit als mijn PayWatch Buddy. Met deze link kun je mijn voortgang volgen en me helpen op koers te blijven.';
+    const text = t('inviteText');
     if (navigator.share) {
-      try { await navigator.share({ title: 'PayWatch Buddy uitnodiging', text, url }); } catch {}
+      try { await navigator.share({ title: t('inviteTitle'), text, url }); } catch {}
     } else {
       handleCopy(code);
     }
@@ -370,7 +373,7 @@ export default function BuddySettings() {
                   <button onClick={() => handleToggle(b.id, 'share_amounts', b.share_amounts)}
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${b.share_amounts ? 'bg-pw-blue/10 text-pw-blue' : 'bg-pw-bg text-pw-muted'}`}>
                     {b.share_amounts ? <Eye className="h-3 w-3" strokeWidth={1.5} /> : <EyeOff className="h-3 w-3" strokeWidth={1.5} />}
-                    {b.share_amounts ? 'Bedragen zichtbaar' : 'Bedragen verborgen'}
+                    {b.share_amounts ? t('amountsVisible') : t('amountsHidden')}
                   </button>
                   <button onClick={() => handleToggle(b.id, 'notify_on_incasso', b.notify_on_incasso)}
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${b.notify_on_incasso ? 'bg-pw-blue/10 text-pw-blue' : 'bg-pw-bg text-pw-muted'}`}>
@@ -480,7 +483,7 @@ export default function BuddySettings() {
                 </span>
                 <button onClick={() => handleCopy(newInviteCode)}
                   className="flex-shrink-0 rounded-button bg-pw-blue px-3 py-1.5 text-[11px] font-semibold text-white">
-                  {copied ? 'Gekopieerd' : 'Kopiëren'}
+                  {copied ? t('copied') : t('copy')}
                 </button>
               </div>
               <button onClick={() => handleShare(newInviteCode)}
@@ -512,10 +515,10 @@ export default function BuddySettings() {
         <p className="text-[13px] font-semibold text-pw-text mb-3">Wat ziet een Buddy?</p>
         <div className="space-y-2.5">
           {[
-            { icon: Eye, text: 'Alleen-lezen overzicht van je schulden', color: 'text-pw-blue' },
-            { icon: Bell, text: 'Melding als een rekening naar incasso gaat', color: 'text-pw-blue' },
-            { icon: Shield, text: 'Kan niets wijzigen of betalen', color: 'text-pw-green' },
-            { icon: EyeOff, text: 'Bedragen standaard verborgen (instelbaar)', color: 'text-pw-muted' },
+            { icon: Eye, text: t('readOnlyOverview'), color: 'text-pw-blue' },
+            { icon: Bell, text: t('incassoNotification'), color: 'text-pw-blue' },
+            { icon: Shield, text: t('cannotModify'), color: 'text-pw-green' },
+            { icon: EyeOff, text: t('amountsHiddenByDefault'), color: 'text-pw-muted' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2.5">
               <item.icon className={`h-3.5 w-3.5 flex-shrink-0 ${item.color}`} strokeWidth={1.5} />
@@ -582,7 +585,7 @@ export default function BuddySettings() {
               >
                 {orgCodeLoading
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-                  : 'Verbind'
+                  : t('connect')
                 }
               </button>
             </div>
@@ -603,11 +606,11 @@ export default function BuddySettings() {
           <div className="space-y-2">
             {orgs.map(uo => {
               const typeLabel: Record<string, string> = {
-                gemeente: 'Gemeente',
-                incasso: 'Incassobureau',
-                hulporg: 'Hulporganisatie',
-                hulporganisatie: 'Hulporganisatie',
-                kredietbank: 'Kredietbank',
+                gemeente: t('orgGemeente'),
+                incasso: t('orgIncasso'),
+                hulporg: t('orgHulporg'),
+                hulporganisatie: t('orgHulporg'),
+                kredietbank: t('orgKredietbank'),
               };
               const typeColor: Record<string, string> = {
                 gemeente: 'text-pw-blue bg-pw-blue/10',

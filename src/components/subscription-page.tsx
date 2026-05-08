@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import React, { useState, useEffect } from 'react';
 import { Check, Zap, Crown, Loader2, ExternalLink, CreditCard, ArrowRight, AlertTriangle, Clock, Calendar, X, Gift, Smartphone, Globe } from 'lucide-react';
 
@@ -23,7 +25,7 @@ const PRICES = APP_STORE_PRICES;
 const PLANS = [
   {
     id: 'gratis',
-    name: 'Gratis',
+    name: t('freePlanName'),
     icon: null,
     priceMonthly: 0,
     priceYearly: 0,
@@ -46,11 +48,11 @@ const PLANS = [
       '10 scans per maand',
       '1 e-mail inbox',
     ],
-    notIncluded: ['Bankrekening koppelen'],
+    notIncluded: [t('noBankConnection')],
   },
   {
     id: 'pro',
-    name: 'Pro',
+    name: t('proPlanName'),
     icon: Zap,
     priceMonthly: 4.99,   // App Store; Stripe: 4.00
     priceYearly: 44.99,   // App Store; Stripe: 40.00
@@ -63,7 +65,7 @@ const PLANS = [
       '30 AI chats per dag',
       '8 bezwaarschriften/maand',
       '6 AI inzichten/maand',
-      'Onbeperkt scannen',
+      t('unlimitedScanning'),
       '2 e-mail inboxen',
       '1 bankrekening koppelen',
     ],
@@ -72,7 +74,7 @@ const PLANS = [
       '40 AI chats per dag',
       '12 bezwaarschriften/maand',
       '8 AI inzichten/maand',
-      'Onbeperkt scannen',
+      t('unlimitedScanning'),
       '2 e-mail inboxen',
       '1 bankrekening koppelen',
     ],
@@ -80,7 +82,7 @@ const PLANS = [
   },
   {
     id: 'premium',
-    name: 'Premium',
+    name: t('premiumPlanName'),
     icon: Crown,
     priceMonthly: 8.99,   // App Store; Stripe: 8.00
     priceYearly: 79.99,   // App Store; Stripe: 80.00
@@ -89,19 +91,19 @@ const PLANS = [
     border: 'border-amber-200 dark:border-amber-500/30',
     featuresMonthly: [
       '40 min PayBuddy/maand',
-      'Onbeperkt AI chatten',
-      'Onbeperkte bezwaarschriften',
+      t('unlimitedChat'),
+      t('unlimitedDisputes'),
       '12 AI inzichten/maand',
       '4 e-mail inboxen',
-      'Onbeperkt bankrekeningen',
+      t('unlimitedBankAccounts'),
     ],
     featuresYearly: [
       '60 min PayBuddy/maand',
-      'Onbeperkt AI chatten',
-      'Onbeperkte bezwaarschriften',
+      t('unlimitedChat'),
+      t('unlimitedDisputes'),
       '15 AI inzichten/maand',
       '6 e-mail inboxen',
-      'Onbeperkt bankrekeningen',
+      t('unlimitedBankAccounts'),
     ],
     notIncluded: [],
   },
@@ -117,6 +119,7 @@ function daysUntil(iso: string | null) {
 }
 
 export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
+  const t = useTranslations('settings');
   const [currentPlan, setCurrentPlan] = useState<string>('gratis');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
@@ -259,7 +262,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
               <Clock className="h-4 w-4 flex-shrink-0 mt-0.5 text-pw-blue" />
               <div>
                 <p className="text-[12px] font-semibold text-pw-navy dark:text-white">
-                  {trialDaysLeft === 0 ? 'Proefperiode loopt vandaag af' : `Nog ${trialDaysLeft} ${trialDaysLeft === 1 ? 'dag' : 'dagen'} gratis`}
+                  {trialDaysLeft === 0 ? t('trialEndsToday') : `${trialDaysLeft} ${trialDaysLeft === 1 ? t('trialDaysLeft') : t('trialDaysLeftPlural')}`}
                 </p>
                 {trialEndDate && <p className="text-[11px] text-pw-muted mt-0.5">Eerste betaling op {trialEndDate}</p>}
               </div>
@@ -332,7 +335,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
         {(['monthly', 'yearly'] as const).map(b => (
           <button key={b} onClick={() => setBilling(b)}
             className={`flex-1 rounded-xl py-2 text-[13px] font-semibold transition-all ${billing === b ? 'bg-white dark:bg-white/20 text-pw-text dark:text-white shadow-sm' : 'text-pw-muted'}`}>
-            {b === 'monthly' ? 'Maandelijks' : 'Jaarlijks'}
+            {b === 'monthly' ? t('monthly') : t('yearly')}
             {b === 'yearly' && <span className="ml-1.5 rounded-full bg-pw-green/15 px-1.5 py-0.5 text-[10px] font-bold text-pw-green">Bespaar 25%</span>}
           </button>
         ))}
@@ -442,7 +445,7 @@ export default function SubscriptionPage({ lang = 'nl' }: { lang?: string }) {
         </div>
         <p className="text-[11px] text-pw-muted leading-relaxed">
           {isNative
-            ? 'Betaling via de App Store. Beheer je abonnement via Instellingen → App Store op je iPhone.'
+            ? t('appStoreManage')
             : trialEligible && !isPaid
             ? 'Eerste 14 dagen gratis. Daarna automatisch verlengd. Opzeggen kan altijd.'
             : 'Betaling via Stripe. Opzeggen kan altijd vóór de verlengingsdatum.'

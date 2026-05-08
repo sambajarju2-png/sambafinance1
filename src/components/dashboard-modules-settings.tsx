@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { useState, useEffect } from 'react';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 import {
@@ -14,50 +16,51 @@ import { hapticFeedback } from '@/lib/capacitor';
 
 interface ModuleOption {
   key: keyof DashboardModules;
-  label: string;
-  description: string;
+  labelKey: string;
+  descKey: string;
 }
 
 const HOME_MODULES: ModuleOption[] = [
   {
     key: 'home_vrij_besteedbaar',
-    label: 'Vrij besteedbaar',
-    description: 'Hoeveel je deze maand vrij te besteden hebt',
+    labelKey: 'disposable',
+    descKey: 'disposableDesc',
   },
   {
     key: 'home_schuldvrij_countdown',
-    label: 'Schuldvrij countdown',
-    description: 'Aftelling naar je schuldvrije datum',
+    labelKey: 'debtFreeCountdown',
+    descKey: 'debtFreeCountdownDesc',
   },
   {
     key: 'home_rewards',
-    label: 'Prestaties',
-    description: 'Badges en beloningen op je dashboard',
+    labelKey: 'achievements',
+    descKey: 'achievementsDesc',
   },
 ];
 
 const STATS_MODULES: ModuleOption[] = [
   {
     key: 'stats_category',
-    label: 'Categorie overzicht',
-    description: 'Verdeling per categorie op de prestatie tab',
+    labelKey: 'categoryOverview',
+    descKey: 'categoryOverviewDesc',
   },
 ];
 
 const CASHFLOW_MODULES: ModuleOption[] = [
   {
     key: 'cashflow_monthly_overview',
-    label: 'Maandelijks overzicht',
-    description: 'Geschiedenis van je maandelijkse uitgaven',
+    labelKey: 'monthlyOverview',
+    descKey: 'monthlyOverviewDesc',
   },
   {
     key: 'cashflow_expected_expenses',
-    label: 'Verwachte uitgaven',
-    description: 'Vooruitblik op komende rekeningen',
+    labelKey: 'expectedExpenses',
+    descKey: 'expectedExpensesDesc',
   },
 ];
 
 export default function DashboardModulesSettings() {
+  const t = useTranslations('modules');
   const [modules, setModules] = useState<DashboardModules>(DEFAULT_MODULES);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,7 +127,7 @@ export default function DashboardModulesSettings() {
             <Check className="h-3.5 w-3.5 text-pw-green" strokeWidth={2} />
           )}
           <span className="text-[12px] font-medium text-pw-muted">
-            {saving ? 'Opslaan...' : 'Opgeslagen'}
+            {saving ? t('saving') : t('saved')}
           </span>
         </div>
       )}
@@ -132,8 +135,8 @@ export default function DashboardModulesSettings() {
       {/* Home page modules */}
       <ModuleSection
         icon={<LayoutDashboard className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />}
-        title="Dashboard"
-        description="Onderdelen op je startpagina"
+        title={t("dashboardTitle")}
+        description={t("dashboardDesc")}
         options={HOME_MODULES}
         modules={modules}
         onToggle={handleToggle}
@@ -172,7 +175,7 @@ function ModuleSection({
 }: {
   icon: React.ReactNode;
   title: string;
-  description: string;
+  descKey: string;
   options: ModuleOption[];
   modules: DashboardModules;
   onToggle: (key: keyof DashboardModules) => void;
@@ -198,8 +201,8 @@ function ModuleSection({
             className="flex items-center justify-between px-4 py-3"
           >
             <div className="flex-1 pr-4">
-              <p className="text-[13px] font-medium text-pw-text">{opt.label}</p>
-              <p className="mt-0.5 text-[11px] text-pw-muted">{opt.description}</p>
+              <p className="text-[13px] font-medium text-pw-text">{t(t(opt.labelKey)Key)}</p>
+              <p className="mt-0.5 text-[11px] text-pw-muted">{t(opt.descKey)}</p>
             </div>
             <IOSSwitch
               checked={modules[opt.key]}
