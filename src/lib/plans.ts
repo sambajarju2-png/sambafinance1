@@ -24,37 +24,37 @@ export const PLANS: Record<PlanId, Plan> = {
   gratis: {
     id: 'gratis', tier: 'gratis',
     name: 'PayWatch Gratis', nameNl: 'Gratis', billingPeriod: 'free',
-    voiceSecondsPerMonth: 600,          // 10 min/month
-    chatMessagesPerDay: 20,
-    features: ['Rekeningen bijhouden','Gmail & camera scan','PayBuddy (10 min/maand)','WIK check','Basisoverzicht'],
+    voiceSecondsPerMonth: 300,          // 5 min/month (matches plan_rules)
+    chatMessagesPerDay: 15,             // 15/day (matches plan_rules)
+    features: ['Rekeningen bijhouden','Gmail & camera scan','PayBuddy (5 min/maand)','WIK check','Basisoverzicht'],
   },
   pro_monthly: {
     id: 'pro_monthly', tier: 'pro',
     name: 'PayWatch Pro', nameNl: 'Pro (maandelijks)', billingPeriod: 'monthly',
-    voiceSecondsPerMonth: 3600,         // 60 min/month
-    chatMessagesPerDay: -1,
-    features: ['Alles van Gratis','PayBuddy (60 min/maand)','Onbeperkt chatten','Bezwaarbrieven AI','Schuldhulp routing','Prioriteit support'],
+    voiceSecondsPerMonth: 900,          // 15 min/month (matches plan_rules)
+    chatMessagesPerDay: 30,             // 30/day (matches plan_rules)
+    features: ['Alles van Gratis','PayBuddy (15 min/maand)','30 chats per dag','8 bezwaarbrieven/maand','Schuldhulp routing','1 bankrekening koppelen'],
   },
   pro_yearly: {
     id: 'pro_yearly', tier: 'pro',
     name: 'PayWatch Pro', nameNl: 'Pro (jaarlijks)', billingPeriod: 'yearly',
-    voiceSecondsPerMonth: 3600,
-    chatMessagesPerDay: -1,
-    features: ['Alles van Gratis','PayBuddy (60 min/maand)','Onbeperkt chatten','Bezwaarbrieven AI','Schuldhulp routing','Prioriteit support'],
+    voiceSecondsPerMonth: 1500,         // 25 min/month (matches plan_rules)
+    chatMessagesPerDay: 40,             // 40/day (matches plan_rules)
+    features: ['Alles van Gratis','PayBuddy (25 min/maand)','40 chats per dag','12 bezwaarbrieven/maand','Schuldhulp routing','1 bankrekening koppelen'],
   },
   premium_monthly: {
     id: 'premium_monthly', tier: 'premium',
     name: 'PayWatch Premium', nameNl: 'Premium (maandelijks)', billingPeriod: 'monthly',
-    voiceSecondsPerMonth: 99999,        // effectively unlimited
-    chatMessagesPerDay: -1,
-    features: ['Alles van Pro','Onbeperkt PayBuddy','Vroege toegang nieuwe features','Persoonlijke onboarding','Dedicated support'],
+    voiceSecondsPerMonth: 2400,         // 40 min/month (matches plan_rules)
+    chatMessagesPerDay: -1,             // unlimited
+    features: ['Alles van Pro','PayBuddy (40 min/maand)','Onbeperkt chatten','Onbeperkte bezwaarbrieven','4 email inboxen','Onbeperkt bankrekeningen'],
   },
   premium_yearly: {
     id: 'premium_yearly', tier: 'premium',
     name: 'PayWatch Premium', nameNl: 'Premium (jaarlijks)', billingPeriod: 'yearly',
-    voiceSecondsPerMonth: 99999,
-    chatMessagesPerDay: -1,
-    features: ['Alles van Pro','Onbeperkt PayBuddy','Vroege toegang nieuwe features','Persoonlijke onboarding','Dedicated support'],
+    voiceSecondsPerMonth: 3600,         // 60 min/month (matches plan_rules)
+    chatMessagesPerDay: -1,             // unlimited
+    features: ['Alles van Pro','PayBuddy (60 min/maand)','Onbeperkt chatten','Onbeperkte bezwaarbrieven','6 email inboxen','Onbeperkt bankrekeningen'],
   },
 };
 

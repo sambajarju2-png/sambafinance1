@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // PW-09: Run categorization + subscription detection fire-and-forget
+    // PW-09: Run categorization + aggregation + subscription detection fire-and-forget
     // Don't block the sync response — user sees transactions immediately
     const userId = user.id
     Promise.resolve().then(async () => {
@@ -175,6 +175,14 @@ export async function POST(req: NextRequest) {
         log.info('Categorization complete', { userId, categorized: catResult.categorized, aiCalled: catResult.aiCalled })
       } catch (catErr) {
         log.error('Categorization error (background)', { error: catErr instanceof Error ? catErr.message : 'unknown' })
+      }
+      try {
+        // Aggregate transactions → analytics_monthly_totals + analytics_monthly_categories
+        const { aggregateAnalytics } = await import('@/lib/analytics/aggregate')
+        const aggResult = await aggregateAnalytics(userId)
+        log.info('Analytics aggregation complete', { userId, months: aggResult.months, categories: aggResult.categories })
+      } catch (aggErr) {
+        log.error('Analytics aggregation error (background)', { error: aggErr instanceof Error ? aggErr.message : 'unknown' })
       }
       try {
         await supabase.rpc('detect_recurring_payments', { p_user_id: userId })

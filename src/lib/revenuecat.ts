@@ -1,13 +1,7 @@
 /**
  * RevenueCat helper — initializes Purchases SDK and exposes helpers.
  * Only runs on native (iOS) — web uses Stripe.
- *
- * DEBUG MODE: API key hardcoded temporarily to rule out env var issues.
- * TODO: Revert to process.env after confirming paywall works.
  */
-
-// TEMPORARY HARDCODE — remove after debugging Error 23
-const RC_API_KEY = 'appl_ZHqiMWfBOzDrOGpOVMpuinRfOYW';
 
 let initialized = false;
 
@@ -19,45 +13,35 @@ export async function initRevenueCat(userId: string) {
 
     const { Purchases, LOG_LEVEL } = await import('@revenuecat/purchases-capacitor');
 
-    // Always enable debug logs until paywall is confirmed working
+    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
+    if (!apiKey) {
+      console.error('[RevenueCat] NEXT_PUBLIC_REVENUECAT_IOS_API_KEY not set');
+      return;
+    }
+
     await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
 
-    // Debug: log which key we're using
-    const envKey = process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
-    console.log('[RevenueCat] Env key present:', !!envKey, envKey ? envKey.substring(0, 10) + '...' : 'UNDEFINED');
-    console.log('[RevenueCat] Using hardcoded key:', RC_API_KEY.substring(0, 10) + '...');
-
-    // Single configure call with appUserID (recommended over configure + logIn)
     await Purchases.configure({
-      apiKey: RC_API_KEY,
+      apiKey,
       appUserID: userId,
     });
 
     initialized = true;
     console.log('[RevenueCat] Initialized for user:', userId);
 
-    // Immediately test if offerings load
+    // Verify offerings load correctly
     try {
       const offerings = await Purchases.getOfferings();
       if (offerings.current) {
-        console.log('[RevenueCat] Offerings loaded:', offerings.current.identifier);
-        const pkgs = offerings.current.availablePackages?.map((p: { identifier: string }) => p.identifier).join(', ');
-        console.log('[RevenueCat] Packages:', pkgs);
+        console.log('[RevenueCat] Offering ready:', offerings.current.identifier);
       } else {
-        console.error('[RevenueCat] No current offering — offerings.current is null');
-        console.error('[RevenueCat] Full offerings:', JSON.stringify(offerings, null, 2));
+        console.error('[RevenueCat] No current offering — check RC dashboard default offering');
       }
     } catch (offerErr) {
       console.error('[RevenueCat] Failed to fetch offerings:', offerErr);
     }
   } catch (err: unknown) {
     console.error('[RevenueCat] Init error:', err);
-    if (err && typeof err === 'object') {
-      const e = err as Record<string, unknown>;
-      console.error('[RevenueCat] code:', e.code, 'message:', e.message);
-      console.error('[RevenueCat] underlying:', e.underlyingErrorMessage);
-      console.error('[RevenueCat] full:', JSON.stringify(err, null, 2));
-    }
   }
 }
 

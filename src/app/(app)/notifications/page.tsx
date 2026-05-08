@@ -165,7 +165,7 @@ function Section({ title, count, color, children }: { title: string; count: numb
 }
 
 function NotifCard({ icon: Icon, iconColor, bgColor, borderColor, title, subtitle, right, onClick }: {
-  icon: React.ElementType; iconColor: string; bgColor: string; borderColor: string; title: string; subtitle: string; right?: string; onClick: () => void;
+  icon: React.ElementType; iconColor: string; bgColor: string; borderColor: string; title: string; subtitle: string; right?: string; onClick: () => void | Promise<void>;
 }) {
   return (<button onClick={onClick} className={`btn-press flex w-full items-center gap-3 rounded-card border ${borderColor} ${bgColor} px-3.5 py-3 text-left`}>
     <Icon className={`h-4 w-4 flex-shrink-0 ${iconColor}`} strokeWidth={1.5} />
