@@ -13,7 +13,7 @@ import AchievementsDisplay from '@/components/achievements';
 import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
 import RecurringPredictions from '@/components/recurring-predictions';
 import MetricCard from '@/components/metric-card';
-import FinancialOverviewCard from '@/components/finances/financial-overview-card';
+import BankAwareFinancialSection from '@/components/bank/bank-aware-financial-section';
 import MatchCards from '@/components/bank/match-cards';
 import { useDashboardModules } from '@/lib/dashboard-modules';
 import { PullToRefresh } from '@/components/pull-to-refresh';
@@ -134,8 +134,8 @@ export default function OverzichtPage() {
       {activeTab === 'overview' ? (
         <PullToRefresh onRefresh={fetchBills}>
           <div className="space-y-5">
-          {/* Financial overview */}
-          {modules.home_vrij_besteedbaar && <FinancialOverviewCard />}
+          {/* Financial overview — plan-aware, bank-aware */}
+          {modules.home_vrij_besteedbaar && <BankAwareFinancialSection />}
 
           {/* Bank match confirmations */}
           <MatchCards />
