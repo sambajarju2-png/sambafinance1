@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
     activated_at: new Date().toISOString(),
   }).eq("id", invite.id);
 
+  // Update member status in B2B portal (so it shows "Actief" instead of "Uitgenodigd")
+  await supabase.from("b2b_org_members").update({
+    invite_status: "accepted",
+  }).eq("organization_id", invite.organization_id).eq("email", user.email);
+
   // Log in audit
   await supabase.from("b2b_audit_log").insert({
     organization_id: invite.organization_id,
