@@ -136,6 +136,8 @@ function ThreadView({ threadId, onBack, nl }: {
   const [sending, setSending] = useState(false);
   const [threadName, setThreadName] = useState('');
   const [threadType, setThreadType] = useState('');
+  const [activeCall, setActiveCall] = useState<{ token: string; roomName: string; livekitUrl: string } | null>(null);
+  const [joiningCall, setJoiningCall] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
