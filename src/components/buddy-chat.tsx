@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, Send, ChevronLeft, Loader2, User } from 'lucide-react';
+import { MessageCircle, Send, ChevronLeft, Loader2, User, Phone } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import dynamic from 'next/dynamic';
+
+const CoachCallRoom = dynamic(() => import('@/components/chat/coach-call-room'), { ssr: false });
 
 interface Conversation {
   buddy_link_id: string;
@@ -21,6 +24,14 @@ interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+  message_type?: string;
+  metadata?: { room_name?: string; expires_at?: string } | null;
+}
+
+interface ActiveCall {
+  token: string;
+  roomName: string;
+  livekitUrl: string;
 }
 
 interface BuddyChatProps {
@@ -29,6 +40,8 @@ interface BuddyChatProps {
 
 export default function BuddyChat({ onClose }: BuddyChatProps) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [joiningCall, setJoiningCall] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -177,6 +190,63 @@ export default function BuddyChat({ onClose }: BuddyChatProps) {
           ) : (
             messages.map(msg => {
               const isMine = msg.sender_id === currentUserId;
+
+              // Call invite — show join button if not expired
+              if (msg.message_type === 'call_invite' && msg.metadata?.room_name) {
+                const expired = msg.metadata.expires_at
+                  ? new Date(msg.metadata.expires_at) < new Date()
+                  : false;
+                const roomName = msg.metadata.room_name;
+                const isJoining = joiningCall === roomName;
+
+                return (
+                  <div key={msg.id} className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-pw-blue/20 bg-pw-blue/5 px-4 py-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Phone className="w-4 h-4 text-pw-blue flex-shrink-0" strokeWidth={2} />
+                        <span className="text-[13px] font-semibold text-pw-navy">
+                          {isMine ? 'Je hebt een gesprek gestart' : 'Coach wil videobellen'}
+                        </span>
+                      </div>
+                      {expired ? (
+                        <p className="text-[12px] text-pw-muted">Gesprek verlopen</p>
+                      ) : !isMine ? (
+                        <button
+                          disabled={isJoining}
+                          onClick={async () => {
+                            setJoiningCall(roomName);
+                            try {
+                              const res = await fetch(`/api/call?room=${encodeURIComponent(roomName)}`);
+                              if (res.ok) {
+                                const data = await res.json();
+                                setActiveCall({ token: data.token, roomName, livekitUrl: data.livekitUrl });
+                              } else {
+                                alert('Kon gesprek niet starten. Probeer opnieuw.');
+                              }
+                            } catch { alert('Verbindingsfout.'); }
+                            setJoiningCall(null);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-pw-blue text-white text-[13px] font-medium rounded-xl active:scale-95 disabled:opacity-60"
+                        >
+                          {isJoining ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Phone className="w-3.5 h-3.5" strokeWidth={2} />
+                          )}
+                          Gesprek joinen
+                        </button>
+                      ) : (
+                        <p className="text-[12px] text-pw-muted">Wachten op coach...</p>
+                      )}
+                      <p className="text-[10px] text-pw-muted mt-2">
+                        {new Date(msg.created_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Regular text message
               return (
                 <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${

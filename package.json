@@ -2,7 +2,7 @@
   "name": "paywatch-v2",
   "version": "2.0.0",
   "private": true,
-  "description": "PayWatch v2 — Dutch household bill tracker and debt protection tool",
+  "description": "PayWatch v2 \u2014 Dutch household bill tracker and debt protection tool",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -52,7 +52,10 @@
     "tesseract.js": "^7.0.0",
     "unpdf": "^1.4.0",
     "vaul": "^1.1.2",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@livekit/components-react": "^2.6.6",
+    "@livekit/client": "^2.9.5",
+    "livekit-server-sdk": "^2.10.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.1",
