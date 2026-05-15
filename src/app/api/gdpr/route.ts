@@ -32,9 +32,9 @@ export async function GET() {
   ]);
 
   const connections: Array<{ type: string; label: string; id: string }> = [];
-  (gmailRes.data || []).forEach(g => connections.push({ type: 'gmail', label: `Gmail: ${g.email || 'account'}`, id: g.id }));
-  (outlookRes.data || []).forEach(o => connections.push({ type: 'outlook', label: `Outlook: ${o.email || 'account'}`, id: o.id }));
-  (bankRes.data || []).forEach(b => connections.push({ type: 'bank', label: `Bank: ${b.bank_name || 'rekening'}`, id: b.id }));
+  (gmailRes.data || []).forEach((g: any) => connections.push({ type: 'gmail', label: `Gmail: ${g.email || 'account'}`, id: g.id }));
+  (outlookRes.data || []).forEach((o: any) => connections.push({ type: 'outlook', label: `Outlook: ${o.email || 'account'}`, id: o.id }));
+  (bankRes.data || []).forEach((b: any) => connections.push({ type: 'bank', label: `Bank: ${b.bank_name || 'rekening'}`, id: b.id }));
   (orgRes.data || []).forEach((o: any) => connections.push({ type: 'b2b', label: o.organizations?.name || 'Organisatie', id: o.organization_id }));
 
   return NextResponse.json({ requests: requestsRes.data || [], connections });
