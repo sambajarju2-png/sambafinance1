@@ -372,6 +372,22 @@ function BankSelectorModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Data consent explanation */}
+        <div className="mx-5 mb-3 rounded-xl border border-pw-blue/15 bg-blue-50/50 p-4">
+          <div className="flex items-start gap-2.5 mb-2">
+            <Shield className="w-4 h-4 text-pw-blue flex-shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-[13px] font-semibold text-pw-navy">Wat ziet PayWatch?</p>
+          </div>
+          <div className="text-[12px] text-pw-text leading-relaxed space-y-1.5 ml-6.5">
+            <p>✓ Bedrijfsnaam, bedrag en datum van je transacties</p>
+            <p className="text-pw-muted">✗ Niet je saldo, spaargeld of bankwachtwoord</p>
+            <p className="text-pw-muted">✗ We kunnen nooit geld overmaken</p>
+          </div>
+          <div className="mt-2.5 ml-6.5 text-[11px] text-pw-muted leading-relaxed">
+            Via Enable Banking (PSD2) · Alleen-lezen · Verloopt na 90 dagen · <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a>
+          </div>
+        </div>
+
         {/* Search */}
         <div className="px-5 pb-3">
           <div className="relative">

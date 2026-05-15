@@ -87,6 +87,15 @@ export async function POST(req: NextRequest) {
       access_valid_until: validUntil.toISOString()
     })
 
+    // Log explicit consent for bank data access (GDPR compliance)
+    await supabase.from('consent_log').insert({
+      user_id: user.id,
+      consent_type: 'bank_connection',
+      granted: true,
+      ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || null,
+      user_agent: req.headers.get('user-agent') || null,
+    })
+
     return NextResponse.json({
       link: authResult.url,
       authorization_id: authResult.authorization_id

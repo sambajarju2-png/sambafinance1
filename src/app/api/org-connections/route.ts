@@ -82,6 +82,15 @@ export async function POST(req: NextRequest) {
   // Mark invite used
   await supabase.from('b2b_invites').update({ status: 'activated', activated_at: new Date().toISOString() }).eq('id', invite.id);
 
+  // Log consent (GDPR compliance)
+  await supabase.from('consent_log').insert({
+    user_id: userId,
+    consent_type: 'b2b_org_connection',
+    granted: true,
+    ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
+    user_agent: req.headers.get('user-agent') || null,
+  }).catch(() => {}); // non-fatal
+
   // Get org info to return
   const { data: org } = await supabase.from('organizations').select('id, name, type, city').eq('id', invite.organization_id).single();
 

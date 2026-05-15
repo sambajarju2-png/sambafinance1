@@ -316,6 +316,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   // Org connections state
   const [orgs, setOrgs] = useState<Array<{ organization_id: string; status: string; org: { id: string; name: string; type: string; city?: string; primary_color?: string } | null }>>([]);
   const [codeInput, setCodeInput] = useState('');
+  const [showOrgConsent, setShowOrgConsent] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [codeSuccess, setCodeSuccess] = useState<string | null>(null);
@@ -343,9 +344,15 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     load();
   }, [activeThread]);
 
-  async function connectCode() {
+  function connectCode() {
     if (!codeInput.trim()) return;
+    setCodeError(null);
+    setShowOrgConsent(true);
+  }
+
+  async function confirmOrgConnect() {
     setCodeLoading(true); setCodeError(null); setCodeSuccess(null);
+    setShowOrgConsent(false);
     try {
       const res = await fetch('/api/org-connections', {
         method: 'POST',
@@ -357,7 +364,6 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
         setCodeSuccess(d.org?.name || 'Organisatie');
         setCodeInput('');
         setShowCodeInput(false);
-        // Reload orgs
         const orgsRes = await fetch('/api/org-connections');
         if (orgsRes.ok) setOrgs((await orgsRes.json()).orgs || []);
       } else {
@@ -366,6 +372,48 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     } catch { setCodeError('Verbinding mislukt'); }
     setCodeLoading(false);
   }
+
+  // Org consent modal
+  const orgConsentModal = showOrgConsent ? (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-5" onClick={() => setShowOrgConsent(false)}>
+      <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <h3 className="text-[16px] font-bold text-pw-navy">Gegevens delen met organisatie</h3>
+        <p className="text-[13px] text-pw-muted leading-relaxed">
+          Door je te verbinden geef je deze organisatie toegang tot:
+        </p>
+        <div className="rounded-xl bg-pw-bg p-4 space-y-2 text-[13px]">
+          <p className="text-pw-text">✓ Je naam en contactgegevens</p>
+          <p className="text-pw-text">✓ Je rekeningen en betalingsstatus</p>
+          <p className="text-pw-text">✓ Je financieel profiel (inkomen, vaste lasten)</p>
+          <p className="text-pw-text">✓ Betalingsregelingen</p>
+        </div>
+        <div className="rounded-xl bg-pw-bg p-4 space-y-2 text-[13px]">
+          <p className="text-pw-muted">✗ Niet je banktransacties</p>
+          <p className="text-pw-muted">✗ Niet je e-mails</p>
+          <p className="text-pw-muted">✗ Niet je community posts</p>
+        </div>
+        <p className="text-[12px] text-pw-muted">
+          Je kunt deze verbinding op elk moment verbreken via Instellingen → Privacyrechten.
+        </p>
+        <div className="flex gap-3 pt-1">
+          <button
+            onClick={confirmOrgConnect}
+            disabled={codeLoading}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-pw-blue text-white text-[14px] font-semibold rounded-xl active:scale-95 disabled:opacity-50"
+          >
+            {codeLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+            Ja, ik ga akkoord
+          </button>
+          <button
+            onClick={() => setShowOrgConsent(false)}
+            className="flex-1 py-3 border border-pw-border text-pw-muted text-[14px] font-semibold rounded-xl"
+          >
+            Annuleren
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (activeThread) {
     return (
@@ -381,6 +429,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-pw-bg dark:bg-pw-navy">
+      {orgConsentModal}
       {/* Header */}
       <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-3">

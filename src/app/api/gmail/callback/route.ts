@@ -113,6 +113,15 @@ export async function GET(req: NextRequest) {
       return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=error&reason=store_failed`, isNative);
     }
 
+    // Log consent for Gmail access (GDPR compliance)
+    await supabase.from('consent_log').insert({
+      user_id: user.id,
+      consent_type: 'gmail_connection',
+      granted: true,
+      ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
+      user_agent: req.headers.get('user-agent') || null,
+    }).catch(() => {}); // non-fatal
+
     return oauthRedirect(req, `${appUrl}/instellingen?tab=gmail&status=connected`, isNative);
   } catch (err) {
     console.error('Gmail callback error:', err);
