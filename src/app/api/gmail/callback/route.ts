@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 
     // Log consent for Gmail access (GDPR compliance)
     await supabase.from('consent_log').insert({
-      user_id: user.id,
+      user_id: userId,
       consent_type: 'gmail_connection',
       granted: true,
       ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
