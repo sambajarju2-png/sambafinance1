@@ -27,8 +27,9 @@ import ToeslagenCard from '@/components/finances/toeslagen-card';
 import BankConnectCard from '@/components/bank/bank-connect-card';
 import DashboardModulesSettings from '@/components/dashboard-modules-settings';
 import { IOSSwitch } from '@/components/ui/ios-switch';
+import PrivacyRightsPanel from '@/components/privacy-rights-panel';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement';
+type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement' | 'privacy';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -47,7 +48,7 @@ function SettingsContent() {
     if (tab === 'sync' || tab === 'gmail') {
       setActiveTab('gmail');
       // Don't clean URL yet — gmail-settings reads ?outlook= params
-    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security', 'abonnement'].includes(tab)) {
+    } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security', 'abonnement', 'privacy'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       window.history.replaceState(null, '', '/instellingen');
     }
@@ -228,6 +229,11 @@ function SettingsContent() {
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
         <SettingsLink icon={Users} label="Vrienden uitnodigen" description="Deel PayWatch en ontgrendel functies" onClick={() => setActiveTab('referral')} />
         <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => setActiveTab('help')} />
+      </div>
+
+      {/* Privacy rights */}
+      <div className="pt-4">
+        <SettingsLink icon={Shield} label="Jouw privacyrechten (AVG)" description="Inzage, correctie, verwijdering of overdracht" onClick={() => setActiveTab('privacy')} />
       </div>
 
       <div className="pt-4 space-y-3">
