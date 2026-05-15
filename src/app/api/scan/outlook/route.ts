@@ -164,6 +164,12 @@ export async function POST(request: NextRequest) {
       if (!rlAllowed) return NextResponse.json({ error: 'Te veel verzoeken' }, { status: 429 })
     }
 
+    // GDPR Art. 18: block processing for restricted accounts
+    const { isAccountRestricted } = await import('@/lib/auth');
+    if (await isAccountRestricted(userId)) {
+      return NextResponse.json({ error: 'Account is bevroren' }, { status: 403 });
+    }
+
     const tokenResult = await getValidOutlookToken(accountId, userId)
     if (!tokenResult) {
       return NextResponse.json(
