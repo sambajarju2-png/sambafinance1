@@ -344,6 +344,19 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     load();
   }, [activeThread]);
 
+  const [consentScopes, setConsentScopes] = useState({
+    contact_info: true,
+    view_bills: true,
+    financial_overview: true,
+    payment_plans: true,
+    messaging: true,
+  });
+
+  function toggleScope(key: keyof typeof consentScopes) {
+    if (key === 'contact_info') return; // always required
+    setConsentScopes(prev => ({ ...prev, [key]: !prev[key] }));
+  }
+
   function connectCode() {
     if (!codeInput.trim()) return;
     setCodeError(null);
@@ -353,11 +366,12 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   async function confirmOrgConnect() {
     setCodeLoading(true); setCodeError(null); setCodeSuccess(null);
     setShowOrgConsent(false);
+    const selectedScopes = Object.entries(consentScopes).filter(([, v]) => v).map(([k]) => k);
     try {
       const res = await fetch('/api/org-connections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_code: codeInput.trim() }),
+        body: JSON.stringify({ invite_code: codeInput.trim(), scopes: selectedScopes }),
       });
       const d = await res.json();
       if (res.ok) {
@@ -373,28 +387,43 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     setCodeLoading(false);
   }
 
+  const SCOPE_LABELS: Record<string, { label: string; desc: string; required?: boolean }> = {
+    contact_info: { label: 'Naam en contactgegevens', desc: 'Zodat je coach je kan bereiken', required: true },
+    view_bills: { label: 'Rekeningen en betalingsstatus', desc: 'Openstaande facturen, escalatiefase' },
+    financial_overview: { label: 'Financieel profiel', desc: 'Inkomen, vaste lasten, toeslagen' },
+    payment_plans: { label: 'Betalingsregelingen', desc: 'Actieve regelingen en voortgang' },
+    messaging: { label: 'Berichten en chat', desc: 'Communicatie met je coach' },
+  };
+
   // Org consent modal
   const orgConsentModal = showOrgConsent ? (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-5" onClick={() => setShowOrgConsent(false)}>
       <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <h3 className="text-[16px] font-bold text-pw-navy">Gegevens delen met organisatie</h3>
         <p className="text-[13px] text-pw-muted leading-relaxed">
-          Door je te verbinden geef je deze organisatie toegang tot:
+          Kies welke gegevens je wilt delen. Je kunt dit later wijzigen via Instellingen → Privacyrechten.
         </p>
-        <div className="rounded-xl bg-pw-bg p-4 space-y-2 text-[13px]">
-          <p className="text-pw-text">✓ Je naam en contactgegevens</p>
-          <p className="text-pw-text">✓ Je rekeningen en betalingsstatus</p>
-          <p className="text-pw-text">✓ Je financieel profiel (inkomen, vaste lasten)</p>
-          <p className="text-pw-text">✓ Betalingsregelingen</p>
+        <div className="rounded-xl bg-pw-bg p-3 space-y-1">
+          {Object.entries(SCOPE_LABELS).map(([key, { label, desc, required }]) => (
+            <label key={key} className={`flex items-start gap-3 p-2.5 rounded-lg ${required ? 'opacity-80' : 'cursor-pointer active:scale-[0.98]'}`}>
+              <input
+                type="checkbox"
+                checked={consentScopes[key as keyof typeof consentScopes]}
+                onChange={() => toggleScope(key as keyof typeof consentScopes)}
+                disabled={required}
+                className="mt-0.5 w-4 h-4 rounded border-pw-border text-pw-blue accent-pw-blue"
+              />
+              <div>
+                <p className="text-[13px] text-pw-text font-medium">{label}{required ? ' (verplicht)' : ''}</p>
+                <p className="text-[11px] text-pw-muted">{desc}</p>
+              </div>
+            </label>
+          ))}
         </div>
-        <div className="rounded-xl bg-pw-bg p-4 space-y-2 text-[13px]">
-          <p className="text-pw-muted">✗ Niet je banktransacties</p>
-          <p className="text-pw-muted">✗ Niet je e-mails</p>
-          <p className="text-pw-muted">✗ Niet je community posts</p>
+        <div className="rounded-xl bg-pw-bg p-3 space-y-1 text-[12px] text-pw-muted">
+          <p>✗ Nooit gedeeld: banktransacties, e-mails, community posts</p>
+          <p>✗ Organisatie kan geen betalingen doen namens jou</p>
         </div>
-        <p className="text-[12px] text-pw-muted">
-          Je kunt deze verbinding op elk moment verbreken via Instellingen → Privacyrechten.
-        </p>
         <div className="flex gap-3 pt-1">
           <button
             onClick={confirmOrgConnect}

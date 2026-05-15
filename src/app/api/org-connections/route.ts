@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
-  const { invite_code } = await req.json();
+  const { invite_code, scopes: requestedScopes } = await req.json();
   if (!invite_code?.trim()) return NextResponse.json({ error: 'Code is verplicht' }, { status: 400, headers: NO_CACHE });
 
   const supabase = createServiceRoleClient();
@@ -69,8 +69,11 @@ export async function POST(req: NextRequest) {
     onboarded_at: new Date().toISOString(),
   }, { onConflict: 'user_id,organization_id' });
 
-  // Grant consent
-  const scopes = ['full_access', 'aggregated', 'payment_plans', 'financial_overview'];
+  // Grant consent — only for scopes the user explicitly selected
+  const validScopes = ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging', 'full_access', 'aggregated'];
+  const scopes = (requestedScopes && Array.isArray(requestedScopes) && requestedScopes.length > 0)
+    ? requestedScopes.filter((s: string) => validScopes.includes(s))
+    : ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging']; // fallback for old clients
   await supabase.from('b2b_consents').upsert(
     scopes.map(scope => ({
       user_id: userId, organization_id: invite.organization_id,
