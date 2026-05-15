@@ -75,6 +75,12 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
+  // GDPR beperking: block data processing for restricted accounts
+  const { isAccountRestricted } = await import('@/lib/auth');
+  if (await isAccountRestricted(userId)) {
+    return NextResponse.json({ error: 'Account is bevroren. Neem contact op met je organisatie.' }, { status: 403, headers: NO_CACHE });
+  }
+
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400, headers: NO_CACHE });

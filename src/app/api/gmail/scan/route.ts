@@ -98,6 +98,11 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
+  const { isAccountRestricted } = await import('@/lib/auth');
+  if (await isAccountRestricted(userId)) {
+    return NextResponse.json({ error: 'Account is bevroren. Neem contact op met je organisatie.' }, { status: 403, headers: NO_CACHE });
+  }
+
   // PW-10: Rate limit — 30 scans per 10 minutes (first scan = ~10 batches, re-scan = ~4 batches)
   const allowed = await checkRateLimit(userId, 'gmail/scan', 30, 10);
   if (!allowed) return NextResponse.json({ error: 'Te veel verzoeken' }, { status: 429, headers: NO_CACHE });

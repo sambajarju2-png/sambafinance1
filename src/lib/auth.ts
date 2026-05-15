@@ -61,3 +61,22 @@ export const NO_CACHE = {
 export const SHORT_CACHE = {
   'Cache-Control': 'private, max-age=10, stale-while-revalidate=30',
 } as const;
+
+/**
+ * Check if a user's account is restricted (GDPR "beperking").
+ * When restricted, data processing (email scan, bank sync, AI) should be blocked.
+ */
+export async function isAccountRestricted(userId: string): Promise<boolean> {
+  try {
+    const { createServiceRoleClient } = require('@/lib/supabase/server');
+    const supabase = createServiceRoleClient();
+    const { data } = await supabase
+      .from('user_settings')
+      .select('is_restricted')
+      .eq('user_id', userId)
+      .single();
+    return data?.is_restricted === true;
+  } catch {
+    return false;
+  }
+}
