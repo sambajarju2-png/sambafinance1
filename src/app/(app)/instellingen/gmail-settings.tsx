@@ -270,10 +270,11 @@ export default function GmailSettings() {
           Verbind je e-mail om automatisch rekeningen te detecteren uit je inbox.
         </p>
         <div className="mt-3 rounded-xl border border-pw-blue/15 bg-blue-50/50 p-3.5 text-[12px] leading-relaxed space-y-1">
-          <p className="text-pw-text">✓ We lezen alleen: afzender, onderwerp en datum</p>
-          <p className="text-pw-muted">✗ Niet de inhoud van je e-mails</p>
-          <p className="text-pw-muted">✗ Niet je bijlagen, foto&apos;s of contacten</p>
-          <p className="text-pw-muted">✗ We slaan geen e-mailteksten op</p>
+          <p className="text-pw-text">✓ We scannen onderwerp en afzender om rekeningen te vinden</p>
+          <p className="text-pw-text">✓ Alleen bij rekening-e-mails lezen we de inhoud om bedrag en vervaldatum te herkennen</p>
+          <p className="text-pw-muted">✗ Niet-rekening e-mails worden nooit geopend</p>
+          <p className="text-pw-muted">✗ We slaan geen e-mailteksten op — alleen het bedrijf, bedrag en datum</p>
+          <p className="text-pw-muted">✗ Geen toegang tot bijlagen, foto&apos;s of contacten</p>
           <p className="text-[11px] text-pw-muted/70 mt-1">OAuth 2.0 read-only · Je kunt op elk moment ontkoppelen · <a href="https://paywatch.app/privacy" target="_blank" rel="noopener noreferrer" className="text-pw-blue hover:underline">Privacybeleid</a></p>
         </div>
       </div>
