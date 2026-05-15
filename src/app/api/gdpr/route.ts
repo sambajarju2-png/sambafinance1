@@ -20,13 +20,23 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   const supabase = createServiceRoleClient();
-  const { data } = await supabase
-    .from('gdpr_requests')
-    .select('id, request_type, status, details, completed_at, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
 
-  return NextResponse.json({ requests: data || [] });
+  // Fetch requests + active connections in parallel
+  const [requestsRes, gmailRes, outlookRes, bankRes, orgRes] = await Promise.all([
+    supabase.from('gdpr_requests').select('id, request_type, status, created_at').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('gmail_accounts').select('id, email').eq('user_id', userId),
+    supabase.from('outlook_accounts').select('id, email').eq('user_id', userId),
+    supabase.from('bank_connections').select('id, bank_name, status').eq('user_id', userId).neq('status', 'expired'),
+    supabase.from('user_organizations').select('organization_id, status, organizations(name)').eq('user_id', userId).eq('status', 'active'),
+  ]);
+
+  const connections: Array<{ type: string; label: string; id: string }> = [];
+  (gmailRes.data || []).forEach(g => connections.push({ type: 'gmail', label: `Gmail: ${g.email || 'account'}`, id: g.id }));
+  (outlookRes.data || []).forEach(o => connections.push({ type: 'outlook', label: `Outlook: ${o.email || 'account'}`, id: o.id }));
+  (bankRes.data || []).forEach(b => connections.push({ type: 'bank', label: `Bank: ${b.bank_name || 'rekening'}`, id: b.id }));
+  (orgRes.data || []).forEach((o: any) => connections.push({ type: 'b2b', label: o.organizations?.name || 'Organisatie', id: o.organization_id }));
+
+  return NextResponse.json({ requests: requestsRes.data || [], connections });
 }
 
 /**
