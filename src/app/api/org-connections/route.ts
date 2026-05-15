@@ -74,10 +74,16 @@ export async function POST(req: NextRequest) {
   const scopes = (requestedScopes && Array.isArray(requestedScopes) && requestedScopes.length > 0)
     ? requestedScopes.filter((s: string) => validScopes.includes(s))
     : ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging']; // fallback for old clients
+  const consentIp = req.headers.get('x-forwarded-for')?.split(',')[0] || null;
+  const consentUa = req.headers.get('user-agent') || null;
   await supabase.from('b2b_consents').upsert(
     scopes.map(scope => ({
       user_id: userId, organization_id: invite.organization_id,
       scope, granted: true, granted_at: new Date().toISOString(),
+      consent_version: '2026-05-v1',
+      consent_text_snapshot: `Toestemming voor ${scope}: verleend via uitnodigingscode`,
+      consent_ip: consentIp,
+      consent_user_agent: consentUa,
     })),
     { onConflict: 'user_id,organization_id,scope' }
   );

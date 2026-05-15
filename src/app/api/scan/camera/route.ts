@@ -27,6 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
   }
 
+  const { isAccountRestricted } = await import('@/lib/auth');
+  if (await isAccountRestricted(userId)) {
+    return NextResponse.json({ error: 'Account is bevroren' }, { status: 403, headers: NO_CACHE });
+  }
+
   try {
     // Rate limit: 30 scans per hour
     guard();

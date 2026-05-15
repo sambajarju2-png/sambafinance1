@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
     console.log(`[Gmail Daily] Starting scan for ${accounts.length} accounts`);
 
     for (const account of accounts) {
+      // GDPR Art. 18: skip restricted accounts
+      const { isAccountRestricted: isRestricted } = await import('@/lib/auth');
+      if (await isRestricted(account.user_id)) continue;
+
       const accountStart = Date.now();
 
       // Log scan start

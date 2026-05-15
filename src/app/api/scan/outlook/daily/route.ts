@@ -54,6 +54,10 @@ export async function POST(request: NextRequest) {
     const results = []
 
     for (const account of accounts) {
+      // GDPR Art. 18: skip restricted accounts
+      const { isAccountRestricted: isRestricted } = await import('@/lib/auth');
+      if (await isRestricted(account.user_id)) continue;
+
       const accountStart = Date.now()
 
       // Log scan start

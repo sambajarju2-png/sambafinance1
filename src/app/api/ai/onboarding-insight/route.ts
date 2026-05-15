@@ -8,6 +8,11 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { isAccountRestricted } = await import('@/lib/auth');
+  if (await isAccountRestricted(user.id)) {
+    return NextResponse.json({ error: 'Account is bevroren' }, { status: 403 });
+  }
+
   const { income, expenses, disposable, kids, hasPart, gemeente, lang } = await req.json();
 
   const incFmt = `€${(income / 100).toFixed(0)}`;

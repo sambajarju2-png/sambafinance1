@@ -16,6 +16,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { isAccountRestricted } = await import('@/lib/auth');
+    if (await isAccountRestricted(userId)) {
+      return NextResponse.json({ error: 'Account is bevroren' }, { status: 403 });
+    }
+
     const { image } = await req.json();
     if (!image) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });

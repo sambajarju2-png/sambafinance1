@@ -11,6 +11,12 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
+  // GDPR Art. 18: block processing for restricted accounts
+  const { isAccountRestricted } = await import('@/lib/auth');
+  if (await isAccountRestricted(userId)) {
+    return NextResponse.json({ error: 'Account is bevroren' }, { status: 403 });
+  }
+
   try {
     const { url } = await req.json();
     if (!url || typeof url !== 'string' || !url.startsWith('http')) {
