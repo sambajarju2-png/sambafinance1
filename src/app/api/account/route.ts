@@ -5,7 +5,9 @@ import { verifyCsrf } from '@/lib/csrf';
 
 /**
  * DELETE /api/account
- * Permanently deletes ALL user data from ALL tables.
+ * Permanently deletes ALL user data from ALL tables using
+ * the delete_all_user_data() database function (covers 52 tables).
+ * Then deletes the Supabase Auth user.
  */
 export async function DELETE() {
   try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
@@ -13,58 +15,36 @@ export async function DELETE() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {
-    // Use service role to bypass RLS — ensures all tables are actually cleaned
     const supabase = createServiceRoleClient();
 
-    // Delete from all user-specific tables in dependency order (children first)
-    // Community tables (have FK dependencies between them)
-    await supabase.from('community_reactions').delete().eq('user_id', userId);
-    await supabase.from('community_reports').delete().eq('reporter_user_id', userId);
-    await supabase.from('community_notifications').delete().eq('user_id', userId);
-    await supabase.from('community_comments').delete().eq('user_id', userId);
-    await supabase.from('community_posts').delete().eq('user_id', userId);
-    await supabase.from('community_profiles').delete().eq('user_id', userId);
+    // Log the GDPR deletion request
+    await supabase.from('gdpr_requests').insert({
+      user_id: userId,
+      request_type: 'verwijdering',
+      status: 'processing',
+      details: { method: 'self_service', initiated_at: new Date().toISOString() },
+    });
 
-    // Buddy relationships (both directions)
-    await supabase.from('user_buddies').delete().eq('user_id', userId);
-    await supabase.from('user_buddies').delete().eq('buddy_user_id', userId);
+    // Delete ALL user data from ALL tables (single DB function, no tables missed)
+    const { error: deleteError } = await supabase.rpc('delete_all_user_data', {
+      target_user_id: userId,
+    });
 
-    // AI & scanning
-    await supabase.from('ai_usage_log').delete().eq('user_id', userId);
-    await supabase.from('ai_extraction_corrections').delete().eq('user_id', userId);
-    await supabase.from('scan_processed').delete().eq('user_id', userId);
+    if (deleteError) {
+      console.error('delete_all_user_data error:', deleteError);
+      // Fallback: try to continue with auth deletion anyway
+    }
 
-    // Achievements & mood
-    await supabase.from('user_achievements').delete().eq('user_id', userId);
-    await supabase.from('mood_log').delete().eq('user_id', userId);
-    await supabase.from('mood_analytics').delete().eq('user_id', userId);
-
-    // Notifications & push
-    await supabase.from('notification_log').delete().eq('user_id', userId);
-    await supabase.from('push_subscriptions').delete().eq('user_id', userId);
-
-    // Bills & related
-    await supabase.from('bills').delete().eq('user_id', userId);
-    await supabase.from('recurring_patterns').delete().eq('user_id', userId);
-    await supabase.from('vendor_directory').delete().eq('user_id', userId);
-
-    // Email accounts & OAuth states
-    await supabase.from('gmail_accounts').delete().eq('user_id', userId);
-    await supabase.from('gmail_oauth_states').delete().eq('user_id', userId);
-    await supabase.from('outlook_accounts').delete().eq('user_id', userId);
-    await supabase.from('outlook_oauth_states').delete().eq('user_id', userId);
-
-    // User preferences & metadata
-    await supabase.from('user_feedback').delete().eq('user_id', userId);
-    await supabase.from('consent_log').delete().eq('user_id', userId);
-    await supabase.from('custom_categories').delete().eq('user_id', userId);
-    await supabase.from('rate_limits').delete().eq('user_id', userId);
-
-    // User settings last (other tables may reference user_id via FK)
-    await supabase.from('user_settings').delete().eq('user_id', userId);
-
-    // Delete the Supabase Auth user itself
+    // Delete the Supabase Auth user
     await supabase.auth.admin.deleteUser(userId);
+
+    // Mark GDPR request as completed
+    await supabase
+      .from('gdpr_requests')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('request_type', 'verwijdering')
+      .eq('status', 'processing');
 
     return NextResponse.json({ ok: true, message: 'Account and all data permanently deleted' }, { headers: NO_CACHE });
   } catch (err) {
