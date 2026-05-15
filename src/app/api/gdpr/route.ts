@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sendEmail } from '@/lib/email';
 
 const VALID_TYPES = [
   'inzage',               // Right of access
@@ -80,6 +81,43 @@ export async function POST(req: NextRequest) {
 
   const requestId = request.id;
   let autoResponse: Record<string, unknown> = {};
+
+  // Get user email for confirmation
+  const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+  const userEmail = authUser?.user?.email;
+
+  // Send confirmation email
+  if (userEmail) {
+    const typeLabels: Record<string, string> = {
+      inzage: 'Recht op inzage', overdracht: 'Recht op overdracht',
+      toestemming_intrekken: 'Toestemming intrekken', rectificatie: 'Recht op correctie',
+      beperking: 'Recht op beperking', bezwaar: 'Recht op bezwaar', verwijdering: 'Recht op verwijdering',
+    };
+    const refCode = requestId.slice(0, 8).toUpperCase();
+    await sendEmail({
+      to: userEmail,
+      subject: `Privacyverzoek ontvangen — ${typeLabels[type] || type} (ref: ${refCode})`,
+      html: `<div style="font-family:-apple-system,sans-serif;max-width:540px;margin:0 auto;padding:32px">
+        <p style="font-size:12px;font-weight:800;color:#0A2540">PayWatch</p>
+        <p style="font-size:14px;color:#0A2540;margin-top:16px">Hoi,</p>
+        <p style="font-size:14px;color:#0A2540;line-height:1.7">We hebben je privacyverzoek ontvangen en geregistreerd.</p>
+        <div style="background:#F4F7FB;border-radius:12px;padding:16px 20px;margin:16px 0">
+          <p style="margin:0;font-size:13px;color:#64748B">Type verzoek</p>
+          <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#0A2540">${typeLabels[type] || type}</p>
+          <p style="margin:12px 0 0;font-size:13px;color:#64748B">Referentienummer</p>
+          <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#2563EB">${refCode}</p>
+          <p style="margin:12px 0 0;font-size:13px;color:#64748B">Datum</p>
+          <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#0A2540">${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
+        <p style="font-size:14px;color:#0A2540;line-height:1.7">${['rectificatie', 'beperking', 'bezwaar'].includes(type)
+          ? 'We behandelen je verzoek binnen 30 dagen. Je ontvangt een e-mail zodra het is afgerond.'
+          : 'Je verzoek is automatisch verwerkt. Controleer de app voor het resultaat.'}</p>
+        <p style="font-size:13px;color:#64748B;margin-top:24px">Met vriendelijke groet,<br><strong style="color:#0A2540">PayWatch Privacy Team</strong></p>
+        <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0">
+        <p style="font-size:11px;color:#94A3B8">PayWatch · Rotterdam · KVK 83474889</p>
+      </div>`,
+    }).catch(err => console.error('[GDPR] Email error:', err));
+  }
 
   try {
     switch (type) {
