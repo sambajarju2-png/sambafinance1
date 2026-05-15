@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     supabase.from('bills').select('*').eq('user_id', userId).order('due_date', { ascending: true }),
 
     // 2. User settings (plan)
-    supabase.from('user_settings').select('plan').eq('user_id', userId).single(),
+    supabase.from('user_settings').select('plan, is_restricted').eq('user_id', userId).single(),
 
     // 3. Bank connections (linked only)
     supabase.from('bank_connections').select('id, institution_name, status').eq('user_id', userId).eq('status', 'linked'),
@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
 
   const bills = billsRes.data || [];
   const plan = settingsRes.data?.plan || 'gratis';
+  const is_restricted = settingsRes.data?.is_restricted || false;
   const connections = connectionsRes.data || [];
   const has_bank = connections.length > 0;
   const latestMonth = analyticsRes.data?.[0] || null;
@@ -156,6 +157,7 @@ export async function GET(req: NextRequest) {
     {
       bills,
       plan,
+      is_restricted,
       has_bank,
       finances: financesOverview,
       matches,

@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
       settings, finances, expenses, bills, bankConnections, transactions,
       gmailAccounts, outlookAccounts, pushTokens, communityPosts,
       paymentPlans, installments, buddies, moodLog, achievements,
+      chatMessages, hulpMessages, consentLog, b2bConsents,
+      recurringPatterns, gdprRequests, orgConnections, communityComments,
+      userFeedback,
     ] = await Promise.all([
       supabase.from('user_settings').select('*').eq('user_id', user.id),
       supabase.from('user_finances').select('*').eq('user_id', user.id),
@@ -58,6 +61,16 @@ export async function POST(req: NextRequest) {
       supabase.from('user_buddies').select('id, role, status, created_at').eq('user_id', user.id),
       supabase.from('mood_log').select('*').eq('user_id', user.id),
       supabase.from('user_achievements').select('achievement_id, unlocked_at').eq('user_id', user.id),
+      // Additional tables for complete GDPR export
+      supabase.from('chat_messages').select('id, content, role, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(500),
+      supabase.from('hulp_messages').select('id, thread_id, sender_type, content, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(500),
+      supabase.from('consent_log').select('*').eq('user_id', user.id),
+      supabase.from('b2b_consents').select('id, organization_id, scope, granted, created_at').eq('user_id', user.id),
+      supabase.from('recurring_patterns').select('id, vendor, amount, frequency, created_at').eq('user_id', user.id),
+      supabase.from('gdpr_requests').select('id, request_type, status, created_at, completed_at').eq('user_id', user.id),
+      supabase.from('user_organizations').select('organization_id, status, created_at').eq('user_id', user.id),
+      supabase.from('community_comments').select('id, content, created_at').eq('user_id', user.id),
+      supabase.from('user_feedback').select('id, type, message, created_at').eq('user_id', user.id),
     ]);
 
     const exportData = {
@@ -85,6 +98,16 @@ export async function POST(req: NextRequest) {
       mood_log: moodLog.data,
       achievements: achievements.data,
       devices: pushTokens.data,
+      // Additional data for complete GDPR compliance
+      chat_history: chatMessages.data,
+      coach_messages: hulpMessages.data,
+      consent_log: consentLog.data,
+      b2b_consents: b2bConsents.data,
+      recurring_patterns: recurringPatterns.data,
+      gdpr_requests: gdprRequests.data,
+      organization_connections: orgConnections.data,
+      community_comments: communityComments.data,
+      feedback: userFeedback.data,
     };
 
     log.info('GDPR data export', { userId: user.id });
