@@ -17,6 +17,82 @@ interface GdprRequest {
 }
 
 export default function PrivacyRightsPanel() {
+  const [lang, setLang] = useState<'nl' | 'en'>('nl');
+
+  useEffect(() => {
+    const htmlLang = document.documentElement.lang;
+    if (htmlLang === 'en') setLang('en');
+  }, []);
+
+  const T = lang === 'nl' ? {
+    title: 'Recht op inzage',
+    downloadBtn: 'Download mijn gegevens',
+    downloadDone: 'Je gegevens zijn gedownload.',
+    downloadFail: 'Download mislukt. Probeer het opnieuw.',
+    consent: 'Toestemming intrekken',
+    consentDesc: 'Kies welke koppelingen je wilt verbreken',
+    consentView: 'Bekijk koppelingen',
+    consentNone: 'Geen actieve koppelingen.',
+    consentBtn: 'koppeling',
+    consentBtnPlural: 'koppelingen',
+    consentVerb: 'verbreken',
+    correction: 'Recht op correctie',
+    correctionDesc: 'Laat onjuiste gegevens aanpassen',
+    restriction: 'Recht op beperking',
+    restrictionDesc: 'Pauzeer de verwerking van je gegevens',
+    objection: 'Recht op bezwaar',
+    objectionDesc: 'Maak bezwaar tegen verwerking',
+    erasure: 'Recht op verwijdering',
+    erasureDesc: 'Verwijder je account en alle gegevens permanent',
+    start: 'Verzoek starten',
+    submit: 'Verzoek indienen',
+    cancel: 'Annuleren',
+    placeholder: 'Omschrijf je verzoek (optioneel)...',
+    auto: 'Automatisch',
+    direct: 'Direct uitvoeren',
+    history: 'Eerdere verzoeken',
+    historyView: 'Bekijk eerdere verzoeken',
+    historyNone: 'Geen eerdere verzoeken.',
+    done: 'Afgerond',
+    processing: 'In behandeling',
+    notShared: '{T.notShared}',
+    noPayments: '{T.noPayments}',
+    downloadLabel: 'Download al je gegevens als JSON-bestand',
+  } : {
+    title: 'Right of access',
+    downloadBtn: 'Download my data',
+    downloadDone: 'Your data has been downloaded.',
+    downloadFail: 'Download failed. Please try again.',
+    consent: 'Withdraw consent',
+    consentDesc: 'Choose which connections to disconnect',
+    consentView: 'View connections',
+    consentNone: 'No active connections.',
+    consentBtn: 'connection',
+    consentBtnPlural: 'connections',
+    consentVerb: 'disconnect',
+    correction: 'Right to rectification',
+    correctionDesc: 'Have incorrect data corrected',
+    restriction: 'Right to restriction',
+    restrictionDesc: 'Pause the processing of your data',
+    objection: 'Right to object',
+    objectionDesc: 'Object to processing of your data',
+    erasure: 'Right to erasure',
+    erasureDesc: 'Delete your account and all data permanently',
+    start: 'Start request',
+    submit: 'Submit request',
+    cancel: 'Cancel',
+    placeholder: 'Describe your request (optional)...',
+    auto: 'Automatic',
+    direct: 'Execute directly',
+    history: 'Previous requests',
+    historyView: 'View previous requests',
+    historyNone: 'No previous requests.',
+    done: 'Completed',
+    processing: 'In progress',
+    notShared: 'Never shared: bank transactions, emails, community posts',
+    noPayments: 'Organisation cannot make payments on your behalf',
+    downloadLabel: 'Download all your data as a JSON file',
+  };
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<{ type: string; message: string } | null>(null);
   const [details, setDetails] = useState('');
@@ -159,10 +235,10 @@ export default function PrivacyRightsPanel() {
           <Eye className="w-5 h-5 text-pw-blue flex-shrink-0 mt-0.5" strokeWidth={1.5} />
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-[14px] font-semibold text-pw-navy">Recht op inzage</h3>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">Automatisch</span>
+              <h3 className="text-[14px] font-semibold text-pw-navy">{T.title}</h3>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">{T.auto}</span>
             </div>
-            <p className="text-[12px] text-pw-muted mt-0.5">Download al je gegevens als JSON-bestand</p>
+            <p className="text-[12px] text-pw-muted mt-0.5">{T.downloadLabel}</p>
             <button onClick={handleExport} disabled={loading === 'export'} className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-pw-blue active:scale-95 disabled:opacity-50">
               {loading === 'export' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
               Download mijn gegevens
@@ -177,13 +253,13 @@ export default function PrivacyRightsPanel() {
         <div className="flex items-start gap-3">
           <ToggleLeft className="w-5 h-5 text-pw-blue flex-shrink-0 mt-0.5" strokeWidth={1.5} />
           <div className="flex-1">
-            <h3 className="text-[14px] font-semibold text-pw-navy">Toestemming intrekken</h3>
-            <p className="text-[12px] text-pw-muted mt-0.5">Kies welke koppelingen je wilt verbreken</p>
+            <h3 className="text-[14px] font-semibold text-pw-navy">{T.consent}</h3>
+            <p className="text-[12px] text-pw-muted mt-0.5">{T.consentDesc}</p>
 
             {!connectionsLoaded ? (
-              <button onClick={loadConnections} className="mt-2 text-[12px] font-medium text-pw-blue">Bekijk koppelingen</button>
+              <button onClick={loadConnections} className="mt-2 text-[12px] font-medium text-pw-blue">{T.consentView}</button>
             ) : connections.length === 0 ? (
-              <p className="mt-2 text-[12px] text-pw-muted">Geen actieve koppelingen.</p>
+              <p className="mt-2 text-[12px] text-pw-muted">{T.consentNone}</p>
             ) : (
               <div className="mt-3 space-y-2">
                 {connections.map((conn, i) => {
@@ -227,7 +303,7 @@ export default function PrivacyRightsPanel() {
               {showDetails === type ? (
                 <div className="mt-3 space-y-2">
                   <textarea value={details} onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Omschrijf je verzoek (optioneel)..."
+                    placeholder={T.placeholder}
                     className="w-full rounded-lg border border-pw-border bg-pw-bg px-3 py-2 text-[13px] text-pw-text placeholder:text-pw-muted/50 resize-none" rows={3} />
                   <div className="flex gap-2">
                     <button onClick={() => submitRequest(type)} disabled={loading === type}
@@ -235,7 +311,7 @@ export default function PrivacyRightsPanel() {
                       {loading === type ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                       Verzoek indienen
                     </button>
-                    <button onClick={() => { setShowDetails(null); setDetails(''); }} className="px-3 py-1.5 text-[12px] text-pw-muted">Annuleren</button>
+                    <button onClick={() => { setShowDetails(null); setDetails(''); }} className="px-3 py-1.5 text-[12px] text-pw-muted">{T.cancel}</button>
                   </div>
                 </div>
               ) : (
@@ -253,10 +329,10 @@ export default function PrivacyRightsPanel() {
       {/* ── Request history ── */}
       <div className="pt-4">
         {!historyLoaded ? (
-          <button onClick={loadHistory} className="text-[12px] text-pw-blue font-medium">Bekijk eerdere verzoeken</button>
+          <button onClick={loadHistory} className="text-[12px] text-pw-blue font-medium">{T.historyView}</button>
         ) : history.length > 0 ? (
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-pw-navy">Eerdere verzoeken</h3>
+            <h3 className="text-[13px] font-semibold text-pw-navy">{T.history}</h3>
             {history.map((req) => (
               <div key={req.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-pw-bg text-[12px]">
                 <Clock className="w-3.5 h-3.5 text-pw-muted flex-shrink-0" />
@@ -272,7 +348,7 @@ export default function PrivacyRightsPanel() {
             ))}
           </div>
         ) : (
-          <p className="text-[12px] text-pw-muted">Geen eerdere verzoeken.</p>
+          <p className="text-[12px] text-pw-muted">{T.historyNone}</p>
         )}
       </div>
     </div>

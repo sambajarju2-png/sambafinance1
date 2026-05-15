@@ -349,7 +349,11 @@
     "trialEndsToday": "Trial ends today",
     "trialDaysLeft": "day free left",
     "trialDaysLeftPlural": "days free left",
-    "appStoreManage": "Payment via the App Store. Manage your subscription via Settings → App Store on your iPhone."
+    "appStoreManage": "Payment via the App Store. Manage your subscription via Settings → App Store on your iPhone.",
+    "privacyRightsTitle": "Your privacy rights",
+    "privacyRightsDesc": "Under the GDPR you have the right to access, correction, erasure and portability of your data. You can submit a request directly below.",
+    "privacyRightsLink": "Your privacy rights (GDPR)",
+    "privacyRightsLinkDesc": "Access, correction, erasure or portability"
   },
   "profile": {
     "title": "Profile",

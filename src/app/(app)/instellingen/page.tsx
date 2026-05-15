@@ -215,9 +215,9 @@ function SettingsContent() {
     return (
       <div className="space-y-5">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-lg font-bold text-pw-navy">Jouw privacyrechten</h2>
+        <h2 className="text-lg font-bold text-pw-navy">{t("privacyRightsTitle") || "Jouw privacyrechten"}</h2>
         <p className="text-[13px] text-pw-muted leading-relaxed">
-          Onder de AVG (GDPR) heb je recht op inzage, correctie, verwijdering en overdracht van je gegevens. Hieronder kun je direct een verzoek indienen.
+          {t("privacyRightsDesc") || "Onder de AVG (GDPR) heb je recht op inzage, correctie, verwijdering en overdracht van je gegevens. Hieronder kun je direct een verzoek indienen."}
         </p>
         <PrivacyRightsPanel />
       </div>
@@ -246,7 +246,7 @@ function SettingsContent() {
 
       {/* Privacy rights */}
       <div className="pt-4">
-        <SettingsLink icon={Shield} label="Jouw privacyrechten (AVG)" description="Inzage, correctie, verwijdering of overdracht" onClick={() => setActiveTab('privacy')} />
+        <SettingsLink icon={Shield} label={t("privacyRightsLink") || "Jouw privacyrechten (AVG)"} description={t("privacyRightsLinkDesc") || "Inzage, correctie, verwijdering of overdracht"} onClick={() => setActiveTab('privacy')} />
       </div>
 
       <div className="pt-4 space-y-3">

@@ -309,7 +309,11 @@
     "trialEndsToday": "Proefperiode loopt vandaag af",
     "trialDaysLeft": "dag gratis",
     "trialDaysLeftPlural": "dagen gratis",
-    "appStoreManage": "Betaling via de App Store. Beheer je abonnement via Instellingen → App Store op je iPhone."
+    "appStoreManage": "Betaling via de App Store. Beheer je abonnement via Instellingen → App Store op je iPhone.",
+    "privacyRightsTitle": "Jouw privacyrechten",
+    "privacyRightsDesc": "Onder de AVG (GDPR) heb je recht op inzage, correctie, verwijdering en overdracht van je gegevens. Hieronder kun je direct een verzoek indienen.",
+    "privacyRightsLink": "Jouw privacyrechten (AVG)",
+    "privacyRightsLinkDesc": "Inzage, correctie, verwijdering of overdracht"
   },
   "profile": {
     "title": "Profiel",
