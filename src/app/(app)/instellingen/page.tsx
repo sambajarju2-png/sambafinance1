@@ -211,6 +211,19 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'privacy') {
+    return (
+      <div className="space-y-5">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <h2 className="text-lg font-bold text-pw-navy">Jouw privacyrechten</h2>
+        <p className="text-[13px] text-pw-muted leading-relaxed">
+          Onder de AVG (GDPR) heb je recht op inzage, correctie, verwijdering en overdracht van je gegevens. Hieronder kun je direct een verzoek indienen.
+        </p>
+        <PrivacyRightsPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
