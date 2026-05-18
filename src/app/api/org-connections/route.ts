@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
       scope, granted: true, granted_at: new Date().toISOString(),
       consent_version: '2026-05-v1',
       consent_text_snapshot: `Toestemming voor ${scope}: verleend via uitnodigingscode`,
+      consent_displayed_at: new Date(Date.now() - 5000).toISOString(),
+      consent_submitted_at: new Date().toISOString(),
       consent_ip: consentIp,
       consent_user_agent: consentUa,
     })),

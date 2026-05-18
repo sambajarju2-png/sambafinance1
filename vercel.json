@@ -1,5 +1,7 @@
 {
-  "regions": ["lhr1"],
+  "regions": [
+    "lhr1"
+  ],
   "crons": [
     {
       "path": "/api/cron/payday",
@@ -8,6 +10,10 @@
     {
       "path": "/api/cron/spending-alerts",
       "schedule": "0 17 * * 2"
+    },
+    {
+      "path": "/api/cron/inactive-cleanup",
+      "schedule": "0 3 1 * *"
     }
   ]
 }
