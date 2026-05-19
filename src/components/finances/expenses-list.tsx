@@ -3,9 +3,34 @@
 import { useState, useEffect } from 'react';
 import {
   Home, Zap, Droplets, Shield, Heart, Smartphone, Wifi, Repeat, Car, ShoppingCart,
-  Plus, Loader2, Trash2, X, Check, CircleDot
+  Plus, Loader2, Trash2, X, Check, CircleDot, ExternalLink
 } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
+
+// Daisycon affiliate deeplinks per sector
+const AFFILIATE_LINKS: Record<string, { url: string; label: string }> = {
+  energie: { url: 'https://lt45.net/c/?si=12134&li=1535052&wi=420734&ws=&dl=', label: 'Energie vergelijken' },
+  telecom: { url: 'https://dc.budgetthuis.nl/c/?si=14524&li=1624243&wi=420734&ws=&dl=internet', label: 'Telecom vergelijken' },
+  internet: { url: 'https://dc.budgetthuis.nl/c/?si=14524&li=1624243&wi=420734&ws=&dl=internet', label: 'Internet vergelijken' },
+};
+
+// Map expense category → affiliate sector
+const CATEGORY_TO_SECTOR: Record<string, string> = {
+  energie: 'energie',
+  telecom: 'telecom',
+  internet: 'telecom',
+};
+
+async function openAffiliate(sector: string) {
+  const link = AFFILIATE_LINKS[sector];
+  if (!link) return;
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: link.url, presentationStyle: 'popover' });
+  } catch {
+    window.open(link.url, '_blank');
+  }
+}
 
 interface Expense {
   id: string;
@@ -220,82 +245,102 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
             const config = CATEGORY_CONFIG[expense.category] || CATEGORY_CONFIG.overig;
             const Icon = config.icon;
             const isPaidThisMonth = expense.last_paid_month === currentMonth;
+            const norm = NIBUD_NORMS[expense.category];
+            const aboveNorm = norm && expense.monthly_amount > 0 ? Math.round(((expense.monthly_amount - norm) / norm) * 100) > 10 : false;
+            const affiliateSector = CATEGORY_TO_SECTOR[expense.category];
+            const affiliateLink = affiliateSector ? AFFILIATE_LINKS[affiliateSector] : null;
 
             return (
-              <div key={expense.id}
-                className="flex items-center gap-3 rounded-xl border border-pw-border/60 bg-pw-surface p-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-              >
-                <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-pw-bg ${config.color}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-[14px] font-semibold text-pw-text">{expense.name}</p>
-                    {isPaidThisMonth && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-pw-green/10 px-1.5 py-0.5 text-[10px] font-medium text-pw-green">
-                        <Check className="h-2.5 w-2.5" /> betaald
-                      </span>
-                    )}
+              <div key={expense.id} className="rounded-xl border border-pw-border/60 bg-pw-surface shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden">
+                <div className="flex items-center gap-3 p-3">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-pw-bg ${config.color}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-[11px] text-pw-muted">
-                      {config.label}
-                      {expense.interval !== 'monthly' && ` · ${INTERVAL_LABELS[expense.interval]}`}
-                      {expense.payment_day && ` · dag ${expense.payment_day}`}
-                    </p>
-                    {(() => {
-                      const norm = NIBUD_NORMS[expense.category];
-                      if (!norm || expense.monthly_amount <= 0) return null;
-                      const diff = Math.round(((expense.monthly_amount - norm) / norm) * 100);
-                      if (diff > 10) {
-                        return (
-                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
-                            {diff}% boven norm
-                          </span>
-                        );
-                      }
-                      if (diff >= -5) {
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[14px] font-semibold text-pw-text">{expense.name}</p>
+                      {isPaidThisMonth && (
+                        <span className="flex items-center gap-0.5 rounded-full bg-pw-green/10 px-1.5 py-0.5 text-[10px] font-medium text-pw-green">
+                          <Check className="h-2.5 w-2.5" /> betaald
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[11px] text-pw-muted">
+                        {config.label}
+                        {expense.interval !== 'monthly' && ` · ${INTERVAL_LABELS[expense.interval]}`}
+                        {expense.payment_day && ` · dag ${expense.payment_day}`}
+                      </p>
+                      {(() => {
+                        if (!norm || expense.monthly_amount <= 0) return null;
+                        const diff = Math.round(((expense.monthly_amount - norm) / norm) * 100);
+                        if (diff > 10) {
+                          return (
+                            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                              {diff}% boven norm
+                            </span>
+                          );
+                        }
+                        if (diff >= -5) {
+                          return (
+                            <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
+                              binnen norm
+                            </span>
+                          );
+                        }
                         return (
                           <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
-                            binnen norm
+                            {Math.abs(diff)}% onder norm
                           </span>
                         );
-                      }
-                      return (
-                        <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-bold text-green-700 dark:bg-green-500/15 dark:text-green-400">
-                          {Math.abs(diff)}% onder norm
-                        </span>
-                      );
-                    })()}
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-[14px] font-bold text-pw-text">{formatCents(expense.monthly_amount)}</p>
+                      <p className="text-[10px] text-pw-muted">/mnd</p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {!isPaidThisMonth && (
+                        <button onClick={() => handleMarkPaid(expense.id)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-green/10 hover:text-pw-green"
+                          title="Markeer als betaald"
+                        ><Check className="h-3 w-3" /></button>
+                      )}
+                      <button onClick={() => handleDelete(expense.id)}
+                        disabled={deletingId === expense.id}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-red/10 hover:text-pw-red"
+                        title="Verwijderen"
+                      >
+                        {deletingId === expense.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Trash2 className="h-3 w-3" />
+                        }
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className="text-[14px] font-bold text-pw-text">{formatCents(expense.monthly_amount)}</p>
-                    <p className="text-[10px] text-pw-muted">/mnd</p>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {!isPaidThisMonth && (
-                      <button onClick={() => handleMarkPaid(expense.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-green/10 hover:text-pw-green"
-                        title="Markeer als betaald"
-                      ><Check className="h-3 w-3" /></button>
-                    )}
-                    <button onClick={() => handleDelete(expense.id)}
-                      disabled={deletingId === expense.id}
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-pw-muted hover:bg-pw-red/10 hover:text-pw-red"
-                      title="Verwijderen"
-                    >
-                      {deletingId === expense.id
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <Trash2 className="h-3 w-3" />
-                      }
-                    </button>
-                  </div>
-                </div>
+                {/* Bespaar CTA — shows when above Nibud norm + affiliate link available */}
+                {aboveNorm && affiliateLink && (
+                  <button
+                    onClick={() => openAffiliate(affiliateSector!)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-t border-green-200 dark:border-green-800/40 active:scale-[0.99] transition-transform"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-green-700 dark:text-green-300">
+                        Te duur? Vergelijk en bespaar
+                      </span>
+                    </div>
+                    <ExternalLink className="h-3 w-3 text-green-600" />
+                  </button>
+                )}
               </div>
+            );
+          })}
             );
           })}
         </div>

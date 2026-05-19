@@ -107,14 +107,14 @@ const KEYWORD_RULES: KeywordRule[] = [
   // Housing
   { patterns: ['hypotheek', 'mortgage'], category: 'wonen', sub_category: 'hypotheek' },
   { patterns: ['huur', 'woningcorporatie', 'woonbron', 'vestia', 'havensteder', 'woonstad'], category: 'wonen', sub_category: 'huur' },
-  { patterns: ['eneco', 'vattenfall', 'essent', 'greenchoice', 'budget energie', 'energiedirect', 'oxxio'], category: 'wonen', sub_category: 'energie' },
+  { patterns: ['eneco', 'vattenfall', 'essent', 'greenchoice', 'budget energie', 'energiedirect', 'oxxio', 'vandebron', 'innova energie', 'noord energie'], category: 'wonen', sub_category: 'energie' },
   { patterns: ['vitens', 'brabant water', 'evides', 'waternet', 'dunea', 'oasen'], category: 'wonen', sub_category: 'water' },
   { patterns: ['gemeentebelasting', 'mswg', 'bsge'], category: 'wonen', sub_category: 'gemeentebelasting' },
 
   // Fixed costs
   { patterns: ['zilveren kruis', 'cz groep', 'vgz', 'menzis', 'ohra', 'interpolis', 'ditzo', 'just', 'anderzorg', 'a.s.r.'], category: 'vaste_lasten', sub_category: 'zorgverzekering' },
   { patterns: ['nationale-nederlanden', 'aegon', 'centraal beheer', 'univé', 'allianz', 'inshared'], category: 'vaste_lasten', sub_category: 'verzekering' },
-  { patterns: ['kpn', 'vodafone', 'tele2', 't-mobile', 'ziggo', 'odido', 'simyo', 'lebara', 'ben', 'hollandsnieuwe'], category: 'vaste_lasten', sub_category: 'telecom' },
+  { patterns: ['kpn', 'vodafone', 'tele2', 't-mobile', 'ziggo', 'odido', 'simyo', 'lebara', 'ben', 'hollandsnieuwe', 'budget mobiel', 'budgetmobiel', 'budget thuis', 'budgetthuis', 'youfone', 'simpel'], category: 'vaste_lasten', sub_category: 'telecom' },
 
   // Groceries (Dutch supermarkets)
   { patterns: ['albert heijn', 'jumbo', 'lidl', 'aldi', 'plus', 'dirk', 'vomar', 'dekamarkt', 'poiesz', 'boni', 'coop', 'nettorama', 'hoogvliet', 'spar'], category: 'boodschappen' },
