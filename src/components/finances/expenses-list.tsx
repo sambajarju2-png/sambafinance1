@@ -341,8 +341,6 @@ export default function ExpensesList({ onChanged }: { onChanged?: () => void }) 
               </div>
             );
           })}
-            );
-          })}
         </div>
       )}
 
