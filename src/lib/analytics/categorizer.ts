@@ -114,7 +114,7 @@ const KEYWORD_RULES: KeywordRule[] = [
   // Fixed costs
   { patterns: ['zilveren kruis', 'cz groep', 'vgz', 'menzis', 'ohra', 'interpolis', 'ditzo', 'just', 'anderzorg', 'a.s.r.'], category: 'vaste_lasten', sub_category: 'zorgverzekering' },
   { patterns: ['nationale-nederlanden', 'aegon', 'centraal beheer', 'univé', 'allianz', 'inshared'], category: 'vaste_lasten', sub_category: 'verzekering' },
-  { patterns: ['kpn', 'vodafone', 'tele2', 't-mobile', 'ziggo', 'odido', 'simyo', 'lebara', 'ben', 'hollandsnieuwe', 'budget mobiel', 'budgetmobiel', 'budget thuis', 'budgetthuis', 'youfone', 'simpel'], category: 'vaste_lasten', sub_category: 'telecom' },
+  { patterns: ['kpn', 'vodafone', 'tele2', 't-mobile', 'ziggo', 'odido', 'simyo', 'lebara', 'ben', 'hollandsnieuwe', 'budget mobiel', 'budgetmobiel', 'budget thuis', 'budgetthuis', 'youfone', 'simpel', 'delta fiber', 'caiway', 'online.nl', 'solcon', 'tweak', 'freedom internet'], category: 'vaste_lasten', sub_category: 'telecom' },
 
   // Groceries (Dutch supermarkets)
   { patterns: ['albert heijn', 'jumbo', 'lidl', 'aldi', 'plus', 'dirk', 'vomar', 'dekamarkt', 'poiesz', 'boni', 'coop', 'nettorama', 'hoogvliet', 'spar'], category: 'boodschappen' },

@@ -791,26 +791,38 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
     mobiel: 'https://dc.budgetthuis.nl/c/?si=14759&li=1636713&wi=420734&ws=&dl=mobiel',
   };
 
-  const SWITCHABLE_PROVIDERS: Record<string, { sector: string; saving: string }> = {
-    vattenfall: { sector: 'energie', saving: 'tot €200/jr' },
-    eneco: { sector: 'energie', saving: 'tot €180/jr' },
-    essent: { sector: 'energie', saving: 'tot €150/jr' },
-    greenchoice: { sector: 'energie', saving: 'tot €120/jr' },
-    'budget energie': { sector: 'energie', saving: 'tot €100/jr' },
-    energiedirect: { sector: 'energie', saving: 'tot €100/jr' },
-    oxxio: { sector: 'energie', saving: 'tot €100/jr' },
+  const SWITCHABLE_PROVIDERS: Record<string, { sectors: string[]; saving: string }> = {
+    // Energie
+    vattenfall: { sectors: ['energie'], saving: 'tot €200/jr' },
+    eneco: { sectors: ['energie'], saving: 'tot €180/jr' },
+    essent: { sectors: ['energie'], saving: 'tot €150/jr' },
+    greenchoice: { sectors: ['energie'], saving: 'tot €120/jr' },
+    'budget energie': { sectors: ['energie'], saving: 'tot €100/jr' },
+    energiedirect: { sectors: ['energie'], saving: 'tot €100/jr' },
+    oxxio: { sectors: ['energie'], saving: 'tot €100/jr' },
+    'vandebron': { sectors: ['energie'], saving: 'tot €80/jr' },
+    // Internet + Mobiel (dual providers)
+    kpn: { sectors: ['internet', 'mobiel'], saving: 'tot €120/jr' },
+    't-mobile': { sectors: ['internet', 'mobiel'], saving: 'tot €96/jr' },
+    odido: { sectors: ['internet', 'mobiel'], saving: 'tot €96/jr' },
     // Internet providers
-    ziggo: { sector: 'internet', saving: 'tot €120/jr' },
-    // Mobiel providers
-    kpn: { sector: 'mobiel', saving: 'tot €120/jr' },
-    odido: { sector: 'mobiel', saving: 'tot €96/jr' },
-    't-mobile': { sector: 'mobiel', saving: 'tot €96/jr' },
-    vodafone: { sector: 'mobiel', saving: 'tot €84/jr' },
-    tele2: { sector: 'mobiel', saving: 'tot €60/jr' },
-    simyo: { sector: 'mobiel', saving: 'tot €48/jr' },
-    lebara: { sector: 'mobiel', saving: 'tot €36/jr' },
-    ben: { sector: 'mobiel', saving: 'tot €36/jr' },
-    hollandsnieuwe: { sector: 'mobiel', saving: 'tot €36/jr' },
+    ziggo: { sectors: ['internet'], saving: 'tot €120/jr' },
+    delta: { sectors: ['internet'], saving: 'tot €100/jr' },
+    caiway: { sectors: ['internet'], saving: 'tot €80/jr' },
+    'online.nl': { sectors: ['internet'], saving: 'tot €80/jr' },
+    solcon: { sectors: ['internet'], saving: 'tot €60/jr' },
+    tweak: { sectors: ['internet'], saving: 'tot €60/jr' },
+    'freedom internet': { sectors: ['internet'], saving: 'tot €60/jr' },
+    // Mobiel-only providers
+    vodafone: { sectors: ['mobiel'], saving: 'tot €84/jr' },
+    tele2: { sectors: ['mobiel'], saving: 'tot €60/jr' },
+    simyo: { sectors: ['mobiel'], saving: 'tot €48/jr' },
+    youfone: { sectors: ['mobiel'], saving: 'tot €48/jr' },
+    simpel: { sectors: ['mobiel'], saving: 'tot €36/jr' },
+    lebara: { sectors: ['mobiel'], saving: 'tot €36/jr' },
+    ben: { sectors: ['mobiel'], saving: 'tot €36/jr' },
+    hollandsnieuwe: { sectors: ['mobiel'], saving: 'tot €36/jr' },
+    'budget mobiel': { sectors: ['mobiel'], saving: 'tot €36/jr' },
   };
 
   const SECTOR_LABELS: Record<string, string> = {
@@ -819,7 +831,7 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
     mobiel: 'telefoon',
   };
 
-  function detectProvider(name: string): { sector: string; saving: string } | null {
+  function detectProvider(name: string): { sectors: string[]; saving: string } | null {
     const lower = name.toLowerCase();
     for (const [key, val] of Object.entries(SWITCHABLE_PROVIDERS)) {
       if (lower.includes(key.toLowerCase())) return val;
@@ -880,20 +892,20 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
                 </div>
               </div>
 
-              {/* Vergelijk CTA */}
-              {provider && DEEPLINKS[provider.sector] && (
-                <div className="mx-3.5 mb-3 p-3 rounded-[10px] bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800/40">
+              {/* Vergelijk CTAs — one per sector for dual providers like KPN */}
+              {provider && provider.sectors.filter(s => DEEPLINKS[s]).map(sector => (
+                <div key={sector} className="mx-3.5 mb-2 last:mb-3 p-3 rounded-[10px] bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800/40">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-[11px] font-semibold text-green-800 dark:text-green-300">
-                        {t('saveOn')} {SECTOR_LABELS[provider.sector] || provider.sector}
+                        {t('saveOn')} {SECTOR_LABELS[sector] || sector}
                       </p>
                       <p className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">
                         {t('compareProviders')} — {t('save')} {provider.saving}
                       </p>
                     </div>
                     <button
-                      onClick={() => openDeeplink(provider.sector)}
+                      onClick={() => openDeeplink(sector)}
                       className="shrink-0 ml-2 px-3 py-1.5 bg-green-600 text-white text-[11px] font-semibold rounded-[6px] active:scale-95 transition-transform"
                     >
                       Vergelijk
@@ -903,7 +915,7 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
                     PayWatch ontvangt een vergoeding bij overstap
                   </p>
                 </div>
-              )}
+              ))}
             </div>
           );
         })}
@@ -920,7 +932,7 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
             {(['energie', 'internet', 'mobiel'] as const).map(sector => {
               const hasProvider = subscriptions.some(s => {
                 const p = detectProvider(s.merchant_clean_name || s.creditor_name);
-                return p?.sector === sector;
+                return p?.sectors.includes(sector);
               });
               if (!hasProvider || !DEEPLINKS[sector]) return null;
               const labels: Record<string, string> = { energie: 'Energie', internet: 'Internet', mobiel: 'Mobiel' };
