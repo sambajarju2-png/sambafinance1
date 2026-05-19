@@ -10,15 +10,15 @@ import { formatCents } from '@/lib/bills';
 // Daisycon affiliate deeplinks per sector
 const AFFILIATE_LINKS: Record<string, { url: string; label: string }> = {
   energie: { url: 'https://lt45.net/c/?si=12134&li=1535052&wi=420734&ws=&dl=', label: 'Energie vergelijken' },
-  telecom: { url: 'https://dc.budgetthuis.nl/c/?si=14524&li=1624243&wi=420734&ws=&dl=internet', label: 'Telecom vergelijken' },
   internet: { url: 'https://dc.budgetthuis.nl/c/?si=14524&li=1624243&wi=420734&ws=&dl=internet', label: 'Internet vergelijken' },
+  mobiel: { url: 'https://dc.budgetthuis.nl/c/?si=14759&li=1636713&wi=420734&ws=&dl=mobiel', label: 'Mobiel vergelijken' },
 };
 
 // Map expense category → affiliate sector
 const CATEGORY_TO_SECTOR: Record<string, string> = {
   energie: 'energie',
-  telecom: 'telecom',
-  internet: 'telecom',
+  telecom: 'mobiel',
+  internet: 'internet',
 };
 
 async function openAffiliate(sector: string) {
