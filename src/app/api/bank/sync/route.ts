@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { getTransactions, Transaction } from '@/lib/enablebanking'
 import { sendPushToUser } from '@/lib/push'
 import { log } from '@/lib/logger'
+
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
@@ -186,30 +189,29 @@ export async function POST(req: NextRequest) {
       console.error('[Bank] Analytics refresh failed (non-fatal):', rpcErr)
     }
 
-    // PW-09: Run categorization + re-aggregation fire-and-forget
-    // Categorization may take >10s (AI batch) — don't block the response
-    // After categorization completes, it calls refresh_user_analytics again to update categories
+    // PW-09: Run categorization + aggregation + subscription detection AFTER response
+    // after() keeps the function alive until this completes (Next.js 15+)
     const userId = user.id
-    Promise.resolve().then(async () => {
+    after(async () => {
       try {
         const { categorizeUserTransactions } = await import('@/lib/analytics/categorizer')
         const catResult = await categorizeUserTransactions(userId)
         log.info('Categorization complete', { userId, categorized: catResult.categorized, aiCalled: catResult.aiCalled })
       } catch (catErr) {
-        log.error('Categorization error (background)', { error: catErr instanceof Error ? catErr.message : 'unknown' })
+        log.error('Categorization error (after)', { error: catErr instanceof Error ? catErr.message : 'unknown' })
       }
       try {
-        // Aggregate transactions → analytics_monthly_totals + analytics_monthly_categories
         const { aggregateAnalytics } = await import('@/lib/analytics/aggregate')
         const aggResult = await aggregateAnalytics(userId)
         log.info('Analytics aggregation complete', { userId, months: aggResult.months, categories: aggResult.categories })
       } catch (aggErr) {
-        log.error('Analytics aggregation error (background)', { error: aggErr instanceof Error ? aggErr.message : 'unknown' })
+        log.error('Analytics aggregation error (after)', { error: aggErr instanceof Error ? aggErr.message : 'unknown' })
       }
       try {
         await supabase.rpc('detect_recurring_payments', { p_user_id: userId })
+        log.info('Subscription detection complete', { userId })
       } catch (subErr) {
-        log.error('Subscription detection error (background)', { error: subErr instanceof Error ? subErr.message : 'unknown' })
+        log.error('Subscription detection error (after)', { error: subErr instanceof Error ? subErr.message : 'unknown' })
       }
     })
 
