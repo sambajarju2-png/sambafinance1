@@ -452,7 +452,10 @@
     "legalDisclaimer": "PayWatch is geen juridisch adviesbureau. Raadpleeg een professional voor juridisch advies.",
     "days": "dagen",
     "months": "maanden",
-    "back": "Terug"
+    "back": "Terug",
+    "errorTitle": "Er ging iets mis",
+    "errorRateLimit": "Je hebt het maximum aantal brieven per uur bereikt. Probeer het later opnieuw.",
+    "tryAgain": "Opnieuw proberen"
   },
   "incasso": {
     "wikTitle": "WIK Incassokosten",

@@ -513,7 +513,10 @@
     "legalDisclaimer": "PayWatch is not a legal advisor. Consult a professional for legal advice.",
     "days": "days",
     "months": "months",
-    "back": "Back"
+    "back": "Back",
+    "errorTitle": "Something went wrong",
+    "errorRateLimit": "You've reached the maximum number of letters per hour. Try again later.",
+    "tryAgain": "Try again"
   },
   "incasso": {
     "wikTitle": "WIK Collection Costs",

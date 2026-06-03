@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   try {
     guard();
-    const allowed = await checkRateLimit(userId, 'draft-letter', 20, 3600000);
+    const allowed = await checkRateLimit(userId, 'draft-letter', 20, 60);
     if (!allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429, headers: NO_CACHE });
 
     const body = await req.json();
