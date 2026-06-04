@@ -18,6 +18,7 @@ import { formatCents } from '@/lib/bills';
 import { getCategoryLabel, getCategoryColor, CATEGORIES, DEBT_CATEGORY_IDS, FIXED_COST_IDS } from '@/lib/analytics/categories';
 import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem, TransactionItem, SubscriptionItem } from '@/lib/analytics/types';
 import { haptic } from '@/lib/capacitor';
+import { InsightCard } from '@/components/analytics/insight-card';
 
 type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld' | 'transacties' | 'abonnementen';
 
@@ -77,9 +78,10 @@ export default function AnalyticsPage() {
         if (res.ok) {
           const d = await res.json();
           setData(d);
-          // Default to current month
+          // Default to the most recent month (monthly_totals is returned oldest-first)
           if (d.monthly_totals?.length > 0) {
-            setSelectedMonth(d.monthly_totals[0].month);
+            const newest = d.monthly_totals.map((m: MonthlyTotalItem) => m.month).sort().reverse()[0];
+            setSelectedMonth(newest);
           }
         }
       } catch (err) {
@@ -293,6 +295,11 @@ export default function AnalyticsPage() {
         {tab === 'schuld' && <TabSchuld debts={data.debt_summary} totals={data.monthly_totals} />}
         {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} onTap={(tx) => { setCorrecting(tx); haptic('tap'); }} />}
         {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} showVergelijk={true} />}
+      </div>
+
+      {/* AI-powered monthly insight (Mistral) */}
+      <div className="px-4">
+        <InsightCard month={selectedMonth} tab={tab} />
       </div>
 
       {/* Category correction sheet */}
