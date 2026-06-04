@@ -102,7 +102,7 @@ const KEYWORD_RULES: KeywordRule[] = [
   { patterns: ['belastingdienst toeslag', 'huurtoeslag', 'zorgtoeslag', 'kindgebonden budget', 'kinderopvangtoeslag'], category: 'overheid', sub_category: 'toeslag', direction: 'in' },
   { patterns: ['uwv', 'uitkering', 'ww-uitkering', 'bijstand', 'participatiewet'], category: 'overheid', sub_category: 'uitkering', direction: 'in' },
   { patterns: ['svb', 'kinderbijslag', 'aow'], category: 'overheid', sub_category: 'kinderbijslag', direction: 'in' },
-  { patterns: ['tikkie', 'betaalverzoek'], category: 'overig_inkomen', sub_category: 'betaalverzoek' },
+  { patterns: ['tikkie', 'betaalverzoek'], category: 'overig_inkomen', sub_category: 'betaalverzoek', direction: 'in' },
 
   // Housing
   { patterns: ['hypotheek', 'mortgage'], category: 'wonen', sub_category: 'hypotheek' },
@@ -152,8 +152,8 @@ const KEYWORD_RULES: KeywordRule[] = [
   // Cash
   { patterns: ['geldautomaat', 'geldopname', 'atm', 'pinopname', 'cash withdrawal'], category: 'pin_opname' },
 
-  // International money transfers (outgoing)
-  { patterns: ['remitly', 'wise', 'transferwise', 'western union', 'moneygram', 'worldremit'], category: 'overig', sub_category: 'internationale_overboeking', direction: 'out' },
+  // International money transfers (outgoing) — no dedicated category, falls under "Overig"
+  { patterns: ['remitly', 'wise', 'transferwise', 'western union', 'moneygram', 'worldremit'], category: 'onbekend', sub_category: 'internationale_overboeking', direction: 'out' },
 
   // P2P payments received (Tikkie, Spesa, etc.)
   { patterns: ['spesa payment', 'spesa'], category: 'overig_inkomen', sub_category: 'betaalverzoek', direction: 'in' },
@@ -161,8 +161,8 @@ const KEYWORD_RULES: KeywordRule[] = [
   // Convenience stores & food shops
   { patterns: ['avondwinkel', 'nachtwacht', 'zabka', 'xenos', 'kruidvat', 'etos'], category: 'boodschappen' },
 
-  // Business / services
-  { patterns: ['kvk', 'kamer van koophandel', 'applaunchpad', 'appstore', 'google workspace', 'adobe', 'dropbox', 'notion', 'github'], category: 'zakelijk' },
+  // Software & SaaS subscriptions
+  { patterns: ['applaunchpad', 'appstore', 'google workspace', 'adobe', 'dropbox', 'notion', 'github', 'microsoft 365', 'office 365'], category: 'abonnementen' },
 
   // Healthcare supplements
   { patterns: ['ggz', 'geestelijke gezondheidszorg', 'riagg'], category: 'zorg', sub_category: 'zorginstelling' },
@@ -350,7 +350,9 @@ Je krijgt banktransacties en categoriseert ze ALLEEN in de gegeven categorieën.
 Retourneer ALLEEN valide JSON. Geen uitleg, geen markdown.
 
 Categorieën:
-wonen | vaste_lasten | boodschappen | eten_drinken | vervoer | winkelen | vrije_tijd | zorg | abonnementen | schuld | salaris | overheid | overig_inkomen | eigen_rekening | pin_opname | zakelijk | overig | onbekend
+wonen | vaste_lasten | boodschappen | eten_drinken | vervoer | winkelen | vrije_tijd | zorg | abonnementen | schuld | salaris | overheid | overig_inkomen | eigen_rekening | pin_opname | onbekend
+
+Gebruik NOOIT een categorie buiten deze lijst. Twijfel je? Gebruik 'onbekend'.
 
 Subcategorieën (optioneel):
 wonen: huur, hypotheek, energie, water, gemeentebelasting

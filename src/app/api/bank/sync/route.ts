@@ -109,7 +109,14 @@ export async function POST(req: NextRequest) {
             const matchedExp = matchExpense(tx, expenses || [])
             if (matchedExp) {
               record.matched_expense_id = matchedExp.id
-              record.pw_category = matchedExp.category
+              // user_expenses use the bills taxonomy (energie/huur/telecom/...).
+              // Map into the analytics pw_category taxonomy so it isn't shown as "Overig".
+              const mapped = mapExpenseCategory(matchedExp.category)
+              record.pw_category = mapped.category
+              ;(record as Record<string, unknown>).pw_sub_category = mapped.sub
+              ;(record as Record<string, unknown>).category_source = 'user'
+              ;(record as Record<string, unknown>).category_confidence = 0.95
+              ;(record as Record<string, unknown>).merchant_clean_name = tx.creditor?.name || matchedExp.name
               totalMatched++
             }
             const billMatch = matchBill(tx, bills || [])
@@ -223,6 +230,47 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── Mapping & Matching ──────────────────────────────────────
+
+// user_expenses / bills use a different taxonomy than bank analytics.
+// Translate to the analytics pw_category taxonomy (see lib/analytics/categories.ts).
+function mapExpenseCategory(cat: string | null): { category: string; sub: string | null } {
+  const c = (cat || '').toLowerCase().trim()
+  const M: Record<string, { category: string; sub: string | null }> = {
+    // housing
+    huur: { category: 'wonen', sub: 'huur' },
+    hypotheek: { category: 'wonen', sub: 'hypotheek' },
+    energie: { category: 'wonen', sub: 'energie' },
+    water: { category: 'wonen', sub: 'water' },
+    gemeentebelasting: { category: 'wonen', sub: 'gemeentebelasting' },
+    belasting: { category: 'wonen', sub: 'gemeentebelasting' },
+    // fixed costs
+    verzekering: { category: 'vaste_lasten', sub: 'verzekering' },
+    zorgverzekering: { category: 'vaste_lasten', sub: 'zorgverzekering' },
+    telecom: { category: 'vaste_lasten', sub: 'telecom' },
+    internet: { category: 'vaste_lasten', sub: 'telecom' },
+    // subscriptions
+    abonnement: { category: 'abonnementen', sub: null },
+    // debt
+    incasso: { category: 'schuld', sub: 'incasso' },
+    deurwaarder: { category: 'schuld', sub: 'deurwaarder' },
+    cjib: { category: 'schuld', sub: 'cjib' },
+    boete: { category: 'schuld', sub: 'cjib' },
+    belastingschuld: { category: 'schuld', sub: 'belastingschuld' },
+    lening: { category: 'schuld', sub: 'lening' },
+    // already analytics taxonomy → pass through
+    wonen: { category: 'wonen', sub: null },
+    vaste_lasten: { category: 'vaste_lasten', sub: null },
+    boodschappen: { category: 'boodschappen', sub: null },
+    eten_drinken: { category: 'eten_drinken', sub: null },
+    vervoer: { category: 'vervoer', sub: null },
+    winkelen: { category: 'winkelen', sub: null },
+    vrije_tijd: { category: 'vrije_tijd', sub: null },
+    zorg: { category: 'zorg', sub: null },
+    abonnementen: { category: 'abonnementen', sub: null },
+    schuld: { category: 'schuld', sub: null },
+  }
+  return M[c] || { category: 'onbekend', sub: null }
+}
 
 function mapTx(tx: Transaction, userId: string, connId: string, accountUid: string) {
   const amount = Math.round(parseFloat(tx.transaction_amount.amount) * 100)
