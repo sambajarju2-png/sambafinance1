@@ -8,6 +8,11 @@ const nextConfig = {
   reactStrictMode: true,
   // FIX: Remove X-Powered-By header (CWE-200)
   poweredByHeader: false,
+  // PERF: tree-shake large libraries so only the icons/exports actually used
+  // are bundled, instead of the whole package. Cuts JS shipped on every page.
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'motion', 'recharts', 'date-fns'],
+  },
   // Mobile builds use static export — web builds use default SSR
   ...(isMobile && { output: 'export' }),
   images: {

@@ -8,10 +8,6 @@ import { formatCents, type Bill } from '@/lib/bills';
 import { calculateWIKCosts } from '@/lib/wik';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import MoodTracker from '@/components/mood-tracker';
-import AchievementsDisplay from '@/components/achievements';
-import SchuldenvrijCountdown from '@/components/schuldenvrij-countdown';
-import RecurringPredictions from '@/components/recurring-predictions';
 import MetricCard from '@/components/metric-card';
 import BankAwareFinancialSection from '@/components/bank/bank-aware-financial-section';
 import MatchCards from '@/components/bank/match-cards';
@@ -29,6 +25,13 @@ import { useState, useEffect } from 'react';
 const AiInsightsPanel = dynamic(() => import('@/components/ai-insights'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
 });
+
+// PERF: these widgets all sit below the fold and render conditionally, so we
+// load them lazily to keep the initial dashboard bundle + hydration light.
+const MoodTracker = dynamic(() => import('@/components/mood-tracker'), { ssr: false });
+const AchievementsDisplay = dynamic(() => import('@/components/achievements'), { ssr: false });
+const SchuldenvrijCountdown = dynamic(() => import('@/components/schuldenvrij-countdown'), { ssr: false });
+const RecurringPredictions = dynamic(() => import('@/components/recurring-predictions'), { ssr: false });
 
 type OverzichtTab = 'overview' | 'ai';
 
@@ -141,7 +144,7 @@ export default function OverzichtPage() {
               {loading ? (
                 <motion.div key="skeleton-grid" exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="grid grid-cols-2 gap-3.5">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="skeleton h-[90px] rounded-[14px]" />
+                    <div key={i} className="skeleton h-[110px] rounded-[14px]" />
                   ))}
                 </motion.div>
               ) : (
