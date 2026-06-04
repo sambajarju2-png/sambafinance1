@@ -32,6 +32,33 @@ export interface BankTx {
   category_source: string | null;
 }
 
+export interface UserCategoryRule {
+  pattern: string;
+  match_field: string;
+  match_type: string;
+  category: string;
+  sub_category: string | null;
+  priority?: number;
+}
+
+// Match a transaction against the user's saved category rules (from corrections).
+function matchUserRule(tx: BankTx, rules: UserCategoryRule[]): UserCategoryRule | null {
+  if (!rules.length) return null;
+  const fields: Record<string, string> = {
+    creditor_name: (tx.creditor_name || '').toLowerCase(),
+    debtor_name: (tx.debtor_name || '').toLowerCase(),
+    remittance_info: (tx.remittance_info || '').toLowerCase(),
+  };
+  for (const r of rules) {
+    const hay = fields[r.match_field] ?? '';
+    const needle = (r.pattern || '').toLowerCase();
+    if (!needle || !hay) continue;
+    const hit = r.match_type === 'exact' ? hay === needle : hay.includes(needle);
+    if (hit) return r;
+  }
+  return null;
+}
+
 export interface CategoryResult {
   category: string;
   sub_category: string | null;
@@ -483,11 +510,39 @@ export async function categorizeUserTransactions(userId: string): Promise<{ cate
 
   const incassoNames = (incassoAgencies || []).map(a => a.name.toLowerCase());
 
+  // 3b. User-defined category rules (created when the user corrects a category).
+  // These have the highest priority and make corrections stick for future
+  // transactions from the same vendor.
+  const { data: userRulesRows } = await supabase
+    .from('category_rules')
+    .select('pattern, match_field, match_type, category, sub_category, priority')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('priority', { ascending: false });
+  const userRules = (userRulesRows || []) as UserCategoryRule[];
+
   // 4. Run rules engine
   const needsAI: BankTx[] = [];
   const updates: Array<{ id: string; data: Record<string, unknown> }> = [];
 
   for (const tx of uncategorized as BankTx[]) {
+    // User-defined rule (from a previous correction) wins over everything else.
+    const userRule = matchUserRule(tx, userRules);
+    if (userRule) {
+      updates.push({
+        id: tx.id,
+        data: {
+          pw_category: userRule.category,
+          pw_sub_category: userRule.sub_category || null,
+          category_source: 'user',
+          category_confidence: 1.0,
+          merchant_clean_name: tx.creditor_name || tx.debtor_name,
+          is_internal_transfer: false,
+        },
+      });
+      continue;
+    }
+
     // Check incasso agencies first
     const credLower = (tx.creditor_name || '').toLowerCase();
     const isIncassoAgency = incassoNames.some(name =>

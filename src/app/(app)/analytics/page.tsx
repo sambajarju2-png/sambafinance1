@@ -68,6 +68,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [correcting, setCorrecting] = useState<TransactionItem | null>(null);
+  const [categoryView, setCategoryView] = useState<{ category: string; direction: 'in' | 'out' } | null>(null);
   const [correctionLoading, setCorrectionLoading] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -288,10 +289,10 @@ export default function AnalyticsPage() {
 
       {/* Tab content */}
       <div className="px-4 pt-4">
-        {tab === 'uitgaven' && <TabUitgaven data={spendingData} />}
-        {tab === 'inkomen' && <TabInkomen data={incomeData} />}
+        {tab === 'uitgaven' && <TabUitgaven data={spendingData} onCategoryTap={(c) => { setCategoryView({ category: c, direction: 'out' }); haptic('tap'); }} />}
+        {tab === 'inkomen' && <TabInkomen data={incomeData} onCategoryTap={(c) => { setCategoryView({ category: c, direction: 'in' }); haptic('tap'); }} />}
         {tab === 'geldstroom' && <TabGeldstroom data={data.weekly_cashflow} />}
-        {tab === 'trend' && <TabTrend data={data.monthly_totals} />}
+        {tab === 'trend' && <TabTrend data={data.monthly_totals} selectedMonth={selectedMonth} />}
         {tab === 'schuld' && <TabSchuld debts={data.debt_summary} totals={data.monthly_totals} />}
         {tab === 'transacties' && <TabTransacties transactions={data.transactions || []} selectedMonth={selectedMonth} onTap={(tx) => { setCorrecting(tx); haptic('tap'); }} />}
         {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} showVergelijk={true} />}
@@ -311,13 +312,25 @@ export default function AnalyticsPage() {
           onClose={() => setCorrecting(null)}
         />
       )}
+
+      {/* Category drill-down sheet */}
+      {categoryView && (
+        <CategoryTransactionsSheet
+          category={categoryView.category}
+          direction={categoryView.direction}
+          transactions={data.transactions || []}
+          selectedMonth={selectedMonth}
+          onClose={() => setCategoryView(null)}
+          onCorrect={(tx) => { setCategoryView(null); setCorrecting(tx); haptic('tap'); }}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Tab: Uitgaven ────────────────────────────────────────────
 
-function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
+function TabUitgaven({ data, onCategoryTap }: { data: MonthlyCategoryItem[]; onCategoryTap?: (c: string) => void }) {
   const t = useTranslations('analytics');
   const total = data.reduce((a, c) => a + c.total_cents, 0);
 
@@ -355,22 +368,23 @@ function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
           {data.map((d, i) => {
             const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
             return (
-              <div key={d.category}>
+              <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="block w-full text-left active:opacity-60 transition-opacity">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: getCategoryColor(d.category) }} />
                     <span className="text-[12px] font-medium text-pw-text">{getCategoryLabel(d.category)}</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="text-[10px] text-pw-muted">{pct}%</span>
                     <span className="text-[12px] font-semibold text-pw-navy min-w-[60px] text-right">{formatCents(d.total_cents)}</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-pw-muted/50 flex-shrink-0" strokeWidth={1.5} />
                   </div>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-pw-border/60">
                   <div className="h-1.5 rounded-full transition-all duration-500"
                     style={{ width: `${pct}%`, background: getCategoryColor(d.category) }} />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -381,7 +395,7 @@ function TabUitgaven({ data }: { data: MonthlyCategoryItem[] }) {
 
 // ─── Tab: Inkomen ─────────────────────────────────────────────
 
-function TabInkomen({ data }: { data: MonthlyCategoryItem[] }) {
+function TabInkomen({ data, onCategoryTap }: { data: MonthlyCategoryItem[]; onCategoryTap?: (c: string) => void }) {
   const t = useTranslations('analytics');
   const total = data.reduce((a, c) => a + c.total_cents, 0);
 
@@ -419,16 +433,17 @@ function TabInkomen({ data }: { data: MonthlyCategoryItem[] }) {
           {data.map((d) => {
             const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
             return (
-              <div key={d.category} className="flex items-center justify-between">
+              <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="flex w-full items-center justify-between text-left active:opacity-60 transition-opacity">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: getCategoryColor(d.category) }} />
                   <span className="text-[12px] font-medium text-pw-text">{getCategoryLabel(d.category)}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <span className="text-[10px] text-pw-muted">{pct}%</span>
                   <span className="text-[12px] font-semibold text-pw-green min-w-[60px] text-right">{formatCents(d.total_cents)}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-pw-muted/50 flex-shrink-0" strokeWidth={1.5} />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -497,13 +512,17 @@ function TabGeldstroom({ data }: { data: WeeklyCashflowItem[] }) {
 
 // ─── Tab: Trend ───────────────────────────────────────────────
 
-function TabTrend({ data }: { data: MonthlyTotalItem[] }) {
+function TabTrend({ data, selectedMonth }: { data: MonthlyTotalItem[]; selectedMonth: string }) {
   const t = useTranslations('analytics');
   if (!data || data.length < 2) {
     return <EmptyState message={t("needMoreData")} />;
   }
 
-  const sorted = [...data].sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
+  const allSorted = [...data].sort((a, b) => a.month.localeCompare(b.month));
+  // Window of up to 6 months ending at the selected month (falls back to the
+  // full range when the earliest month is selected).
+  const upto = selectedMonth ? allSorted.filter(m => m.month <= selectedMonth) : allSorted;
+  const sorted = (upto.length >= 2 ? upto : allSorted).slice(-6);
   const last = sorted[sorted.length - 1];
   const prev = sorted[sorted.length - 2];
   const diff = last.expenses_cents - prev.expenses_cents;
@@ -873,9 +892,16 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
         </div>
       </div>
 
-      {/* Subscription list */}
-      <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
-        {subscriptions.map(sub => {
+      {/* Subscription list, grouped by type */}
+      {([
+        { label: 'Abonnementen', items: subscriptions.filter(s => s.pw_category === 'abonnementen') },
+        { label: 'Vaste lasten', items: subscriptions.filter(s => s.pw_category === 'wonen' || s.pw_category === 'vaste_lasten') },
+        { label: 'Persoonlijke betalingen', items: subscriptions.filter(s => !['abonnementen', 'wonen', 'vaste_lasten'].includes(s.pw_category || '')) },
+      ]).filter(group => group.items.length > 0).map(group => (
+        <div key={group.label} className="space-y-1.5">
+          <p className="px-1 text-[10px] font-semibold uppercase tracking-wider text-pw-muted">{group.label}</p>
+          <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
+            {group.items.map(sub => {
           const displayName = sub.merchant_clean_name || sub.creditor_name;
           const provider = showVergelijk ? detectProvider(displayName) : null;
           return (
@@ -925,8 +951,10 @@ function TabAbonnementen({ subscriptions, showVergelijk }: { subscriptions: Subs
               ))}
             </div>
           );
-        })}
-      </div>
+            })}
+          </div>
+        </div>
+      ))}
 
       {/* Vergelijk summary card */}
       {subscriptions.some(s => detectProvider(s.merchant_clean_name || s.creditor_name)) && (
@@ -1058,6 +1086,81 @@ function CategoryCorrectionSheet({
             </label>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+// ─── Category drill-down sheet ───────────────────────────────
+
+function CategoryTransactionsSheet({
+  category, direction, transactions, selectedMonth, onClose, onCorrect,
+}: {
+  category: string;
+  direction: 'in' | 'out';
+  transactions: TransactionItem[];
+  selectedMonth: string;
+  onClose: () => void;
+  onCorrect: (tx: TransactionItem) => void;
+}) {
+  const t = useTranslations('analytics');
+  const monthPrefix = selectedMonth.slice(0, 7);
+  const txs = transactions
+    .filter(tx => {
+      if (tx.pw_category !== category) return false;
+      if (monthPrefix && !tx.booking_date.startsWith(monthPrefix)) return false;
+      // 'onbekend' shows on both sides; split by sign to match the chart slice.
+      if (category === 'onbekend') return direction === 'out' ? tx.amount < 0 : tx.amount >= 0;
+      return true;
+    })
+    .sort((a, b) => b.booking_date.localeCompare(a.booking_date));
+
+  const total = txs.reduce((a, tx) => a + Math.abs(tx.amount), 0);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-[101] rounded-t-[20px] bg-pw-surface border-t border-pw-border max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200 safe-pb">
+        <div className="sticky top-0 bg-pw-surface z-10 pt-3 pb-2 px-4 border-b border-pw-border/50">
+          <div className="mx-auto h-1 w-10 rounded-full bg-pw-border mb-3" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ background: getCategoryColor(category) }} />
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-pw-text truncate">{getCategoryLabel(category)}</p>
+                <p className="text-[12px] text-pw-muted mt-0.5">
+                  {txs.length} {txs.length === 1 ? 'transactie' : 'transacties'} &middot; {formatCents(total)}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-pw-bg ml-2">
+              <X className="h-5 w-5 text-pw-muted" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-4 py-3">
+          {txs.length === 0 ? (
+            <p className="py-8 text-center text-[13px] text-pw-muted">{t('noTransactions')}</p>
+          ) : (
+            <div className="rounded-card border border-pw-border bg-pw-surface divide-y divide-pw-border/60">
+              {txs.map(tx => (
+                <button key={tx.id} onClick={() => onCorrect(tx)} className="flex w-full items-center justify-between py-3 px-3.5 text-left active:bg-pw-bg/50 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-pw-text truncate">{tx.display_name}</p>
+                    <p className="text-[10px] text-pw-muted mt-0.5">
+                      {new Date(tx.booking_date + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <span className={`text-[13px] font-semibold ml-2 flex-shrink-0 ${tx.amount < 0 ? 'text-pw-text' : 'text-pw-green'}`}>
+                    {tx.amount >= 0 ? '+' : ''}{formatCents(tx.amount)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-3 text-center text-[10px] text-pw-muted">Tik op een transactie om de categorie aan te passen</p>
+        </div>
       </div>
     </>
   );
