@@ -60,15 +60,7 @@ export async function POST(req: NextRequest) {
       if (result.categorized === 0) break
     }
 
-    // Re-aggregate
-    try {
-      const { aggregateAnalytics } = await import('@/lib/analytics/aggregate')
-      await aggregateAnalytics(user.id)
-    } catch (e) {
-      log.error('Aggregate error', { error: e instanceof Error ? e.message : 'unknown' })
-    }
-
-    // Re-detect subscriptions
+    // Re-detect subscriptions (categorizeUserTransactions already refreshes analytics)
     try {
       await supabase.rpc('detect_recurring_payments', { p_user_id: user.id })
     } catch (e) {
