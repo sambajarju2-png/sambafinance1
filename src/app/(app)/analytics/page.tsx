@@ -18,7 +18,7 @@ import { formatCents } from '@/lib/bills';
 import { getCategoryLabel, getCategoryColor, CATEGORIES, DEBT_CATEGORY_IDS, FIXED_COST_IDS } from '@/lib/analytics/categories';
 import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem, TransactionItem, SubscriptionItem } from '@/lib/analytics/types';
 import { haptic } from '@/lib/capacitor';
-import { InsightCard } from '@/components/analytics/insight-card';
+import { LogicInsights } from '@/components/analytics/logic-insights';
 
 type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld' | 'transacties' | 'abonnementen';
 
@@ -251,16 +251,18 @@ export default function AnalyticsPage() {
         {/* Summary bar */}
         {currentTotal && (
           <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              { label: t('income'), value: currentTotal.income_cents, color: 'text-pw-green' },
-              { label: t('expenses'), value: currentTotal.expenses_cents, color: 'text-pw-red' },
-              { label: t('net'), value: currentTotal.net_cents, color: currentTotal.net_cents >= 0 ? 'text-pw-green' : 'text-pw-red' },
-            ].map(m => (
-              <div key={m.label} className="rounded-[10px] border border-pw-border bg-pw-surface p-2.5 text-center">
-                <p className="text-[10px] text-pw-muted">{m.label}</p>
-                <p className={`text-[14px] font-bold ${m.color}`}>{formatCents(Math.abs(m.value))}</p>
-              </div>
-            ))}
+            <div className="rounded-card border border-green-200/60 bg-green-50/70 dark:border-green-900/30 dark:bg-green-950/15 p-2.5 text-center">
+              <p className="text-[10px] font-medium text-pw-muted">{t('income')}</p>
+              <p className="mt-0.5 text-[16px] font-extrabold tracking-tight text-pw-green">{formatCents(currentTotal.income_cents)}</p>
+            </div>
+            <div className="rounded-card border border-pw-border bg-pw-surface p-2.5 text-center">
+              <p className="text-[10px] font-medium text-pw-muted">{t('expenses')}</p>
+              <p className="mt-0.5 text-[16px] font-extrabold tracking-tight text-pw-navy">{formatCents(currentTotal.expenses_cents)}</p>
+            </div>
+            <div className={`rounded-card border p-2.5 text-center ${currentTotal.net_cents >= 0 ? 'border-green-200/60 bg-green-50/70 dark:border-green-900/30 dark:bg-green-950/15' : 'border-red-200/60 bg-red-50/70 dark:border-red-900/30 dark:bg-red-950/15'}`}>
+              <p className="text-[10px] font-medium text-pw-muted">{t('net')}</p>
+              <p className={`mt-0.5 text-[16px] font-extrabold tracking-tight ${currentTotal.net_cents >= 0 ? 'text-pw-green' : 'text-pw-red'}`}>{formatCents(Math.abs(currentTotal.net_cents))}</p>
+            </div>
           </div>
         )}
       </div>
@@ -298,9 +300,14 @@ export default function AnalyticsPage() {
         {tab === 'abonnementen' && <TabAbonnementen subscriptions={data.subscriptions || []} showVergelijk={true} />}
       </div>
 
-      {/* AI-powered monthly insight (Mistral) */}
+      {/* Deterministic logic insights (no AI, instant) */}
       <div className="px-4">
-        <InsightCard month={selectedMonth} tab={tab} />
+        <LogicInsights
+          data={data}
+          selectedMonth={selectedMonth}
+          tab={tab}
+          onCategoryTap={(c, dir) => { setCategoryView({ category: c, direction: dir }); haptic('tap'); }}
+        />
       </div>
 
       {/* Category correction sheet */}
@@ -345,49 +352,54 @@ function TabUitgaven({ data, onCategoryTap }: { data: MonthlyCategoryItem[]; onC
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="relative h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={chartData} dataKey="value" cx="50%" cy="50%"
-              innerRadius={65} outerRadius={95} paddingAngle={2}
-              startAngle={90} endAngle={-270}>
-              {chartData.map((d, i) => (
-                <Cell key={i} fill={getCategoryColor(d.category)} stroke="none" />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("total")}</text>
-            <text x="50%" y="58%" textAnchor="middle" className="fill-pw-navy text-[18px] font-bold">{formatCents(total)}</text>
-          </PieChart>
-        </ResponsiveContainer>
+    <div className="space-y-3">
+      {/* Donut hero */}
+      <div className="rounded-card-lg border border-pw-border bg-gradient-to-br from-blue-50/50 to-pw-surface dark:from-blue-950/15 dark:to-pw-surface p-4">
+        <div className="relative h-[210px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={chartData} dataKey="value" cx="50%" cy="50%"
+                innerRadius={66} outerRadius={94} paddingAngle={2}
+                startAngle={90} endAngle={-270}>
+                {chartData.map((d, i) => (
+                  <Cell key={i} fill={getCategoryColor(d.category)} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("total")}</text>
+              <text x="50%" y="58%" textAnchor="middle" className="fill-pw-navy text-[20px] font-extrabold">{formatCents(total)}</text>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <div className="rounded-card border border-pw-border bg-pw-surface p-3.5">
-        <div className="space-y-2.5">
-          {data.map((d, i) => {
-            const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
-            return (
-              <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="block w-full text-left active:opacity-60 transition-opacity">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: getCategoryColor(d.category) }} />
-                    <span className="text-[12px] font-medium text-pw-text">{getCategoryLabel(d.category)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-pw-muted">{pct}%</span>
-                    <span className="text-[12px] font-semibold text-pw-navy min-w-[60px] text-right">{formatCents(d.total_cents)}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-pw-muted/50 flex-shrink-0" strokeWidth={1.5} />
-                  </div>
+      {/* Category list with icon chips */}
+      <div className="rounded-card border border-pw-border bg-pw-surface p-2 divide-y divide-pw-border/50">
+        {data.map((d) => {
+          const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
+          const Icon = ICON_MAP[d.category] || HelpCircle;
+          const color = getCategoryColor(d.category);
+          return (
+            <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="flex w-full items-center gap-3 rounded-[8px] px-2 py-2.5 text-left transition-colors active:bg-pw-bg/60">
+              <div className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px]" style={{ background: `${color}1A` }}>
+                <Icon className="h-4 w-4" strokeWidth={1.8} style={{ color }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-[13px] font-semibold text-pw-text">{getCategoryLabel(d.category)}</span>
+                  <span className="flex-none text-[13px] font-bold text-pw-navy">{formatCents(d.total_cents)}</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-pw-border/60">
-                  <div className="h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: getCategoryColor(d.category) }} />
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-pw-border/60">
+                    <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <span className="w-7 flex-none text-right text-[10px] text-pw-muted">{pct}%</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              <ChevronRight className="h-4 w-4 flex-none text-pw-muted/40" strokeWidth={1.5} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -410,43 +422,54 @@ function TabInkomen({ data, onCategoryTap }: { data: MonthlyCategoryItem[]; onCa
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="relative h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={chartData} dataKey="value" cx="50%" cy="50%"
-              innerRadius={65} outerRadius={95} paddingAngle={2}
-              startAngle={90} endAngle={-270}>
-              {chartData.map((d, i) => (
-                <Cell key={i} fill={getCategoryColor(d.category)} stroke="none" />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("income")}</text>
-            <text x="50%" y="58%" textAnchor="middle" className="fill-pw-green text-[18px] font-bold">{formatCents(total)}</text>
-          </PieChart>
-        </ResponsiveContainer>
+    <div className="space-y-3">
+      {/* Donut hero */}
+      <div className="rounded-card-lg border border-pw-border bg-gradient-to-br from-green-50/50 to-pw-surface dark:from-green-950/15 dark:to-pw-surface p-4">
+        <div className="relative h-[210px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={chartData} dataKey="value" cx="50%" cy="50%"
+                innerRadius={66} outerRadius={94} paddingAngle={2}
+                startAngle={90} endAngle={-270}>
+                {chartData.map((d, i) => (
+                  <Cell key={i} fill={getCategoryColor(d.category)} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <text x="50%" y="46%" textAnchor="middle" className="fill-pw-muted text-[11px]">{t("income")}</text>
+              <text x="50%" y="58%" textAnchor="middle" className="fill-pw-green text-[20px] font-extrabold">{formatCents(total)}</text>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <div className="rounded-card border border-pw-border bg-pw-surface p-3.5">
-        <div className="space-y-2.5">
-          {data.map((d) => {
-            const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
-            return (
-              <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="flex w-full items-center justify-between text-left active:opacity-60 transition-opacity">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: getCategoryColor(d.category) }} />
-                  <span className="text-[12px] font-medium text-pw-text">{getCategoryLabel(d.category)}</span>
+      {/* Category list with icon chips */}
+      <div className="rounded-card border border-pw-border bg-pw-surface p-2 divide-y divide-pw-border/50">
+        {data.map((d) => {
+          const pct = total > 0 ? Math.round((d.total_cents / total) * 100) : 0;
+          const Icon = ICON_MAP[d.category] || HelpCircle;
+          const color = getCategoryColor(d.category);
+          return (
+            <button key={d.category} onClick={() => onCategoryTap?.(d.category)} className="flex w-full items-center gap-3 rounded-[8px] px-2 py-2.5 text-left transition-colors active:bg-pw-bg/60">
+              <div className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px]" style={{ background: `${color}1A` }}>
+                <Icon className="h-4 w-4" strokeWidth={1.8} style={{ color }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-[13px] font-semibold text-pw-text">{getCategoryLabel(d.category)}</span>
+                  <span className="flex-none text-[13px] font-bold text-pw-green">{formatCents(d.total_cents)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-pw-muted">{pct}%</span>
-                  <span className="text-[12px] font-semibold text-pw-green min-w-[60px] text-right">{formatCents(d.total_cents)}</span>
-                  <ChevronRight className="h-3.5 w-3.5 text-pw-muted/50 flex-shrink-0" strokeWidth={1.5} />
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-pw-border/60">
+                    <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <span className="w-7 flex-none text-right text-[10px] text-pw-muted">{pct}%</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              <ChevronRight className="h-4 w-4 flex-none text-pw-muted/40" strokeWidth={1.5} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
