@@ -23,54 +23,70 @@ interface LimitReachedModalProps {
 }
 
 type LimitCopy = { title: string; desc: string; icon: string };
-const LIMIT_INFO: Record<LimitType, { nl: LimitCopy; en: LimitCopy; pl: LimitCopy; tr: LimitCopy }> = {
+const LIMIT_INFO: Record<LimitType, { nl: LimitCopy; en: LimitCopy; pl: LimitCopy; tr: LimitCopy; fr: LimitCopy; ar: LimitCopy }> = {
   chat: {
     nl: { title: 'Chatlimiet bereikt', desc: 'Je hebt je dagelijkse chatberichten opgebruikt. Upgrade om meer te chatten met PayBuddy.', icon: '💬' },
     en: { title: 'Chat limit reached', desc: "You've used up your daily chat messages. Upgrade to chat more with PayBuddy.", icon: '💬' },
     pl: { title: 'Limit czatu osiągnięty', desc: 'Wykorzystałeś dzienne wiadomości czatu. Przejdź na wyższy plan, aby więcej rozmawiać z PayBuddy.', icon: '💬' },
     tr: { title: 'Sohbet limiti doldu', desc: 'Günlük sohbet mesajlarını kullandın. PayBuddy ile daha fazla sohbet etmek için yükselt.', icon: '💬' },
+    fr: { title: "Limite de chat atteinte", desc: "Vous avez épuisé vos messages de chat quotidiens. Passez à un forfait supérieur pour discuter davantage avec PayBuddy.", icon: '💬' },
+    ar: { title: 'تم الوصول إلى حد المحادثة', desc: 'لقد استنفدت رسائل المحادثة اليومية. قم بالترقية للدردشة أكثر مع PayBuddy.', icon: '💬' },
   },
   voice: {
     nl: { title: 'Beltijd is op', desc: 'Je PayBuddy beltijd is op voor deze maand. Upgrade voor meer belminuten.', icon: '📞' },
     en: { title: 'Voice time used up', desc: 'Your PayBuddy call time is used up this month. Upgrade for more minutes.', icon: '📞' },
     pl: { title: 'Czas rozmów wyczerpany', desc: 'Twój czas rozmów z PayBuddy w tym miesiącu się skończył. Przejdź na wyższy plan, aby uzyskać więcej minut.', icon: '📞' },
     tr: { title: 'Görüşme süren bitti', desc: 'Bu ay PayBuddy görüşme süren doldu. Daha fazla dakika için yükselt.', icon: '📞' },
+    fr: { title: "Temps d'appel épuisé", desc: "Votre temps d'appel PayBuddy est épuisé ce mois-ci. Passez à un forfait supérieur pour plus de minutes.", icon: '📞' },
+    ar: { title: 'انتهى وقت المكالمات', desc: 'انتهى وقت مكالمات PayBuddy لديك هذا الشهر. قم بالترقية للحصول على المزيد من الدقائق.', icon: '📞' },
   },
   bezwaarschrift: {
     nl: { title: 'Bezwaarschriftenlimiet bereikt', desc: 'Je hebt je maandelijkse bezwaarschriften opgebruikt. Upgrade om meer brieven te genereren.', icon: '📝' },
     en: { title: 'Dispute letter limit reached', desc: "You've used your monthly dispute letters. Upgrade to generate more.", icon: '📝' },
     pl: { title: 'Limit pism osiągnięty', desc: 'Wykorzystałeś miesięczne pisma z odwołaniem. Przejdź na wyższy plan, aby generować więcej pism.', icon: '📝' },
     tr: { title: 'İtiraz mektubu limiti doldu', desc: 'Aylık itiraz mektuplarını kullandın. Daha fazla mektup oluşturmak için yükselt.', icon: '📝' },
+    fr: { title: "Limite de lettres de contestation atteinte", desc: "Vous avez utilisé vos lettres de contestation mensuelles. Passez à un forfait supérieur pour en générer davantage.", icon: '📝' },
+    ar: { title: 'تم الوصول إلى حد رسائل الاعتراض', desc: 'لقد استخدمت رسائل الاعتراض الشهرية. قم بالترقية لإنشاء المزيد.', icon: '📝' },
   },
   ai_insight: {
     nl: { title: 'AI inzichtenlimiet bereikt', desc: 'Je hebt je maandelijkse AI inzichten opgebruikt. Upgrade voor meer analyses.', icon: '🧠' },
     en: { title: 'AI insights limit reached', desc: "You've used your monthly AI insights. Upgrade for more analyses.", icon: '🧠' },
     pl: { title: 'Limit analiz AI osiągnięty', desc: 'Wykorzystałeś miesięczne analizy AI. Przejdź na wyższy plan, aby uzyskać więcej analiz.', icon: '🧠' },
     tr: { title: 'AI analiz limiti doldu', desc: 'Aylık AI analizlerini kullandın. Daha fazla analiz için yükselt.', icon: '🧠' },
+    fr: { title: "Limite d'analyses IA atteinte", desc: "Vous avez utilisé vos analyses IA mensuelles. Passez à un forfait supérieur pour plus d'analyses.", icon: '🧠' },
+    ar: { title: 'تم الوصول إلى حد تحليلات الذكاء الاصطناعي', desc: 'لقد استخدمت تحليلات الذكاء الاصطناعي الشهرية. قم بالترقية للحصول على المزيد من التحليلات.', icon: '🧠' },
   },
   scan: {
     nl: { title: 'Scanlimiet bereikt', desc: 'Je hebt je maandelijkse scans opgebruikt. Upgrade voor onbeperkt scannen.', icon: '📷' },
     en: { title: 'Scan limit reached', desc: "You've used your monthly scans. Upgrade for unlimited scanning.", icon: '📷' },
     pl: { title: 'Limit skanowania osiągnięty', desc: 'Wykorzystałeś miesięczne skanowania. Przejdź na wyższy plan, aby skanować bez limitu.', icon: '📷' },
     tr: { title: 'Tarama limiti doldu', desc: 'Aylık taramalarını kullandın. Sınırsız tarama için yükselt.', icon: '📷' },
+    fr: { title: "Limite de scans atteinte", desc: "Vous avez utilisé vos scans mensuels. Passez à un forfait supérieur pour scanner sans limite.", icon: '📷' },
+    ar: { title: 'تم الوصول إلى حد المسح', desc: 'لقد استخدمت عمليات المسح الشهرية. قم بالترقية للمسح بلا حدود.', icon: '📷' },
   },
   payment_confirmation: {
     nl: { title: 'Betalingsbewijzenlimiet bereikt', desc: 'Je hebt je maandelijkse betalingsbewijzen opgebruikt. Upgrade voor onbeperkt opslaan.', icon: '✅' },
     en: { title: 'Payment confirmation limit reached', desc: "You've used your monthly payment confirmations. Upgrade for unlimited.", icon: '✅' },
     pl: { title: 'Limit potwierdzeń płatności osiągnięty', desc: 'Wykorzystałeś miesięczne potwierdzenia płatności. Przejdź na wyższy plan, aby zapisywać bez limitu.', icon: '✅' },
     tr: { title: 'Ödeme onayı limiti doldu', desc: 'Aylık ödeme onaylarını kullandın. Sınırsız kayıt için yükselt.', icon: '✅' },
+    fr: { title: "Limite de confirmations de paiement atteinte", desc: "Vous avez utilisé vos confirmations de paiement mensuelles. Passez à un forfait supérieur pour un nombre illimité.", icon: '✅' },
+    ar: { title: 'تم الوصول إلى حد تأكيدات الدفع', desc: 'لقد استخدمت تأكيدات الدفع الشهرية. قم بالترقية للحصول على عدد غير محدود.', icon: '✅' },
   },
   email_inbox: {
     nl: { title: 'E-mail inbox limiet bereikt', desc: 'Je hebt het maximum aantal e-mail inboxen bereikt. Upgrade om meer inboxen te koppelen.', icon: '📧' },
     en: { title: 'Email inbox limit reached', desc: "You've reached the maximum email inboxes. Upgrade to connect more.", icon: '📧' },
     pl: { title: 'Limit skrzynek e-mail osiągnięty', desc: 'Osiągnąłeś maksymalną liczbę skrzynek e-mail. Przejdź na wyższy plan, aby połączyć więcej skrzynek.', icon: '📧' },
     tr: { title: 'E-posta gelen kutusu limiti doldu', desc: 'Maksimum e-posta gelen kutusu sayısına ulaştın. Daha fazla bağlamak için yükselt.', icon: '📧' },
+    fr: { title: "Limite de boîtes mail atteinte", desc: "Vous avez atteint le nombre maximum de boîtes mail. Passez à un forfait supérieur pour en connecter davantage.", icon: '📧' },
+    ar: { title: 'تم الوصول إلى حد صناديق البريد', desc: 'لقد وصلت إلى الحد الأقصى لصناديق البريد الإلكتروني. قم بالترقية لربط المزيد.', icon: '📧' },
   },
   bank_account: {
     nl: { title: 'Bankrekening koppelen', desc: 'Bankrekeningen koppelen is beschikbaar vanaf het Pro-abonnement.', icon: '🏦' },
     en: { title: 'Bank account linking', desc: 'Linking bank accounts is available from the Pro plan.', icon: '🏦' },
     pl: { title: 'Połączenie konta bankowego', desc: 'Łączenie kont bankowych jest dostępne od abonamentu Pro.', icon: '🏦' },
     tr: { title: 'Banka hesabı bağlama', desc: 'Banka hesabı bağlama Pro aboneliğinden itibaren kullanılabilir.', icon: '🏦' },
+    fr: { title: "Connexion de compte bancaire", desc: "La connexion de comptes bancaires est disponible à partir du forfait Pro.", icon: '🏦' },
+    ar: { title: 'ربط حساب مصرفي', desc: 'ربط الحسابات المصرفية متاح بدءًا من خطة Pro.', icon: '🏦' },
   },
 };
 
@@ -126,10 +142,10 @@ export default function LimitReachedModal({ limitType, currentPlan = 'gratis', l
             </div>
             <div>
               <p className={`text-[14px] font-semibold ${target.color}`}>
-                {pick(lang, { nl: `Upgrade naar ${target.nameNl}`, en: `Upgrade to ${target.nameEn}`, pl: `Przejdź na ${target.nameNl}`, tr: `${target.nameEn}'a yükselt` })}
+                {pick(lang, { nl: `Upgrade naar ${target.nameNl}`, en: `Upgrade to ${target.nameEn}`, pl: `Przejdź na ${target.nameNl}`, tr: `${target.nameEn}'a yükselt`, fr: `Passer à ${target.nameEn}`, ar: `الترقية إلى ${target.nameEn}` })}
               </p>
               <p className="text-[12px] text-gray-500 dark:text-gray-400">
-                {pick(lang, { nl: 'Probeer 7 dagen gratis', en: '7-day free trial', pl: 'Wypróbuj 7 dni za darmo', tr: '7 gün ücretsiz dene' })}
+                {pick(lang, { nl: 'Probeer 7 dagen gratis', en: '7-day free trial', pl: 'Wypróbuj 7 dni za darmo', tr: '7 gün ücretsiz dene', fr: 'Essai gratuit de 7 jours', ar: 'تجربة مجانية لمدة 7 أيام' })}
               </p>
             </div>
           </div>
@@ -140,7 +156,7 @@ export default function LimitReachedModal({ limitType, currentPlan = 'gratis', l
           onClick={onUpgrade}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold text-white active:scale-[0.98] transition-transform ${target.bgColor} shadow-lg ${target.plan === 'premium' ? 'shadow-amber-500/20' : 'shadow-pw-blue/20'}`}
         >
-          {pick(lang, { nl: `Bekijk ${target.nameNl}-abonnement`, en: `View ${target.nameEn} plan`, pl: `Zobacz abonament ${target.nameNl}`, tr: `${target.nameEn} aboneliğini gör` })}
+          {pick(lang, { nl: `Bekijk ${target.nameNl}-abonnement`, en: `View ${target.nameEn} plan`, pl: `Zobacz abonament ${target.nameNl}`, tr: `${target.nameEn} aboneliğini gör`, fr: `Voir le forfait ${target.nameEn}`, ar: `عرض خطة ${target.nameEn}` })}
           <ArrowRight className="h-4 w-4" strokeWidth={2} />
         </button>
 
@@ -149,7 +165,7 @@ export default function LimitReachedModal({ limitType, currentPlan = 'gratis', l
           onClick={onClose}
           className="w-full mt-2.5 rounded-xl py-3 text-[14px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
         >
-          {pick(lang, { nl: 'Niet nu', en: 'Not now', pl: 'Nie teraz', tr: 'Şimdi değil' })}
+          {pick(lang, { nl: 'Niet nu', en: 'Not now', pl: 'Nie teraz', tr: 'Şimdi değil', fr: 'Pas maintenant', ar: 'ليس الآن' })}
         </button>
       </div>
     </div>

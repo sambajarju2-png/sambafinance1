@@ -18,21 +18,21 @@ interface ScanProgressProps {
 }
 
 interface Quote {
-  text: { nl: string; en: string; pl: string; tr: string };
+  text: { nl: string; en: string; pl: string; tr: string; fr: string; ar: string };
   Icon: React.ElementType;
 }
 
 const QUOTES: Quote[] = [
-  { text: { nl: 'Financiële rust begint met overzicht.', en: 'Financial peace starts with overview.', pl: 'Spokój finansowy zaczyna się od przeglądu.', tr: 'Mali huzur, genel bakışla başlar.' }, Icon: Eye },
-  { text: { nl: 'Elke betaalde rekening is een stap vooruit.', en: 'Every paid bill is a step forward.', pl: 'Każdy opłacony rachunek to krok naprzód.', tr: 'Ödenen her fatura ileriye bir adımdır.' }, Icon: ArrowRight },
-  { text: { nl: 'Je bent al bezig — dat is het belangrijkste.', en: 'You\'re already on it — that\'s what matters.', pl: 'Już działasz — to jest najważniejsze.', tr: 'Şimdiden başladın — en önemlisi bu.' }, Icon: Zap },
-  { text: { nl: 'Schulden voorkomen is beter dan genezen.', en: 'Preventing debt is better than curing it.', pl: 'Lepiej zapobiegać długom niż je leczyć.', tr: 'Borcu önlemek, sonra çözmekten iyidir.' }, Icon: Shield },
-  { text: { nl: 'Kleine stappen, groot resultaat.', en: 'Small steps, big results.', pl: 'Małe kroki, wielki efekt.', tr: 'Küçük adımlar, büyük sonuç.' }, Icon: Leaf },
-  { text: { nl: 'Je financiën onder controle = rust in je hoofd.', en: 'Finances under control = peace of mind.', pl: 'Finanse pod kontrolą = spokój w głowie.', tr: 'Finansın kontrol altında = huzurlu bir zihin.' }, Icon: Compass },
-  { text: { nl: 'Kennis is macht. Overzicht is rust.', en: 'Knowledge is power. Overview is calm.', pl: 'Wiedza to potęga. Przegląd to spokój.', tr: 'Bilgi güçtür. Genel bakış huzurdur.' }, Icon: Lightbulb },
-  { text: { nl: 'Iedere reis begint met een eerste stap.', en: 'Every journey starts with a first step.', pl: 'Każda podróż zaczyna się od pierwszego kroku.', tr: 'Her yolculuk ilk adımla başlar.' }, Icon: Target },
-  { text: { nl: 'Je toekomstige zelf zal je dankbaar zijn.', en: 'Your future self will thank you.', pl: 'Twoje przyszłe ja będzie ci wdzięczne.', tr: 'Gelecekteki sen sana teşekkür edecek.' }, Icon: Heart },
-  { text: { nl: 'Grip op je geld = grip op je leven.', en: 'Control your money = control your life.', pl: 'Kontrola nad pieniędzmi = kontrola nad życiem.', tr: 'Paranın kontrolü = hayatının kontrolü.' }, Icon: Target },
+  { text: { nl: 'Financiële rust begint met overzicht.', en: 'Financial peace starts with overview.', pl: 'Spokój finansowy zaczyna się od przeglądu.', tr: 'Mali huzur, genel bakışla başlar.', fr: "La sérénité financière commence par une vue d'ensemble.", ar: 'يبدأ السلام المالي بنظرة شاملة.' }, Icon: Eye },
+  { text: { nl: 'Elke betaalde rekening is een stap vooruit.', en: 'Every paid bill is a step forward.', pl: 'Każdy opłacony rachunek to krok naprzód.', tr: 'Ödenen her fatura ileriye bir adımdır.', fr: 'Chaque facture payée est un pas en avant.', ar: 'كل فاتورة مدفوعة خطوة إلى الأمام.' }, Icon: ArrowRight },
+  { text: { nl: 'Je bent al bezig — dat is het belangrijkste.', en: 'You\'re already on it — that\'s what matters.', pl: 'Już działasz — to jest najważniejsze.', tr: 'Şimdiden başladın — en önemlisi bu.', fr: "Vous avez déjà commencé — c'est l'essentiel.", ar: 'لقد بدأت بالفعل — وهذا هو الأهم.' }, Icon: Zap },
+  { text: { nl: 'Schulden voorkomen is beter dan genezen.', en: 'Preventing debt is better than curing it.', pl: 'Lepiej zapobiegać długom niż je leczyć.', tr: 'Borcu önlemek, sonra çözmekten iyidir.', fr: 'Mieux vaut prévenir les dettes que les guérir.', ar: 'الوقاية من الديون خير من علاجها.' }, Icon: Shield },
+  { text: { nl: 'Kleine stappen, groot resultaat.', en: 'Small steps, big results.', pl: 'Małe kroki, wielki efekt.', tr: 'Küçük adımlar, büyük sonuç.', fr: 'De petits pas, de grands résultats.', ar: 'خطوات صغيرة، نتائج كبيرة.' }, Icon: Leaf },
+  { text: { nl: 'Je financiën onder controle = rust in je hoofd.', en: 'Finances under control = peace of mind.', pl: 'Finanse pod kontrolą = spokój w głowie.', tr: 'Finansın kontrol altında = huzurlu bir zihin.', fr: "Des finances maîtrisées = l'esprit tranquille.", ar: 'سيطرتك على أموالك = راحة البال.' }, Icon: Compass },
+  { text: { nl: 'Kennis is macht. Overzicht is rust.', en: 'Knowledge is power. Overview is calm.', pl: 'Wiedza to potęga. Przegląd to spokój.', tr: 'Bilgi güçtür. Genel bakış huzurdur.', fr: "Le savoir, c'est le pouvoir. La vue d'ensemble, c'est la sérénité.", ar: 'المعرفة قوة. النظرة الشاملة طمأنينة.' }, Icon: Lightbulb },
+  { text: { nl: 'Iedere reis begint met een eerste stap.', en: 'Every journey starts with a first step.', pl: 'Każda podróż zaczyna się od pierwszego kroku.', tr: 'Her yolculuk ilk adımla başlar.', fr: 'Chaque voyage commence par un premier pas.', ar: 'كل رحلة تبدأ بخطوة أولى.' }, Icon: Target },
+  { text: { nl: 'Je toekomstige zelf zal je dankbaar zijn.', en: 'Your future self will thank you.', pl: 'Twoje przyszłe ja będzie ci wdzięczne.', tr: 'Gelecekteki sen sana teşekkür edecek.', fr: 'Votre futur vous remerciera.', ar: 'سيشكرك أنت في المستقبل.' }, Icon: Heart },
+  { text: { nl: 'Grip op je geld = grip op je leven.', en: 'Control your money = control your life.', pl: 'Kontrola nad pieniędzmi = kontrola nad życiem.', tr: 'Paranın kontrolü = hayatının kontrolü.', fr: 'Maîtriser votre argent = maîtriser votre vie.', ar: 'التحكم في أموالك = التحكم في حياتك.' }, Icon: Target },
 ];
 
 const MAX_EMAILS = 200;
@@ -205,7 +205,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
             nl: 'Je account moet opnieuw verbonden worden.',
             en: 'Your account needs to be reconnected.',
             pl: 'Twoje konto musi zostać ponownie połączone.',
-            tr: 'Hesabının yeniden bağlanması gerekiyor.',
+            tr: 'Hesabının yeniden bağlanması gerekiyor.', fr: 'Votre compte doit être reconnecté.', ar: 'يجب إعادة ربط حسابك.',
           }));
           scanningRef.current = false;
           return;
@@ -268,7 +268,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
       }
     } catch {
       setStatus('error');
-      setErrorMessage(pick(lang, { nl: 'Netwerkfout. Controleer je internetverbinding.', en: 'Network error. Check your connection.', pl: 'Błąd sieci. Sprawdź połączenie z internetem.', tr: 'Ağ hatası. Bağlantını kontrol et.' }));
+      setErrorMessage(pick(lang, { nl: 'Netwerkfout. Controleer je internetverbinding.', en: 'Network error. Check your connection.', pl: 'Błąd sieci. Sprawdź połączenie z internetem.', tr: 'Ağ hatası. Bağlantını kontrol et.', fr: 'Erreur réseau. Vérifiez votre connexion.', ar: 'خطأ في الشبكة. تحقق من اتصالك.' }));
       scanningRef.current = false;
     }
   }, [accountId, provider, startTime, lang, maxEmails, updateEstimate]);
@@ -312,7 +312,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
               <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-blue" strokeWidth={1.5} />
               <div>
                 <p className="text-[15px] font-semibold text-pw-navy mb-2">
-                  {pick(lang, { nl: `${providerName} inbox scannen`, en: `Scan ${providerName} inbox`, pl: `Skanowanie skrzynki ${providerName}`, tr: `${providerName} gelen kutusunu tara` })}
+                  {pick(lang, { nl: `${providerName} inbox scannen`, en: `Scan ${providerName} inbox`, pl: `Skanowanie skrzynki ${providerName}`, tr: `${providerName} gelen kutusunu tara`, fr: `Analyser la boîte ${providerName}`, ar: `فحص صندوق ${providerName}` })}
                 </p>
                 <div className="space-y-3 text-[13px] text-pw-muted leading-relaxed">
                   <p>
@@ -321,6 +321,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                       en: <>We&apos;ll scan your emails from the <strong>last 7 days</strong> (up to {MAX_EMAILS} emails). This usually takes <strong>2-5 minutes</strong>.</>,
                       pl: <>Skanujemy twoje e-maile z <strong>ostatnich 7 dni</strong> (maksymalnie {MAX_EMAILS} e-maili). Zwykle trwa to <strong>2-5 minut</strong>.</>,
                       tr: <>Son <strong>7 güne</strong> ait e-postalarını tararız (en fazla {MAX_EMAILS} e-posta). Bu genellikle <strong>2-5 dakika</strong> sürer.</>,
+                      fr: <>Nous analysons vos e-mails des <strong>7 derniers jours</strong> (jusqu&apos;à {MAX_EMAILS} e-mails). Cela prend généralement <strong>2 à 5 minutes</strong>.</>,
+                      ar: <>نفحص رسائلك من <strong>آخر 7 أيام</strong> (حتى {MAX_EMAILS} رسالة). يستغرق هذا عادةً <strong>2-5 دقائق</strong>.</>,
                     })}
                   </p>
                   <div className="flex items-start gap-2">
@@ -331,6 +333,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                         en: <><strong>You can leave the app</strong> while scanning. The scan continues on the server and you&apos;ll get a notification when it&apos;s done.</>,
                         pl: <><strong>Możesz opuścić aplikację</strong> podczas skanowania. Skanowanie jest kontynuowane na serwerze, a po zakończeniu otrzymasz powiadomienie.</>,
                         tr: <><strong>Tarama sırasında uygulamadan çıkabilirsin</strong>. Tarama sunucuda devam eder ve bittiğinde bir bildirim alırsın.</>,
+                        fr: <><strong>Vous pouvez quitter l&apos;application</strong> pendant l&apos;analyse. L&apos;analyse se poursuit sur le serveur et vous recevrez une notification une fois terminée.</>,
+                        ar: <><strong>يمكنك مغادرة التطبيق</strong> أثناء الفحص. يستمر الفحص على الخادم وستتلقى إشعارًا عند اكتماله.</>,
                       })}
                     </p>
                   </div>
@@ -342,6 +346,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                         en: <>After this first scan, we automatically scan the <strong>last 24 hours every day</strong>. No action needed on your end.</>,
                         pl: <>Po tym pierwszym skanowaniu automatycznie skanujemy <strong>codziennie</strong> ostatnie 24 godziny. Nie musisz nic robić.</>,
                         tr: <>Bu ilk taramadan sonra her gün <strong>son 24 saati</strong> otomatik tararız. Senin bir şey yapmana gerek yok.</>,
+                        fr: <>Après cette première analyse, nous analysons automatiquement les <strong>dernières 24 heures chaque jour</strong>. Aucune action requise de votre part.</>,
+                        ar: <>بعد هذا الفحص الأول، نفحص تلقائيًا <strong>آخر 24 ساعة كل يوم</strong>. لا يلزم أي إجراء من جانبك.</>,
                       })}
                     </p>
                   </div>
@@ -352,10 +358,10 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
 
           <div className="flex gap-3">
             <button onClick={startScan} className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-              {pick(lang, { nl: 'Start scan', en: 'Start scan', pl: 'Rozpocznij skanowanie', tr: 'Taramayı başlat' })}
+              {pick(lang, { nl: 'Start scan', en: 'Start scan', pl: 'Rozpocznij skanowanie', tr: 'Taramayı başlat', fr: 'Démarrer le scan', ar: 'بدء المسح' })}
             </button>
             <button onClick={onCancel} className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
-              {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal' })}
+              {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal', fr: 'Annuler', ar: 'إلغاء' })}
             </button>
           </div>
         </div>
@@ -369,7 +375,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
               <RotateCcw className="mt-0.5 h-5 w-5 flex-shrink-0 text-pw-amber" strokeWidth={1.5} />
               <div>
                 <p className="text-[15px] font-semibold text-pw-navy mb-2">
-                  {pick(lang, { nl: 'Scan hervatten', en: 'Resume scan', pl: 'Wznów skanowanie', tr: 'Taramayı sürdür' })}
+                  {pick(lang, { nl: 'Scan hervatten', en: 'Resume scan', pl: 'Wznów skanowanie', tr: 'Taramayı sürdür', fr: 'Reprendre le scan', ar: 'استئناف المسح' })}
                 </p>
                 <p className="text-[13px] text-pw-muted leading-relaxed">
                   {pick(lang, {
@@ -377,6 +383,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                     en: <>Your previous scan stopped at <strong>{processed} emails</strong>. We&apos;ll continue where you left off.</>,
                     pl: <>Twoje poprzednie skanowanie zatrzymało się na <strong>{processed} e-mailach</strong>. Kontynuujemy od miejsca, w którym przerwałeś.</>,
                     tr: <>Önceki taraman <strong>{processed} e-postada</strong> durdu. Kaldığın yerden devam ediyoruz.</>,
+                    fr: <>Votre analyse précédente s&apos;est arrêtée à <strong>{processed} e-mails</strong>. Nous reprenons là où vous en étiez.</>,
+                    ar: <>توقّف فحصك السابق عند <strong>{processed} رسالة</strong>. سنكمل من حيث توقفت.</>,
                   })}
                 </p>
               </div>
@@ -385,13 +393,13 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
 
           <div className="flex gap-3">
             <button onClick={resumeScan} className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-              {pick(lang, { nl: 'Hervat scan', en: 'Resume scan', pl: 'Wznów skanowanie', tr: 'Taramayı sürdür' })}
+              {pick(lang, { nl: 'Hervat scan', en: 'Resume scan', pl: 'Wznów skanowanie', tr: 'Taramayı sürdür', fr: 'Reprendre le scan', ar: 'استئناف المسح' })}
             </button>
             <button
               onClick={() => { totalProcessedRef.current = 0; totalBillsRef.current = 0; setProcessed(0); setTotalBillsFound(0); startScan(); }}
               className="btn-press rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted"
             >
-              {pick(lang, { nl: 'Opnieuw', en: 'Restart', pl: 'Od nowa', tr: 'Yeniden başlat' })}
+              {pick(lang, { nl: 'Opnieuw', en: 'Restart', pl: 'Od nowa', tr: 'Yeniden başlat', fr: 'Redémarrer', ar: 'إعادة التشغيل' })}
             </button>
           </div>
         </div>
@@ -403,10 +411,10 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
           <div>
             <div className="mb-2 flex items-center justify-between text-[12px] font-semibold">
               <span className="text-pw-blue">
-                {processed} / {maxEmails} {pick(lang, { nl: 'e-mails', en: 'emails', pl: 'e-maili', tr: 'e-posta' })}
+                {processed} / {maxEmails} {pick(lang, { nl: 'e-mails', en: 'emails', pl: 'e-maili', tr: 'e-posta', fr: 'e-mails', ar: 'رسائل' })}
               </span>
               <span className="text-pw-green">
-                {totalBillsFound} {pick(lang, { nl: 'rekeningen gevonden', en: 'bills found', pl: 'znalezionych rachunków', tr: 'fatura bulundu' })}
+                {totalBillsFound} {pick(lang, { nl: 'rekeningen gevonden', en: 'bills found', pl: 'znalezionych rachunków', tr: 'fatura bulundu', fr: 'factures trouvées', ar: 'فاتورة تم العثور عليها' })}
               </span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
@@ -417,7 +425,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
             </div>
             {displayEstimate && !backgroundRunning && (
               <p className="mt-1 text-[11px] text-pw-muted">
-                {pick(lang, { nl: 'Geschatte resterende tijd:', en: 'Estimated time remaining:', pl: 'Szacowany pozostały czas:', tr: 'Tahmini kalan süre:' })} {displayEstimate}
+                {pick(lang, { nl: 'Geschatte resterende tijd:', en: 'Estimated time remaining:', pl: 'Szacowany pozostały czas:', tr: 'Tahmini kalan süre:', fr: 'Temps restant estimé :', ar: 'الوقت المتبقي المقدّر:' })} {displayEstimate}
               </p>
             )}
           </div>
@@ -439,8 +447,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
               <Loader2 className="h-3.5 w-3.5 animate-spin text-pw-blue/50" strokeWidth={2} />
               <span className="text-[11px] font-medium text-pw-muted">
                 {backgroundRunning
-                  ? pick(lang, { nl: 'Scan draait op de server — je kunt de app sluiten', en: 'Scan is running on the server — you can close the app', pl: 'Skanowanie działa na serwerze — możesz zamknąć aplikację', tr: 'Tarama sunucuda çalışıyor — uygulamayı kapatabilirsin' })
-                  : pick(lang, { nl: `${providerName} inbox wordt gescand...`, en: `Scanning ${providerName} inbox...`, pl: `Skanowanie skrzynki ${providerName}...`, tr: `${providerName} gelen kutusu taranıyor...` })
+                  ? pick(lang, { nl: 'Scan draait op de server — je kunt de app sluiten', en: 'Scan is running on the server — you can close the app', pl: 'Skanowanie działa na serwerze — możesz zamknąć aplikację', tr: 'Tarama sunucuda çalışıyor — uygulamayı kapatabilirsin', fr: "Le scan s'exécute sur le serveur — vous pouvez fermer l'application", ar: 'المسح قيد التشغيل على الخادم — يمكنك إغلاق التطبيق' })
+                  : pick(lang, { nl: `${providerName} inbox wordt gescand...`, en: `Scanning ${providerName} inbox...`, pl: `Skanowanie skrzynki ${providerName}...`, tr: `${providerName} gelen kutusu taranıyor...`, fr: `Analyse de la boîte ${providerName}...`, ar: `جارٍ فحص صندوق ${providerName}...` })
                 }
               </span>
             </div>
@@ -454,7 +462,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                 nl: 'Je kunt de app verlaten — de scan gaat door op de server. Je krijgt een melding als het klaar is.',
                 en: 'You can leave the app — the scan continues on the server. You\'ll get a notification when it\'s done.',
                 pl: 'Możesz opuścić aplikację — skanowanie jest kontynuowane na serwerze. Otrzymasz powiadomienie, gdy się zakończy.',
-                tr: 'Uygulamadan çıkabilirsin — tarama sunucuda devam eder. Bittiğinde bir bildirim alırsın.',
+                tr: 'Uygulamadan çıkabilirsin — tarama sunucuda devam eder. Bittiğinde bir bildirim alırsın.', fr: "Vous pouvez quitter l'application — le scan se poursuit sur le serveur. Vous recevrez une notification une fois terminé.", ar: 'يمكنك مغادرة التطبيق — يستمر المسح على الخادم. ستتلقى إشعارًا عند الانتهاء.',
               })}
             </p>
           </div>
@@ -463,7 +471,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
             onClick={() => { abortRef.current = true; onCancel(); }}
             className="text-[13px] font-semibold text-pw-muted hover:text-pw-text"
           >
-            {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal' })}
+            {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal', fr: 'Annuler', ar: 'إلغاء' })}
           </button>
         </>
       )}
@@ -474,7 +482,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5 text-pw-green" strokeWidth={1.5} />
             <span className="text-[14px] font-semibold text-pw-green">
-              {pick(lang, { nl: 'Scan voltooid!', en: 'Scan complete!', pl: 'Skanowanie zakończone!', tr: 'Tarama tamamlandı!' })}
+              {pick(lang, { nl: 'Scan voltooid!', en: 'Scan complete!', pl: 'Skanowanie zakończone!', tr: 'Tarama tamamlandı!', fr: 'Scan terminé !', ar: 'اكتمل المسح!' })}
             </span>
           </div>
           <p className="text-[13px] text-pw-muted">
@@ -483,6 +491,8 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
               en: `${processed} emails scanned, ${totalBillsFound} bills found.`,
               pl: `${processed} e-maili przeskanowanych, ${totalBillsFound} znalezionych rachunków.`,
               tr: `${processed} e-posta tarandı, ${totalBillsFound} fatura bulundu.`,
+              fr: `${processed} e-mails analysés, ${totalBillsFound} factures trouvées.`,
+              ar: `تم فحص ${processed} رسالة، وتم العثور على ${totalBillsFound} فاتورة.`,
             })}
           </p>
 
@@ -495,13 +505,15 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                   en: <>From now on, we automatically scan your inbox <strong>every day</strong>. No need to do this manually anymore.</>,
                   pl: <>Od teraz automatycznie skanujemy twoją skrzynkę <strong>codziennie</strong>. Nie musisz już robić tego ręcznie.</>,
                   tr: <>Bundan sonra gelen kutunu <strong>her gün</strong> otomatik tararız. Bunu artık elle yapmana gerek yok.</>,
+                  fr: <>Désormais, nous analysons automatiquement votre boîte de réception <strong>chaque jour</strong>. Vous n&apos;avez plus besoin de le faire manuellement.</>,
+                  ar: <>من الآن فصاعدًا، نفحص صندوق بريدك تلقائيًا <strong>كل يوم</strong>. لم تعد بحاجة إلى القيام بذلك يدويًا.</>,
                 })}
               </p>
             </div>
           </div>
 
           <button onClick={onComplete} className="btn-press w-full rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white">
-            {pick(lang, { nl: 'Bekijk je rekeningen', en: 'View your bills', pl: 'Zobacz swoje rachunki', tr: 'Faturalarını gör' })}
+            {pick(lang, { nl: 'Bekijk je rekeningen', en: 'View your bills', pl: 'Zobacz swoje rachunki', tr: 'Faturalarını gör', fr: 'Voir vos factures', ar: 'عرض فواتيرك' })}
           </button>
         </div>
       )}
@@ -512,21 +524,21 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-pw-red" strokeWidth={1.5} />
             <span className="text-[14px] font-semibold text-pw-red">
-              {pick(lang, { nl: 'Er ging iets mis', en: 'Something went wrong', pl: 'Coś poszło nie tak', tr: 'Bir şeyler ters gitti' })}
+              {pick(lang, { nl: 'Er ging iets mis', en: 'Something went wrong', pl: 'Coś poszło nie tak', tr: 'Bir şeyler ters gitti', fr: "Une erreur s'est produite", ar: 'حدث خطأ ما' })}
             </span>
           </div>
           <p className="text-[13px] text-pw-muted">
-            {errorMessage || pick(lang, { nl: 'Er ging iets mis bij het scannen.', en: 'Something went wrong during the scan.', pl: 'Coś poszło nie tak podczas skanowania.', tr: 'Tarama sırasında bir şeyler ters gitti.' })}
+            {errorMessage || pick(lang, { nl: 'Er ging iets mis bij het scannen.', en: 'Something went wrong during the scan.', pl: 'Coś poszło nie tak podczas skanowania.', tr: 'Tarama sırasında bir şeyler ters gitti.', fr: "Une erreur s'est produite pendant le scan.", ar: 'حدث خطأ ما أثناء المسح.' })}
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => { setStatus('info'); setErrorMessage(null); scanningRef.current = false; abortRef.current = false; }}
               className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2.5 text-[13px] font-semibold text-white"
             >
-              {pick(lang, { nl: 'Opnieuw proberen', en: 'Try again', pl: 'Spróbuj ponownie', tr: 'Tekrar dene' })}
+              {pick(lang, { nl: 'Opnieuw proberen', en: 'Try again', pl: 'Spróbuj ponownie', tr: 'Tekrar dene', fr: 'Réessayer', ar: 'حاول مرة أخرى' })}
             </button>
             <button onClick={onCancel} className="btn-press flex-1 rounded-button border border-pw-border px-4 py-2.5 text-[13px] font-semibold text-pw-muted">
-              {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal' })}
+              {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal', fr: 'Annuler', ar: 'إلغاء' })}
             </button>
           </div>
         </div>

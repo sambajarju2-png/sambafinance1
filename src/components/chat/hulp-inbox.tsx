@@ -31,7 +31,7 @@ interface Message {
 function timeAgo(date: string, lang: string): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return pick(lang, { nl: 'nu', en: 'now', pl: 'teraz', tr: 'şimdi' });
+  if (mins < 1) return pick(lang, { nl: 'nu', en: 'now', pl: 'teraz', tr: 'şimdi', fr: "à l'instant", ar: 'الآن' });
   if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}u`;
@@ -68,14 +68,14 @@ function ThreadList({ threads, onOpen, lang }: {
           <Users className="h-6 w-6 text-pw-blue" strokeWidth={1.5} />
         </div>
         <p className="text-[14px] font-medium text-pw-text dark:text-white">
-          {pick(lang, { nl: 'Nog geen berichten', en: 'No messages yet', pl: 'Brak wiadomości', tr: 'Henüz mesaj yok' })}
+          {pick(lang, { nl: 'Nog geen berichten', en: 'No messages yet', pl: 'Brak wiadomości', tr: 'Henüz mesaj yok', fr: 'Aucun message pour le moment', ar: 'لا توجد رسائل بعد' })}
         </p>
         <p className="mt-1 text-[12px] text-pw-muted max-w-[240px]">
           {pick(lang, {
             nl: 'Je vangnet buddy of hulporganisatie kan hier contact met je opnemen.',
             en: 'Your safety net buddy or help organization can reach out to you here.',
             pl: 'Twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może się tu z tobą skontaktować.',
-            tr: 'Güvenlik ağındaki destekçin veya yardım kuruluşu burada seninle iletişime geçebilir.',
+            tr: 'Güvenlik ağındaki destekçin veya yardım kuruluşu burada seninle iletişime geçebilir.', fr: "Votre soutien dans le filet de sécurité ou votre organisation d'aide peut vous contacter ici.", ar: 'يمكن لداعمك في شبكة الأمان أو منظمة المساعدة التواصل معك هنا.',
           })}
         </p>
       </div>
@@ -290,7 +290,7 @@ function ThreadView({ threadId, onBack, lang }: {
                 sendReply();
               }
             }}
-            placeholder={pick(lang, { nl: 'Typ een antwoord...', en: 'Type a reply...', pl: 'Napisz odpowiedź...', tr: 'Yanıt yaz...' })}
+            placeholder={pick(lang, { nl: 'Typ een antwoord...', en: 'Type a reply...', pl: 'Napisz odpowiedź...', tr: 'Yanıt yaz...', fr: 'Saisissez une réponse...', ar: 'اكتب ردًا...' })}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue dark:bg-white/5 dark:text-white dark:border-pw-border/50"
           />
@@ -470,10 +470,10 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
           </button>
           <div>
             <h2 className="text-[15px] font-semibold text-pw-text dark:text-white">
-              {pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu' })}
+              {pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu', fr: "Boîte d'aide", ar: 'صندوق المساعدة' })}
             </h2>
             <p className="text-[11px] text-pw-muted">
-              {pick(lang, { nl: 'Berichten van je vangnet', en: 'Messages from your safety net', pl: 'Wiadomości od twojej siatki bezpieczeństwa', tr: 'Güvenlik ağından mesajlar' })}
+              {pick(lang, { nl: 'Berichten van je vangnet', en: 'Messages from your safety net', pl: 'Wiadomości od twojej siatki bezpieczeństwa', tr: 'Güvenlik ağından mesajlar', fr: 'Messages de votre filet de sécurité', ar: 'رسائل من شبكة الأمان الخاصة بك' })}
             </p>
           </div>
         </div>
@@ -499,13 +499,13 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
       <div className="border-t border-pw-border/40 px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[12px] font-semibold text-pw-text dark:text-white">
-            {pick(lang, { nl: 'Mijn organisaties', en: 'My organisations', pl: 'Moje organizacje', tr: 'Kuruluşlarım' })}
+            {pick(lang, { nl: 'Mijn organisaties', en: 'My organisations', pl: 'Moje organizacje', tr: 'Kuruluşlarım', fr: 'Mes organisations', ar: 'مؤسساتي' })}
           </p>
           <button
             onClick={() => { setShowCodeInput(v => !v); setCodeError(null); setCodeSuccess(null); }}
             className="text-[11px] font-semibold text-pw-blue"
           >
-            {pick(lang, { nl: '+ Code invoeren', en: '+ Enter code', pl: '+ Wpisz kod', tr: '+ Kod gir' })}
+            {pick(lang, { nl: '+ Code invoeren', en: '+ Enter code', pl: '+ Wpisz kod', tr: '+ Kod gir', fr: '+ Saisir un code', ar: '+ إدخال رمز' })}
           </button>
         </div>
 
@@ -530,7 +530,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
 
         {orgs.length === 0 && !showCodeInput && (
           <p className="text-[11px] text-pw-muted">
-            {pick(lang, { nl: 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.', en: 'No organisation connected yet. Have an invite code? Enter it above.', pl: 'Brak połączonej organizacji. Masz kod zaproszenia? Wpisz go.', tr: 'Henüz bağlı kuruluş yok. Davet kodun var mı? Yukarıya gir.' })}
+            {pick(lang, { nl: 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.', en: 'No organisation connected yet. Have an invite code? Enter it above.', pl: 'Brak połączonej organizacji. Masz kod zaproszenia? Wpisz go.', tr: 'Henüz bağlı kuruluş yok. Davet kodun var mı? Yukarıya gir.', fr: "Aucune organisation connectée pour le moment. Vous avez un code d'invitation ? Saisissez-le ci-dessus.", ar: 'لا توجد مؤسسة مرتبطة بعد. هل لديك رمز دعوة؟ أدخله بالأعلى.' })}
           </p>
         )}
 
@@ -543,7 +543,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
                 value={codeInput}
                 onChange={e => setCodeInput(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === 'Enter' && connectCode()}
-                placeholder={pick(lang, { nl: 'Voer uitnodigingscode in', en: 'Enter invite code', pl: 'Wpisz kod zaproszenia', tr: 'Davet kodu gir' })}
+                placeholder={pick(lang, { nl: 'Voer uitnodigingscode in', en: 'Enter invite code', pl: 'Wpisz kod zaproszenia', tr: 'Davet kodu gir', fr: "Saisir le code d'invitation", ar: 'أدخل رمز الدعوة' })}
                 className="flex-1 px-3 py-2 text-[13px] rounded-xl border border-pw-border bg-pw-bg dark:bg-white/5 dark:text-white outline-none focus:border-pw-blue"
               />
               <button
@@ -551,7 +551,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
                 disabled={codeLoading || !codeInput.trim()}
                 className="px-4 py-2 bg-pw-blue text-white text-[12px] font-semibold rounded-xl disabled:opacity-50"
               >
-                {codeLoading ? '...' : pick(lang, { nl: 'Verbind', en: 'Connect', pl: 'Połącz', tr: 'Bağlan' })}
+                {codeLoading ? '...' : pick(lang, { nl: 'Verbind', en: 'Connect', pl: 'Połącz', tr: 'Bağlan', fr: 'Connecter', ar: 'ربط' })}
               </button>
             </div>
             {codeError && <p className="text-[11px] text-pw-red mt-1">{codeError}</p>}
@@ -569,7 +569,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
               nl: 'Alleen je vangnet buddy of hulporganisatie kan een gesprek starten. Jij kunt hier antwoorden.',
               en: 'Only your safety net buddy or help organization can start a conversation. You can reply here.',
               pl: 'Tylko twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może rozpocząć rozmowę. Możesz tu odpowiadać.',
-              tr: 'Sadece güvenlik ağındaki destekçin veya yardım kuruluşu görüşme başlatabilir. Burada yanıt verebilirsin.',
+              tr: 'Sadece güvenlik ağındaki destekçin veya yardım kuruluşu görüşme başlatabilir. Burada yanıt verebilirsin.', fr: "Seul votre soutien dans le filet de sécurité ou votre organisation d'aide peut démarrer un appel. Vous pouvez répondre ici.", ar: 'يمكن فقط لداعمك في شبكة الأمان أو منظمة المساعدة بدء مكالمة. يمكنك الرد هنا.',
             })}
           </p>
         </div>

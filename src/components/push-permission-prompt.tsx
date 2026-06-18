@@ -128,14 +128,14 @@ export default function PushPermissionPrompt() {
             </div>
             <div className="flex-1 pr-4">
               <p className="text-[14px] font-semibold text-pw-navy">
-                {pick(lang, { nl: 'Meldingen inschakelen', en: 'Enable notifications', pl: 'Włącz powiadomienia', tr: 'Bildirimleri aç' })}
+                {pick(lang, { nl: 'Meldingen inschakelen', en: 'Enable notifications', pl: 'Włącz powiadomienia', tr: 'Bildirimleri aç', fr: 'Activer les notifications', ar: 'تفعيل الإشعارات' })}
               </p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-pw-muted">
                 {pick(lang, {
                   nl: 'Ontvang een melding als een rekening bijna vervalt of als je scan klaar is.',
                   en: 'Get notified when a bill is almost due or when your scan is complete.',
                   pl: 'Otrzymaj powiadomienie, gdy zbliża się termin rachunku lub gdy skanowanie się zakończy.',
-                  tr: 'Bir faturanın son ödeme tarihi yaklaştığında veya taraman bittiğinde bildirim al.',
+                  tr: 'Bir faturanın son ödeme tarihi yaklaştığında veya taraman bittiğinde bildirim al.', fr: "Soyez notifié lorsqu'une facture arrive à échéance ou lorsque votre scan est terminé.", ar: 'احصل على إشعار عند اقتراب موعد استحقاق فاتورة أو عند اكتمال المسح.',
                 })}
               </p>
             </div>
@@ -148,14 +148,14 @@ export default function PushPermissionPrompt() {
               className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-50 transition-transform active:scale-[0.97]"
             >
               {enabling
-                ? pick(lang, { nl: 'Even geduld...', en: 'One moment...', pl: 'Chwila...', tr: 'Bir saniye...' })
-                : pick(lang, { nl: 'Inschakelen', en: 'Enable', pl: 'Włącz', tr: 'Aç' })}
+                ? pick(lang, { nl: 'Even geduld...', en: 'One moment...', pl: 'Chwila...', tr: 'Bir saniye...', fr: 'Un instant...', ar: 'لحظة واحدة...' })
+                : pick(lang, { nl: 'Inschakelen', en: 'Enable', pl: 'Włącz', tr: 'Aç', fr: 'Activer', ar: 'تفعيل' })}
             </button>
             <button
               onClick={handleDismiss}
               className="btn-press rounded-button border border-pw-border px-4 py-2 text-[13px] font-semibold text-pw-muted transition-transform active:scale-[0.97]"
             >
-              {pick(lang, { nl: 'Later', en: 'Later', pl: 'Później', tr: 'Sonra' })}
+              {pick(lang, { nl: 'Later', en: 'Later', pl: 'Później', tr: 'Sonra', fr: 'Plus tard', ar: 'لاحقًا' })}
             </button>
           </div>
         </div>

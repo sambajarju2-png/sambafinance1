@@ -67,7 +67,7 @@ export default function OfflineDetector() {
         </div>
 
         <h1 className="text-[22px] font-bold text-pw-text dark:text-white mb-2">
-          {pick(lang, { nl: 'Geen internetverbinding', en: 'No internet connection', pl: 'Brak połączenia z internetem', tr: 'İnternet bağlantısı yok' })}
+          {pick(lang, { nl: 'Geen internetverbinding', en: 'No internet connection', pl: 'Brak połączenia z internetem', tr: 'İnternet bağlantısı yok', fr: 'Pas de connexion internet', ar: 'لا يوجد اتصال بالإنترنت' })}
         </h1>
 
         <p className="text-[14px] text-pw-muted leading-relaxed mb-8">
@@ -75,7 +75,7 @@ export default function OfflineDetector() {
             nl: 'Controleer je wifi of mobiele data en probeer het opnieuw.',
             en: 'Check your wifi or mobile data and try again.',
             pl: 'Sprawdź swoje wifi lub dane mobilne i spróbuj ponownie.',
-            tr: 'Wifi veya mobil verini kontrol et ve tekrar dene.',
+            tr: 'Wifi veya mobil verini kontrol et ve tekrar dene.', fr: 'Vérifiez votre wifi ou vos données mobiles et réessayez.', ar: 'تحقق من شبكة wifi أو بيانات هاتفك المحمول وحاول مرة أخرى.',
           })}
         </p>
 
@@ -86,8 +86,8 @@ export default function OfflineDetector() {
         >
           <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} strokeWidth={2} />
           {retrying
-            ? pick(lang, { nl: 'Verbinden...', en: 'Connecting...', pl: 'Łączenie...', tr: 'Bağlanılıyor...' })
-            : pick(lang, { nl: 'Opnieuw proberen', en: 'Try again', pl: 'Spróbuj ponownie', tr: 'Tekrar dene' })}
+            ? pick(lang, { nl: 'Verbinden...', en: 'Connecting...', pl: 'Łączenie...', tr: 'Bağlanılıyor...', fr: 'Connexion...', ar: 'جارٍ الاتصال...' })
+            : pick(lang, { nl: 'Opnieuw proberen', en: 'Try again', pl: 'Spróbuj ponownie', tr: 'Tekrar dene', fr: 'Réessayer', ar: 'حاول مرة أخرى' })}
         </button>
       </div>
     </div>
