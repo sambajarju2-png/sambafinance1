@@ -18,12 +18,6 @@ export const LOCALE_META: Record<Locale, { label: string; flag: string }> = {
   ar: { label: 'العربية', flag: '🇸🇦' },
 };
 
-// Right-to-left locales (used for `dir="rtl"` in the root layout).
-export const RTL_LOCALES: readonly Locale[] = ['ar'];
-export function isRtlLocale(value: string | undefined | null): boolean {
-  return !!value && (RTL_LOCALES as readonly string[]).includes(value);
-}
-
 // Narrowing helper: is an arbitrary string one of our supported locales?
 export function isLocale(value: string | undefined | null): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value);

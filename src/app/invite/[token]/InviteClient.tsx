@@ -225,7 +225,7 @@ export default function InviteClient({
 
   if (isAlreadyActivated) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
         <div style={{ textAlign: "center", padding: "20px 0" }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -311,7 +311,7 @@ export default function InviteClient({
   // Show email confirmation screen after successful signup
   if (emailConfirmationSent) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
         <div style={{ textAlign: "center", padding: "8px 0" }}>
           <div style={{ width: 52, height: 52, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -331,7 +331,7 @@ export default function InviteClient({
   }
 
   return (
-    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
+    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
       {introText && (
         <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>{introText}</p>
       )}
@@ -423,11 +423,11 @@ export default function InviteClient({
   );
 }
 
-function Shell({ orgName, orgColor, orgLogo, title, dir = "ltr", children }: {
-  orgName: string; orgColor: string; orgLogo: string | null; title: string; dir?: "ltr" | "rtl"; children: React.ReactNode;
+function Shell({ orgName, orgColor, orgLogo, title, children }: {
+  orgName: string; orgColor: string; orgLogo: string | null; title: string; children: React.ReactNode;
 }) {
   return (
-    <div dir={dir} style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F7FB", padding: 20 }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F7FB", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         {/* Branded header */}
         <div style={{ background: orgColor, borderRadius: "12px 12px 0 0", padding: "20px 24px", display: "flex", alignItems: "center", gap: 10 }}>

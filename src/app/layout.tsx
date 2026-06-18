@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { isRtlLocale } from '@/i18n/locale-meta';
 import ServiceWorkerRegistration from '@/components/pwa/sw-register';
 import { ThemeProvider } from '@/components/theme-provider';
 import SplashScreen from '@/components/splash-screen';
@@ -50,7 +49,7 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} dir={isRtlLocale(locale) ? 'rtl' : 'ltr'} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
