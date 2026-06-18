@@ -15,7 +15,7 @@ import {
 type UserType = 'consumer' | 'buddy' | 'professional' | null;
 interface Props { initialName: string; initialLanguage: string; }
 
-const ONB_LOCALES = ['nl', 'en', 'pl', 'tr'];
+const ONB_LOCALES = ['nl', 'en', 'pl', 'tr', 'fr', 'ar'];
 
 // ─── Spring (iOS feel) ───────────────────────────────────────────────────────
 const sp = { type: 'spring' as const, stiffness: 300, damping: 30 };
@@ -179,6 +179,70 @@ proD:'Profesyonel olarak ayarlandın',
 next:'İleri',back:'Geri',saving:'Kaydediliyor...',pm:'/ay',
 hiH:'İyi görünüyor! Böyle devam et.',hiM:'Her euro önemli. Yolda kalmana yardım ederiz.',hiL:'Endişelenme — bunu daha sonra panelinde tamamla.',
 kidH:'Çocukla ilgili yardımlara hak kazanabilirsin.',
+},
+fr:{welcome:"Bienvenue sur PayWatch",tagline:"Ne soyez plus jamais surpris par une société de recouvrement",lang:"Choisissez votre langue",branch:"Qu'est-ce qui vous amène ?",
+cons:"Je veux gérer mes propres factures",consSub:"Suivez vos factures, évitez les dettes, vérifiez vos aides",
+bud:"Quelqu'un m'a invité",budSub:"Consultez l'aperçu des factures de quelqu'un d'autre",
+pro:"J'aide les autres à titre professionnel",proSub:"Conseiller en dettes, coach budgétaire ou travailleur social",
+name:"Comment vous appelez-vous ?",fn:"Prénom",ln:"Nom (facultatif)",dob:"Date de naissance (facultatif)",dobX:"Pour le calcul des aides et les courriers juridiques",
+city:"Dans quelle commune habitez-vous ?",cityX:"Nous cherchons une aide gratuite aux dettes près de chez vous",search:"Rechercher une commune...",skip:"Passer",
+house:"Votre foyer",partner:"Avez-vous un partenaire ?",kids:"Enfants de moins de 18 ans",
+hRent:"Location",hOwn:"Propriétaire",hPar:"Chez les parents",hOth:"Autre",rent:"Loyer mensuel",kinder:"Garde d'enfants ?",
+income:"Vos revenus",salary:"Salaire net",partnerInc:"Revenu du partenaire",uitk:"Allocation/aide sociale",duo:"DUO/bourse d'études",other:"Autres revenus",
+dFrom:"Vers le jour",dTo:"au jour",totInc:"Revenu mensuel total",
+exp:"Charges fixes",expX:"Ajustez ou passez — nous avons rempli des moyennes néerlandaises",
+zorg:"Assurance maladie",ener:"Énergie",water:"Eau",tel:"Téléphone + internet",verz:"Autres assurances",verv:"Transport",
+totExp:"Total des charges fixes",avg:"moy.",
+scan:"Comment ajoutez-vous vos factures ?",gmail:"Connecter Gmail",gmailX:"Lecture seule. Tout sur des serveurs européens.",outl:"Connecter Outlook",cam:"Scanner avec la caméra",camX:"Scannez jusqu'à 5 factures à la fois",man:"Saisie manuelle",manX:"Ajoutez les montants vous-même",
+scanInfo:"Vous pouvez connecter votre e-mail à tout moment depuis le tableau de bord. PayWatch analysera alors automatiquement votre boîte de réception à la recherche de factures.",
+safe:"Filet de sécurité",safeX:"Invitez quelqu'un pour vous soutenir. Cette personne peut seulement consulter vos factures.",budEmail:"E-mail du buddy",
+done:"Tout est prêt !",doneSub:"PayWatch surveille maintenant vos factures. Nous vous alertons avant que les choses ne dégénèrent.",inc:"Revenu mensuel",costs:"Charges fixes",free:"Reste à vivre",scanning:"Analyse",buddy:"Buddy",
+on:"Connecté",off:"Pas encore",inv:"Invité",noB:"Pas de buddy",go:"Vers mon tableau de bord",
+stat1:"1,4 million",stat1x:"de Néerlandais ont des dettes problématiques",stat2:"€43.300",stat2x:"Dette moyenne au moment de la demande d'aide",stat3:"73%",stat3x:"Attendent trop longtemps avant de chercher de l'aide",
+pw1:"Analyse automatique des factures depuis votre boîte de réception",pw2:"Alertes avant qu'une facture ne s'aggrave",pw3:"Aperçu de toutes vos charges fixes au même endroit",
+factsT:"Le saviez-vous ?",factsS:"Pourquoi agir tôt est si important",
+f1:"Une facture impayée de €50 peut atteindre €625+ en 6 mois à cause des frais de recouvrement, des intérêts et des frais d'huissier.",
+f2:"Plus vous agissez tôt, plus vous avez d'options. Après une assignation, vous n'avez presque plus de marge de négociation.",
+f3:"PayWatch vous alerte pendant la phase de rappel, avant que les vrais frais ne commencent.",
+invC:"Accepter l'invitation",code:"Code d'invitation",conn:"Vous êtes connecté !",connX:"Vous pouvez maintenant consulter l'aperçu des factures",view:"Voir le tableau de bord",
+org:"Organisation",role:"Fonction",sw:"Travailleur social",dc:"Conseiller en dettes",bc:"Coach budgétaire",
+how:"Comment ça marche",p1:"Vos clients créent leur propre compte",p2:"Ils vous invitent comme buddy",p3:"Vous obtenez un accès en lecture seule",p4:"Vous surveillez les risques d'aggravation",
+proD:"Vous êtes configuré comme professionnel",
+next:"Suivant",back:"Retour",saving:"Enregistrement...",pm:"/mois",
+hiH:"Ça a l'air bien ! Continuez comme ça.",hiM:"Chaque euro compte. Nous vous aidons à rester sur la bonne voie.",hiL:"Pas d'inquiétude — complétez ceci plus tard sur votre tableau de bord.",
+kidH:"Vous avez peut-être droit à des aides liées aux enfants.",
+},
+ar:{welcome:'مرحبًا بك في PayWatch',tagline:'لا تتفاجأ بعد الآن بوكالة تحصيل ديون',lang:'اختر لغتك',branch:'ما الذي أتى بك إلى هنا؟',
+cons:'أريد إدارة فواتيري الخاصة',consSub:'تابع الفواتير، تجنّب الديون، تحقق من المساعدات',
+bud:'دعاني أحدهم',budSub:'اطّلع على ملخص فواتير شخص آخر',
+pro:'أساعد الآخرين بشكل مهني',proSub:'مستشار ديون، أو مدرب ميزانية، أو أخصائي اجتماعي',
+name:'ما اسمك؟',fn:'الاسم الأول',ln:'اسم العائلة (اختياري)',dob:'تاريخ الميلاد (اختياري)',dobX:'لحساب المساعدات والرسائل القانونية',
+city:'في أي بلدية تسكن؟',cityX:'سنبحث عن مساعدة مجانية للديون بالقرب منك',search:'ابحث عن بلدية...',skip:'تخطّي',
+house:'أسرتك',partner:'هل لديك شريك؟',kids:'أطفال دون 18 عامًا',
+hRent:'إيجار',hOwn:'ملك',hPar:'مع الوالدين',hOth:'أخرى',rent:'الإيجار الشهري',kinder:'رعاية الأطفال؟',
+income:'دخلك',salary:'الراتب الصافي',partnerInc:'دخل الشريك',uitk:'إعانة/مساعدة اجتماعية',duo:'DUO/تمويل الدراسة',other:'دخل آخر',
+dFrom:'حوالي يوم',dTo:'إلى يوم',totInc:'إجمالي الدخل الشهري',
+exp:'المصاريف الثابتة',expX:'عدّل أو تخطَّ — أدخلنا متوسطات هولندية',
+zorg:'التأمين الصحي',ener:'الطاقة',water:'الماء',tel:'الهاتف + الإنترنت',verz:'تأمينات أخرى',verv:'النقل',
+totExp:'إجمالي المصاريف الثابتة',avg:'متوسط',
+scan:'كيف تضيف الفواتير؟',gmail:'ربط Gmail',gmailX:'للقراءة فقط. كل شيء على خوادم أوروبية.',outl:'ربط Outlook',cam:'المسح بالكاميرا',camX:'امسح حتى 5 فواتير دفعة واحدة',man:'إدخال يدوي',manX:'أضف المبالغ بنفسك',
+scanInfo:'يمكنك ربط بريدك الإلكتروني في أي وقت من لوحة التحكم. عندها سيفحص PayWatch صندوق الوارد تلقائيًا بحثًا عن الفواتير.',
+safe:'شبكة الأمان',safeX:'ادعُ شخصًا ليتابع معك. يمكنه فقط الاطلاع على فواتيرك.',budEmail:'البريد الإلكتروني للرفيق',
+done:'كل شيء جاهز!',doneSub:'يراقب PayWatch الآن فواتيرك. سننبهك قبل أن تسوء الأمور.',inc:'الدخل الشهري',costs:'المصاريف الثابتة',free:'المتاح للإنفاق',scanning:'الفحص',buddy:'الرفيق',
+on:'مُتّصل',off:'ليس بعد',inv:'تمت الدعوة',noB:'لا يوجد رفيق',go:'إلى لوحة التحكم',
+stat1:'1,4 مليون',stat1x:'هولندي لديهم ديون متعثرة',stat2:'€43.300',stat2x:'متوسط الدين عند طلب المساعدة',stat3:'73%',stat3x:'ينتظرون طويلًا قبل طلب المساعدة',
+pw1:'فحص الفواتير تلقائيًا من صندوق الوارد',pw2:'تنبيهات قبل أن تتفاقم الفاتورة',pw3:'نظرة على جميع مصاريفك الثابتة في مكان واحد',
+factsT:'هل تعلم؟',factsS:'لماذا التصرف مبكرًا مهم جدًا',
+f1:'فاتورة غير مدفوعة بقيمة €50 قد تصل إلى €625+ خلال 6 أشهر بسبب رسوم التحصيل والفوائد ورسوم المحضر.',
+f2:'كلما تصرفت أبكر، زادت خياراتك. بعد استدعاء المحكمة لا يبقى لك مجال للتفاوض تقريبًا.',
+f3:'ينبهك PayWatch في مرحلة التذكير، قبل أن تبدأ التكاليف الحقيقية.',
+invC:'قبول الدعوة',code:'رمز الدعوة',conn:'تم الاتصال!',connX:'يمكنك الآن الاطلاع على ملخص الفواتير',view:'عرض لوحة التحكم',
+org:'المؤسسة',role:'الوظيفة',sw:'أخصائي اجتماعي',dc:'مستشار ديون',bc:'مدرب ميزانية',
+how:'كيف يعمل',p1:'ينشئ عملاؤك حساباتهم الخاصة',p2:'يدعونك كرفيق',p3:'تحصل على وصول للقراءة فقط',p4:'تراقب مخاطر التفاقم',
+proD:'تم إعدادك كمحترف',
+next:'التالي',back:'رجوع',saving:'جارٍ الحفظ...',pm:'/شهر',
+hiH:'يبدو جيدًا! استمر هكذا.',hiM:'كل يورو مهم. سنساعدك على البقاء على المسار الصحيح.',hiL:'لا تقلق — أكمل هذا لاحقًا في لوحة التحكم.',
+kidH:'قد تكون مؤهلًا للحصول على مساعدات متعلقة بالأطفال.',
 }};
 
 // ─── Expense config ──────────────────────────────────────────────────────────
@@ -384,7 +448,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <h1 className="text-[28px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.welcome}</h1>
         <p className="text-[14px] text-pw-muted text-center mb-10 px-4">{t.tagline}</p>
         <p className="text-[13px] text-pw-muted text-center mb-4">{t.lang}</p>
-        <div className="grid grid-cols-2 gap-3">{([['nl','🇳🇱 Nederlands'],['en','🇬🇧 English'],['pl','🇵🇱 Polski'],['tr','🇹🇷 Türkçe']] as const).map(([l,lbl])=>(
+        <div className="grid grid-cols-2 gap-3">{([['nl','🇳🇱 Nederlands'],['en','🇬🇧 English'],['pl','🇵🇱 Polski'],['tr','🇹🇷 Türkçe'],['fr','🇫🇷 Français'],['ar','🇸🇦 العربية']] as const).map(([l,lbl])=>(
           <button key={l} onClick={()=>{setLang(l);document.cookie=`paywatch-locale=${l};path=/;max-age=31536000;samesite=lax`;}}
             className={`py-4 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.96] ${lang===l?'bg-pw-blue text-white shadow-[0_6px_20px_rgba(37,99,235,0.3)]':'border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 text-pw-text dark:text-gray-100'}`}>
             {lbl}
@@ -571,7 +635,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
         {kids>0&&tInc>0&&<div className="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><p className="text-[12px] text-purple-700 dark:text-purple-300">{t.kidH}</p></div>}
 
-        {(scans.has('gmail')||scans.has('outlook'))&&<div className="mt-3 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20"><p className="text-[12px] text-pw-muted">{({nl:'Na het afronden koppelen we je e-mail zodat PayWatch direct kan beginnen met scannen.',en:"After finishing we'll connect your email so PayWatch can start scanning right away.",pl:'Po zakończeniu połączymy twoją pocztę, aby PayWatch mógł od razu zacząć skanowanie.',tr:'Bittikten sonra e-postanı bağlarız, böylece PayWatch hemen taramaya başlayabilir.'}[lang])||"After finishing we'll connect your email so PayWatch can start scanning right away."}</p></div>}
+        {(scans.has('gmail')||scans.has('outlook'))&&<div className="mt-3 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20"><p className="text-[12px] text-pw-muted">{({nl:'Na het afronden koppelen we je e-mail zodat PayWatch direct kan beginnen met scannen.',en:"After finishing we'll connect your email so PayWatch can start scanning right away.",pl:'Po zakończeniu połączymy twoją pocztę, aby PayWatch mógł od razu zacząć skanowanie.',tr:'Bittikten sonra e-postanı bağlarız, böylece PayWatch hemen taramaya başlayabilir.',fr:'Une fois terminé, nous connecterons votre e-mail pour que PayWatch puisse commencer à analyser tout de suite.',ar:'بعد الانتهاء، سنربط بريدك الإلكتروني حتى يتمكن PayWatch من بدء الفحص على الفور.'}[lang])||"After finishing we'll connect your email so PayWatch can start scanning right away."}</p></div>}
       </>);}
 
       case 'bInv': return (<>

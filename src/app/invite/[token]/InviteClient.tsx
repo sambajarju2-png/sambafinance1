@@ -23,7 +23,7 @@ interface Props {
 
 // The user was invited in this language: the page renders in it and we set the
 // paywatch-locale cookie so signup + onboarding continue in the same language.
-const SUPPORTED = ["nl", "en", "pl", "tr"];
+const SUPPORTED = ["nl", "en", "pl", "tr", "fr", "ar"];
 
 const T: Record<string, {
   title: string;
@@ -150,6 +150,56 @@ const T: Record<string, {
     confirmR: ". Hesabını etkinleştirip devam etmek için e-postadaki bağlantıya tıkla.",
     confirmSpam: "E-posta gelmedi mi? Spam klasörünü de kontrol et.",
   },
+  fr: {
+    title: "Vous êtes invité",
+    activatedTitle: "Déjà activé",
+    activatedBody: "Cette invitation a déjà été utilisée.",
+    login: "Se connecter",
+    intro: (org) => `${org} vous a invité à utiliser PayWatch. Avec PayWatch, vous gardez une vue d'ensemble de vos factures et de vos paiements.`,
+    newAccount: "Nouveau compte",
+    haveAccount: "J'ai déjà un compte",
+    emailLabel: "Adresse e-mail",
+    pwLabelSignup: "Choisissez un mot de passe",
+    pwLabelLogin: "Mot de passe",
+    pwPhSignup: "Au moins 6 caractères",
+    pwPhLogin: "Votre mot de passe",
+    submitSignup: "Créer un compte",
+    submitLogin: "Se connecter et lier",
+    loading: "Un instant...",
+    terms: "En vous inscrivant, vous acceptez les conditions de PayWatch.",
+    errExists: "Cette adresse e-mail a déjà un compte. Connectez-vous ci-dessous.",
+    errLogin: "Adresse e-mail ou mot de passe incorrect.",
+    errGeneric: "Une erreur s'est produite",
+    confirmTitle: "Confirmez votre e-mail",
+    confirmL: "Nous avons envoyé un e-mail de confirmation à ",
+    confirmR: ". Cliquez sur le lien dans l'e-mail pour activer votre compte et continuer.",
+    confirmSpam: "Pas d'e-mail reçu ? Vérifiez aussi votre dossier spam.",
+  },
+  ar: {
+    title: "لقد تمت دعوتك",
+    activatedTitle: "مُفعّل بالفعل",
+    activatedBody: "تم استخدام هذه الدعوة بالفعل.",
+    login: "تسجيل الدخول",
+    intro: (org) => `دعاك ${org} لاستخدام PayWatch. مع PayWatch تحافظ على نظرة شاملة لفواتيرك ومدفوعاتك.`,
+    newAccount: "حساب جديد",
+    haveAccount: "لديّ حساب بالفعل",
+    emailLabel: "البريد الإلكتروني",
+    pwLabelSignup: "اختر كلمة مرور",
+    pwLabelLogin: "كلمة المرور",
+    pwPhSignup: "6 أحرف على الأقل",
+    pwPhLogin: "كلمة المرور الخاصة بك",
+    submitSignup: "إنشاء حساب",
+    submitLogin: "تسجيل الدخول والربط",
+    loading: "لحظة من فضلك...",
+    terms: "بالتسجيل فإنك توافق على شروط PayWatch.",
+    errExists: "هذا البريد الإلكتروني لديه حساب بالفعل. سجّل الدخول أدناه.",
+    errLogin: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    errGeneric: "حدث خطأ ما",
+    confirmTitle: "أكّد بريدك الإلكتروني",
+    confirmL: "أرسلنا رسالة تأكيد إلى ",
+    confirmR: ". اضغط على الرابط في الرسالة لتفعيل حسابك والمتابعة.",
+    confirmSpam: "لم تصلك رسالة؟ تحقق أيضًا من مجلد الرسائل غير المرغوب فيها.",
+  },
 };
 
 export default function InviteClient({
@@ -175,7 +225,7 @@ export default function InviteClient({
 
   if (isAlreadyActivated) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
         <div style={{ textAlign: "center", padding: "20px 0" }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -261,7 +311,7 @@ export default function InviteClient({
   // Show email confirmation screen after successful signup
   if (emailConfirmationSent) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
         <div style={{ textAlign: "center", padding: "8px 0" }}>
           <div style={{ width: 52, height: 52, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -281,7 +331,7 @@ export default function InviteClient({
   }
 
   return (
-    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
+    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title} dir={lang === "ar" ? "rtl" : "ltr"}>
       {introText && (
         <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>{introText}</p>
       )}
@@ -373,11 +423,11 @@ export default function InviteClient({
   );
 }
 
-function Shell({ orgName, orgColor, orgLogo, title, children }: {
-  orgName: string; orgColor: string; orgLogo: string | null; title: string; children: React.ReactNode;
+function Shell({ orgName, orgColor, orgLogo, title, dir = "ltr", children }: {
+  orgName: string; orgColor: string; orgLogo: string | null; title: string; dir?: "ltr" | "rtl"; children: React.ReactNode;
 }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F7FB", padding: 20 }}>
+    <div dir={dir} style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F7FB", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         {/* Branded header */}
         <div style={{ background: orgColor, borderRadius: "12px 12px 0 0", padding: "20px 24px", display: "flex", alignItems: "center", gap: 10 }}>

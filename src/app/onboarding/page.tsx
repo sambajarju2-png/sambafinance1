@@ -30,7 +30,7 @@ export default async function OnboardingPage() {
   // Language priority: the paywatch-locale cookie (set when a user opens an invite
   // in a given language) wins, so invited users continue onboarding in that language;
   // otherwise fall back to the saved user_settings.language, then Dutch.
-  const ONB_LOCALES = ['nl', 'en', 'pl', 'tr'];
+  const ONB_LOCALES = ['nl', 'en', 'pl', 'tr', 'fr', 'ar'];
   const cookieLang = (await cookies()).get('paywatch-locale')?.value;
   const dbLang = settings?.language as string | undefined;
   const initialLanguage =

@@ -226,11 +226,11 @@ function ThreadView({ threadId, onBack, lang }: {
                   <div className="flex items-center gap-2 mb-2">
                     <Phone className="w-4 h-4 text-pw-blue flex-shrink-0" strokeWidth={2} />
                     <span className="text-[13px] font-semibold text-pw-navy dark:text-white">
-                      {msg.sender_name || 'Coach'} {pick(lang, { nl: 'wil videobellen', en: 'wants to video call', pl: 'chce rozpocząć rozmowę wideo', tr: 'görüntülü görüşme yapmak istiyor' })}
+                      {msg.sender_name || 'Coach'} {pick(lang, { nl: 'wil videobellen', en: 'wants to video call', pl: 'chce rozpocząć rozmowę wideo', tr: 'görüntülü görüşme yapmak istiyor', fr: 'veut passer un appel vidéo', ar: 'يريد إجراء مكالمة فيديو' })}
                     </span>
                   </div>
                   {expired ? (
-                    <p className="text-[12px] text-pw-muted">{pick(lang, { nl: 'Gesprek verlopen', en: 'Call expired', pl: 'Rozmowa wygasła', tr: 'Görüşme süresi doldu' })}</p>
+                    <p className="text-[12px] text-pw-muted">{pick(lang, { nl: 'Gesprek verlopen', en: 'Call expired', pl: 'Rozmowa wygasła', tr: 'Görüşme süresi doldu', fr: 'Appel expiré', ar: 'انتهت صلاحية المكالمة' })}</p>
                   ) : (
                     <button
                       disabled={isJoining}
@@ -241,14 +241,14 @@ function ThreadView({ threadId, onBack, lang }: {
                           if (res.ok) {
                             const data = await res.json();
                             setActiveCall({ token: data.token, roomName, livekitUrl: data.livekitUrl });
-                          } else { alert(pick(lang, { nl: 'Kon gesprek niet starten.', en: 'Could not start the call.', pl: 'Nie udało się rozpocząć rozmowy.', tr: 'Görüşme başlatılamadı.' })); }
-                        } catch { alert(pick(lang, { nl: 'Verbindingsfout.', en: 'Connection error.', pl: 'Błąd połączenia.', tr: 'Bağlantı hatası.' })); }
+                          } else { alert(pick(lang, { nl: 'Kon gesprek niet starten.', en: 'Could not start the call.', pl: 'Nie udało się rozpocząć rozmowy.', tr: 'Görüşme başlatılamadı.', fr: "Impossible de démarrer l'appel.", ar: 'تعذّر بدء المكالمة.' })); }
+                        } catch { alert(pick(lang, { nl: 'Verbindingsfout.', en: 'Connection error.', pl: 'Błąd połączenia.', tr: 'Bağlantı hatası.', fr: 'Erreur de connexion.', ar: 'خطأ في الاتصال.' })); }
                         setJoiningCall(null);
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-pw-blue text-white text-[13px] font-medium rounded-xl active:scale-95 disabled:opacity-60"
                     >
                       {isJoining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" strokeWidth={2} />}
-                      {pick(lang, { nl: 'Gesprek joinen', en: 'Join call', pl: 'Dołącz do rozmowy', tr: 'Görüşmeye katıl' })}
+                      {pick(lang, { nl: 'Gesprek joinen', en: 'Join call', pl: 'Dołącz do rozmowy', tr: 'Görüşmeye katıl', fr: "Rejoindre l'appel", ar: 'انضم إلى المكالمة' })}
                     </button>
                   )}
                   <p className="text-[10px] text-pw-muted mt-2">
@@ -378,33 +378,33 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
       });
       const d = await res.json();
       if (res.ok) {
-        setCodeSuccess(d.org?.name || pick(lang, { nl: 'Organisatie', en: 'Organisation', pl: 'Organizacja', tr: 'Kuruluş' }));
+        setCodeSuccess(d.org?.name || pick(lang, { nl: 'Organisatie', en: 'Organisation', pl: 'Organizacja', tr: 'Kuruluş', fr: 'Organisation', ar: 'المؤسسة' }));
         setCodeInput('');
         setShowCodeInput(false);
         const orgsRes = await fetch('/api/org-connections');
         if (orgsRes.ok) setOrgs((await orgsRes.json()).orgs || []);
       } else {
-        setCodeError(d.error || pick(lang, { nl: 'Onbekende fout', en: 'Unknown error', pl: 'Nieznany błąd', tr: 'Bilinmeyen hata' }));
+        setCodeError(d.error || pick(lang, { nl: 'Onbekende fout', en: 'Unknown error', pl: 'Nieznany błąd', tr: 'Bilinmeyen hata', fr: 'Erreur inconnue', ar: 'خطأ غير معروف' }));
       }
-    } catch { setCodeError(pick(lang, { nl: 'Verbinding mislukt', en: 'Connection failed', pl: 'Połączenie nie powiodło się', tr: 'Bağlantı başarısız' })); }
+    } catch { setCodeError(pick(lang, { nl: 'Verbinding mislukt', en: 'Connection failed', pl: 'Połączenie nie powiodło się', tr: 'Bağlantı başarısız', fr: 'Échec de la connexion', ar: 'فشل الاتصال' })); }
     setCodeLoading(false);
   }
 
   const SCOPE_LABELS: Record<string, { label: string; desc: string; required?: boolean }> = {
-    contact_info: { label: pick(lang, { nl: 'Naam en contactgegevens', en: 'Name and contact details', pl: 'Imię i dane kontaktowe', tr: 'Ad ve iletişim bilgileri' }), desc: pick(lang, { nl: 'Zodat je coach je kan bereiken', en: 'So your coach can reach you', pl: 'Aby twój opiekun mógł się z tobą skontaktować', tr: 'Koçunun sana ulaşabilmesi için' }), required: true },
-    view_bills: { label: pick(lang, { nl: 'Rekeningen en betalingsstatus', en: 'Bills and payment status', pl: 'Rachunki i status płatności', tr: 'Faturalar ve ödeme durumu' }), desc: pick(lang, { nl: 'Openstaande facturen, escalatiefase', en: 'Outstanding invoices, escalation stage', pl: 'Nieopłacone faktury, etap eskalacji', tr: 'Ödenmemiş faturalar, yükseltme aşaması' }) },
-    financial_overview: { label: pick(lang, { nl: 'Financieel profiel', en: 'Financial profile', pl: 'Profil finansowy', tr: 'Finansal profil' }), desc: pick(lang, { nl: 'Inkomen, vaste lasten, toeslagen', en: 'Income, fixed costs, allowances', pl: 'Dochód, stałe wydatki, dodatki', tr: 'Gelir, sabit giderler, yardımlar' }) },
-    payment_plans: { label: pick(lang, { nl: 'Betalingsregelingen', en: 'Payment plans', pl: 'Plany płatności', tr: 'Ödeme planları' }), desc: pick(lang, { nl: 'Actieve regelingen en voortgang', en: 'Active plans and progress', pl: 'Aktywne plany i postępy', tr: 'Aktif planlar ve ilerleme' }) },
-    messaging: { label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet' }), desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim' }) },
+    contact_info: { label: pick(lang, { nl: 'Naam en contactgegevens', en: 'Name and contact details', pl: 'Imię i dane kontaktowe', tr: 'Ad ve iletişim bilgileri', fr: 'Nom et coordonnées', ar: 'الاسم وبيانات التواصل' }), desc: pick(lang, { nl: 'Zodat je coach je kan bereiken', en: 'So your coach can reach you', pl: 'Aby twój opiekun mógł się z tobą skontaktować', tr: 'Koçunun sana ulaşabilmesi için', fr: 'Pour que votre coach puisse vous joindre', ar: 'حتى يتمكن مدربك من الوصول إليك' }), required: true },
+    view_bills: { label: pick(lang, { nl: 'Rekeningen en betalingsstatus', en: 'Bills and payment status', pl: 'Rachunki i status płatności', tr: 'Faturalar ve ödeme durumu', fr: 'Factures et statut de paiement', ar: 'الفواتير وحالة الدفع' }), desc: pick(lang, { nl: 'Openstaande facturen, escalatiefase', en: 'Outstanding invoices, escalation stage', pl: 'Nieopłacone faktury, etap eskalacji', tr: 'Ödenmemiş faturalar, yükseltme aşaması', fr: "Factures impayées, phase d'escalade", ar: 'الفواتير غير المدفوعة، مرحلة التصعيد' }) },
+    financial_overview: { label: pick(lang, { nl: 'Financieel profiel', en: 'Financial profile', pl: 'Profil finansowy', tr: 'Finansal profil', fr: 'Profil financier', ar: 'الملف المالي' }), desc: pick(lang, { nl: 'Inkomen, vaste lasten, toeslagen', en: 'Income, fixed costs, allowances', pl: 'Dochód, stałe wydatki, dodatki', tr: 'Gelir, sabit giderler, yardımlar', fr: 'Revenus, charges fixes, aides', ar: 'الدخل، المصاريف الثابتة، المساعدات' }) },
+    payment_plans: { label: pick(lang, { nl: 'Betalingsregelingen', en: 'Payment plans', pl: 'Plany płatności', tr: 'Ödeme planları', fr: 'Plans de paiement', ar: 'خطط الدفع' }), desc: pick(lang, { nl: 'Actieve regelingen en voortgang', en: 'Active plans and progress', pl: 'Aktywne plany i postępy', tr: 'Aktif planlar ve ilerleme', fr: 'Plans actifs et progression', ar: 'الخطط النشطة والتقدّم' }) },
+    messaging: { label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet', fr: 'Messages et chat', ar: 'الرسائل والدردشة' }), desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim', fr: 'Communication avec votre coach', ar: 'التواصل مع مدربك' }) },
   };
 
   // Org consent modal
   const orgConsentModal = showOrgConsent ? (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-5" onClick={() => setShowOrgConsent(false)}>
       <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
-        <h3 className="text-[16px] font-bold text-pw-navy">{pick(lang, { nl: 'Gegevens delen met organisatie', en: 'Share data with organisation', pl: 'Udostępnij dane organizacji', tr: 'Verileri kuruluşla paylaş' })}</h3>
+        <h3 className="text-[16px] font-bold text-pw-navy">{pick(lang, { nl: 'Gegevens delen met organisatie', en: 'Share data with organisation', pl: 'Udostępnij dane organizacji', tr: 'Verileri kuruluşla paylaş', fr: "Partager des données avec l'organisation", ar: 'مشاركة البيانات مع المؤسسة' })}</h3>
         <p className="text-[13px] text-pw-muted leading-relaxed">
-          {pick(lang, { nl: 'Kies welke gegevens je wilt delen. Je kunt dit later wijzigen via Instellingen → Privacyrechten.', en: 'Choose which data you want to share. You can change this later via Settings → Privacy rights.', pl: 'Wybierz, które dane chcesz udostępnić. Możesz to później zmienić w Ustawienia → Prawa do prywatności.', tr: 'Hangi verileri paylaşmak istediğini seç. Bunu daha sonra Ayarlar → Gizlilik hakları üzerinden değiştirebilirsin.' })}
+          {pick(lang, { nl: 'Kies welke gegevens je wilt delen. Je kunt dit later wijzigen via Instellingen → Privacyrechten.', en: 'Choose which data you want to share. You can change this later via Settings → Privacy rights.', pl: 'Wybierz, które dane chcesz udostępnić. Możesz to później zmienić w Ustawienia → Prawa do prywatności.', tr: 'Hangi verileri paylaşmak istediğini seç. Bunu daha sonra Ayarlar → Gizlilik hakları üzerinden değiştirebilirsin.', fr: 'Choisissez les données que vous souhaitez partager. Vous pourrez modifier cela plus tard via Paramètres → Droits de confidentialité.', ar: 'اختر البيانات التي تريد مشاركتها. يمكنك تغيير ذلك لاحقًا عبر الإعدادات ← حقوق الخصوصية.' })}
         </p>
         <div className="rounded-xl bg-pw-bg p-3 space-y-1">
           {Object.entries(SCOPE_LABELS).map(([key, { label, desc, required }]) => (
@@ -417,15 +417,15 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
                 className="mt-0.5 w-4 h-4 rounded border-pw-border text-pw-blue accent-pw-blue"
               />
               <div>
-                <p className="text-[13px] text-pw-text font-medium">{label}{required ? ` (${pick(lang, { nl: 'verplicht', en: 'required', pl: 'wymagane', tr: 'zorunlu' })})` : ''}</p>
+                <p className="text-[13px] text-pw-text font-medium">{label}{required ? ` (${pick(lang, { nl: 'verplicht', en: 'required', pl: 'wymagane', tr: 'zorunlu', fr: 'obligatoire', ar: 'إلزامي' })})` : ''}</p>
                 <p className="text-[11px] text-pw-muted">{desc}</p>
               </div>
             </label>
           ))}
         </div>
         <div className="rounded-xl bg-pw-bg p-3 space-y-1 text-[12px] text-pw-muted">
-          <p>{pick(lang, { nl: '✗ Nooit gedeeld: banktransacties, e-mails, community posts', en: '✗ Never shared: bank transactions, emails, community posts', pl: '✗ Nigdy nieudostępniane: transakcje bankowe, e-maile, posty społeczności', tr: '✗ Asla paylaşılmaz: banka işlemleri, e-postalar, topluluk gönderileri' })}</p>
-          <p>{pick(lang, { nl: '✗ Organisatie kan geen betalingen doen namens jou', en: '✗ The organisation cannot make payments on your behalf', pl: '✗ Organizacja nie może dokonywać płatności w twoim imieniu', tr: '✗ Kuruluş senin adına ödeme yapamaz' })}</p>
+          <p>{pick(lang, { nl: '✗ Nooit gedeeld: banktransacties, e-mails, community posts', en: '✗ Never shared: bank transactions, emails, community posts', pl: '✗ Nigdy nieudostępniane: transakcje bankowe, e-maile, posty społeczności', tr: '✗ Asla paylaşılmaz: banka işlemleri, e-postalar, topluluk gönderileri', fr: '✗ Jamais partagé : transactions bancaires, e-mails, publications de la communauté', ar: '✗ لا تتم مشاركتها أبدًا: المعاملات البنكية، رسائل البريد، منشورات المجتمع' })}</p>
+          <p>{pick(lang, { nl: '✗ Organisatie kan geen betalingen doen namens jou', en: '✗ The organisation cannot make payments on your behalf', pl: '✗ Organizacja nie może dokonywać płatności w twoim imieniu', tr: '✗ Kuruluş senin adına ödeme yapamaz', fr: "✗ L'organisation ne peut pas effectuer de paiements en votre nom", ar: '✗ لا يمكن للمؤسسة إجراء مدفوعات نيابة عنك' })}</p>
         </div>
         <div className="flex gap-3 pt-1">
           <button
@@ -434,13 +434,13 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-pw-blue text-white text-[14px] font-semibold rounded-xl active:scale-95 disabled:opacity-50"
           >
             {codeLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-            {pick(lang, { nl: 'Ja, ik ga akkoord', en: 'Yes, I agree', pl: 'Tak, zgadzam się', tr: 'Evet, kabul ediyorum' })}
+            {pick(lang, { nl: 'Ja, ik ga akkoord', en: 'Yes, I agree', pl: 'Tak, zgadzam się', tr: 'Evet, kabul ediyorum', fr: "Oui, j'accepte", ar: 'نعم، أوافق' })}
           </button>
           <button
             onClick={() => setShowOrgConsent(false)}
             className="flex-1 py-3 border border-pw-border text-pw-muted text-[14px] font-semibold rounded-xl"
           >
-            {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal' })}
+            {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal', fr: 'Annuler', ar: 'إلغاء' })}
           </button>
         </div>
       </div>

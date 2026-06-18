@@ -430,7 +430,7 @@ export default function ScanProgress({ accountId, provider = 'gmail', language, 
                 <div className="flex items-center gap-2">
                   <currentQuote.Icon className="h-4 w-4 text-pw-blue/40" strokeWidth={1.5} />
                   <p className="text-[15px] font-semibold leading-relaxed text-pw-navy">
-                    {currentQuote.text[lang]}
+                    {pick(lang, currentQuote.text)}
                   </p>
                 </div>
               </div>

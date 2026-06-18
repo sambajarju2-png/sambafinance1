@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'First name is required' }, { status: 400, headers: NO_CACHE });
     }
 
-    if (!['nl', 'en', 'pl', 'tr'].includes(language)) {
+    if (!['nl', 'en', 'pl', 'tr', 'fr', 'ar'].includes(language)) {
       return NextResponse.json({ error: 'Invalid language' }, { status: 400, headers: NO_CACHE });
     }
 

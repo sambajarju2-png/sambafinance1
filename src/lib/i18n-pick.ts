@@ -15,12 +15,14 @@ export function localeFromCookie(): Locale {
 
 /**
  * Pick a localized value for the given locale.
- * pl/tr are optional and fall back to en, then nl, so a partially-translated
+ * pl/tr/fr/ar are optional and fall back to en, then nl, so a partially-translated
  * dictionary can never render `undefined` or crash.
  */
-export function pick<T>(lang: string, o: { nl: T; en: T; pl?: T; tr?: T }): T {
+export function pick<T>(lang: string, o: { nl: T; en: T; pl?: T; tr?: T; fr?: T; ar?: T }): T {
   if (lang === 'en') return o.en;
   if (lang === 'pl') return o.pl ?? o.en;
   if (lang === 'tr') return o.tr ?? o.en;
+  if (lang === 'fr') return o.fr ?? o.en;
+  if (lang === 'ar') return o.ar ?? o.en;
   return o.nl;
 }

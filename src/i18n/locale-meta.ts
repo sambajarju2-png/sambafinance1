@@ -5,7 +5,7 @@
 // To add a language: add its code here, add a matching src/messages/<code>.json,
 // and add a LOCALE_META entry. Everything else is data-driven.
 
-export const LOCALES = ['nl', 'en', 'pl', 'tr'] as const;
+export const LOCALES = ['nl', 'en', 'pl', 'tr', 'fr', 'ar'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'nl';
 
@@ -14,7 +14,15 @@ export const LOCALE_META: Record<Locale, { label: string; flag: string }> = {
   en: { label: 'English', flag: '🇬🇧' },
   pl: { label: 'Polski', flag: '🇵🇱' },
   tr: { label: 'Türkçe', flag: '🇹🇷' },
+  fr: { label: 'Français', flag: '🇫🇷' },
+  ar: { label: 'العربية', flag: '🇸🇦' },
 };
+
+// Right-to-left locales (used for `dir="rtl"` in the root layout).
+export const RTL_LOCALES: readonly Locale[] = ['ar'];
+export function isRtlLocale(value: string | undefined | null): boolean {
+  return !!value && (RTL_LOCALES as readonly string[]).includes(value);
+}
 
 // Narrowing helper: is an arbitrary string one of our supported locales?
 export function isLocale(value: string | undefined | null): value is Locale {
