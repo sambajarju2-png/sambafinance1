@@ -214,11 +214,11 @@
     "stage": "المرحلة"
   },
   "escalation": {
-    "factuur": "Invoice",
-    "herinnering": "Reminder",
-    "aanmaning": "Final notice",
-    "incasso": "Collection",
-    "deurwaarder": "Bailiff"
+    "factuur": "فاتورة",
+    "herinnering": "تذكير",
+    "aanmaning": "إنذار",
+    "incasso": "تحصيل",
+    "deurwaarder": "مُحضِر قضائي"
   },
   "stats": {
     "title": "الإحصائيات",
@@ -519,20 +519,20 @@
     "tryAgain": "حاول مرة أخرى"
   },
   "incasso": {
-    "wikTitle": "WIK Collection Costs",
-    "wikDescription": "Calculation based on Dutch collection cost regulations",
-    "wikDisclaimer": "This is an estimate. Actual costs may vary.",
-    "wikExtra": "Estimated extra costs",
-    "recommendedAction": "Recommended action",
-    "savingsTitle": "Savings by paying on time",
-    "collectionTitle": "Collection agency",
-    "bailiffTitle": "Bailiff",
-    "howToTitle": "What can you do?",
-    "helpTitle": "Need help?",
+    "wikTitle": "تكاليف التحصيل WIK",
+    "wikDescription": "حساب بناءً على اللائحة الهولندية لتكاليف التحصيل",
+    "wikDisclaimer": "هذا تقدير. قد تختلف التكاليف الفعلية.",
+    "wikExtra": "التكاليف الإضافية التقديرية",
+    "recommendedAction": "الإجراء الموصى به",
+    "savingsTitle": "التوفير عند الدفع في الوقت المحدد",
+    "collectionTitle": "وكالة التحصيل",
+    "bailiffTitle": "المُحضِر القضائي",
+    "howToTitle": "ماذا يمكنك أن تفعل؟",
+    "helpTitle": "تحتاج إلى مساعدة؟",
     "juridischLoket": "Juridisch Loket",
     "nibud": "Nibud",
-    "schuldhulp": "Debt counseling",
-    "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
+    "schuldhulp": "المساعدة في الديون",
+    "legalDisclaimer": "لا تقدّم PayWatch استشارات قانونية. استشر Juridisch Loket أو محاميًا."
   },
   "achievements": {
     "title": "الإنجازات",
@@ -653,28 +653,28 @@
     "share": "مشاركة"
   },
   "helpResources": {
-    "helpTitle": "Debt help",
+    "helpTitle": "المساعدة في الديون",
     "juridischLoket": "Juridisch Loket",
-    "juridischDesc": "Free legal advice",
-    "juridisch_desc": "Call for free legal advice",
+    "juridischDesc": "استشارة قانونية مجانية",
+    "juridisch_desc": "اتصل للحصول على استشارة قانونية مجانية",
     "nibud": "Nibud",
-    "nibudDesc": "Budget advice and debt help",
-    "nibud_desc": "Tips for your household budget",
-    "schuldhulp": "Debt counseling",
-    "schuldhulp_desc": "Help through your municipality",
-    "geldfit_desc": "Check if you're financially fit",
-    "ombudsman_desc": "Complaints about collection agencies"
+    "nibudDesc": "استشارة الميزانية والمساعدة في الديون",
+    "nibud_desc": "نصائح لميزانية أسرتك",
+    "schuldhulp": "المساعدة في الديون",
+    "schuldhulp_desc": "مساعدة عبر بلديتك",
+    "geldfit_desc": "تحقق مما إذا كنت بصحة مالية جيدة",
+    "ombudsman_desc": "شكاوى بشأن وكالات التحصيل"
   },
   "lawyer": {
-    "title": "Lawyers in your area",
-    "collectionTitle": "Collection case? Get a lawyer",
-    "description": "These law firms specialize in collection and debt cases.",
-    "noGemeente": "Set your municipality to find lawyers near you.",
-    "noResults": "No lawyers found in your area.",
-    "stad": "City",
+    "title": "محامون في منطقتك",
+    "collectionTitle": "قضية تحصيل؟ استعن بمحامٍ",
+    "description": "هذه المكاتب القانونية متخصصة في قضايا التحصيل والديون.",
+    "noGemeente": "حدّد بلديتك للعثور على محامين بالقرب منك.",
+    "noResults": "لم يتم العثور على محامين في منطقتك.",
+    "stad": "المدينة",
     "juridischLoket": "Juridisch Loket",
-    "juridischDesc": "Call for free legal advice: 0900-8020",
-    "nibudDesc": "Budget coach and debt help: nibud.nl"
+    "juridischDesc": "اتصل للحصول على استشارة قانونية مجانية: 0900-8020",
+    "nibudDesc": "مدرب الميزانية والمساعدة في الديون: nibud.nl"
   },
   "referral": {
     "title": "مشاركة PayWatch",
@@ -698,55 +698,55 @@
     "thankYouDesc": "ملاحظاتك تساعدنا على تحسين PayWatch."
   },
   "pwa": {
-    "installTitle": "Install PayWatch",
-    "installDesc": "Add PayWatch to your home screen for quick access.",
-    "install": "Install",
-    "later": "Later",
-    "maybeLater": "Maybe later",
-    "iosStep1Title": "Tap Share",
-    "iosStep1Desc": "Tap the share icon in Safari",
-    "iosStep2Title": "Add to Home Screen",
-    "iosStep2Desc": "Scroll down and tap 'Add to Home Screen'",
-    "iosStep3Title": "Add",
-    "iosStep3Desc": "Tap 'Add' in the top right",
-    "androidStep1Title": "Tap menu",
-    "androidStep1Desc": "Tap the three dots in the top right",
-    "androidStep2Title": "Install app",
-    "androidStep2Desc": "Choose 'Install app' or 'Add to Home screen'",
-    "androidStep3Title": "Confirm",
-    "androidStep3Desc": "Tap 'Install' to confirm"
+    "installTitle": "تثبيت PayWatch",
+    "installDesc": "أضِف PayWatch إلى شاشتك الرئيسية للوصول السريع.",
+    "install": "تثبيت",
+    "later": "لاحقًا",
+    "maybeLater": "ربما لاحقًا",
+    "iosStep1Title": "اضغط على مشاركة",
+    "iosStep1Desc": "اضغط على أيقونة المشاركة في Safari",
+    "iosStep2Title": "إضافة إلى الشاشة الرئيسية",
+    "iosStep2Desc": "مرّر للأسفل واضغط على «إضافة إلى الشاشة الرئيسية»",
+    "iosStep3Title": "إضافة",
+    "iosStep3Desc": "اضغط على «إضافة» في أعلى اليمين",
+    "androidStep1Title": "اضغط على القائمة",
+    "androidStep1Desc": "اضغط على النقاط الثلاث في أعلى اليمين",
+    "androidStep2Title": "تثبيت التطبيق",
+    "androidStep2Desc": "اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»",
+    "androidStep3Title": "تأكيد",
+    "androidStep3Desc": "اضغط على «تثبيت» للتأكيد"
   },
   "tour": {
-    "title": "Tour",
-    "skip": "Skip",
-    "next": "Next",
-    "done": "Done",
-    "getStarted": "Get started",
+    "title": "جولة تعريفية",
+    "skip": "تخطٍّ",
+    "next": "التالي",
+    "done": "تم",
+    "getStarted": "ابدأ الآن",
     "overview": {
-      "title": "Overview",
-      "desc": "See your bills, financial insights and debt-free countdown in one place."
+      "title": "نظرة عامة",
+      "desc": "اطّلع على فواتيرك وتحليلاتك المالية والعدّ التنازلي للتخلص من الديون في مكان واحد."
     },
     "payments": {
-      "title": "Payments",
-      "desc": "Manage all your bills. View escalation stage, pay directly and track your calendar."
+      "title": "المدفوعات",
+      "desc": "أدِر جميع فواتيرك. اطّلع على مرحلة التصعيد، وادفع مباشرةً، وتابع تقويمك."
     },
     "feed": {
-      "title": "Community Feed",
-      "desc": "Share experiences, ask questions and support others. Anonymous or with your name."
+      "title": "موجز المجتمع",
+      "desc": "شارك تجاربك، واطرح الأسئلة، وادعم الآخرين. بشكل مجهول أو باسمك."
     },
     "stats": {
-      "title": "Financial Insight",
-      "desc": "Categorize transactions, discover subscriptions and see where your money goes."
+      "title": "التحليل المالي",
+      "desc": "صنّف معاملاتك، واكتشف اشتراكاتك، وشاهد أين تذهب أموالك."
     },
     "cashflow": {
-      "title": "Cashflow",
-      "desc": "See your monthly spending and expected costs."
+      "title": "التدفق النقدي",
+      "desc": "اطّلع على إنفاقك الشهري والتكاليف المتوقعة."
     },
     "settings": {
-      "title": "More",
-      "desc": "Buddy mode, settings, bank connection and notification preferences."
+      "title": "المزيد",
+      "desc": "وضع Buddy، والإعدادات، والاتصال المصرفي، وتفضيلات الإشعارات."
     },
-    "previous": "Previous"
+    "previous": "السابق"
   },
   "adminTest": {
     "title": "لوحة اختبار المشرف",
@@ -841,41 +841,41 @@
     "trend": "الاتجاه"
   },
   "paymentPlan": {
-    "title": "Payment plan",
-    "setupTitle": "Set up payment plan",
-    "amount": "Total amount",
-    "installments": "Number of installments",
-    "perInstallment": "Per installment",
-    "startDate": "Start date",
-    "create": "Create plan",
-    "active": "Active plan",
-    "progress": "Progress",
-    "paid": "Paid",
-    "remaining": "Remaining",
-    "nextPayment": "Next payment",
-    "markPaid": "Mark as paid",
-    "cancelPlan": "Cancel plan",
-    "cancelConfirm": "Are you sure you want to cancel this payment plan?",
-    "completed": "Plan completed!",
-    "uploadProof": "Upload proof of payment"
+    "title": "خطة السداد",
+    "setupTitle": "إعداد خطة سداد",
+    "amount": "المبلغ الإجمالي",
+    "installments": "عدد الأقساط",
+    "perInstallment": "لكل قسط",
+    "startDate": "تاريخ البدء",
+    "create": "إنشاء الخطة",
+    "active": "خطة نشطة",
+    "progress": "التقدم",
+    "paid": "مدفوع",
+    "remaining": "المتبقي",
+    "nextPayment": "الدفعة التالية",
+    "markPaid": "وضع علامة كمدفوع",
+    "cancelPlan": "إلغاء الخطة",
+    "cancelConfirm": "هل أنت متأكد أنك تريد إلغاء خطة السداد هذه؟",
+    "completed": "اكتملت الخطة!",
+    "uploadProof": "رفع إثبات الدفع"
   },
   "recurring": {
-    "title": "Expected bills",
-    "analyze": "Analyze",
-    "noPatternsYet": "No patterns found yet. Scan more bills to see predictions.",
-    "runFirstAnalysis": "Run first analysis",
-    "expectedNext60": "Expected next 60 days",
-    "weekly": "Weekly",
-    "biWeekly": "Bi-weekly",
-    "monthly": "Monthly",
-    "biMonthly": "Bi-monthly",
-    "quarterly": "Quarterly",
-    "semiAnnual": "Semi-annual",
-    "yearly": "Yearly",
-    "overdue": "Overdue",
-    "today": "Today",
-    "tomorrow": "Tomorrow",
-    "morePatterns": "more patterns"
+    "title": "الفواتير المتوقعة",
+    "analyze": "تحليل",
+    "noPatternsYet": "لم يتم العثور على أنماط بعد. امسح المزيد من الفواتير لرؤية التوقعات.",
+    "runFirstAnalysis": "إجراء التحليل الأول",
+    "expectedNext60": "متوقع خلال الـ 60 يومًا القادمة",
+    "weekly": "أسبوعي",
+    "biWeekly": "كل أسبوعين",
+    "monthly": "شهري",
+    "biMonthly": "كل شهرين",
+    "quarterly": "ربع سنوي",
+    "semiAnnual": "نصف سنوي",
+    "yearly": "سنوي",
+    "overdue": "متأخر",
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "morePatterns": "أنماط أخرى"
   },
   "diploma": {
     "certifiedBy": "معتمد من",
@@ -1012,27 +1012,27 @@
     "installmentPaid": "تم دفع القسط"
   },
   "toeslagen": {
-    "title": "BENEFITS CHECK",
-    "eligible": "You may be eligible for {count} benefit",
-    "eligiblePlural": "You may be eligible for {count} benefits",
-    "receives": "Receives:",
-    "perMonth": "/mo",
-    "possiblyTooMuch": "Possibly {amount}/mo too much — check your assessment",
-    "estimatedTotal": "Estimated total per month",
-    "doCalculation": "Do an exact calculation at toeslagen.nl",
-    "tooMuchWarningTitle": "You may be receiving too much in benefits",
-    "tooMuchWarningDesc": "Overpaid benefits must be repaid to the tax office. Check your assessments or do a trial calculation.",
-    "myCurrentBenefits": "My current benefits",
-    "youReceive": "You receive {amount}/mo",
-    "fillInToCheck": "Enter what you currently receive to check",
-    "fillInDesc": "Enter per benefit what you receive monthly. This can be found on your assessment from the tax office.",
-    "saved": "Saved",
-    "save": "Save",
-    "notEligible": "Not eligible:",
-    "zorgtoeslag": "Healthcare allowance",
-    "huurtoeslag": "Housing allowance",
-    "kindgebondenBudget": "Child budget",
-    "kinderopvangtoeslag": "Childcare allowance"
+    "title": "التحقق من البدلات",
+    "eligible": "قد يحق لك الحصول على {count} بدل",
+    "eligiblePlural": "قد يحق لك الحصول على {count} بدلات",
+    "receives": "يستلم:",
+    "perMonth": "/شهر",
+    "possiblyTooMuch": "ربما {amount}/شهر أكثر من اللازم — تحقق من إشعارك",
+    "estimatedTotal": "الإجمالي التقديري شهريًا",
+    "doCalculation": "قم بحساب دقيق على toeslagen.nl",
+    "tooMuchWarningTitle": "قد تكون تستلم بدلات أكثر من اللازم",
+    "tooMuchWarningDesc": "يجب إعادة البدلات المدفوعة بالزيادة إلى مصلحة الضرائب. تحقق من إشعاراتك أو قم بحساب تجريبي.",
+    "myCurrentBenefits": "بدلاتي الحالية",
+    "youReceive": "أنت تستلم {amount}/شهر",
+    "fillInToCheck": "أدخل ما تستلمه حاليًا للتحقق",
+    "fillInDesc": "أدخل لكل بدل المبلغ الذي تستلمه شهريًا. يمكنك العثور عليه في إشعارك من مصلحة الضرائب.",
+    "saved": "تم الحفظ",
+    "save": "حفظ",
+    "notEligible": "غير مؤهل:",
+    "zorgtoeslag": "بدل الرعاية الصحية",
+    "huurtoeslag": "بدل السكن",
+    "kindgebondenBudget": "ميزانية الطفل",
+    "kinderopvangtoeslag": "بدل رعاية الأطفال"
   },
   "countdown": {
     "debtFree": "خالٍ من الديون!",
@@ -1058,30 +1058,30 @@
     "adjustBudget": "تعديل الميزانية"
   },
   "incomeForm": {
-    "income": "Income",
-    "netIncomePerMonth": "Net income per month",
-    "duoStudyFinance": "DUO / Study finance",
-    "benefitIncome": "Benefits (welfare, unemployment, etc.)",
-    "otherIncome": "Other income",
-    "salaryPayment": "Salary payment",
-    "household": "Household",
-    "netIncomePartner": "Net income partner per month",
-    "age": "Age",
-    "benefitsCheck": "Benefits check",
-    "bareRent": "Bare rent per month (optional — auto-detected from fixed expenses)",
-    "save": "Save"
+    "income": "الدخل",
+    "netIncomePerMonth": "صافي الدخل شهريًا",
+    "duoStudyFinance": "DUO / تمويل الدراسة",
+    "benefitIncome": "البدلات (المساعدة الاجتماعية، البطالة، إلخ)",
+    "otherIncome": "دخل آخر",
+    "salaryPayment": "دفعة الراتب",
+    "household": "الأسرة",
+    "netIncomePartner": "صافي دخل الشريك شهريًا",
+    "age": "العمر",
+    "benefitsCheck": "التحقق من البدلات",
+    "bareRent": "الإيجار الأساسي شهريًا (اختياري — يُكتشف تلقائيًا من المصاريف الثابتة)",
+    "save": "حفظ"
   },
   "beslagvrijeVoet": {
-    "single": "Single",
-    "cohabiting": "Cohabiting / married",
-    "singleParent": "Single parent",
-    "netIncome": "Net income per month",
-    "bareRent": "Bare rent per month",
-    "healthInsurance": "Health insurance premium per month",
-    "totalBenefits": "Total benefits received per month",
-    "enterName": "Enter your name",
-    "copied": "Copied",
-    "copyLetter": "Copy letter"
+    "single": "أعزب",
+    "cohabiting": "معاشر / متزوج",
+    "singleParent": "والد وحيد",
+    "netIncome": "صافي الدخل شهريًا",
+    "bareRent": "الإيجار الأساسي شهريًا",
+    "healthInsurance": "قسط التأمين الصحي شهريًا",
+    "totalBenefits": "إجمالي البدلات المستلمة شهريًا",
+    "enterName": "أدخل اسمك",
+    "copied": "تم النسخ",
+    "copyLetter": "نسخ الرسالة"
   },
   "modules": {
     "disposable": "الدخل المتاح",

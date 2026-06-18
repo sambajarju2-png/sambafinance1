@@ -214,11 +214,11 @@
     "stage": "Étape"
   },
   "escalation": {
-    "factuur": "Invoice",
-    "herinnering": "Reminder",
-    "aanmaning": "Final notice",
-    "incasso": "Collection",
-    "deurwaarder": "Bailiff"
+    "factuur": "Facture",
+    "herinnering": "Rappel",
+    "aanmaning": "Mise en demeure",
+    "incasso": "Recouvrement",
+    "deurwaarder": "Huissier"
   },
   "stats": {
     "title": "Statistiques",
@@ -519,20 +519,20 @@
     "tryAgain": "Réessayer"
   },
   "incasso": {
-    "wikTitle": "WIK Collection Costs",
-    "wikDescription": "Calculation based on Dutch collection cost regulations",
-    "wikDisclaimer": "This is an estimate. Actual costs may vary.",
-    "wikExtra": "Estimated extra costs",
-    "recommendedAction": "Recommended action",
-    "savingsTitle": "Savings by paying on time",
-    "collectionTitle": "Collection agency",
-    "bailiffTitle": "Bailiff",
-    "howToTitle": "What can you do?",
-    "helpTitle": "Need help?",
+    "wikTitle": "Frais de recouvrement WIK",
+    "wikDescription": "Calcul basé sur la réglementation néerlandaise des frais de recouvrement",
+    "wikDisclaimer": "Ceci est une estimation. Les coûts réels peuvent varier.",
+    "wikExtra": "Frais supplémentaires estimés",
+    "recommendedAction": "Action recommandée",
+    "savingsTitle": "Économies en payant à temps",
+    "collectionTitle": "Agence de recouvrement",
+    "bailiffTitle": "Huissier",
+    "howToTitle": "Que pouvez-vous faire ?",
+    "helpTitle": "Besoin d'aide ?",
     "juridischLoket": "Juridisch Loket",
     "nibud": "Nibud",
-    "schuldhulp": "Debt counseling",
-    "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
+    "schuldhulp": "Aide au surendettement",
+    "legalDisclaimer": "PayWatch ne fournit pas de conseils juridiques. Consultez le Juridisch Loket ou un avocat."
   },
   "achievements": {
     "title": "Réussites",
@@ -653,28 +653,28 @@
     "share": "Partager"
   },
   "helpResources": {
-    "helpTitle": "Debt help",
+    "helpTitle": "Aide au surendettement",
     "juridischLoket": "Juridisch Loket",
-    "juridischDesc": "Free legal advice",
-    "juridisch_desc": "Call for free legal advice",
+    "juridischDesc": "Conseils juridiques gratuits",
+    "juridisch_desc": "Appelez pour des conseils juridiques gratuits",
     "nibud": "Nibud",
-    "nibudDesc": "Budget advice and debt help",
-    "nibud_desc": "Tips for your household budget",
-    "schuldhulp": "Debt counseling",
-    "schuldhulp_desc": "Help through your municipality",
-    "geldfit_desc": "Check if you're financially fit",
-    "ombudsman_desc": "Complaints about collection agencies"
+    "nibudDesc": "Conseils budgétaires et aide au surendettement",
+    "nibud_desc": "Conseils pour le budget de votre ménage",
+    "schuldhulp": "Aide au surendettement",
+    "schuldhulp_desc": "Aide via votre commune",
+    "geldfit_desc": "Vérifiez si vous êtes en bonne santé financière",
+    "ombudsman_desc": "Plaintes concernant les agences de recouvrement"
   },
   "lawyer": {
-    "title": "Lawyers in your area",
-    "collectionTitle": "Collection case? Get a lawyer",
-    "description": "These law firms specialize in collection and debt cases.",
-    "noGemeente": "Set your municipality to find lawyers near you.",
-    "noResults": "No lawyers found in your area.",
-    "stad": "City",
+    "title": "Avocats près de chez vous",
+    "collectionTitle": "Affaire de recouvrement ? Prenez un avocat",
+    "description": "Ces cabinets d'avocats sont spécialisés dans les affaires de recouvrement et de dettes.",
+    "noGemeente": "Indiquez votre commune pour trouver des avocats près de chez vous.",
+    "noResults": "Aucun avocat trouvé dans votre région.",
+    "stad": "Ville",
     "juridischLoket": "Juridisch Loket",
-    "juridischDesc": "Call for free legal advice: 0900-8020",
-    "nibudDesc": "Budget coach and debt help: nibud.nl"
+    "juridischDesc": "Appelez pour des conseils juridiques gratuits : 0900-8020",
+    "nibudDesc": "Coach budgétaire et aide au surendettement : nibud.nl"
   },
   "referral": {
     "title": "Partager PayWatch",
@@ -698,55 +698,55 @@
     "thankYouDesc": "Votre avis nous aide à améliorer PayWatch."
   },
   "pwa": {
-    "installTitle": "Install PayWatch",
-    "installDesc": "Add PayWatch to your home screen for quick access.",
-    "install": "Install",
-    "later": "Later",
-    "maybeLater": "Maybe later",
-    "iosStep1Title": "Tap Share",
-    "iosStep1Desc": "Tap the share icon in Safari",
-    "iosStep2Title": "Add to Home Screen",
-    "iosStep2Desc": "Scroll down and tap 'Add to Home Screen'",
-    "iosStep3Title": "Add",
-    "iosStep3Desc": "Tap 'Add' in the top right",
-    "androidStep1Title": "Tap menu",
-    "androidStep1Desc": "Tap the three dots in the top right",
-    "androidStep2Title": "Install app",
-    "androidStep2Desc": "Choose 'Install app' or 'Add to Home screen'",
-    "androidStep3Title": "Confirm",
-    "androidStep3Desc": "Tap 'Install' to confirm"
+    "installTitle": "Installer PayWatch",
+    "installDesc": "Ajoutez PayWatch à votre écran d'accueil pour un accès rapide.",
+    "install": "Installer",
+    "later": "Plus tard",
+    "maybeLater": "Peut-être plus tard",
+    "iosStep1Title": "Appuyez sur Partager",
+    "iosStep1Desc": "Appuyez sur l'icône de partage dans Safari",
+    "iosStep2Title": "Ajouter à l'écran d'accueil",
+    "iosStep2Desc": "Faites défiler et appuyez sur « Ajouter à l'écran d'accueil »",
+    "iosStep3Title": "Ajouter",
+    "iosStep3Desc": "Appuyez sur « Ajouter » en haut à droite",
+    "androidStep1Title": "Appuyez sur le menu",
+    "androidStep1Desc": "Appuyez sur les trois points en haut à droite",
+    "androidStep2Title": "Installer l'application",
+    "androidStep2Desc": "Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »",
+    "androidStep3Title": "Confirmer",
+    "androidStep3Desc": "Appuyez sur « Installer » pour confirmer"
   },
   "tour": {
-    "title": "Tour",
-    "skip": "Skip",
-    "next": "Next",
-    "done": "Done",
-    "getStarted": "Get started",
+    "title": "Visite guidée",
+    "skip": "Passer",
+    "next": "Suivant",
+    "done": "Terminé",
+    "getStarted": "Commencer",
     "overview": {
-      "title": "Overview",
-      "desc": "See your bills, financial insights and debt-free countdown in one place."
+      "title": "Aperçu",
+      "desc": "Consultez vos factures, vos analyses financières et le compte à rebours sans dettes en un seul endroit."
     },
     "payments": {
-      "title": "Payments",
-      "desc": "Manage all your bills. View escalation stage, pay directly and track your calendar."
+      "title": "Paiements",
+      "desc": "Gérez toutes vos factures. Consultez le stade d'escalade, payez directement et suivez votre calendrier."
     },
     "feed": {
-      "title": "Community Feed",
-      "desc": "Share experiences, ask questions and support others. Anonymous or with your name."
+      "title": "Fil communautaire",
+      "desc": "Partagez vos expériences, posez des questions et soutenez les autres. De façon anonyme ou avec votre nom."
     },
     "stats": {
-      "title": "Financial Insight",
-      "desc": "Categorize transactions, discover subscriptions and see where your money goes."
+      "title": "Analyse financière",
+      "desc": "Catégorisez vos transactions, repérez vos abonnements et voyez où va votre argent."
     },
     "cashflow": {
-      "title": "Cashflow",
-      "desc": "See your monthly spending and expected costs."
+      "title": "Trésorerie",
+      "desc": "Consultez vos dépenses mensuelles et les coûts à venir."
     },
     "settings": {
-      "title": "More",
-      "desc": "Buddy mode, settings, bank connection and notification preferences."
+      "title": "Plus",
+      "desc": "Mode buddy, paramètres, connexion bancaire et préférences de notification."
     },
-    "previous": "Previous"
+    "previous": "Précédent"
   },
   "adminTest": {
     "title": "Panneau de test admin",
@@ -841,41 +841,41 @@
     "trend": "Tendance"
   },
   "paymentPlan": {
-    "title": "Payment plan",
-    "setupTitle": "Set up payment plan",
-    "amount": "Total amount",
-    "installments": "Number of installments",
-    "perInstallment": "Per installment",
-    "startDate": "Start date",
-    "create": "Create plan",
-    "active": "Active plan",
-    "progress": "Progress",
-    "paid": "Paid",
-    "remaining": "Remaining",
-    "nextPayment": "Next payment",
-    "markPaid": "Mark as paid",
-    "cancelPlan": "Cancel plan",
-    "cancelConfirm": "Are you sure you want to cancel this payment plan?",
-    "completed": "Plan completed!",
-    "uploadProof": "Upload proof of payment"
+    "title": "Plan de paiement",
+    "setupTitle": "Configurer un plan de paiement",
+    "amount": "Montant total",
+    "installments": "Nombre de versements",
+    "perInstallment": "Par versement",
+    "startDate": "Date de début",
+    "create": "Créer le plan",
+    "active": "Plan actif",
+    "progress": "Progression",
+    "paid": "Payé",
+    "remaining": "Restant",
+    "nextPayment": "Prochain paiement",
+    "markPaid": "Marquer comme payé",
+    "cancelPlan": "Annuler le plan",
+    "cancelConfirm": "Voulez-vous vraiment annuler ce plan de paiement ?",
+    "completed": "Plan terminé !",
+    "uploadProof": "Téléverser une preuve de paiement"
   },
   "recurring": {
-    "title": "Expected bills",
-    "analyze": "Analyze",
-    "noPatternsYet": "No patterns found yet. Scan more bills to see predictions.",
-    "runFirstAnalysis": "Run first analysis",
-    "expectedNext60": "Expected next 60 days",
-    "weekly": "Weekly",
-    "biWeekly": "Bi-weekly",
-    "monthly": "Monthly",
-    "biMonthly": "Bi-monthly",
-    "quarterly": "Quarterly",
-    "semiAnnual": "Semi-annual",
-    "yearly": "Yearly",
-    "overdue": "Overdue",
-    "today": "Today",
-    "tomorrow": "Tomorrow",
-    "morePatterns": "more patterns"
+    "title": "Factures attendues",
+    "analyze": "Analyser",
+    "noPatternsYet": "Aucun schéma trouvé pour le moment. Scannez plus de factures pour voir des prévisions.",
+    "runFirstAnalysis": "Lancer la première analyse",
+    "expectedNext60": "Attendu dans les 60 prochains jours",
+    "weekly": "Hebdomadaire",
+    "biWeekly": "Toutes les deux semaines",
+    "monthly": "Mensuel",
+    "biMonthly": "Tous les deux mois",
+    "quarterly": "Trimestriel",
+    "semiAnnual": "Semestriel",
+    "yearly": "Annuel",
+    "overdue": "En retard",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "morePatterns": "autres schémas"
   },
   "diploma": {
     "certifiedBy": "Certifié par",
@@ -1012,27 +1012,27 @@
     "installmentPaid": "Versement payé"
   },
   "toeslagen": {
-    "title": "BENEFITS CHECK",
-    "eligible": "You may be eligible for {count} benefit",
-    "eligiblePlural": "You may be eligible for {count} benefits",
-    "receives": "Receives:",
-    "perMonth": "/mo",
-    "possiblyTooMuch": "Possibly {amount}/mo too much — check your assessment",
-    "estimatedTotal": "Estimated total per month",
-    "doCalculation": "Do an exact calculation at toeslagen.nl",
-    "tooMuchWarningTitle": "You may be receiving too much in benefits",
-    "tooMuchWarningDesc": "Overpaid benefits must be repaid to the tax office. Check your assessments or do a trial calculation.",
-    "myCurrentBenefits": "My current benefits",
-    "youReceive": "You receive {amount}/mo",
-    "fillInToCheck": "Enter what you currently receive to check",
-    "fillInDesc": "Enter per benefit what you receive monthly. This can be found on your assessment from the tax office.",
-    "saved": "Saved",
-    "save": "Save",
-    "notEligible": "Not eligible:",
-    "zorgtoeslag": "Healthcare allowance",
-    "huurtoeslag": "Housing allowance",
-    "kindgebondenBudget": "Child budget",
-    "kinderopvangtoeslag": "Childcare allowance"
+    "title": "VÉRIFICATION DES ALLOCATIONS",
+    "eligible": "Vous pourriez avoir droit à {count} allocation",
+    "eligiblePlural": "Vous pourriez avoir droit à {count} allocations",
+    "receives": "Reçoit :",
+    "perMonth": "/mois",
+    "possiblyTooMuch": "Peut-être {amount}/mois de trop — vérifiez votre avis",
+    "estimatedTotal": "Total estimé par mois",
+    "doCalculation": "Faites un calcul exact sur toeslagen.nl",
+    "tooMuchWarningTitle": "Vous recevez peut-être trop d'allocations",
+    "tooMuchWarningDesc": "Les allocations versées en trop doivent être remboursées à l'administration fiscale. Vérifiez vos avis ou faites un calcul d'essai.",
+    "myCurrentBenefits": "Mes allocations actuelles",
+    "youReceive": "Vous recevez {amount}/mois",
+    "fillInToCheck": "Indiquez ce que vous recevez actuellement pour vérifier",
+    "fillInDesc": "Indiquez pour chaque allocation le montant que vous recevez chaque mois. Vous le trouverez sur votre avis de l'administration fiscale.",
+    "saved": "Enregistré",
+    "save": "Enregistrer",
+    "notEligible": "Pas éligible :",
+    "zorgtoeslag": "Allocation santé",
+    "huurtoeslag": "Allocation logement",
+    "kindgebondenBudget": "Budget lié à l'enfant",
+    "kinderopvangtoeslag": "Allocation garde d'enfants"
   },
   "countdown": {
     "debtFree": "Sans dettes !",
@@ -1058,30 +1058,30 @@
     "adjustBudget": "Ajuster le budget"
   },
   "incomeForm": {
-    "income": "Income",
-    "netIncomePerMonth": "Net income per month",
-    "duoStudyFinance": "DUO / Study finance",
-    "benefitIncome": "Benefits (welfare, unemployment, etc.)",
-    "otherIncome": "Other income",
-    "salaryPayment": "Salary payment",
-    "household": "Household",
-    "netIncomePartner": "Net income partner per month",
-    "age": "Age",
-    "benefitsCheck": "Benefits check",
-    "bareRent": "Bare rent per month (optional — auto-detected from fixed expenses)",
-    "save": "Save"
+    "income": "Revenu",
+    "netIncomePerMonth": "Revenu net par mois",
+    "duoStudyFinance": "DUO / Financement des études",
+    "benefitIncome": "Allocations (aide sociale, chômage, etc.)",
+    "otherIncome": "Autres revenus",
+    "salaryPayment": "Versement du salaire",
+    "household": "Ménage",
+    "netIncomePartner": "Revenu net du partenaire par mois",
+    "age": "Âge",
+    "benefitsCheck": "Vérification des allocations",
+    "bareRent": "Loyer nu par mois (facultatif — détecté automatiquement à partir des charges fixes)",
+    "save": "Enregistrer"
   },
   "beslagvrijeVoet": {
-    "single": "Single",
-    "cohabiting": "Cohabiting / married",
-    "singleParent": "Single parent",
-    "netIncome": "Net income per month",
-    "bareRent": "Bare rent per month",
-    "healthInsurance": "Health insurance premium per month",
-    "totalBenefits": "Total benefits received per month",
-    "enterName": "Enter your name",
-    "copied": "Copied",
-    "copyLetter": "Copy letter"
+    "single": "Célibataire",
+    "cohabiting": "En couple / marié(e)",
+    "singleParent": "Parent isolé",
+    "netIncome": "Revenu net par mois",
+    "bareRent": "Loyer nu par mois",
+    "healthInsurance": "Prime d'assurance santé par mois",
+    "totalBenefits": "Total des allocations reçues par mois",
+    "enterName": "Saisissez votre nom",
+    "copied": "Copié",
+    "copyLetter": "Copier la lettre"
   },
   "modules": {
     "disposable": "Revenu disponible",
