@@ -75,7 +75,7 @@ function ThreadList({ threads, onOpen, lang }: {
             nl: 'Je vangnet buddy of hulporganisatie kan hier contact met je opnemen.',
             en: 'Your safety net buddy or help organization can reach out to you here.',
             pl: 'Twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może się tu z tobą skontaktować.',
-            tr: 'Güvenlik ağındaki destekçin veya yardım kuruluşu burada seninle iletişime geçebilir.', fr: "Votre soutien dans le filet de sécurité ou votre organisation d'aide peut vous contacter ici.", ar: 'يمكن لداعمك في شبكة الأمان أو منظمة المساعدة التواصل معك هنا.',
+            tr: 'Güvenlik ağındaki destekçin veya yardım kuruluşu burada seninle iletişime geçebilir.', fr: "Ton soutien dans le filet de sécurité ou ton organisation d'aide peut te contacter ici.", ar: 'يمكن لداعمك في شبكة الأمان أو منظمة المساعدة التواصل معك هنا.',
           })}
         </p>
       </div>
@@ -290,7 +290,7 @@ function ThreadView({ threadId, onBack, lang }: {
                 sendReply();
               }
             }}
-            placeholder={pick(lang, { nl: 'Typ een antwoord...', en: 'Type a reply...', pl: 'Napisz odpowiedź...', tr: 'Yanıt yaz...', fr: 'Saisissez une réponse...', ar: 'اكتب ردًا...' })}
+            placeholder={pick(lang, { nl: 'Typ een antwoord...', en: 'Type a reply...', pl: 'Napisz odpowiedź...', tr: 'Yanıt yaz...', fr: 'Saisis une réponse...', ar: 'اكتب ردًا...' })}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue dark:bg-white/5 dark:text-white dark:border-pw-border/50"
           />
@@ -391,11 +391,11 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   }
 
   const SCOPE_LABELS: Record<string, { label: string; desc: string; required?: boolean }> = {
-    contact_info: { label: pick(lang, { nl: 'Naam en contactgegevens', en: 'Name and contact details', pl: 'Imię i dane kontaktowe', tr: 'Ad ve iletişim bilgileri', fr: 'Nom et coordonnées', ar: 'الاسم وبيانات التواصل' }), desc: pick(lang, { nl: 'Zodat je coach je kan bereiken', en: 'So your coach can reach you', pl: 'Aby twój opiekun mógł się z tobą skontaktować', tr: 'Koçunun sana ulaşabilmesi için', fr: 'Pour que votre coach puisse vous joindre', ar: 'حتى يتمكن مدربك من الوصول إليك' }), required: true },
+    contact_info: { label: pick(lang, { nl: 'Naam en contactgegevens', en: 'Name and contact details', pl: 'Imię i dane kontaktowe', tr: 'Ad ve iletişim bilgileri', fr: 'Nom et coordonnées', ar: 'الاسم وبيانات التواصل' }), desc: pick(lang, { nl: 'Zodat je coach je kan bereiken', en: 'So your coach can reach you', pl: 'Aby twój opiekun mógł się z tobą skontaktować', tr: 'Koçunun sana ulaşabilmesi için', fr: 'Pour que ton coach puisse te joindre', ar: 'حتى يتمكن مدربك من الوصول إليك' }), required: true },
     view_bills: { label: pick(lang, { nl: 'Rekeningen en betalingsstatus', en: 'Bills and payment status', pl: 'Rachunki i status płatności', tr: 'Faturalar ve ödeme durumu', fr: 'Factures et statut de paiement', ar: 'الفواتير وحالة الدفع' }), desc: pick(lang, { nl: 'Openstaande facturen, escalatiefase', en: 'Outstanding invoices, escalation stage', pl: 'Nieopłacone faktury, etap eskalacji', tr: 'Ödenmemiş faturalar, yükseltme aşaması', fr: "Factures impayées, phase d'escalade", ar: 'الفواتير غير المدفوعة، مرحلة التصعيد' }) },
     financial_overview: { label: pick(lang, { nl: 'Financieel profiel', en: 'Financial profile', pl: 'Profil finansowy', tr: 'Finansal profil', fr: 'Profil financier', ar: 'الملف المالي' }), desc: pick(lang, { nl: 'Inkomen, vaste lasten, toeslagen', en: 'Income, fixed costs, allowances', pl: 'Dochód, stałe wydatki, dodatki', tr: 'Gelir, sabit giderler, yardımlar', fr: 'Revenus, charges fixes, aides', ar: 'الدخل، المصاريف الثابتة، المساعدات' }) },
     payment_plans: { label: pick(lang, { nl: 'Betalingsregelingen', en: 'Payment plans', pl: 'Plany płatności', tr: 'Ödeme planları', fr: 'Plans de paiement', ar: 'خطط الدفع' }), desc: pick(lang, { nl: 'Actieve regelingen en voortgang', en: 'Active plans and progress', pl: 'Aktywne plany i postępy', tr: 'Aktif planlar ve ilerleme', fr: 'Plans actifs et progression', ar: 'الخطط النشطة والتقدّم' }) },
-    messaging: { label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet', fr: 'Messages et chat', ar: 'الرسائل والدردشة' }), desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim', fr: 'Communication avec votre coach', ar: 'التواصل مع مدربك' }) },
+    messaging: { label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet', fr: 'Messages et chat', ar: 'الرسائل والدردشة' }), desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim', fr: 'Communication avec ton coach', ar: 'التواصل مع مدربك' }) },
   };
 
   // Org consent modal
@@ -404,7 +404,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
       <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <h3 className="text-[16px] font-bold text-pw-navy">{pick(lang, { nl: 'Gegevens delen met organisatie', en: 'Share data with organisation', pl: 'Udostępnij dane organizacji', tr: 'Verileri kuruluşla paylaş', fr: "Partager des données avec l'organisation", ar: 'مشاركة البيانات مع المؤسسة' })}</h3>
         <p className="text-[13px] text-pw-muted leading-relaxed">
-          {pick(lang, { nl: 'Kies welke gegevens je wilt delen. Je kunt dit later wijzigen via Instellingen → Privacyrechten.', en: 'Choose which data you want to share. You can change this later via Settings → Privacy rights.', pl: 'Wybierz, które dane chcesz udostępnić. Możesz to później zmienić w Ustawienia → Prawa do prywatności.', tr: 'Hangi verileri paylaşmak istediğini seç. Bunu daha sonra Ayarlar → Gizlilik hakları üzerinden değiştirebilirsin.', fr: 'Choisissez les données que vous souhaitez partager. Vous pourrez modifier cela plus tard via Paramètres → Droits de confidentialité.', ar: 'اختر البيانات التي تريد مشاركتها. يمكنك تغيير ذلك لاحقًا عبر الإعدادات ← حقوق الخصوصية.' })}
+          {pick(lang, { nl: 'Kies welke gegevens je wilt delen. Je kunt dit later wijzigen via Instellingen → Privacyrechten.', en: 'Choose which data you want to share. You can change this later via Settings → Privacy rights.', pl: 'Wybierz, które dane chcesz udostępnić. Możesz to później zmienić w Ustawienia → Prawa do prywatności.', tr: 'Hangi verileri paylaşmak istediğini seç. Bunu daha sonra Ayarlar → Gizlilik hakları üzerinden değiştirebilirsin.', fr: 'Choisis les données que tu souhaites partager. Tu pourras modifier cela plus tard via Paramètres → Droits de confidentialité.', ar: 'اختر البيانات التي تريد مشاركتها. يمكنك تغيير ذلك لاحقًا عبر الإعدادات ← حقوق الخصوصية.' })}
         </p>
         <div className="rounded-xl bg-pw-bg p-3 space-y-1">
           {Object.entries(SCOPE_LABELS).map(([key, { label, desc, required }]) => (
@@ -425,7 +425,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
         </div>
         <div className="rounded-xl bg-pw-bg p-3 space-y-1 text-[12px] text-pw-muted">
           <p>{pick(lang, { nl: '✗ Nooit gedeeld: banktransacties, e-mails, community posts', en: '✗ Never shared: bank transactions, emails, community posts', pl: '✗ Nigdy nieudostępniane: transakcje bankowe, e-maile, posty społeczności', tr: '✗ Asla paylaşılmaz: banka işlemleri, e-postalar, topluluk gönderileri', fr: '✗ Jamais partagé : transactions bancaires, e-mails, publications de la communauté', ar: '✗ لا تتم مشاركتها أبدًا: المعاملات البنكية، رسائل البريد، منشورات المجتمع' })}</p>
-          <p>{pick(lang, { nl: '✗ Organisatie kan geen betalingen doen namens jou', en: '✗ The organisation cannot make payments on your behalf', pl: '✗ Organizacja nie może dokonywać płatności w twoim imieniu', tr: '✗ Kuruluş senin adına ödeme yapamaz', fr: "✗ L'organisation ne peut pas effectuer de paiements en votre nom", ar: '✗ لا يمكن للمؤسسة إجراء مدفوعات نيابة عنك' })}</p>
+          <p>{pick(lang, { nl: '✗ Organisatie kan geen betalingen doen namens jou', en: '✗ The organisation cannot make payments on your behalf', pl: '✗ Organizacja nie może dokonywać płatności w twoim imieniu', tr: '✗ Kuruluş senin adına ödeme yapamaz', fr: "✗ L'organisation ne peut pas effectuer de paiements en ton nom", ar: '✗ لا يمكن للمؤسسة إجراء مدفوعات نيابة عنك' })}</p>
         </div>
         <div className="flex gap-3 pt-1">
           <button
@@ -473,7 +473,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
               {pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu', fr: "Boîte d'aide", ar: 'صندوق المساعدة' })}
             </h2>
             <p className="text-[11px] text-pw-muted">
-              {pick(lang, { nl: 'Berichten van je vangnet', en: 'Messages from your safety net', pl: 'Wiadomości od twojej siatki bezpieczeństwa', tr: 'Güvenlik ağından mesajlar', fr: 'Messages de votre filet de sécurité', ar: 'رسائل من شبكة الأمان الخاصة بك' })}
+              {pick(lang, { nl: 'Berichten van je vangnet', en: 'Messages from your safety net', pl: 'Wiadomości od twojej siatki bezpieczeństwa', tr: 'Güvenlik ağından mesajlar', fr: 'Messages de ton filet de sécurité', ar: 'رسائل من شبكة الأمان الخاصة بك' })}
             </p>
           </div>
         </div>
@@ -530,7 +530,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
 
         {orgs.length === 0 && !showCodeInput && (
           <p className="text-[11px] text-pw-muted">
-            {pick(lang, { nl: 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.', en: 'No organisation connected yet. Have an invite code? Enter it above.', pl: 'Brak połączonej organizacji. Masz kod zaproszenia? Wpisz go.', tr: 'Henüz bağlı kuruluş yok. Davet kodun var mı? Yukarıya gir.', fr: "Aucune organisation connectée pour le moment. Vous avez un code d'invitation ? Saisissez-le ci-dessus.", ar: 'لا توجد مؤسسة مرتبطة بعد. هل لديك رمز دعوة؟ أدخله بالأعلى.' })}
+            {pick(lang, { nl: 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.', en: 'No organisation connected yet. Have an invite code? Enter it above.', pl: 'Brak połączonej organizacji. Masz kod zaproszenia? Wpisz go.', tr: 'Henüz bağlı kuruluş yok. Davet kodun var mı? Yukarıya gir.', fr: "Aucune organisation connectée pour le moment. Tu as un code d'invitation ? Saisis-le ci-dessus.", ar: 'لا توجد مؤسسة مرتبطة بعد. هل لديك رمز دعوة؟ أدخله بالأعلى.' })}
           </p>
         )}
 
@@ -569,7 +569,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
               nl: 'Alleen je vangnet buddy of hulporganisatie kan een gesprek starten. Jij kunt hier antwoorden.',
               en: 'Only your safety net buddy or help organization can start a conversation. You can reply here.',
               pl: 'Tylko twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może rozpocząć rozmowę. Możesz tu odpowiadać.',
-              tr: 'Sadece güvenlik ağındaki destekçin veya yardım kuruluşu görüşme başlatabilir. Burada yanıt verebilirsin.', fr: "Seul votre soutien dans le filet de sécurité ou votre organisation d'aide peut démarrer un appel. Vous pouvez répondre ici.", ar: 'يمكن فقط لداعمك في شبكة الأمان أو منظمة المساعدة بدء مكالمة. يمكنك الرد هنا.',
+              tr: 'Sadece güvenlik ağındaki destekçin veya yardım kuruluşu görüşme başlatabilir. Burada yanıt verebilirsin.', fr: "Seul ton soutien dans le filet de sécurité ou ton organisation d'aide peut démarrer un appel. Tu peux répondre ici.", ar: 'يمكن فقط لداعمك في شبكة الأمان أو منظمة المساعدة بدء مكالمة. يمكنك الرد هنا.',
             })}
           </p>
         </div>

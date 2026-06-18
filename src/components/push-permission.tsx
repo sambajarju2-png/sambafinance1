@@ -139,12 +139,12 @@ export default function PushPermission() {
             </p>
             <p className="text-[11px] text-pw-muted">
               {status === 'granted'
-                ? pick(lang, { nl: 'Je ontvangt herinneringen voor vervaldatums', en: 'You receive reminders for due dates', pl: 'Otrzymujesz przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatmalar alıyorsun', fr: 'Vous recevez des rappels pour les échéances', ar: 'تتلقى تذكيرات بمواعيد الاستحقاق' })
+                ? pick(lang, { nl: 'Je ontvangt herinneringen voor vervaldatums', en: 'You receive reminders for due dates', pl: 'Otrzymujesz przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatmalar alıyorsun', fr: 'Tu reçois des rappels pour les échéances', ar: 'تتلقى تذكيرات بمواعيد الاستحقاق' })
                 : status === 'denied'
                   ? (isNative
-                      ? pick(lang, { nl: 'Open Instellingen → Meldingen → PayWatch', en: 'Open Settings → Notifications → PayWatch', pl: 'Otwórz Ustawienia → Powiadomienia → PayWatch', tr: 'Ayarlar → Bildirimler → PayWatch yolunu aç', fr: 'Ouvrez Réglages → Notifications → PayWatch', ar: 'افتح الإعدادات ← الإشعارات ← PayWatch' })
-                      : pick(lang, { nl: 'Meldingen geblokkeerd in je browser', en: 'Notifications blocked in your browser', pl: 'Powiadomienia zablokowane w przeglądarce', tr: 'Bildirimler tarayıcında engellendi', fr: 'Notifications bloquées dans votre navigateur', ar: 'الإشعارات محظورة في متصفحك' }))
-                  : pick(lang, { nl: 'Ontvang herinneringen voor vervaldatums', en: 'Receive reminders for due dates', pl: 'Otrzymuj przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatma al', fr: 'Recevez des rappels pour les échéances', ar: 'تلقَّ تذكيرات بمواعيد الاستحقاق' })}
+                      ? pick(lang, { nl: 'Open Instellingen → Meldingen → PayWatch', en: 'Open Settings → Notifications → PayWatch', pl: 'Otwórz Ustawienia → Powiadomienia → PayWatch', tr: 'Ayarlar → Bildirimler → PayWatch yolunu aç', fr: 'Ouvre Réglages → Notifications → PayWatch', ar: 'افتح الإعدادات ← الإشعارات ← PayWatch' })
+                      : pick(lang, { nl: 'Meldingen geblokkeerd in je browser', en: 'Notifications blocked in your browser', pl: 'Powiadomienia zablokowane w przeglądarce', tr: 'Bildirimler tarayıcında engellendi', fr: 'Notifications bloquées dans ton navigateur', ar: 'الإشعارات محظورة في متصفحك' }))
+                  : pick(lang, { nl: 'Ontvang herinneringen voor vervaldatums', en: 'Receive reminders for due dates', pl: 'Otrzymuj przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatma al', fr: 'Reçois des rappels pour les échéances', ar: 'تلقَّ تذكيرات بمواعيد الاستحقاق' })}
             </p>
           </div>
         </div>

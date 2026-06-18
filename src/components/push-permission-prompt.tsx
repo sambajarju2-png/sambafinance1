@@ -135,7 +135,7 @@ export default function PushPermissionPrompt() {
                   nl: 'Ontvang een melding als een rekening bijna vervalt of als je scan klaar is.',
                   en: 'Get notified when a bill is almost due or when your scan is complete.',
                   pl: 'Otrzymaj powiadomienie, gdy zbliża się termin rachunku lub gdy skanowanie się zakończy.',
-                  tr: 'Bir faturanın son ödeme tarihi yaklaştığında veya taraman bittiğinde bildirim al.', fr: "Soyez notifié lorsqu'une facture arrive à échéance ou lorsque votre scan est terminé.", ar: 'احصل على إشعار عند اقتراب موعد استحقاق فاتورة أو عند اكتمال المسح.',
+                  tr: 'Bir faturanın son ödeme tarihi yaklaştığında veya taraman bittiğinde bildirim al.', fr: "Sois notifié lorsqu'une facture arrive à échéance ou lorsque ton scan est terminé.", ar: 'احصل على إشعار عند اقتراب موعد استحقاق فاتورة أو عند اكتمال المسح.',
                 })}
               </p>
             </div>

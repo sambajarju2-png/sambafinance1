@@ -248,7 +248,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             nl: err.message || 'Je hebt je limiet bereikt. Upgrade om verder te gaan.',
             en: "You've reached your limit. Upgrade to continue.",
             pl: 'Osiągnąłeś swój limit. Przejdź na wyższy plan, aby kontynuować.',
-            tr: 'Limitine ulaştın. Devam etmek için yükselt.', fr: 'Vous avez atteint votre limite. Passez à un forfait supérieur pour continuer.', ar: 'لقد وصلت إلى حدك. قم بالترقية للمتابعة.',
+            tr: 'Limitine ulaştın. Devam etmek için yükselt.', fr: 'Tu as atteint ta limite. Passe à un forfait supérieur pour continuer.', ar: 'لقد وصلت إلى حدك. قم بالترقية للمتابعة.',
           });
           setMessages(prev => prev.map(m =>
             m.id === assistantId ? { ...m, content: limitContent } : m
@@ -258,8 +258,8 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
         }
 
         const errorContent = err.error === 'Rate limited'
-          ? pick(lang, { nl: 'Even rustig aan! Probeer het over een minuutje opnieuw.', en: 'Slow down! Try again in a minute.', pl: 'Spokojnie! Spróbuj ponownie za minutę.', tr: 'Sakin ol! Bir dakika sonra tekrar dene.', fr: 'Doucement ! Réessayez dans une minute.', ar: 'تمهّل! حاول مرة أخرى بعد دقيقة.' })
-          : pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.', fr: "Une erreur s'est produite. Appuyez sur Réessayer pour recommencer.", ar: 'حدث خطأ ما. اضغط على إعادة المحاولة للمحاولة مرة أخرى.' });
+          ? pick(lang, { nl: 'Even rustig aan! Probeer het over een minuutje opnieuw.', en: 'Slow down! Try again in a minute.', pl: 'Spokojnie! Spróbuj ponownie za minutę.', tr: 'Sakin ol! Bir dakika sonra tekrar dene.', fr: 'Doucement ! Réessaie dans une minute.', ar: 'تمهّل! حاول مرة أخرى بعد دقيقة.' })
+          : pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.', fr: "Une erreur s'est produite. Appuie sur Réessayer pour recommencer.", ar: 'حدث خطأ ما. اضغط على إعادة المحاولة للمحاولة مرة أخرى.' });
         setMessages(prev => prev.map(m =>
           m.id === assistantId ? { ...m, content: errorContent } : m
         ));
@@ -305,7 +305,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
       ));
     } catch {
       setMessages(prev => prev.map(m =>
-        m.id === assistantId ? { ...m, content: pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.', fr: "Une erreur s'est produite. Appuyez sur Réessayer pour recommencer.", ar: 'حدث خطأ ما. اضغط على إعادة المحاولة للمحاولة مرة أخرى.' }) } : m
+        m.id === assistantId ? { ...m, content: pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.', fr: "Une erreur s'est produite. Appuie sur Réessayer pour recommencer.", ar: 'حدث خطأ ما. اضغط على إعادة المحاولة للمحاولة مرة أخرى.' }) } : m
       ));
       setFailedMessages(prev => new Set(prev).add(assistantId));
     }
@@ -451,7 +451,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
               {pick(lang, { nl: `Hoi${firstName ? ` ${firstName}` : ''}`, en: `Hi${firstName ? ` ${firstName}` : ''}`, pl: `Cześć${firstName ? ` ${firstName}` : ''}`, tr: `Merhaba${firstName ? ` ${firstName}` : ''}`, fr: `Bonjour${firstName ? ` ${firstName}` : ''}`, ar: `مرحبًا${firstName ? ` ${firstName}` : ''}` })}
             </p>
             <p className="mt-1 text-xl font-bold text-pw-text dark:text-white">
-              {pick(lang, { nl: 'Hoe kan ik je helpen?', en: 'How can I help you?', pl: 'Jak mogę ci pomóc?', tr: 'Sana nasıl yardımcı olabilirim?', fr: 'Comment puis-je vous aider ?', ar: 'كيف يمكنني مساعدتك؟' })}
+              {pick(lang, { nl: 'Hoe kan ik je helpen?', en: 'How can I help you?', pl: 'Jak mogę ci pomóc?', tr: 'Sana nasıl yardımcı olabilirim?', fr: "Comment puis-je t'aider ?", ar: 'كيف يمكنني مساعدتك؟' })}
             </p>
 
             {/* Quick action chips */}
@@ -585,7 +585,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                                 en: `**${bill!.vendor}** has been added to your bills (€${((bill!.amount_cents || 0) / 100).toFixed(2)}).`,
                                 pl: `**${bill!.vendor}** został dodany do twoich rachunków (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
                                 tr: `**${bill!.vendor}** faturalarına eklendi (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
-                                fr: `**${bill!.vendor}** a été ajouté à vos factures (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
+                                fr: `**${bill!.vendor}** a été ajouté à tes factures (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
                                 ar: `تمت إضافة **${bill!.vendor}** إلى فواتيرك (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} يورو).`,
                               });
                               setMessages(prev => [...prev, {
@@ -598,7 +598,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                               setMessages(prev => [...prev, {
                                 id: Date.now().toString(),
                                 role: 'assistant' as const,
-                                content: pick(lang, { nl: 'Er ging iets mis bij het toevoegen. Probeer het opnieuw.', en: 'Something went wrong. Try again.', pl: 'Coś poszło nie tak podczas dodawania. Spróbuj ponownie.', tr: 'Eklenirken bir şeyler ters gitti. Tekrar dene.', fr: "Une erreur s'est produite lors de l'ajout. Réessayez.", ar: 'حدث خطأ ما أثناء الإضافة. حاول مرة أخرى.' }),
+                                content: pick(lang, { nl: 'Er ging iets mis bij het toevoegen. Probeer het opnieuw.', en: 'Something went wrong. Try again.', pl: 'Coś poszło nie tak podczas dodawania. Spróbuj ponownie.', tr: 'Eklenirken bir şeyler ters gitti. Tekrar dene.', fr: "Une erreur s'est produite lors de l'ajout. Réessaie.", ar: 'حدث خطأ ما أثناء الإضافة. حاول مرة أخرى.' }),
                                 createdAt: new Date(),
                               }]);
                             }
@@ -722,7 +722,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={pick(lang, { nl: 'Typ je vraag...', en: 'Type your question...', pl: 'Wpisz swoje pytanie...', tr: 'Sorunu yaz...', fr: 'Saisissez votre question...', ar: 'اكتب سؤالك...' })}
+            placeholder={pick(lang, { nl: 'Typ je vraag...', en: 'Type your question...', pl: 'Wpisz swoje pytanie...', tr: 'Sorunu yaz...', fr: 'Saisis ta question...', ar: 'اكتب سؤالك...' })}
             rows={1}
             className="min-h-[36px] max-h-[120px] flex-1 resize-none rounded-2xl border border-pw-border/60 bg-pw-bg px-4 py-2 text-[14px] text-pw-text outline-none transition-colors placeholder:text-pw-muted focus:border-pw-blue/50 dark:bg-pw-bg/50 dark:text-white"
           />

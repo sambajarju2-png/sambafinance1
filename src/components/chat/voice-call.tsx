@@ -435,7 +435,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           nl: 'Camera geopend. Maak een foto van je rekening.',
           en: 'Camera opened. Take a photo of your bill.',
           pl: 'Aparat otwarty. Zrób zdjęcie swojego rachunku.',
-          tr: 'Kamera açıldı. Faturanın fotoğrafını çek.', fr: 'Caméra ouverte. Prenez une photo de la facture.', ar: 'تم فتح الكاميرا. التقط صورة للفاتورة.',
+          tr: 'Kamera açıldı. Faturanın fotoğrafını çek.', fr: 'Caméra ouverte. Prends une photo de la facture.', ar: 'تم فتح الكاميرا. التقط صورة للفاتورة.',
         });
       },
 
@@ -671,7 +671,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
 
         <p className="mt-0.5 text-[13px] text-white/40">
           {isActive && isSpeaking && (pick(lang, { nl: 'Aan het praten', en: 'Speaking', pl: 'Mówi', tr: 'Konuşuyor', fr: 'Parle', ar: 'يتحدث' }))}
-          {isActive && !isSpeaking && (pick(lang, { nl: 'Stel je vraag', en: 'Ask your question', pl: 'Zadaj pytanie', tr: 'Sorunu sor', fr: 'Posez votre question', ar: 'اطرح سؤالك' }))}
+          {isActive && !isSpeaking && (pick(lang, { nl: 'Stel je vraag', en: 'Ask your question', pl: 'Zadaj pytanie', tr: 'Sorunu sor', fr: 'Pose ta question', ar: 'اطرح سؤالك' }))}
           {status === 'error' && (pick(lang, { nl: 'Verbinding mislukt', en: 'Connection failed', pl: 'Połączenie nieudane', tr: 'Bağlantı başarısız', fr: 'Échec de la connexion', ar: 'فشل الاتصال' }))}
         </p>
 
@@ -724,7 +724,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
               t.role === 'user' ? 'text-pw-blue/60' : 'text-white/50'
             }`}>
               <span className="font-semibold text-[11px] uppercase tracking-wider opacity-60">
-                {t.role === 'user' ? (pick(lang, { nl: 'Jij', en: 'You', pl: 'Ty', tr: 'Sen', fr: 'Vous', ar: 'أنت' })) : 'PayBuddy'}
+                {t.role === 'user' ? (pick(lang, { nl: 'Jij', en: 'You', pl: 'Ty', tr: 'Sen', fr: 'Toi', ar: 'أنت' })) : 'PayBuddy'}
               </span>
               <br />
               {t.text}
@@ -773,7 +773,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             sounds.sentToChat();
           } catch {
             conversation.sendUserMessage(
-              pick(lang, { nl: '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw met betere belichting.', en: '[SCAN_ERROR] Could not scan the photo. Try again with better lighting.', pl: '[SCAN_ERROR] Nie udało się przeanalizować zdjęcia. Spróbuj ponownie przy lepszym oświetleniu.', tr: '[SCAN_ERROR] Fotoğraf analiz edilemedi. Daha iyi ışıkta tekrar dene.', fr: "[SCAN_ERROR] Impossible d'analyser la photo. Réessayez avec un meilleur éclairage.", ar: '[SCAN_ERROR] تعذّر تحليل الصورة. حاول مرة أخرى بإضاءة أفضل.' })
+              pick(lang, { nl: '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw met betere belichting.', en: '[SCAN_ERROR] Could not scan the photo. Try again with better lighting.', pl: '[SCAN_ERROR] Nie udało się przeanalizować zdjęcia. Spróbuj ponownie przy lepszym oświetleniu.', tr: '[SCAN_ERROR] Fotoğraf analiz edilemedi. Daha iyi ışıkta tekrar dene.', fr: "[SCAN_ERROR] Impossible d'analyser la photo. Réessaie avec un meilleur éclairage.", ar: '[SCAN_ERROR] تعذّر تحليل الصورة. حاول مرة أخرى بإضاءة أفضل.' })
             );
           } finally {
             setProcessingPhoto(false);
@@ -799,7 +799,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         <div className="absolute inset-x-0 bottom-28 flex justify-center z-10 px-6">
           <div className="w-full max-w-xs rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4 text-center">
             <p className="text-[13px] text-white/80 mb-3">
-              {pick(lang, { nl: 'Maak een foto van je rekening', en: 'Take a photo of your bill', pl: 'Zrób zdjęcie swojego rachunku', tr: 'Faturanın fotoğrafını çek', fr: 'Prenez une photo de votre facture', ar: 'التقط صورة لفاتورتك' })}
+              {pick(lang, { nl: 'Maak een foto van je rekening', en: 'Take a photo of your bill', pl: 'Zrób zdjęcie swojego rachunku', tr: 'Faturanın fotoğrafını çek', fr: 'Prends une photo de ta facture', ar: 'التقط صورة لفاتورتك' })}
             </p>
             <div className="flex gap-2">
               <button

@@ -75,7 +75,7 @@ export default function OfflineDetector() {
             nl: 'Controleer je wifi of mobiele data en probeer het opnieuw.',
             en: 'Check your wifi or mobile data and try again.',
             pl: 'Sprawdź swoje wifi lub dane mobilne i spróbuj ponownie.',
-            tr: 'Wifi veya mobil verini kontrol et ve tekrar dene.', fr: 'Vérifiez votre wifi ou vos données mobiles et réessayez.', ar: 'تحقق من شبكة wifi أو بيانات هاتفك المحمول وحاول مرة أخرى.',
+            tr: 'Wifi veya mobil verini kontrol et ve tekrar dene.', fr: 'Vérifie ton wifi ou tes données mobiles et réessaie.', ar: 'تحقق من شبكة wifi أو بيانات هاتفك المحمول وحاول مرة أخرى.',
           })}
         </p>
 
