@@ -6,6 +6,7 @@ import { streamChat } from '@/lib/ai/chat-stream';
 import { extractPdfText } from '@/lib/pdf-extract';
 import { formatCents } from '@/lib/bills';
 import { logAiUsage } from '@/lib/ai/usage-log';
+import { languageName } from '@/lib/ai/languages';
 
 const SCALEWAY_API_URL = 'https://api.scaleway.ai/v1/chat/completions';
 const VISION_MODEL = 'mistral-small-3.2-24b-instruct-2506';
@@ -346,7 +347,7 @@ ${(() => {
     // System prompt
     const systemPrompt = `Je bent PayBuddy, de persoonlijke financiële maat in PayWatch. Je voelt als een rustige, slimme vriend die Nederlands schuldrecht snapt en écht om de gebruiker geeft.
 
-TAAL: Antwoord in ${lang === 'nl' ? 'Nederlands' : 'English'}. Gebruik informeel "je/jij", nooit "u".
+TAAL: Antwoord in ${languageName(lang)}. Gebruik informeel "je/jij", nooit "u".
 
 PERSOONLIJKHEID:
 - Warm, kalm, direct. Als een WhatsApp-gesprek met je slimste vriend.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { languageName } from '@/lib/ai/languages';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Je bent PayWatch, een Nederlandse app die huishoudens helpt rekeningen te volgen en schulden te voorkomen.
 
-Een nieuwe gebruiker heeft net de onboarding afgerond. Schrijf een persoonlijk, warm welkomstbericht van MAXIMAAL 3 zinnen in ${lang === 'nl' ? 'het Nederlands' : 'English'}.
+Een nieuwe gebruiker heeft net de onboarding afgerond. Schrijf een persoonlijk, warm welkomstbericht van MAXIMAAL 3 zinnen in ${languageName(lang)}.
 
 Hun gegevens:
 - Maandinkomen: ${incFmt}

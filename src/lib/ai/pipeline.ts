@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '../supabase/server';
 import { detectIncassoAgency } from '../incasso-detect';
 import { lookupVendor, buildVendorContext } from '../vendor-lookup';
 import { regexExtract, needsAiFallback } from '../regex-extractor';
+import { languageName, letterLanguageName } from './languages';
 
 /**
  * PayWatch Dual-AI Pipeline
@@ -430,7 +431,7 @@ export async function generateInsight(
 
   const prompt = INSIGHT_PROMPT
     .replace('{bills_json}', JSON.stringify(billsSummary))
-    .replaceAll('{language}', language === 'nl' ? 'Dutch' : 'English');
+    .replaceAll('{language}', languageName(language));
 
   const result = await callHaiku(prompt, userId, 'insights', 1024);
 
@@ -494,7 +495,7 @@ export async function generateDraftLetter(
 ): Promise<DraftLetterResult> {
   const today = new Date().toISOString().split('T')[0];
   const amountEur = (bill.amount / 100).toFixed(2);
-  const langName = language === 'nl' ? 'Dutch' : 'English';
+  const langName = letterLanguageName(language);
 
   const prompt = LETTER_PROMPT
     .replaceAll('{language_name}', langName)
