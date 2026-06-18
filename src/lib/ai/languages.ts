@@ -14,6 +14,7 @@ export const LANGUAGE_NAMES: Record<string, string> = {
   pl: 'Polish',
   tr: 'Turkish',
   ar: 'Arabic',
+  fr: 'French',
 };
 
 /**
@@ -36,6 +37,7 @@ const LETTER_LANGUAGE: Record<string, string> = {
   pl: 'Dutch',
   tr: 'Dutch',
   ar: 'Dutch',
+  fr: 'Dutch',
 };
 
 export function letterLanguageName(code?: string | null): string {

@@ -335,7 +335,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new SR() as any;
-      recognition.lang = lang === 'pl' ? 'pl-PL' : lang === 'tr' ? 'tr-TR' : lang === 'en' ? 'en-US' : 'nl-NL';
+      recognition.lang = lang === 'pl' ? 'pl-PL' : lang === 'tr' ? 'tr-TR' : lang === 'fr' ? 'fr-FR' : lang === 'ar' ? 'ar-SA' : lang === 'en' ? 'en-US' : 'nl-NL';
       recognition.continuous = false;
       recognition.interimResults = true;
 
