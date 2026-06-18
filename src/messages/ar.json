@@ -535,122 +535,122 @@
     "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
   },
   "achievements": {
-    "title": "Achievements",
-    "locked": "Locked",
-    "unlockedOn": "Unlocked on",
-    "achievementsSection": "Badges",
-    "moreToUnlock": "more to unlock",
-    "howToTitle": "How to earn badges?",
-    "howToUnlock": "Keep paying bills on time and use all features to unlock badges.",
+    "title": "الإنجازات",
+    "locked": "مقفل",
+    "unlockedOn": "تم الفتح في",
+    "achievementsSection": "الشارات",
+    "moreToUnlock": "أخرى للفتح",
+    "howToTitle": "كيف تكسب الشارات؟",
+    "howToUnlock": "استمر في دفع فواتيرك في الوقت المحدد واستخدم جميع الميزات لفتح الشارات.",
     "categories": {
-      "betalingen": "Payments",
-      "streak": "Streaks",
-      "gezondheid": "Health",
-      "gebruik": "Usage"
+      "betalingen": "المدفوعات",
+      "streak": "السلاسل",
+      "gezondheid": "الصحة",
+      "gebruik": "الاستخدام"
     },
     "items": {
       "eerste_betaling": {
-        "name": "First payment",
-        "desc": "Paid your first bill!",
-        "howTo": "Mark your first bill as paid"
+        "name": "أول دفعة",
+        "desc": "لقد دفعت أول فاتورة لك!",
+        "howTo": "حدد أول فاتورة لك كمدفوعة"
       },
       "vijf_betaald": {
-        "name": "Five paid",
-        "desc": "5 bills paid",
-        "howTo": "Pay 5 bills"
+        "name": "خمس مدفوعة",
+        "desc": "تم دفع 5 فواتير",
+        "howTo": "ادفع 5 فواتير"
       },
       "tien_betaald": {
-        "name": "Ten paid",
-        "desc": "10 bills paid",
-        "howTo": "Pay 10 bills"
+        "name": "عشر مدفوعة",
+        "desc": "تم دفع 10 فواتير",
+        "howTo": "ادفع 10 فواتير"
       },
       "twintig_betaald": {
-        "name": "Twenty paid",
-        "desc": "20 bills paid!",
-        "howTo": "Pay 20 bills"
+        "name": "عشرون مدفوعة",
+        "desc": "تم دفع 20 فاتورة!",
+        "howTo": "ادفع 20 فاتورة"
       },
       "vijftig_betaald": {
-        "name": "Fifty paid",
-        "desc": "50 bills paid — champion!",
-        "howTo": "Pay 50 bills"
+        "name": "خمسون مدفوعة",
+        "desc": "تم دفع 50 فاتورة — بطل!",
+        "howTo": "ادفع 50 فاتورة"
       },
       "streak_3": {
-        "name": "Streak 3",
-        "desc": "3 paid on time in a row",
-        "howTo": "Pay 3 bills on time consecutively"
+        "name": "سلسلة 3",
+        "desc": "3 مدفوعة في الوقت المحدد على التوالي",
+        "howTo": "ادفع 3 فواتير في الوقت المحدد على التوالي"
       },
       "streak_5": {
-        "name": "Streak 5",
-        "desc": "5 paid on time in a row",
-        "howTo": "Pay 5 bills on time consecutively"
+        "name": "سلسلة 5",
+        "desc": "5 مدفوعة في الوقت المحدد على التوالي",
+        "howTo": "ادفع 5 فواتير في الوقت المحدد على التوالي"
       },
       "streak_10": {
-        "name": "Streak 10",
-        "desc": "10 paid on time in a row!",
-        "howTo": "Pay 10 bills on time consecutively"
+        "name": "سلسلة 10",
+        "desc": "10 مدفوعة في الوقت المحدد على التوالي!",
+        "howTo": "ادفع 10 فواتير في الوقت المحدد على التوالي"
       },
       "streak_20": {
-        "name": "Streak 20",
-        "desc": "20 in a row — unstoppable!",
-        "howTo": "Pay 20 bills on time consecutively"
+        "name": "سلسلة 20",
+        "desc": "20 على التوالي — لا يُوقف!",
+        "howTo": "ادفع 20 فاتورة في الوقت المحدد على التوالي"
       },
       "nul_achterstallig": {
-        "name": "Clean slate",
-        "desc": "No overdue bills",
-        "howTo": "Have no overdue bills"
+        "name": "صفحة نظيفة",
+        "desc": "لا توجد فواتير متأخرة",
+        "howTo": "لا تترك أي فاتورة متأخرة"
       },
       "alle_betaald": {
-        "name": "All paid",
-        "desc": "All bills are paid!",
-        "howTo": "Pay all your outstanding bills"
+        "name": "الكل مدفوع",
+        "desc": "تم دفع جميع الفواتير!",
+        "howTo": "ادفع جميع فواتيرك المستحقة"
       },
       "bespaard_100": {
-        "name": "€100 saved",
-        "desc": "€100 in collection costs saved",
-        "howTo": "Save €100 by paying on time"
+        "name": "توفير 100 €",
+        "desc": "توفير 100 € من رسوم التحصيل",
+        "howTo": "وفّر 100 € بالدفع في الوقت المحدد"
       },
       "bespaard_500": {
-        "name": "€500 saved",
-        "desc": "€500 in collection costs saved!",
-        "howTo": "Save €500 by paying on time"
+        "name": "توفير 500 €",
+        "desc": "توفير 500 € من رسوم التحصيل!",
+        "howTo": "وفّر 500 € بالدفع في الوقت المحدد"
       },
       "scanner": {
-        "name": "Scanner",
-        "desc": "First bill scanned with camera",
-        "howTo": "Scan a bill with your camera"
+        "name": "ماسح",
+        "desc": "تم مسح أول فاتورة بالكاميرا",
+        "howTo": "امسح فاتورة بكاميرتك"
       },
       "gmail_koppeling": {
-        "name": "Gmail connected",
-        "desc": "Gmail account connected",
-        "howTo": "Connect your Gmail account"
+        "name": "تم ربط Gmail",
+        "desc": "تم ربط حساب Gmail",
+        "howTo": "اربط حساب Gmail الخاص بك"
       },
       "brief_geschreven": {
-        "name": "Letter writer",
-        "desc": "First AI letter drafted",
-        "howTo": "Let AI draft a letter for you"
+        "name": "كاتب الرسائل",
+        "desc": "تم تحرير أول رسالة بالذكاء الاصطناعي",
+        "howTo": "دع الذكاء الاصطناعي يحرر رسالة لك"
       },
       "gemeente_ingesteld": {
-        "name": "Municipality set",
-        "desc": "Your municipality is set",
-        "howTo": "Set your municipality in your profile"
+        "name": "تم تعيين البلدية",
+        "desc": "تم تعيين بلديتك",
+        "howTo": "عيّن بلديتك في ملفك الشخصي"
       },
       "donkere_modus": {
-        "name": "Night mode",
-        "desc": "Dark theme activated",
-        "howTo": "Enable the dark theme"
+        "name": "الوضع الليلي",
+        "desc": "تم تفعيل المظهر الداكن",
+        "howTo": "فعّل المظهر الداكن"
       },
       "meldingen_aan": {
-        "name": "Notifications on",
-        "desc": "Push notifications activated",
-        "howTo": "Turn on push notifications"
+        "name": "الإشعارات مفعّلة",
+        "desc": "تم تفعيل الإشعارات الفورية",
+        "howTo": "فعّل الإشعارات الفورية"
       },
       "mood_gelogd": {
-        "name": "Mood logged",
-        "desc": "First mood check done",
-        "howTo": "Log your mood via the mood tracker"
+        "name": "تم تسجيل المزاج",
+        "desc": "تم إجراء أول فحص للمزاج",
+        "howTo": "سجّل مزاجك عبر متتبع المزاج"
       }
     },
-    "share": "Share"
+    "share": "مشاركة"
   },
   "helpResources": {
     "helpTitle": "Debt help",
@@ -677,18 +677,18 @@
     "nibudDesc": "Budget coach and debt help: nibud.nl"
   },
   "referral": {
-    "title": "Share PayWatch",
-    "desc": "Invite friends and unlock extra features",
-    "shareLink": "Your share link",
-    "shareButton": "Share with a friend",
-    "copied": "Copied!",
-    "friendsReferred": "Friends invited",
-    "howToUnlock": "How to unlock?",
-    "tier1": "1 friend = all features + 10 insights",
-    "tier2": "2 friends = 20 insights",
-    "tier3": "3+ friends = unlimited",
-    "statusPending": "Pending",
-    "statusCompleted": "Completed"
+    "title": "مشاركة PayWatch",
+    "desc": "ادعُ أصدقاءك واحصل على ميزات إضافية",
+    "shareLink": "رابط المشاركة الخاص بك",
+    "shareButton": "شارك مع صديق",
+    "copied": "تم النسخ!",
+    "friendsReferred": "الأصدقاء المدعوون",
+    "howToUnlock": "كيف تفتح الميزات؟",
+    "tier1": "صديق واحد = جميع الميزات + 10 تحليلات",
+    "tier2": "صديقان = 20 تحليلًا",
+    "tier3": "3 أصدقاء أو أكثر = غير محدود",
+    "statusPending": "قيد الانتظار",
+    "statusCompleted": "مكتمل"
   },
   "feedback": {
     "title": "ما رأيك في PayWatch؟",
@@ -878,21 +878,21 @@
     "morePatterns": "more patterns"
   },
   "diploma": {
-    "certifiedBy": "Certified by",
-    "awardedTo": "Awarded to",
-    "anonymousUser": "PayWatch User",
-    "titleMaster": "Financial Master",
-    "titleExpert": "Financial Expert",
-    "titleRising": "Rising Star",
-    "titleStarter": "Starter",
-    "badges": "Badges",
-    "billsPaid": "Bills paid",
-    "bestStreak": "Best streak",
-    "saved": "Saved",
-    "since": "Member since",
-    "share": "Share",
-    "shareTitle": "My PayWatch Certificate",
-    "shareText": "I earned {count} of {total} badges on PayWatch!"
+    "certifiedBy": "معتمد من",
+    "awardedTo": "ممنوح إلى",
+    "anonymousUser": "مستخدم PayWatch",
+    "titleMaster": "خبير مالي محترف",
+    "titleExpert": "خبير مالي",
+    "titleRising": "نجم صاعد",
+    "titleStarter": "مبتدئ",
+    "badges": "الشارات",
+    "billsPaid": "الفواتير المدفوعة",
+    "bestStreak": "أفضل سلسلة",
+    "saved": "تم التوفير",
+    "since": "عضو منذ",
+    "share": "مشاركة",
+    "shareTitle": "شهادتي من PayWatch",
+    "shareText": "لقد حصلت على {count} من {total} شارة على PayWatch!"
   },
   "analytics": {
     "title": "Financial insight",
@@ -995,21 +995,21 @@
     "availableFromPro": "Available from Pro — Tap to upgrade"
   },
   "matchCards": {
-    "paymentsFound": "payment found",
-    "paymentsFoundPlural": "payments found",
-    "amountDiffers": "Amount differs — check if this is correct",
-    "confirmPaid": "Confirm whether the bill has been paid",
-    "transaction": "transaction",
-    "matchesWith": "Matches with",
-    "openBill": "Open bill",
-    "dueDate": "due date",
-    "amountDiffersShort": "Amount differs — payment plan?",
-    "paid": "Paid:",
-    "bill": "Bill:",
-    "difference": "difference:",
-    "noMatch": "No match",
-    "confirmed": "Paid",
-    "installmentPaid": "Installment paid"
+    "paymentsFound": "دفعة موجودة",
+    "paymentsFoundPlural": "دفعات موجودة",
+    "amountDiffers": "المبلغ مختلف — تحقق مما إذا كان صحيحًا",
+    "confirmPaid": "أكّد ما إذا كانت الفاتورة قد دُفعت",
+    "transaction": "معاملة",
+    "matchesWith": "يتطابق مع",
+    "openBill": "فاتورة مستحقة",
+    "dueDate": "تاريخ الاستحقاق",
+    "amountDiffersShort": "المبلغ مختلف — خطة سداد؟",
+    "paid": "مدفوع:",
+    "bill": "فاتورة:",
+    "difference": "الفرق:",
+    "noMatch": "لا يوجد تطابق",
+    "confirmed": "مدفوع",
+    "installmentPaid": "تم دفع القسط"
   },
   "toeslagen": {
     "title": "BENEFITS CHECK",
@@ -1084,21 +1084,21 @@
     "copyLetter": "Copy letter"
   },
   "modules": {
-    "disposable": "Disposable income",
-    "disposableDesc": "How much you have left to spend this month",
-    "debtFreeCountdown": "Debt-free countdown",
-    "debtFreeCountdownDesc": "Countdown to your debt-free date",
-    "achievements": "Achievements",
-    "achievementsDesc": "Badges and rewards on your dashboard",
-    "categoryOverview": "Category overview",
-    "categoryOverviewDesc": "Breakdown by category on the achievements tab",
-    "monthlyOverview": "Monthly overview",
-    "monthlyOverviewDesc": "History of your monthly expenses",
-    "expectedExpenses": "Expected expenses",
-    "expectedExpensesDesc": "Forecast of upcoming bills",
-    "saving": "Saving...",
-    "saved": "Saved",
-    "dashboardTitle": "Dashboard",
-    "dashboardDesc": "Components on your home page"
+    "disposable": "الدخل المتاح",
+    "disposableDesc": "ما تبقّى لديك للإنفاق هذا الشهر",
+    "debtFreeCountdown": "العد التنازلي للتحرر من الديون",
+    "debtFreeCountdownDesc": "العد التنازلي حتى تاريخ تحررك من الديون",
+    "achievements": "الإنجازات",
+    "achievementsDesc": "الشارات والمكافآت على لوحة التحكم",
+    "categoryOverview": "نظرة عامة حسب الفئة",
+    "categoryOverviewDesc": "التوزيع حسب الفئة في علامة تبويب الإنجازات",
+    "monthlyOverview": "نظرة عامة شهرية",
+    "monthlyOverviewDesc": "سجل نفقاتك الشهرية",
+    "expectedExpenses": "النفقات المتوقعة",
+    "expectedExpensesDesc": "توقّع الفواتير القادمة",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم الحفظ",
+    "dashboardTitle": "لوحة التحكم",
+    "dashboardDesc": "المكونات في صفحتك الرئيسية"
   }
 }

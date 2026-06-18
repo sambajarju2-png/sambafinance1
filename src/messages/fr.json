@@ -535,122 +535,122 @@
     "legalDisclaimer": "PayWatch does not provide legal advice. Consult the Juridisch Loket or a lawyer."
   },
   "achievements": {
-    "title": "Achievements",
-    "locked": "Locked",
-    "unlockedOn": "Unlocked on",
+    "title": "Réussites",
+    "locked": "Verrouillé",
+    "unlockedOn": "Débloqué le",
     "achievementsSection": "Badges",
-    "moreToUnlock": "more to unlock",
-    "howToTitle": "How to earn badges?",
-    "howToUnlock": "Keep paying bills on time and use all features to unlock badges.",
+    "moreToUnlock": "à débloquer",
+    "howToTitle": "Comment gagner des badges ?",
+    "howToUnlock": "Continuez à payer vos factures à temps et utilisez toutes les fonctionnalités pour débloquer des badges.",
     "categories": {
-      "betalingen": "Payments",
-      "streak": "Streaks",
-      "gezondheid": "Health",
-      "gebruik": "Usage"
+      "betalingen": "Paiements",
+      "streak": "Séries",
+      "gezondheid": "Santé",
+      "gebruik": "Utilisation"
     },
     "items": {
       "eerste_betaling": {
-        "name": "First payment",
-        "desc": "Paid your first bill!",
-        "howTo": "Mark your first bill as paid"
+        "name": "Premier paiement",
+        "desc": "Vous avez payé votre première facture !",
+        "howTo": "Marquez votre première facture comme payée"
       },
       "vijf_betaald": {
-        "name": "Five paid",
-        "desc": "5 bills paid",
-        "howTo": "Pay 5 bills"
+        "name": "Cinq payées",
+        "desc": "5 factures payées",
+        "howTo": "Payez 5 factures"
       },
       "tien_betaald": {
-        "name": "Ten paid",
-        "desc": "10 bills paid",
-        "howTo": "Pay 10 bills"
+        "name": "Dix payées",
+        "desc": "10 factures payées",
+        "howTo": "Payez 10 factures"
       },
       "twintig_betaald": {
-        "name": "Twenty paid",
-        "desc": "20 bills paid!",
-        "howTo": "Pay 20 bills"
+        "name": "Vingt payées",
+        "desc": "20 factures payées !",
+        "howTo": "Payez 20 factures"
       },
       "vijftig_betaald": {
-        "name": "Fifty paid",
-        "desc": "50 bills paid — champion!",
-        "howTo": "Pay 50 bills"
+        "name": "Cinquante payées",
+        "desc": "50 factures payées — champion !",
+        "howTo": "Payez 50 factures"
       },
       "streak_3": {
-        "name": "Streak 3",
-        "desc": "3 paid on time in a row",
-        "howTo": "Pay 3 bills on time consecutively"
+        "name": "Série de 3",
+        "desc": "3 payées à temps d'affilée",
+        "howTo": "Payez 3 factures à temps consécutivement"
       },
       "streak_5": {
-        "name": "Streak 5",
-        "desc": "5 paid on time in a row",
-        "howTo": "Pay 5 bills on time consecutively"
+        "name": "Série de 5",
+        "desc": "5 payées à temps d'affilée",
+        "howTo": "Payez 5 factures à temps consécutivement"
       },
       "streak_10": {
-        "name": "Streak 10",
-        "desc": "10 paid on time in a row!",
-        "howTo": "Pay 10 bills on time consecutively"
+        "name": "Série de 10",
+        "desc": "10 payées à temps d'affilée !",
+        "howTo": "Payez 10 factures à temps consécutivement"
       },
       "streak_20": {
-        "name": "Streak 20",
-        "desc": "20 in a row — unstoppable!",
-        "howTo": "Pay 20 bills on time consecutively"
+        "name": "Série de 20",
+        "desc": "20 d'affilée — imbattable !",
+        "howTo": "Payez 20 factures à temps consécutivement"
       },
       "nul_achterstallig": {
-        "name": "Clean slate",
-        "desc": "No overdue bills",
-        "howTo": "Have no overdue bills"
+        "name": "Table rase",
+        "desc": "Aucune facture en retard",
+        "howTo": "N'ayez aucune facture en retard"
       },
       "alle_betaald": {
-        "name": "All paid",
-        "desc": "All bills are paid!",
-        "howTo": "Pay all your outstanding bills"
+        "name": "Tout payé",
+        "desc": "Toutes les factures sont payées !",
+        "howTo": "Payez toutes vos factures en cours"
       },
       "bespaard_100": {
-        "name": "€100 saved",
-        "desc": "€100 in collection costs saved",
-        "howTo": "Save €100 by paying on time"
+        "name": "100 € économisés",
+        "desc": "100 € de frais de recouvrement économisés",
+        "howTo": "Économisez 100 € en payant à temps"
       },
       "bespaard_500": {
-        "name": "€500 saved",
-        "desc": "€500 in collection costs saved!",
-        "howTo": "Save €500 by paying on time"
+        "name": "500 € économisés",
+        "desc": "500 € de frais de recouvrement économisés !",
+        "howTo": "Économisez 500 € en payant à temps"
       },
       "scanner": {
         "name": "Scanner",
-        "desc": "First bill scanned with camera",
-        "howTo": "Scan a bill with your camera"
+        "desc": "Première facture scannée avec l'appareil photo",
+        "howTo": "Scannez une facture avec votre appareil photo"
       },
       "gmail_koppeling": {
-        "name": "Gmail connected",
-        "desc": "Gmail account connected",
-        "howTo": "Connect your Gmail account"
+        "name": "Gmail connecté",
+        "desc": "Compte Gmail connecté",
+        "howTo": "Connectez votre compte Gmail"
       },
       "brief_geschreven": {
-        "name": "Letter writer",
-        "desc": "First AI letter drafted",
-        "howTo": "Let AI draft a letter for you"
+        "name": "Rédacteur de lettres",
+        "desc": "Première lettre IA rédigée",
+        "howTo": "Laissez l'IA rédiger une lettre pour vous"
       },
       "gemeente_ingesteld": {
-        "name": "Municipality set",
-        "desc": "Your municipality is set",
-        "howTo": "Set your municipality in your profile"
+        "name": "Commune définie",
+        "desc": "Votre commune est définie",
+        "howTo": "Définissez votre commune dans votre profil"
       },
       "donkere_modus": {
-        "name": "Night mode",
-        "desc": "Dark theme activated",
-        "howTo": "Enable the dark theme"
+        "name": "Mode nuit",
+        "desc": "Thème sombre activé",
+        "howTo": "Activez le thème sombre"
       },
       "meldingen_aan": {
-        "name": "Notifications on",
-        "desc": "Push notifications activated",
-        "howTo": "Turn on push notifications"
+        "name": "Notifications activées",
+        "desc": "Notifications push activées",
+        "howTo": "Activez les notifications push"
       },
       "mood_gelogd": {
-        "name": "Mood logged",
-        "desc": "First mood check done",
-        "howTo": "Log your mood via the mood tracker"
+        "name": "Humeur enregistrée",
+        "desc": "Premier suivi d'humeur effectué",
+        "howTo": "Enregistrez votre humeur via le suivi d'humeur"
       }
     },
-    "share": "Share"
+    "share": "Partager"
   },
   "helpResources": {
     "helpTitle": "Debt help",
@@ -677,18 +677,18 @@
     "nibudDesc": "Budget coach and debt help: nibud.nl"
   },
   "referral": {
-    "title": "Share PayWatch",
-    "desc": "Invite friends and unlock extra features",
-    "shareLink": "Your share link",
-    "shareButton": "Share with a friend",
-    "copied": "Copied!",
-    "friendsReferred": "Friends invited",
-    "howToUnlock": "How to unlock?",
-    "tier1": "1 friend = all features + 10 insights",
-    "tier2": "2 friends = 20 insights",
-    "tier3": "3+ friends = unlimited",
-    "statusPending": "Pending",
-    "statusCompleted": "Completed"
+    "title": "Partager PayWatch",
+    "desc": "Invitez des amis et débloquez des fonctionnalités supplémentaires",
+    "shareLink": "Votre lien de partage",
+    "shareButton": "Partager avec un ami",
+    "copied": "Copié !",
+    "friendsReferred": "Amis invités",
+    "howToUnlock": "Comment débloquer ?",
+    "tier1": "1 ami = toutes les fonctionnalités + 10 analyses",
+    "tier2": "2 amis = 20 analyses",
+    "tier3": "3 amis ou plus = illimité",
+    "statusPending": "En attente",
+    "statusCompleted": "Terminé"
   },
   "feedback": {
     "title": "Que pensez-vous de PayWatch ?",
@@ -878,21 +878,21 @@
     "morePatterns": "more patterns"
   },
   "diploma": {
-    "certifiedBy": "Certified by",
-    "awardedTo": "Awarded to",
-    "anonymousUser": "PayWatch User",
-    "titleMaster": "Financial Master",
-    "titleExpert": "Financial Expert",
-    "titleRising": "Rising Star",
-    "titleStarter": "Starter",
+    "certifiedBy": "Certifié par",
+    "awardedTo": "Décerné à",
+    "anonymousUser": "Utilisateur PayWatch",
+    "titleMaster": "Maître des finances",
+    "titleExpert": "Expert financier",
+    "titleRising": "Étoile montante",
+    "titleStarter": "Débutant",
     "badges": "Badges",
-    "billsPaid": "Bills paid",
-    "bestStreak": "Best streak",
-    "saved": "Saved",
-    "since": "Member since",
-    "share": "Share",
-    "shareTitle": "My PayWatch Certificate",
-    "shareText": "I earned {count} of {total} badges on PayWatch!"
+    "billsPaid": "Factures payées",
+    "bestStreak": "Meilleure série",
+    "saved": "Économisé",
+    "since": "Membre depuis",
+    "share": "Partager",
+    "shareTitle": "Mon certificat PayWatch",
+    "shareText": "J'ai obtenu {count} badges sur {total} sur PayWatch !"
   },
   "analytics": {
     "title": "Financial insight",
@@ -995,21 +995,21 @@
     "availableFromPro": "Available from Pro — Tap to upgrade"
   },
   "matchCards": {
-    "paymentsFound": "payment found",
-    "paymentsFoundPlural": "payments found",
-    "amountDiffers": "Amount differs — check if this is correct",
-    "confirmPaid": "Confirm whether the bill has been paid",
+    "paymentsFound": "paiement trouvé",
+    "paymentsFoundPlural": "paiements trouvés",
+    "amountDiffers": "Le montant diffère — vérifiez si c'est correct",
+    "confirmPaid": "Confirmez si la facture a été payée",
     "transaction": "transaction",
-    "matchesWith": "Matches with",
-    "openBill": "Open bill",
-    "dueDate": "due date",
-    "amountDiffersShort": "Amount differs — payment plan?",
-    "paid": "Paid:",
-    "bill": "Bill:",
-    "difference": "difference:",
-    "noMatch": "No match",
-    "confirmed": "Paid",
-    "installmentPaid": "Installment paid"
+    "matchesWith": "Correspond à",
+    "openBill": "Facture en cours",
+    "dueDate": "échéance",
+    "amountDiffersShort": "Le montant diffère — plan de paiement ?",
+    "paid": "Payé :",
+    "bill": "Facture :",
+    "difference": "différence :",
+    "noMatch": "Aucune correspondance",
+    "confirmed": "Payé",
+    "installmentPaid": "Versement payé"
   },
   "toeslagen": {
     "title": "BENEFITS CHECK",
@@ -1084,21 +1084,21 @@
     "copyLetter": "Copy letter"
   },
   "modules": {
-    "disposable": "Disposable income",
-    "disposableDesc": "How much you have left to spend this month",
-    "debtFreeCountdown": "Debt-free countdown",
-    "debtFreeCountdownDesc": "Countdown to your debt-free date",
-    "achievements": "Achievements",
-    "achievementsDesc": "Badges and rewards on your dashboard",
-    "categoryOverview": "Category overview",
-    "categoryOverviewDesc": "Breakdown by category on the achievements tab",
-    "monthlyOverview": "Monthly overview",
-    "monthlyOverviewDesc": "History of your monthly expenses",
-    "expectedExpenses": "Expected expenses",
-    "expectedExpensesDesc": "Forecast of upcoming bills",
-    "saving": "Saving...",
-    "saved": "Saved",
-    "dashboardTitle": "Dashboard",
-    "dashboardDesc": "Components on your home page"
+    "disposable": "Revenu disponible",
+    "disposableDesc": "Ce qu'il vous reste à dépenser ce mois-ci",
+    "debtFreeCountdown": "Compte à rebours sans dettes",
+    "debtFreeCountdownDesc": "Compte à rebours jusqu'à votre date sans dettes",
+    "achievements": "Réussites",
+    "achievementsDesc": "Badges et récompenses sur votre tableau de bord",
+    "categoryOverview": "Aperçu par catégorie",
+    "categoryOverviewDesc": "Répartition par catégorie dans l'onglet des réussites",
+    "monthlyOverview": "Aperçu mensuel",
+    "monthlyOverviewDesc": "Historique de vos dépenses mensuelles",
+    "expectedExpenses": "Dépenses prévues",
+    "expectedExpensesDesc": "Prévision des factures à venir",
+    "saving": "Enregistrement...",
+    "saved": "Enregistré",
+    "dashboardTitle": "Tableau de bord",
+    "dashboardDesc": "Composants de votre page d'accueil"
   }
 }
