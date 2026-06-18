@@ -66,16 +66,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: linkError.message }, { status: 500 });
   }
 
-  // Auto-grant consent — accepting the invite IS consent
-  const consentScopes = ["full_access", "aggregated", "payment_plans", "financial_overview"];
+  // Accepting the invite grants ONLY the minimum required scope (contact_info), so
+  // the org can reach the user. Any access to bills, finances, payment plans or
+  // messaging must be granted explicitly by the user via the granular consent UI.
+  // Privacy-first: no blanket full_access auto-grant.
+  const consentIp = request.headers.get("x-forwarded-for")?.split(",")[0] || null;
+  const consentUa = request.headers.get("user-agent") || null;
+  const consentNow = new Date().toISOString();
   await supabase.from("b2b_consents").upsert(
-    consentScopes.map(scope => ({
+    [{
       user_id: user.id,
       organization_id: invite.organization_id,
-      scope,
+      scope: "contact_info",
       granted: true,
-      granted_at: new Date().toISOString(),
-    })),
+      granted_at: consentNow,
+      consent_version: "2026-06-v2",
+      consent_text_snapshot: "Toestemming voor contact_info: verleend via uitnodiging (minimale toegang). Verdere toegang wordt apart en expliciet gegeven.",
+      consent_displayed_at: consentNow,
+      consent_submitted_at: consentNow,
+      consent_ip: consentIp,
+      consent_user_agent: consentUa,
+    }],
     { onConflict: "user_id,organization_id,scope" }
   );
 
