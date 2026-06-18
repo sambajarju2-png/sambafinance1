@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Bell, Loader2, Sun, Moon, Settings } from 'lucide-react';
 import { useStatusBar } from '@/lib/use-status-bar';
+import { LOCALES, LOCALE_META, DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locale-meta';
 
 interface TopbarProps {
   notificationCount: number;
@@ -20,13 +21,13 @@ export default function Topbar({ notificationCount: initialCount }: TopbarProps)
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [notifCount, setNotifCount] = useState(initialCount);
-  const [currentLang, setCurrentLang] = useState<'nl' | 'en'>('nl');
+  const [currentLang, setCurrentLang] = useState<Locale>(DEFAULT_LOCALE);
   const [switching, setSwitching] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
-    if (typeof document !== 'undefined') setCurrentLang(document.documentElement.lang === 'en' ? 'en' : 'nl');
+    if (typeof document !== 'undefined' && isLocale(document.documentElement.lang)) setCurrentLang(document.documentElement.lang as Locale);
   }, []);
 
   // Fetch live notification count
@@ -53,7 +54,7 @@ export default function Topbar({ notificationCount: initialCount }: TopbarProps)
 
   async function handleLangSwitch() {
     if (switching) return;
-    const newLang = currentLang === 'nl' ? 'en' : 'nl';
+    const newLang = LOCALES[(LOCALES.indexOf(currentLang) + 1) % LOCALES.length];
     setSwitching(true);
     try {
       await fetch('/api/settings/language', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language: newLang }) });
@@ -86,7 +87,7 @@ export default function Topbar({ notificationCount: initialCount }: TopbarProps)
           className="flex h-8 w-8 items-center justify-center rounded-full border border-pw-border/50 text-[12px] transition-colors hover:bg-pw-border/30 disabled:opacity-50"
           aria-label="Switch language">
           {switching ? <Loader2 className="h-3.5 w-3.5 animate-spin text-pw-muted" strokeWidth={2} /> : (
-            <span>{currentLang === 'nl' ? '🇬🇧' : '🇳🇱'}</span>
+            <span>{LOCALE_META[currentLang].flag}</span>
           )}
         </button>
 

@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Moon, Sun } from 'lucide
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { LOCALES, DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locale-meta';
 
 type AuthMode = 'login' | 'signup';
 
@@ -31,11 +32,11 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [mounted, setMounted] = useState(false);
-  const [lang, setLang] = useState<'nl' | 'en'>(() => {
-    if (typeof document !== 'undefined') {
-      return document.documentElement.lang === 'en' ? 'en' : 'nl';
+  const [lang, setLang] = useState<Locale>(() => {
+    if (typeof document !== 'undefined' && isLocale(document.documentElement.lang)) {
+      return document.documentElement.lang as Locale;
     }
-    return 'nl';
+    return DEFAULT_LOCALE;
   });
 
   useEffect(() => setMounted(true), []);
@@ -62,7 +63,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     }
   }, []);
 
-  async function switchLang(newLang: 'nl' | 'en') {
+  async function switchLang(newLang: Locale) {
     if (newLang === lang || isPending) return;
     setLang(newLang);
     // Set cookie directly (no auth needed on login page)
@@ -231,24 +232,18 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       {/* Language + Theme toggle */}
       {mounted && (
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          <button
-            onClick={() => switchLang('nl')}
-            disabled={isPending}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
-              lang === 'nl' ? 'bg-pw-blue/10 text-pw-blue ring-1 ring-pw-blue/30' : 'text-pw-muted hover:text-pw-text'
-            }`}
-          >
-            NL
-          </button>
-          <button
-            onClick={() => switchLang('en')}
-            disabled={isPending}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
-              lang === 'en' ? 'bg-pw-blue/10 text-pw-blue ring-1 ring-pw-blue/30' : 'text-pw-muted hover:text-pw-text'
-            }`}
-          >
-            EN
-          </button>
+          {LOCALES.map((l) => (
+            <button
+              key={l}
+              onClick={() => switchLang(l)}
+              disabled={isPending}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                lang === l ? 'bg-pw-blue/10 text-pw-blue ring-1 ring-pw-blue/30' : 'text-pw-muted hover:text-pw-text'
+              }`}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
           <div className="w-px h-4 bg-pw-border mx-1" />
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

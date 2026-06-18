@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { LOCALES, DEFAULT_LOCALE } from '@/i18n/locale-meta';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 
 /**
  * POST /api/settings/language
- * Body: { language: 'nl' | 'en' }
+ * Body: { language: <one of LOCALES> }
  * Updates user_settings + sets the CORRECT locale cookie.
+ * Unknown / missing values fall back to the default locale.
  */
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
@@ -15,7 +17,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const language = body.language === 'en' ? 'en' : 'nl';
+    const requested = typeof body.language === 'string' ? body.language : '';
+    const language = (LOCALES as readonly string[]).includes(requested) ? requested : DEFAULT_LOCALE;
 
     const supabase = await createServerSupabaseClient();
     await supabase.from('user_settings').update({ language }).eq('user_id', userId);
