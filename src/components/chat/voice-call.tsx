@@ -6,6 +6,7 @@ import { Phone, PhoneOff, Loader2, Check, ArrowRight, X, Camera } from 'lucide-r
 import { sounds } from '@/lib/sounds';
 import { getCachedVoiceToken, clearVoiceTokenCache } from '@/lib/voice-token-cache';
 import { useStatusBar } from '@/lib/use-status-bar';
+import { pick } from '@/lib/i18n-pick';
 
 interface VoiceCallProps {
   onClose: (showSummary?: PostCallData | null) => void;
@@ -161,7 +162,6 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
   onDismiss: () => void;
   onViewBills: () => void;
 }) {
-  const nl = lang === 'nl';
   const mins = Math.floor(data.duration / 60);
   const secs = data.duration % 60;
 
@@ -180,7 +180,7 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
             </div>
             <div>
               <p className="text-[15px] font-semibold text-gray-900 dark:text-white">
-                {nl ? 'Gesprek afgerond' : 'Call ended'}
+                {pick(lang, { nl: 'Gesprek afgerond', en: 'Call ended', pl: 'Rozmowa zakończona', tr: 'Görüşme bitti' })}
               </p>
               <p className="text-[12px] text-gray-500">{mins}:{String(secs).padStart(2, '0')} min</p>
             </div>
@@ -194,15 +194,15 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
         <div className="mb-5 grid grid-cols-3 gap-3">
           <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
             <p className="text-[20px] font-bold text-pw-green">{data.billsAdded.length}</p>
-            <p className="text-[11px] text-gray-500">{nl ? 'Toegevoegd' : 'Added'}</p>
+            <p className="text-[11px] text-gray-500">{pick(lang, { nl: 'Toegevoegd', en: 'Added', pl: 'Dodano', tr: 'Eklendi' })}</p>
           </div>
           <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
             <p className="text-[20px] font-bold text-pw-blue">{data.sentToChat}</p>
-            <p className="text-[11px] text-gray-500">{nl ? 'In chat' : 'To chat'}</p>
+            <p className="text-[11px] text-gray-500">{pick(lang, { nl: 'In chat', en: 'To chat', pl: 'Do czatu', tr: 'Sohbete' })}</p>
           </div>
           <div className="rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-3 text-center">
             <p className="text-[20px] font-bold text-gray-600 dark:text-gray-300">{data.transcriptCount}</p>
-            <p className="text-[11px] text-gray-500">{nl ? 'Berichten' : 'Messages'}</p>
+            <p className="text-[11px] text-gray-500">{pick(lang, { nl: 'Berichten', en: 'Messages', pl: 'Wiadomości', tr: 'Mesajlar' })}</p>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
         {data.billsAdded.length > 0 && (
           <div className="mb-5">
             <p className="mb-2 text-[12px] font-medium text-gray-500 uppercase tracking-wide">
-              {nl ? 'Rekeningen toegevoegd' : 'Bills added'}
+              {pick(lang, { nl: 'Rekeningen toegevoegd', en: 'Bills added', pl: 'Dodane rachunki', tr: 'Eklenen faturalar' })}
             </p>
             {data.billsAdded.map((bill, i) => (
               <div key={i} className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 py-2 last:border-0">
@@ -233,7 +233,7 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
               onClick={onViewBills}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-pw-blue py-3.5 text-[14px] font-medium text-white active:scale-[0.98]"
             >
-              {nl ? 'Bekijk rekeningen' : 'View bills'}
+              {pick(lang, { nl: 'Bekijk rekeningen', en: 'View bills', pl: 'Zobacz rachunki', tr: 'Faturaları gör' })}
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </button>
           )}
@@ -241,7 +241,7 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
             onClick={onDismiss}
             className="w-full rounded-xl bg-gray-100 dark:bg-white/5 py-3.5 text-[14px] font-medium text-gray-700 dark:text-gray-300 active:scale-[0.98]"
           >
-            {nl ? 'Sluiten' : 'Close'}
+            {pick(lang, { nl: 'Sluiten', en: 'Close', pl: 'Zamknij', tr: 'Kapat' })}
           </button>
         </div>
       </div>
@@ -268,7 +268,6 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [processingPhoto, setProcessingPhoto] = useState(false);
-  const nl = lang === 'nl';
 
   // Voice call has dark background — light status bar text
   useStatusBar('light');
@@ -432,9 +431,12 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       // ── Request photo — opens camera, returns instantly. Scan result injected via sendUserMessage ──
       request_photo: () => {
         setShowCamera(true);
-        return nl
-          ? 'Camera geopend. Maak een foto van je rekening.'
-          : 'Camera opened. Take a photo of your bill.';
+        return pick(lang, {
+          nl: 'Camera geopend. Maak een foto van je rekening.',
+          en: 'Camera opened. Take a photo of your bill.',
+          pl: 'Aparat otwarty. Zrób zdjęcie swojego rachunku.',
+          tr: 'Kamera açıldı. Faturanın fotoğrafını çek.',
+        });
       },
 
       // ── Get schuldhulp info for user's gemeente ──
@@ -661,16 +663,16 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         />
 
         <p className="mt-2 text-lg font-semibold text-white">
-          {status === 'connecting' && (nl ? 'Verbinden...' : 'Connecting...')}
+          {status === 'connecting' && (pick(lang, { nl: 'Verbinden...', en: 'Connecting...', pl: 'Łączenie...', tr: 'Bağlanılıyor...' }))}
           {isActive && isSpeaking && 'PayBuddy'}
-          {isActive && !isSpeaking && (nl ? 'Luistert...' : 'Listening...')}
+          {isActive && !isSpeaking && (pick(lang, { nl: 'Luistert...', en: 'Listening...', pl: 'Słucha...', tr: 'Dinliyor...' }))}
           {status === 'error' && 'PayBuddy'}
         </p>
 
         <p className="mt-0.5 text-[13px] text-white/40">
-          {isActive && isSpeaking && (nl ? 'Aan het praten' : 'Speaking')}
-          {isActive && !isSpeaking && (nl ? 'Stel je vraag' : 'Ask your question')}
-          {status === 'error' && (nl ? 'Verbinding mislukt' : 'Connection failed')}
+          {isActive && isSpeaking && (pick(lang, { nl: 'Aan het praten', en: 'Speaking', pl: 'Mówi', tr: 'Konuşuyor' }))}
+          {isActive && !isSpeaking && (pick(lang, { nl: 'Stel je vraag', en: 'Ask your question', pl: 'Zadaj pytanie', tr: 'Sorunu sor' }))}
+          {status === 'error' && (pick(lang, { nl: 'Verbinding mislukt', en: 'Connection failed', pl: 'Połączenie nieudane', tr: 'Bağlantı başarısız' }))}
         </p>
 
         {debugInfo && <p className="mt-1 text-[11px] text-white/20">{debugInfo}</p>}
@@ -708,7 +710,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           <div className="mx-6 mt-4 max-w-sm rounded-2xl bg-pw-red/8 border border-pw-red/15 px-4 py-3">
             <p className="text-[11px] text-pw-red/70 font-mono break-all select-all">{errorDetail}</p>
             <button onClick={() => navigator.clipboard.writeText(errorDetail)} className="mt-2 text-[10px] text-pw-red/40 underline">
-              {nl ? 'Kopieer fout' : 'Copy error'}
+              {pick(lang, { nl: 'Kopieer fout', en: 'Copy error', pl: 'Kopiuj błąd', tr: 'Hatayı kopyala' })}
             </button>
           </div>
         )}
@@ -722,7 +724,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
               t.role === 'user' ? 'text-pw-blue/60' : 'text-white/50'
             }`}>
               <span className="font-semibold text-[11px] uppercase tracking-wider opacity-60">
-                {t.role === 'user' ? (nl ? 'Jij' : 'You') : 'PayBuddy'}
+                {t.role === 'user' ? (pick(lang, { nl: 'Jij', en: 'You', pl: 'Ty', tr: 'Sen' })) : 'PayBuddy'}
               </span>
               <br />
               {t.text}
@@ -755,7 +757,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             });
 
             const data = await res.json();
-            const spoken: string = data.spoken || (nl ? 'Ik heb de foto bekeken maar kon geen details vinden.' : 'I looked at the photo but could not find details.');
+            const spoken: string = data.spoken || (pick(lang, { nl: 'Ik heb de foto bekeken maar kon geen details vinden.', en: 'I looked at the photo but could not find details.', pl: 'Obejrzałem zdjęcie, ale nie znalazłem szczegółów.', tr: 'Fotoğrafa baktım ama ayrıntı bulamadım.' }));
             const docType: string = data.document_type || 'onbekend';
             const isBill: boolean = data.is_bill || false;
 
@@ -771,7 +773,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
             sounds.sentToChat();
           } catch {
             conversation.sendUserMessage(
-              nl ? '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw met betere belichting.' : '[SCAN_ERROR] Could not scan the photo. Try again with better lighting.'
+              pick(lang, { nl: '[SCAN_ERROR] Kon de foto niet analyseren. Probeer opnieuw met betere belichting.', en: '[SCAN_ERROR] Could not scan the photo. Try again with better lighting.', pl: '[SCAN_ERROR] Nie udało się przeanalizować zdjęcia. Spróbuj ponownie przy lepszym oświetleniu.', tr: '[SCAN_ERROR] Fotoğraf analiz edilemedi. Daha iyi ışıkta tekrar dene.' })
             );
           } finally {
             setProcessingPhoto(false);
@@ -786,7 +788,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
           <div className="flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 px-5 py-3">
             <div className="w-4 h-4 border-2 border-pw-blue border-t-transparent rounded-full animate-spin flex-shrink-0" />
             <p className="text-[13px] text-white/80">
-              {nl ? 'Foto analyseren...' : 'Analysing photo...'}
+              {pick(lang, { nl: 'Foto analyseren...', en: 'Analysing photo...', pl: 'Analiza zdjęcia...', tr: 'Fotoğraf analiz ediliyor...' })}
             </p>
           </div>
         </div>
@@ -797,7 +799,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
         <div className="absolute inset-x-0 bottom-28 flex justify-center z-10 px-6">
           <div className="w-full max-w-xs rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4 text-center">
             <p className="text-[13px] text-white/80 mb-3">
-              {nl ? 'Maak een foto van je rekening' : 'Take a photo of your bill'}
+              {pick(lang, { nl: 'Maak een foto van je rekening', en: 'Take a photo of your bill', pl: 'Zrób zdjęcie swojego rachunku', tr: 'Faturanın fotoğrafını çek' })}
             </p>
             <div className="flex gap-2">
               <button
@@ -810,7 +812,7 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-pw-blue py-2.5 text-[13px] font-medium text-white active:scale-95"
               >
                 <Camera className="h-4 w-4" strokeWidth={1.5} />
-                {nl ? 'Camera' : 'Camera'}
+                {pick(lang, { nl: 'Camera', en: 'Camera', pl: 'Aparat', tr: 'Kamera' })}
               </button>
               <button
                 onClick={() => {
@@ -821,14 +823,14 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
                 }}
                 className="flex-1 rounded-xl bg-white/10 py-2.5 text-[13px] font-medium text-white/80 active:scale-95"
               >
-                {nl ? 'Galerij' : 'Gallery'}
+                {pick(lang, { nl: 'Galerij', en: 'Gallery', pl: 'Galeria', tr: 'Galeri' })}
               </button>
             </div>
             <button
               onClick={() => setShowCamera(false)}
               className="mt-2 text-[11px] text-white/40"
             >
-              {nl ? 'Annuleren' : 'Cancel'}
+              {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal' })}
             </button>
           </div>
         </div>

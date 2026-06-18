@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { localeFromCookie, pick } from '@/lib/i18n-pick';
 
 type Status = 'loading' | 'unsupported' | 'denied' | 'granted' | 'prompt';
 
@@ -120,9 +121,7 @@ export default function PushPermission() {
     }
   }
 
-  const isNl = typeof document !== 'undefined'
-    ? (document.cookie.match(/paywatch-locale=(nl|en)/)?.[1] || 'nl') === 'nl'
-    : true;
+  const lang = localeFromCookie();
 
   if (status === 'loading' || status === 'unsupported') return null;
 
@@ -136,16 +135,16 @@ export default function PushPermission() {
           }
           <div>
             <p className="text-[14px] font-semibold text-pw-text">
-              {isNl ? 'Pushmeldingen' : 'Push notifications'}
+              {pick(lang, { nl: 'Pushmeldingen', en: 'Push notifications', pl: 'Powiadomienia push', tr: 'Push bildirimleri' })}
             </p>
             <p className="text-[11px] text-pw-muted">
               {status === 'granted'
-                ? (isNl ? 'Je ontvangt herinneringen voor vervaldatums' : 'You receive reminders for due dates')
+                ? pick(lang, { nl: 'Je ontvangt herinneringen voor vervaldatums', en: 'You receive reminders for due dates', pl: 'Otrzymujesz przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatmalar alıyorsun' })
                 : status === 'denied'
                   ? (isNative
-                      ? (isNl ? 'Open Instellingen → Meldingen → PayWatch' : 'Open Settings → Notifications → PayWatch')
-                      : (isNl ? 'Meldingen geblokkeerd in je browser' : 'Notifications blocked in your browser'))
-                  : (isNl ? 'Ontvang herinneringen voor vervaldatums' : 'Receive reminders for due dates')}
+                      ? pick(lang, { nl: 'Open Instellingen → Meldingen → PayWatch', en: 'Open Settings → Notifications → PayWatch', pl: 'Otwórz Ustawienia → Powiadomienia → PayWatch', tr: 'Ayarlar → Bildirimler → PayWatch yolunu aç' })
+                      : pick(lang, { nl: 'Meldingen geblokkeerd in je browser', en: 'Notifications blocked in your browser', pl: 'Powiadomienia zablokowane w przeglądarce', tr: 'Bildirimler tarayıcında engellendi' }))
+                  : pick(lang, { nl: 'Ontvang herinneringen voor vervaldatums', en: 'Receive reminders for due dates', pl: 'Otrzymuj przypomnienia o terminach płatności', tr: 'Son ödeme tarihleri için hatırlatma al' })}
             </p>
           </div>
         </div>
@@ -162,8 +161,8 @@ export default function PushPermission() {
             {saving
               ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2} />
               : status === 'granted'
-                ? (isNl ? 'Uitschakelen' : 'Disable')
-                : (isNl ? 'Inschakelen' : 'Enable')}
+                ? pick(lang, { nl: 'Uitschakelen', en: 'Disable', pl: 'Wyłącz', tr: 'Kapat' })
+                : pick(lang, { nl: 'Inschakelen', en: 'Enable', pl: 'Włącz', tr: 'Aç' })}
           </button>
         )}
       </div>

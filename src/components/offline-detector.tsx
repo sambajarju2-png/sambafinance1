@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
+import { localeFromCookie, pick } from '@/lib/i18n-pick';
 
 /**
  * Full-screen offline overlay.
@@ -46,9 +47,7 @@ export default function OfflineDetector() {
 
   if (!offline) return null;
 
-  const isNl = typeof document !== 'undefined'
-    ? (document.cookie.match(/paywatch-locale=(nl|en)/)?.[1] || 'nl') === 'nl'
-    : true;
+  const lang = localeFromCookie();
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-pw-bg dark:bg-gray-900 px-8">
@@ -68,13 +67,16 @@ export default function OfflineDetector() {
         </div>
 
         <h1 className="text-[22px] font-bold text-pw-text dark:text-white mb-2">
-          {isNl ? 'Geen internetverbinding' : 'No internet connection'}
+          {pick(lang, { nl: 'Geen internetverbinding', en: 'No internet connection', pl: 'Brak połączenia z internetem', tr: 'İnternet bağlantısı yok' })}
         </h1>
 
         <p className="text-[14px] text-pw-muted leading-relaxed mb-8">
-          {isNl
-            ? 'Controleer je wifi of mobiele data en probeer het opnieuw.'
-            : 'Check your wifi or mobile data and try again.'}
+          {pick(lang, {
+            nl: 'Controleer je wifi of mobiele data en probeer het opnieuw.',
+            en: 'Check your wifi or mobile data and try again.',
+            pl: 'Sprawdź swoje wifi lub dane mobilne i spróbuj ponownie.',
+            tr: 'Wifi veya mobil verini kontrol et ve tekrar dene.',
+          })}
         </p>
 
         <button
@@ -84,8 +86,8 @@ export default function OfflineDetector() {
         >
           <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} strokeWidth={2} />
           {retrying
-            ? (isNl ? 'Verbinden...' : 'Connecting...')
-            : (isNl ? 'Opnieuw proberen' : 'Try again')}
+            ? pick(lang, { nl: 'Verbinden...', en: 'Connecting...', pl: 'Łączenie...', tr: 'Bağlanılıyor...' })
+            : pick(lang, { nl: 'Opnieuw proberen', en: 'Try again', pl: 'Spróbuj ponownie', tr: 'Tekrar dene' })}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
+import { localeFromCookie, pick } from '@/lib/i18n-pick';
 
 /**
  * Floating banner that prompts user to enable push notifications.
@@ -99,9 +100,7 @@ export default function PushPermissionPrompt() {
 
   if (!visible) return null;
 
-  const isNl = typeof document !== 'undefined'
-    ? (document.cookie.match(/paywatch-locale=(nl|en)/)?.[1] || 'nl') === 'nl'
-    : true;
+  const lang = localeFromCookie();
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50">
@@ -129,12 +128,15 @@ export default function PushPermissionPrompt() {
             </div>
             <div className="flex-1 pr-4">
               <p className="text-[14px] font-semibold text-pw-navy">
-                {isNl ? 'Meldingen inschakelen' : 'Enable notifications'}
+                {pick(lang, { nl: 'Meldingen inschakelen', en: 'Enable notifications', pl: 'Włącz powiadomienia', tr: 'Bildirimleri aç' })}
               </p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-pw-muted">
-                {isNl
-                  ? 'Ontvang een melding als een rekening bijna vervalt of als je scan klaar is.'
-                  : 'Get notified when a bill is almost due or when your scan is complete.'}
+                {pick(lang, {
+                  nl: 'Ontvang een melding als een rekening bijna vervalt of als je scan klaar is.',
+                  en: 'Get notified when a bill is almost due or when your scan is complete.',
+                  pl: 'Otrzymaj powiadomienie, gdy zbliża się termin rachunku lub gdy skanowanie się zakończy.',
+                  tr: 'Bir faturanın son ödeme tarihi yaklaştığında veya taraman bittiğinde bildirim al.',
+                })}
               </p>
             </div>
           </div>
@@ -146,14 +148,14 @@ export default function PushPermissionPrompt() {
               className="btn-press flex-1 rounded-button bg-pw-blue px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-50 transition-transform active:scale-[0.97]"
             >
               {enabling
-                ? (isNl ? 'Even geduld...' : 'One moment...')
-                : (isNl ? 'Inschakelen' : 'Enable')}
+                ? pick(lang, { nl: 'Even geduld...', en: 'One moment...', pl: 'Chwila...', tr: 'Bir saniye...' })
+                : pick(lang, { nl: 'Inschakelen', en: 'Enable', pl: 'Włącz', tr: 'Aç' })}
             </button>
             <button
               onClick={handleDismiss}
               className="btn-press rounded-button border border-pw-border px-4 py-2 text-[13px] font-semibold text-pw-muted transition-transform active:scale-[0.97]"
             >
-              {isNl ? 'Later' : 'Later'}
+              {pick(lang, { nl: 'Later', en: 'Later', pl: 'Później', tr: 'Sonra' })}
             </button>
           </div>
         </div>

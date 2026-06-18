@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, Building2, Users, CircleDot, UserCheck, Phone, Loader2 } from 'lucide-react';
+import { pick } from '@/lib/i18n-pick';
 import dynamic from 'next/dynamic';
 
 const CoachCallRoom = dynamic(() => import('@/components/chat/coach-call-room'), { ssr: false });
@@ -27,10 +28,10 @@ interface Message {
   metadata?: { room_name?: string; expires_at?: string } | null;
 }
 
-function timeAgo(date: string, nl: boolean): string {
+function timeAgo(date: string, lang: string): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return nl ? 'nu' : 'now';
+  if (mins < 1) return pick(lang, { nl: 'nu', en: 'now', pl: 'teraz', tr: 'şimdi' });
   if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}u`;
@@ -55,10 +56,10 @@ function senderColor(type: string) {
 /* ─────────────────────────────────────────────
    THREAD LIST (inbox overview)
    ───────────────────────────────────────────── */
-function ThreadList({ threads, onOpen, nl }: {
+function ThreadList({ threads, onOpen, lang }: {
   threads: Thread[];
   onOpen: (threadId: string) => void;
-  nl: boolean;
+  lang: string;
 }) {
   if (threads.length === 0) {
     return (
@@ -67,12 +68,15 @@ function ThreadList({ threads, onOpen, nl }: {
           <Users className="h-6 w-6 text-pw-blue" strokeWidth={1.5} />
         </div>
         <p className="text-[14px] font-medium text-pw-text dark:text-white">
-          {nl ? 'Nog geen berichten' : 'No messages yet'}
+          {pick(lang, { nl: 'Nog geen berichten', en: 'No messages yet', pl: 'Brak wiadomości', tr: 'Henüz mesaj yok' })}
         </p>
         <p className="mt-1 text-[12px] text-pw-muted max-w-[240px]">
-          {nl
-            ? 'Je vangnet buddy of hulporganisatie kan hier contact met je opnemen.'
-            : 'Your safety net buddy or help organization can reach out to you here.'}
+          {pick(lang, {
+            nl: 'Je vangnet buddy of hulporganisatie kan hier contact met je opnemen.',
+            en: 'Your safety net buddy or help organization can reach out to you here.',
+            pl: 'Twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może się tu z tobą skontaktować.',
+            tr: 'Güvenlik ağındaki destekçin veya yardım kuruluşu burada seninle iletişime geçebilir.',
+          })}
         </p>
       </div>
     );
@@ -103,7 +107,7 @@ function ThreadList({ threads, onOpen, nl }: {
                 )}
               </p>
               <span className="ml-2 flex-shrink-0 text-[11px] text-pw-muted">
-                {timeAgo(thread.last_at, nl)}
+                {timeAgo(thread.last_at, lang)}
               </span>
             </div>
             <div className="flex items-center justify-between mt-0.5">
@@ -126,10 +130,10 @@ function ThreadList({ threads, onOpen, nl }: {
 /* ─────────────────────────────────────────────
    THREAD VIEW (single conversation)
    ───────────────────────────────────────────── */
-function ThreadView({ threadId, onBack, nl }: {
+function ThreadView({ threadId, onBack, lang }: {
   threadId: string;
   onBack: () => void;
-  nl: boolean;
+  lang: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState('');
@@ -286,7 +290,7 @@ function ThreadView({ threadId, onBack, nl }: {
                 sendReply();
               }
             }}
-            placeholder={nl ? 'Typ een antwoord...' : 'Type a reply...'}
+            placeholder={pick(lang, { nl: 'Typ een antwoord...', en: 'Type a reply...', pl: 'Napisz odpowiedź...', tr: 'Yanıt yaz...' })}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-pw-border bg-pw-surface px-3 py-2 text-[13px] text-pw-text placeholder:text-pw-muted/50 focus:border-pw-blue focus:outline-none focus:ring-1 focus:ring-pw-blue dark:bg-white/5 dark:text-white dark:border-pw-border/50"
           />
@@ -311,7 +315,6 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   const [totalUnread, setTotalUnread] = useState(0);
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const nl = lang === 'nl';
 
   // Org connections state
   const [orgs, setOrgs] = useState<Array<{ organization_id: string; status: string; org: { id: string; name: string; type: string; city?: string; primary_color?: string } | null }>>([]);
@@ -450,7 +453,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
         <ThreadView
           threadId={activeThread}
           onBack={() => setActiveThread(null)}
-          nl={nl}
+          lang={lang}
         />
       </div>
     );
@@ -467,10 +470,10 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
           </button>
           <div>
             <h2 className="text-[15px] font-semibold text-pw-text dark:text-white">
-              {nl ? 'Hulplijn' : 'Help inbox'}
+              {pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu' })}
             </h2>
             <p className="text-[11px] text-pw-muted">
-              {nl ? 'Berichten van je vangnet' : 'Messages from your safety net'}
+              {pick(lang, { nl: 'Berichten van je vangnet', en: 'Messages from your safety net', pl: 'Wiadomości od twojej siatki bezpieczeństwa', tr: 'Güvenlik ağından mesajlar' })}
             </p>
           </div>
         </div>
@@ -488,7 +491,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-pw-blue border-t-transparent" />
           </div>
         ) : (
-          <ThreadList threads={threads} onOpen={setActiveThread} nl={nl} />
+          <ThreadList threads={threads} onOpen={setActiveThread} lang={lang} />
         )}
       </div>
 
@@ -496,13 +499,13 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
       <div className="border-t border-pw-border/40 px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[12px] font-semibold text-pw-text dark:text-white">
-            {nl ? 'Mijn organisaties' : 'My organisations'}
+            {pick(lang, { nl: 'Mijn organisaties', en: 'My organisations', pl: 'Moje organizacje', tr: 'Kuruluşlarım' })}
           </p>
           <button
             onClick={() => { setShowCodeInput(v => !v); setCodeError(null); setCodeSuccess(null); }}
             className="text-[11px] font-semibold text-pw-blue"
           >
-            {nl ? '+ Code invoeren' : '+ Enter code'}
+            {pick(lang, { nl: '+ Code invoeren', en: '+ Enter code', pl: '+ Wpisz kod', tr: '+ Kod gir' })}
           </button>
         </div>
 
@@ -527,7 +530,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
 
         {orgs.length === 0 && !showCodeInput && (
           <p className="text-[11px] text-pw-muted">
-            {nl ? 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.' : 'No organisation connected yet. Have an invite code? Enter it above.'}
+            {pick(lang, { nl: 'Nog geen organisatie gekoppeld. Heb je een uitnodigingscode? Voer die in.', en: 'No organisation connected yet. Have an invite code? Enter it above.', pl: 'Brak połączonej organizacji. Masz kod zaproszenia? Wpisz go.', tr: 'Henüz bağlı kuruluş yok. Davet kodun var mı? Yukarıya gir.' })}
           </p>
         )}
 
@@ -540,7 +543,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
                 value={codeInput}
                 onChange={e => setCodeInput(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === 'Enter' && connectCode()}
-                placeholder={nl ? 'Voer uitnodigingscode in' : 'Enter invite code'}
+                placeholder={pick(lang, { nl: 'Voer uitnodigingscode in', en: 'Enter invite code', pl: 'Wpisz kod zaproszenia', tr: 'Davet kodu gir' })}
                 className="flex-1 px-3 py-2 text-[13px] rounded-xl border border-pw-border bg-pw-bg dark:bg-white/5 dark:text-white outline-none focus:border-pw-blue"
               />
               <button
@@ -548,7 +551,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
                 disabled={codeLoading || !codeInput.trim()}
                 className="px-4 py-2 bg-pw-blue text-white text-[12px] font-semibold rounded-xl disabled:opacity-50"
               >
-                {codeLoading ? '...' : (nl ? 'Verbind' : 'Connect')}
+                {codeLoading ? '...' : pick(lang, { nl: 'Verbind', en: 'Connect', pl: 'Połącz', tr: 'Bağlan' })}
               </button>
             </div>
             {codeError && <p className="text-[11px] text-pw-red mt-1">{codeError}</p>}
@@ -562,9 +565,12 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
         <div className="flex items-start gap-2 rounded-xl bg-pw-blue/5 px-3 py-2.5">
           <CircleDot className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-pw-blue" strokeWidth={1.5} />
           <p className="text-[11px] leading-relaxed text-pw-muted">
-            {nl
-              ? 'Alleen je vangnet buddy of hulporganisatie kan een gesprek starten. Jij kunt hier antwoorden.'
-              : 'Only your safety net buddy or help organization can start a conversation. You can reply here.'}
+            {pick(lang, {
+              nl: 'Alleen je vangnet buddy of hulporganisatie kan een gesprek starten. Jij kunt hier antwoorden.',
+              en: 'Only your safety net buddy or help organization can start a conversation. You can reply here.',
+              pl: 'Tylko twój buddy z siatki bezpieczeństwa lub organizacja pomocowa może rozpocząć rozmowę. Możesz tu odpowiadać.',
+              tr: 'Sadece güvenlik ağındaki destekçin veya yardım kuruluşu görüşme başlatabilir. Burada yanıt verebilirsin.',
+            })}
           </p>
         </div>
       </div>

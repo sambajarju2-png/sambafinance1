@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 
 const VoiceCall = dynamic(() => import('./voice-call'), { ssr: false });
 import { prewarmVoiceToken } from '@/lib/voice-token-cache';
+import { pick } from '@/lib/i18n-pick';
 const PostCallSummaryLazy = dynamic(() => import('./voice-call').then(m => ({ default: m.PostCallSummary })), { ssr: false });
 const HulpInbox = dynamic(() => import('./hulp-inbox'), { ssr: false });
 const BuddyChat = dynamic(() => import('../buddy-chat'), { ssr: false });
@@ -200,7 +201,6 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
 
   const sendMessage = useCallback(async (text: string, file?: File) => {
     if ((!text.trim() && !file) || isStreaming) return;
-    const isNl = lang === 'nl';
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -244,9 +244,12 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
         if (err.error === 'limit_reached' && err.limit_type) {
           setLimitModal({ type: err.limit_type, plan: err.plan || currentPlan });
           setCurrentPlan(err.plan || currentPlan);
-          const limitContent = isNl
-            ? (err.message || 'Je hebt je limiet bereikt. Upgrade om verder te gaan.')
-            : "You've reached your limit. Upgrade to continue.";
+          const limitContent = pick(lang, {
+            nl: err.message || 'Je hebt je limiet bereikt. Upgrade om verder te gaan.',
+            en: "You've reached your limit. Upgrade to continue.",
+            pl: 'Osiągnąłeś swój limit. Przejdź na wyższy plan, aby kontynuować.',
+            tr: 'Limitine ulaştın. Devam etmek için yükselt.',
+          });
           setMessages(prev => prev.map(m =>
             m.id === assistantId ? { ...m, content: limitContent } : m
           ));
@@ -255,8 +258,8 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
         }
 
         const errorContent = err.error === 'Rate limited'
-          ? (isNl ? 'Even rustig aan! Probeer het over een minuutje opnieuw.' : 'Slow down! Try again in a minute.')
-          : (isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.');
+          ? pick(lang, { nl: 'Even rustig aan! Probeer het over een minuutje opnieuw.', en: 'Slow down! Try again in a minute.', pl: 'Spokojnie! Spróbuj ponownie za minutę.', tr: 'Sakin ol! Bir dakika sonra tekrar dene.' })
+          : pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.' });
         setMessages(prev => prev.map(m =>
           m.id === assistantId ? { ...m, content: errorContent } : m
         ));
@@ -302,7 +305,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
       ));
     } catch {
       setMessages(prev => prev.map(m =>
-        m.id === assistantId ? { ...m, content: isNl ? 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.' : 'Something went wrong. Tap Retry to try again.' } : m
+        m.id === assistantId ? { ...m, content: pick(lang, { nl: 'Er ging iets mis. Tik op Opnieuw om het nog eens te proberen.', en: 'Something went wrong. Tap Retry to try again.', pl: 'Coś poszło nie tak. Dotknij Ponów, aby spróbować jeszcze raz.', tr: 'Bir şeyler ters gitti. Tekrar denemek için Yeniden butonuna dokun.' }) } : m
       ));
       setFailedMessages(prev => new Set(prev).add(assistantId));
     }
@@ -332,7 +335,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new SR() as any;
-      recognition.lang = lang === 'nl' ? 'nl-NL' : 'en-US';
+      recognition.lang = lang === 'pl' ? 'pl-PL' : lang === 'tr' ? 'tr-TR' : lang === 'en' ? 'en-US' : 'nl-NL';
       recognition.continuous = false;
       recognition.interimResults = true;
 
@@ -362,7 +365,6 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
     }
   }
 
-  const nl = lang === 'nl';
   const isEmpty = messages.length === 0;
 
   async function newChat() {
@@ -382,14 +384,14 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             <button
               onClick={() => setShowVoiceCall(true)}
               className="flex h-6 w-6 items-center justify-center rounded-full bg-pw-green/10 text-pw-green transition-colors hover:bg-pw-green/20"
-              aria-label={nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
+              aria-label={pick(lang, { nl: 'Bel PayBuddy', en: 'Call PayBuddy', pl: 'Zadzwoń do PayBuddy', tr: "PayBuddy'yi ara" })}
             >
               <Phone className="h-3 w-3" strokeWidth={2} />
             </button>
             <button
               onClick={() => setShowHulpInbox(true)}
               className="relative flex h-6 w-6 items-center justify-center rounded-full bg-pw-blue/10 text-pw-blue transition-colors hover:bg-pw-blue/20"
-              aria-label={nl ? 'Hulplijn' : 'Help inbox'}
+              aria-label={pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu' })}
             >
               <MessageCircle className="h-3 w-3" strokeWidth={2} />
               {hulpUnread > 0 && (
@@ -412,14 +414,14 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
           >
             <Clock className="h-3 w-3" strokeWidth={1.5} />
-            {nl ? 'Geschiedenis' : 'History'}
+            {pick(lang, { nl: 'Geschiedenis', en: 'History', pl: 'Historia', tr: 'Geçmiş' })}
           </a>
           <button
             onClick={newChat}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
           >
             <Plus className="h-3 w-3" strokeWidth={1.5} />
-            {nl ? 'Nieuw' : 'New'}
+            {pick(lang, { nl: 'Nieuw', en: 'New', pl: 'Nowy', tr: 'Yeni' })}
           </button>
         </div>
         </div>
@@ -446,10 +448,10 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             </div>
 
             <p className="text-pw-blue text-base font-medium">
-              {nl ? `Hoi${firstName ? ` ${firstName}` : ''}` : `Hi${firstName ? ` ${firstName}` : ''}`}
+              {pick(lang, { nl: `Hoi${firstName ? ` ${firstName}` : ''}`, en: `Hi${firstName ? ` ${firstName}` : ''}`, pl: `Cześć${firstName ? ` ${firstName}` : ''}`, tr: `Merhaba${firstName ? ` ${firstName}` : ''}` })}
             </p>
             <p className="mt-1 text-xl font-bold text-pw-text dark:text-white">
-              {nl ? 'Hoe kan ik je helpen?' : 'How can I help you?'}
+              {pick(lang, { nl: 'Hoe kan ik je helpen?', en: 'How can I help you?', pl: 'Jak mogę ci pomóc?', tr: 'Sana nasıl yardımcı olabilirim?' })}
             </p>
 
             {/* Quick action chips */}
@@ -475,7 +477,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 className="flex items-center gap-2 rounded-full border border-pw-green/30 bg-pw-green/5 px-5 py-2.5 text-[13px] font-medium text-pw-green transition-colors hover:bg-pw-green/10 active:scale-[0.97]"
               >
                 <Phone className="h-4 w-4" strokeWidth={1.5} />
-                {nl ? 'Bel PayBuddy' : 'Call PayBuddy'}
+                {pick(lang, { nl: 'Bel PayBuddy', en: 'Call PayBuddy', pl: 'Zadzwoń do PayBuddy', tr: "PayBuddy'yi ara" })}
               </button>
 
               {/* Hulp inbox button */}
@@ -484,7 +486,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 className="relative flex items-center gap-2 rounded-full border border-pw-blue/30 bg-pw-blue/5 px-4 py-2.5 text-[13px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/10 active:scale-[0.97]"
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
-                {nl ? 'Hulplijn' : 'Help inbox'}
+                {pick(lang, { nl: 'Hulplijn', en: 'Help inbox', pl: 'Linia pomocy', tr: 'Yardım kutusu' })}
                 {hulpUnread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pw-red px-1 text-[10px] font-bold text-white">
                     {hulpUnread}
@@ -498,7 +500,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 className="relative flex items-center gap-2 rounded-full border border-purple-300/50 bg-purple-50/50 px-4 py-2.5 text-[13px] font-medium text-purple-600 transition-colors hover:bg-purple-100/50 active:scale-[0.97] dark:border-purple-500/30 dark:bg-purple-500/5 dark:text-purple-400"
               >
                 <Users className="h-4 w-4" strokeWidth={1.5} />
-                {nl ? 'Buddy Chat' : 'Buddy Chat'}
+                {pick(lang, { nl: 'Buddy Chat', en: 'Buddy Chat', pl: 'Buddy Chat', tr: 'Buddy Chat' })}
                 {buddyUnread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pw-red px-1 text-[10px] font-bold text-white">
                     {buddyUnread}
@@ -554,7 +556,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                         className="ml-1 mb-0.5 flex items-center gap-1 text-[10px] text-pw-muted/50 transition-colors hover:text-pw-muted"
                       >
                         {copiedId === msg.id ? (
-                          <><Check className="h-2.5 w-2.5" strokeWidth={2} /> {nl ? 'Gekopieerd' : 'Copied'}</>
+                          <><Check className="h-2.5 w-2.5" strokeWidth={2} /> {pick(lang, { nl: 'Gekopieerd', en: 'Copied', pl: 'Skopiowano', tr: 'Kopyalandı' })}</>
                         ) : (
                           <Copy className="h-2.5 w-2.5" strokeWidth={1.5} />
                         )}
@@ -578,9 +580,12 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                             if (data.success) {
                               setConfirmedBills(prev => new Set(prev).add(msg.id));
                               // Add success message as assistant bubble (no AI call)
-                              const successMsg = nl
-                                ? `**${bill!.vendor}** is toegevoegd aan je rekeningen (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`
-                                : `**${bill!.vendor}** has been added to your bills (€${((bill!.amount_cents || 0) / 100).toFixed(2)}).`;
+                              const successMsg = pick(lang, {
+                                nl: `**${bill!.vendor}** is toegevoegd aan je rekeningen (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
+                                en: `**${bill!.vendor}** has been added to your bills (€${((bill!.amount_cents || 0) / 100).toFixed(2)}).`,
+                                pl: `**${bill!.vendor}** został dodany do twoich rachunków (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
+                                tr: `**${bill!.vendor}** faturalarına eklendi (${((bill!.amount_cents || 0) / 100).toFixed(2).replace('.', ',')} euro).`,
+                              });
                               setMessages(prev => [...prev, {
                                 id: Date.now().toString(),
                                 role: 'assistant' as const,
@@ -591,7 +596,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                               setMessages(prev => [...prev, {
                                 id: Date.now().toString(),
                                 role: 'assistant' as const,
-                                content: nl ? 'Er ging iets mis bij het toevoegen. Probeer het opnieuw.' : 'Something went wrong. Try again.',
+                                content: pick(lang, { nl: 'Er ging iets mis bij het toevoegen. Probeer het opnieuw.', en: 'Something went wrong. Try again.', pl: 'Coś poszło nie tak podczas dodawania. Spróbuj ponownie.', tr: 'Eklenirken bir şeyler ters gitti. Tekrar dene.' }),
                                 createdAt: new Date(),
                               }]);
                             }
@@ -599,7 +604,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                             setMessages(prev => [...prev, {
                               id: Date.now().toString(),
                               role: 'assistant' as const,
-                              content: nl ? 'Er ging iets mis bij het toevoegen.' : 'Something went wrong.',
+                              content: pick(lang, { nl: 'Er ging iets mis bij het toevoegen.', en: 'Something went wrong.', pl: 'Coś poszło nie tak podczas dodawania.', tr: 'Eklenirken bir şeyler ters gitti.' }),
                               createdAt: new Date(),
                             }]);
                           }
@@ -613,15 +618,15 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                         ) : (
                           <Check className="h-3.5 w-3.5" strokeWidth={2} />
                         )}
-                        {nl ? 'Bevestig' : 'Confirm'}
+                        {pick(lang, { nl: 'Bevestig', en: 'Confirm', pl: 'Potwierdź', tr: 'Onayla' })}
                       </button>
                       <button
-                        onClick={() => sendMessage(nl ? 'Ik wil iets aanpassen' : 'I want to edit something')}
+                        onClick={() => sendMessage(pick(lang, { nl: 'Ik wil iets aanpassen', en: 'I want to edit something', pl: 'Chcę coś zmienić', tr: 'Bir şeyi değiştirmek istiyorum' }))}
                         disabled={confirmingBill}
                         className="flex items-center gap-1.5 rounded-lg border border-pw-border px-4 py-2 text-[13px] font-medium text-pw-text transition-all hover:bg-pw-border/30 active:scale-[0.97] dark:text-white dark:border-pw-border/50"
                       >
                         <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
-                        {nl ? 'Bewerken' : 'Edit'}
+                        {pick(lang, { nl: 'Bewerken', en: 'Edit', pl: 'Edytuj', tr: 'Düzenle' })}
                       </button>
                     </div>
                   )}
@@ -631,14 +636,14 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                     <div className="mb-3 flex items-center gap-2 pl-1">
                       <span className="flex items-center gap-1 rounded-lg bg-pw-green/10 px-3 py-1.5 text-[12px] font-medium text-pw-green">
                         <Check className="h-3.5 w-3.5" strokeWidth={2} />
-                        {nl ? 'Toegevoegd' : 'Added'}
+                        {pick(lang, { nl: 'Toegevoegd', en: 'Added', pl: 'Dodano', tr: 'Eklendi' })}
                       </span>
                       <a
                         href="/betalingen"
                         className="flex items-center gap-1 rounded-lg border border-pw-border/60 px-3 py-1.5 text-[12px] font-medium text-pw-blue transition-colors hover:bg-pw-blue/5"
                       >
                         <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-                        {nl ? 'Bekijk' : 'View'}
+                        {pick(lang, { nl: 'Bekijk', en: 'View', pl: 'Zobacz', tr: 'Gör' })}
                       </a>
                     </div>
                   )}
@@ -662,7 +667,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                         className="flex items-center gap-1.5 rounded-lg border border-pw-amber/50 bg-pw-amber/5 px-3 py-1.5 text-[12px] font-medium text-pw-amber transition-colors hover:bg-pw-amber/10 active:scale-[0.97]"
                       >
                         <RotateCcw className="h-3 w-3" strokeWidth={2} />
-                        {nl ? 'Opnieuw proberen' : 'Retry'}
+                        {pick(lang, { nl: 'Opnieuw proberen', en: 'Retry', pl: 'Spróbuj ponownie', tr: 'Tekrar dene' })}
                       </button>
                     </div>
                   )}
@@ -704,7 +709,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-pw-muted transition-colors hover:bg-pw-border/30 hover:text-pw-text"
-            aria-label={nl ? 'Bestand uploaden' : 'Upload file'}
+            aria-label={pick(lang, { nl: 'Bestand uploaden', en: 'Upload file', pl: 'Prześlij plik', tr: 'Dosya yükle' })}
           >
             <Paperclip className="h-5 w-5" strokeWidth={1.5} />
           </button>
@@ -715,7 +720,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={nl ? 'Typ je vraag...' : 'Type your question...'}
+            placeholder={pick(lang, { nl: 'Typ je vraag...', en: 'Type your question...', pl: 'Wpisz swoje pytanie...', tr: 'Sorunu yaz...' })}
             rows={1}
             className="min-h-[36px] max-h-[120px] flex-1 resize-none rounded-2xl border border-pw-border/60 bg-pw-bg px-4 py-2 text-[14px] text-pw-text outline-none transition-colors placeholder:text-pw-muted focus:border-pw-blue/50 dark:bg-pw-bg/50 dark:text-white"
           />
@@ -728,7 +733,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
                 ? 'bg-pw-red/10 text-pw-red'
                 : 'text-pw-muted hover:bg-pw-border/30 hover:text-pw-text'
             }`}
-            aria-label={isRecording ? 'Stop' : (nl ? 'Spraak' : 'Voice')}
+            aria-label={isRecording ? 'Stop' : (pick(lang, { nl: 'Spraak', en: 'Voice', pl: 'Głos', tr: 'Ses' }))}
           >
             {isRecording ? <MicOff className="h-5 w-5" strokeWidth={1.5} /> : <Mic className="h-5 w-5" strokeWidth={1.5} />}
           </button>
@@ -738,7 +743,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || isStreaming}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pw-blue text-white transition-all hover:bg-pw-blue/90 active:scale-[0.95] disabled:opacity-40 disabled:cursor-not-allowed"
-            aria-label={nl ? 'Verstuur' : 'Send'}
+            aria-label={pick(lang, { nl: 'Verstuur', en: 'Send', pl: 'Wyślij', tr: 'Gönder' })}
           >
             {isStreaming ? (
               <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
@@ -753,7 +758,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
           <div className="mt-2 flex items-center justify-center gap-2">
             <div className="h-2 w-2 animate-pulse rounded-full bg-pw-red" />
             <span className="text-[12px] font-medium text-pw-red">
-              {nl ? 'Luisteren...' : 'Listening...'}
+              {pick(lang, { nl: 'Luisteren...', en: 'Listening...', pl: 'Słucham...', tr: 'Dinleniyor...' })}
             </span>
           </div>
         )}
