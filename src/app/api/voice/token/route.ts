@@ -3,6 +3,7 @@ import { getAuthUserId } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { formatCents } from '@/lib/bills';
 import { getPlan, isVoiceLimitExceeded, voiceSecondsRemaining, formatDuration } from '@/lib/plans';
+import { languageName } from '@/lib/ai/languages';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
 
@@ -63,6 +64,15 @@ export async function GET(req: NextRequest) {
     const plans = plansRes.data || [];
     const lang = settings?.language || 'nl';
     const firstName = settings?.first_name || '';
+    const langName = languageName(lang);
+
+    // The operational prompt below is authored in Dutch. For non-Dutch users we
+    // prepend an explicit directive so PayBuddy speaks the user's language, while
+    // keeping Dutch domain terms/proper nouns (which appear verbatim on their real
+    // letters) intact. The ASR/TTS language is set separately via overrides.agent.language.
+    const languageDirective = lang !== 'nl'
+      ? `\nLANGUAGE: Always speak and respond ONLY in ${langName}, regardless of the language of these instructions. Keep Dutch domain terms and proper nouns exactly as written (WIK, factuur, herinnering, aanmaning, incasso, deurwaarder, beslagvrije voet, schuldhulp, toeslagen, gemeente, PayBuddy).\n`
+      : '';
 
     const outstanding = bills.filter(b => b.status !== 'settled');
     const totalOutstanding = outstanding.reduce((sum, b) => sum + (b.amount || 0), 0);
@@ -76,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     // Override REPLACES dashboard prompt — includes essential rules + user data + empowering personality.
     const voicePrompt = `Je bent PayBuddy — die ene vriend die alles weet over geld maar nooit oordeelt. Kort, warm, natuurlijk.
-
+${languageDirective}
 DATUM: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
 
 STIJL: Max 1 zin per beurt. Bevestig kort: "Top", "Snap ik", "Oké". Zeg "even kijken..." voor tools. Eén vraag per beurt. Spreek bedragen uit.
@@ -122,9 +132,18 @@ ${outstanding.slice(0, 3).map(b => `${b.vendor}: ${formatCents(b.amount || 0)} (
 FASES: factuur, herinnering, aanmaning, incasso, deurwaarder.
 WIK: 15% eerste €2.500 (min €40). Schuldhulp: 0800-8115.`;
 
-    const firstMsg = firstName
-      ? `Hoi ${firstName}! Fijn dat je belt. Waar kan ik je mee helpen?`
-      : 'Hoi! Fijn dat je belt. Waar kan ik je mee helpen?';
+    const greet = (n: string): string => {
+      const s = n ? ` ${n}` : '';
+      switch (lang) {
+        case 'en': return `Hi${s}! Good to hear from you. What can I help you with?`;
+        case 'pl': return `Cześć${s}! Dobrze, że dzwonisz. W czym mogę pomóc?`;
+        case 'tr': return `Selam${s}! Aradığına sevindim. Nasıl yardımcı olabilirim?`;
+        case 'fr': return `Salut${s} ! Je suis là. Je peux t'aider avec quoi ?`;
+        case 'ar': return `مرحبا${s}! كيف يمكنني مساعدتك اليوم؟`;
+        default:   return `Hoi${s}! Fijn dat je belt. Waar kan ik je mee helpen?`;
+      }
+    };
+    const firstMsg = greet(firstName);
 
     // Detect platform — iOS needs WebSocket (stable in WKWebView), web uses WebRTC (lower latency)
     const ua = req.headers.get('user-agent') || '';
