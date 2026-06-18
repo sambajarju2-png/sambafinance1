@@ -11,7 +11,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   // Look up invite
   const { data: invite, error } = await supabase
     .from("b2b_invites")
-    .select("id, token, email, external_id, organization_id, status, expires_at, organizations(name, primary_color, secondary_color, logo_url, slug, custom_intro_text)")
+    .select("id, token, email, external_id, organization_id, status, expires_at, language, organizations(name, primary_color, secondary_color, logo_url, slug, custom_intro_text)")
     .eq("token", token)
     .single();
 
@@ -83,6 +83,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       introText={org?.custom_intro_text || null}
       prefillEmail={invite.email || ""}
       isAlreadyActivated={isUsed}
+      inviteLang={(invite as any).language || "nl"}
     />
   );
 }

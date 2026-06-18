@@ -13,7 +13,9 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type UserType = 'consumer' | 'buddy' | 'professional' | null;
-interface Props { initialName: string; initialLanguage: 'nl' | 'en'; }
+interface Props { initialName: string; initialLanguage: string; }
+
+const ONB_LOCALES = ['nl', 'en', 'pl', 'tr'];
 
 // ─── Spring (iOS feel) ───────────────────────────────────────────────────────
 const sp = { type: 'spring' as const, stiffness: 300, damping: 30 };
@@ -113,6 +115,70 @@ proD:"You're set up as a professional",
 next:'Next',back:'Back',saving:'Saving...',pm:'/month',
 hiH:"Looking good! Let's keep it that way.",hiM:"Every euro counts. We'll help you stay on track.",hiL:"No worries — add this later on your dashboard.",
 kidH:'You may qualify for child-related benefits.',
+},
+pl:{welcome:'Witaj w PayWatch',tagline:'Nigdy więcej zaskoczenia przez firmę windykacyjną',lang:'Wybierz swój język',branch:'Co cię tu sprowadza?',
+cons:'Chcę zarządzać swoimi rachunkami',consSub:'Śledź rachunki, zapobiegaj długom, sprawdzaj dodatki',
+bud:'Ktoś mnie zaprosił',budSub:'Zobacz przegląd rachunków innej osoby',
+pro:'Pomagam innym zawodowo',proSub:'Doradca ds. długów, coach budżetowy lub pracownik socjalny',
+name:'Jak masz na imię?',fn:'Imię',ln:'Nazwisko (opcjonalnie)',dob:'Data urodzenia (opcjonalnie)',dobX:'Do obliczania dodatków i pism prawnych',
+city:'W jakiej gminie mieszkasz?',cityX:'Znajdziemy bezpłatną pomoc w sprawie długów w twojej okolicy',search:'Szukaj gminy...',skip:'Pomiń',
+house:'Twoje gospodarstwo domowe',partner:'Masz partnera?',kids:'Dzieci poniżej 18 lat',
+hRent:'Wynajem',hOwn:'Własność',hPar:'U rodziców',hOth:'Inne',rent:'Miesięczny czynsz',kinder:'Opieka nad dziećmi?',
+income:'Twój dochód',salary:'Wynagrodzenie netto',partnerInc:'Dochód partnera',uitk:'Zasiłek/pomoc społeczna',duo:'DUO/finansowanie studiów',other:'Inny dochód',
+dFrom:'Około dnia',dTo:'do dnia',totInc:'Całkowity miesięczny dochód',
+exp:'Stałe wydatki',expX:'Dostosuj lub pomiń — wpisaliśmy holenderskie średnie',
+zorg:'Ubezpieczenie zdrowotne',ener:'Energia',water:'Woda',tel:'Telefon + internet',verz:'Inne ubezpieczenia',verv:'Transport',
+totExp:'Całkowite stałe koszty',avg:'śr.',
+scan:'Jak dodajesz rachunki?',gmail:'Połącz Gmail',gmailX:'Tylko do odczytu. Wszystko na serwerach w UE.',outl:'Połącz Outlook',cam:'Skanuj aparatem',camX:'Skanuj do 5 rachunków naraz',man:'Ręcznie',manX:'Dodaj kwoty samodzielnie',
+scanInfo:'Możesz połączyć swoją pocztę w dowolnym momencie z poziomu panelu. PayWatch automatycznie przeskanuje twoją skrzynkę w poszukiwaniu faktur.',
+safe:'Siatka bezpieczeństwa',safeX:'Zaproś kogoś, kto będzie cię wspierać. Może tylko przeglądać twoje rachunki.',budEmail:'E-mail buddy',
+done:'Wszystko gotowe!',doneSub:'PayWatch pilnuje teraz twoich rachunków. Ostrzeżemy cię, zanim sprawy się pogorszą.',inc:'Dochód miesięczny',costs:'Stałe koszty',free:'Do swobodnego wydania',scanning:'Skanowanie',buddy:'Buddy',
+on:'Połączone',off:'Jeszcze nie',inv:'Zaproszono',noB:'Brak buddy',go:'Przejdź do panelu',
+stat1:'1,4 miliona',stat1x:'Holendrów ma problematyczne długi',stat2:'€43.300',stat2x:'Średni dług w momencie zgłoszenia po pomoc',stat3:'73%',stat3x:'Czeka zbyt długo z szukaniem pomocy',
+pw1:'Automatyczne skanowanie rachunków z twojej skrzynki',pw2:'Ostrzeżenia, zanim faktura eskaluje',pw3:'Przegląd wszystkich stałych kosztów w jednym miejscu',
+factsT:'Czy wiesz, że?',factsS:'Dlaczego wczesne działanie jest tak ważne',
+f1:'Nieopłacona faktura na €50 może w ciągu 6 miesięcy wzrosnąć do €625+ przez koszty windykacji, odsetki i koszty komornika.',
+f2:'Im wcześniej zaczniesz działać, tym więcej masz opcji. Po wezwaniu sądowym prawie nie masz już pola do negocjacji.',
+f3:'PayWatch ostrzega cię w fazie przypomnienia, zanim zaczną się prawdziwe koszty.',
+invC:'Zaakceptuj zaproszenie',code:'Kod zaproszenia',conn:'Połączono!',connX:'Możesz teraz zobaczyć przegląd rachunków',view:'Zobacz panel',
+org:'Organizacja',role:'Funkcja',sw:'Pracownik socjalny',dc:'Doradca ds. długów',bc:'Coach budżetowy',
+how:'Jak to działa',p1:'Twoi klienci zakładają własne konto',p2:'Zapraszają cię jako buddy',p3:'Otrzymujesz dostęp tylko do odczytu',p4:'Monitorujesz ryzyko eskalacji',
+proD:'Jesteś skonfigurowany jako profesjonalista',
+next:'Dalej',back:'Wstecz',saving:'Zapisywanie...',pm:'/miesiąc',
+hiH:'Wygląda dobrze! Tak trzymaj.',hiM:'Każde euro się liczy. Pomożemy ci utrzymać kurs.',hiL:'Bez obaw — uzupełnij to później w panelu.',
+kidH:'Możesz mieć prawo do dodatków na dzieci.',
+},
+tr:{welcome:"PayWatch'e hoş geldin",tagline:'Bir tahsilat bürosu tarafından bir daha asla sürpriz yaşama',lang:'Dilini seç',branch:'Seni buraya ne getirdi?',
+cons:'Kendi faturalarımı yönetmek istiyorum',consSub:'Faturaları takip et, borçları önle, yardımları kontrol et',
+bud:'Biri beni davet etti',budSub:'Başka birinin fatura genel görünümünü gör',
+pro:'Başkalarına profesyonel olarak yardım ediyorum',proSub:'Borç danışmanı, bütçe koçu veya sosyal hizmet uzmanı',
+name:'Adın ne?',fn:'Ad',ln:'Soyad (isteğe bağlı)',dob:'Doğum tarihi (isteğe bağlı)',dobX:'Yardım hesaplamaları ve resmi mektuplar için',
+city:'Hangi belediyede yaşıyorsun?',cityX:'Yakınında ücretsiz borç yardımı buluruz',search:'Belediye ara...',skip:'Atla',
+house:'Hane halkın',partner:'Partnerin var mı?',kids:'18 yaş altı çocuklar',
+hRent:'Kira',hOwn:'Mülk sahibi',hPar:'Ailenle',hOth:'Diğer',rent:'Aylık kira',kinder:'Çocuk bakımı?',
+income:'Gelirin',salary:'Net maaş',partnerInc:'Partner geliri',uitk:'Sosyal yardım',duo:'DUO/öğrenim finansmanı',other:'Diğer gelir',
+dFrom:'Yaklaşık gün',dTo:'gününe kadar',totInc:'Toplam aylık gelir',
+exp:'Sabit giderler',expX:'Ayarla veya atla — Hollanda ortalamalarını girdik',
+zorg:'Sağlık sigortası',ener:'Enerji',water:'Su',tel:'Telefon + internet',verz:'Diğer sigortalar',verv:'Ulaşım',
+totExp:'Toplam sabit maliyetler',avg:'ort.',
+scan:'Faturaları nasıl ekliyorsun?',gmail:"Gmail'i bağla",gmailX:'Yalnızca okuma. Her şey AB sunucularında.',outl:"Outlook'u bağla",cam:'Kamerayla tara',camX:'Aynı anda 5 faturaya kadar tara',man:'Elle giriş',manX:'Tutarları kendin ekle',
+scanInfo:'E-postanı istediğin zaman panelden bağlayabilirsin. PayWatch o zaman gelen kutunu otomatik olarak faturalar için tarar.',
+safe:'Güvenlik ağı',safeX:'Seni takip edecek birini davet et. Yalnızca faturalarını görebilir.',budEmail:'Buddy e-postası',
+done:'Her şey hazır!',doneSub:'PayWatch artık faturalarını izliyor. İşler kötüye gitmeden seni uyarırız.',inc:'Aylık gelir',costs:'Sabit maliyetler',free:'Serbest harcanabilir',scanning:'Taranıyor',buddy:'Buddy',
+on:'Bağlandı',off:'Henüz değil',inv:'Davet edildi',noB:'Buddy yok',go:'Paneline git',
+stat1:'1,4 milyon',stat1x:'Hollandalının sorunlu borçları var',stat2:'€43.300',stat2x:'Yardıma başvuru anındaki ortalama borç',stat3:'73%',stat3x:'Yardım aramak için çok uzun bekliyor',
+pw1:'Faturaları gelen kutundan otomatik tara',pw2:'Bir fatura tırmanmadan önce uyarılar',pw3:'Tüm sabit maliyetlerin tek bir yerde görünümü',
+factsT:'Biliyor muydun?',factsS:'Erken hareket etmek neden bu kadar önemli',
+f1:'Ödenmemiş €50 fatura, tahsilat masrafları, faiz ve icra masrafları nedeniyle 6 ay içinde €625+ seviyesine çıkabilir.',
+f2:'Ne kadar erken harekete geçersen o kadar çok seçeneğin olur. Mahkeme celbinden sonra neredeyse hiç pazarlık alanın kalmaz.',
+f3:'PayWatch seni hatırlatma aşamasında, gerçek masraflar başlamadan önce uyarır.',
+invC:'Daveti kabul et',code:'Davet kodu',conn:'Bağlandın!',connX:'Artık fatura genel görünümünü görebilirsin',view:'Paneli gör',
+org:'Kuruluş',role:'Görev',sw:'Sosyal hizmet uzmanı',dc:'Borç danışmanı',bc:'Bütçe koçu',
+how:'Nasıl çalışır',p1:'Müşterilerin kendi hesaplarını oluşturur',p2:'Seni buddy olarak davet ederler',p3:'Yalnızca okuma erişimi alırsın',p4:'Tırmanma risklerini izlersin',
+proD:'Profesyonel olarak ayarlandın',
+next:'İleri',back:'Geri',saving:'Kaydediliyor...',pm:'/ay',
+hiH:'İyi görünüyor! Böyle devam et.',hiM:'Her euro önemli. Yolda kalmana yardım ederiz.',hiL:'Endişelenme — bunu daha sonra panelinde tamamla.',
+kidH:'Çocukla ilgili yardımlara hak kazanabilirsin.',
 }};
 
 // ─── Expense config ──────────────────────────────────────────────────────────
@@ -188,7 +254,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(false);
   const [userType, setUserType] = useState<UserType>(null);
-  const [lang, setLang] = useState<'nl'|'en'>(initialLanguage);
+  const [lang, setLang] = useState<string>(ONB_LOCALES.includes(initialLanguage) ? initialLanguage : 'nl');
   const t = L[lang];
   const np = initialName.trim().split(/\s+/);
   const [fn, setFn] = useState(np[0]||'');
@@ -318,10 +384,10 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
         <h1 className="text-[28px] font-extrabold text-pw-text dark:text-white text-center tracking-tight mb-2">{t.welcome}</h1>
         <p className="text-[14px] text-pw-muted text-center mb-10 px-4">{t.tagline}</p>
         <p className="text-[13px] text-pw-muted text-center mb-4">{t.lang}</p>
-        <div className="flex gap-3">{(['nl','en'] as const).map(l=>(
+        <div className="grid grid-cols-2 gap-3">{([['nl','🇳🇱 Nederlands'],['en','🇬🇧 English'],['pl','🇵🇱 Polski'],['tr','🇹🇷 Türkçe']] as const).map(([l,lbl])=>(
           <button key={l} onClick={()=>{setLang(l);document.cookie=`paywatch-locale=${l};path=/;max-age=31536000;samesite=lax`;}}
-            className={`flex-1 py-4 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.96] ${lang===l?'bg-pw-blue text-white shadow-[0_6px_20px_rgba(37,99,235,0.3)]':'border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 text-pw-text dark:text-gray-100'}`}>
-            {l==='nl'?'🇳🇱 Nederlands':'🇬🇧 English'}
+            className={`py-4 rounded-xl text-[15px] font-semibold transition-all active:scale-[0.96] ${lang===l?'bg-pw-blue text-white shadow-[0_6px_20px_rgba(37,99,235,0.3)]':'border border-pw-border dark:border-gray-600 bg-pw-surface dark:bg-gray-800 text-pw-text dark:text-gray-100'}`}>
+            {lbl}
           </button>))}</div>
       </>);
 
@@ -505,7 +571,7 @@ export default function OnboardingWizard({ initialName, initialLanguage }: Props
 
         {kids>0&&tInc>0&&<div className="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800"><p className="text-[12px] text-purple-700 dark:text-purple-300">{t.kidH}</p></div>}
 
-        {(scans.has('gmail')||scans.has('outlook'))&&<div className="mt-3 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20"><p className="text-[12px] text-pw-muted">{lang==='nl'?'Na het afronden koppelen we je e-mail zodat PayWatch direct kan beginnen met scannen.':'After finishing we\'ll connect your email so PayWatch can start scanning right away.'}</p></div>}
+        {(scans.has('gmail')||scans.has('outlook'))&&<div className="mt-3 p-3.5 rounded-xl bg-pw-blue/5 dark:bg-blue-900/20 border border-pw-blue/20"><p className="text-[12px] text-pw-muted">{({nl:'Na het afronden koppelen we je e-mail zodat PayWatch direct kan beginnen met scannen.',en:"After finishing we'll connect your email so PayWatch can start scanning right away.",pl:'Po zakończeniu połączymy twoją pocztę, aby PayWatch mógł od razu zacząć skanowanie.',tr:'Bittikten sonra e-postanı bağlarız, böylece PayWatch hemen taramaya başlayabilir.'}[lang])||"After finishing we'll connect your email so PayWatch can start scanning right away."}</p></div>}
       </>);}
 
       case 'bInv': return (<>

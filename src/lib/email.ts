@@ -48,25 +48,41 @@ const btn = (text: string, url: string) =>
 const zenBox = (text: string) =>
   `<div style="margin:20px 0;padding:20px;background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border-radius:16px;text-align:center"><p style="margin:0;font-size:14px;color:${C.navy};font-weight:600;line-height:1.5">${text}</p></div>`;
 
-const founderCard = (isNl: boolean) => card(`
-  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:${C.purple};text-transform:uppercase;letter-spacing:1px">${isNl ? 'ONS VERHAAL' : 'OUR STORY'}</p>
-  <p style="margin:12px 0;font-size:13px;color:${C.navy};line-height:1.6">${isNl
-    ? 'Paywatch is niet zomaar een app. Het is ontstaan uit onze eigen frustratie. Wij zijn <strong>Samba en Mariama</strong>, de oprichters.'
-    : "Paywatch isn't just an app. It was born out of our own frustration. We're <strong>Samba and Mariama</strong>, the founders."}</p>
-  <p style="margin:0;font-size:13px;color:${C.muted};line-height:1.6">${isNl
-    ? 'Zelfs toen we onze financien prima op orde hadden, overkwam het ons: een rekening die we simpelweg vergaten. Een brief die onderop de stapel belandde. De stress van een onverwachte aanmaning... we kennen dat gevoel maar al te goed.'
-    : "Even when we were financially okay, it happened to us: a bill we simply forgot. A letter that ended up at the bottom of the pile. The stress of an unexpected reminder... we know that feeling well."}</p>
+/* ===== LANGUAGE PICKER ===== */
+// Picks the right copy for an email language. Falls back to English for
+// unknown codes, and to English when a pl/tr string is not provided.
+function E(lang: string, o: { nl: string; en: string; pl?: string; tr?: string }): string {
+  if (lang === 'nl') return o.nl;
+  if (lang === 'pl') return o.pl ?? o.en;
+  if (lang === 'tr') return o.tr ?? o.en;
+  return o.en;
+}
+
+const founderCard = (lang: string) => card(`
+  <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:${C.purple};text-transform:uppercase;letter-spacing:1px">${E(lang, { nl: 'ONS VERHAAL', en: 'OUR STORY', pl: 'NASZA HISTORIA', tr: 'HİKAYEMİZ' })}</p>
+  <p style="margin:12px 0;font-size:13px;color:${C.navy};line-height:1.6">${E(lang, {
+    nl: 'Paywatch is niet zomaar een app. Het is ontstaan uit onze eigen frustratie. Wij zijn <strong>Samba en Mariama</strong>, de oprichters.',
+    en: "Paywatch isn't just an app. It was born out of our own frustration. We're <strong>Samba and Mariama</strong>, the founders.",
+    pl: 'Paywatch to nie tylko aplikacja. Powstała z naszej własnej frustracji. Jesteśmy <strong>Samba i Mariama</strong>, założyciele.',
+    tr: "Paywatch sadece bir uygulama değil. Kendi hayal kırıklığımızdan doğdu. Biz <strong>Samba ve Mariama</strong>, kurucularız.",
+  })}</p>
+  <p style="margin:0;font-size:13px;color:${C.muted};line-height:1.6">${E(lang, {
+    nl: 'Zelfs toen we onze financien prima op orde hadden, overkwam het ons: een rekening die we simpelweg vergaten. Een brief die onderop de stapel belandde. De stress van een onverwachte aanmaning... we kennen dat gevoel maar al te goed.',
+    en: "Even when we were financially okay, it happened to us: a bill we simply forgot. A letter that ended up at the bottom of the pile. The stress of an unexpected reminder... we know that feeling well.",
+    pl: 'Nawet kiedy nasze finanse były w porządku, przydarzyło się to i nam: rachunek, o którym po prostu zapomnieliśmy. List, który wylądował na dnie stosu. Stres niespodziewanego ponaglenia... znamy to uczucie aż za dobrze.',
+    tr: "Maddi durumumuz iyiyken bile bizim de başımıza geldi: kolayca unuttuğumuz bir fatura. Yığının en altında kalan bir mektup. Beklenmedik bir hatırlatmanın stresi... bu duyguyu çok iyi biliyoruz.",
+  })}</p>
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px"><tr>
     <td><div style="display:inline-block;width:32px;height:32px;border-radius:50%;background:${C.blue};color:white;text-align:center;line-height:32px;font-size:13px;font-weight:700;margin-right:-4px">S</div><div style="display:inline-block;width:32px;height:32px;border-radius:50%;background:${C.purple};color:white;text-align:center;line-height:32px;font-size:13px;font-weight:700">M</div></td>
-    <td style="padding-left:12px"><strong style="font-size:13px;color:${C.navy}">Samba & Mariama</strong><br><span style="font-size:11px;color:${C.muted}">${isNl ? 'Oprichters van Paywatch' : 'Founders of Paywatch'}</span></td>
+    <td style="padding-left:12px"><strong style="font-size:13px;color:${C.navy}">Samba & Mariama</strong><br><span style="font-size:11px;color:${C.muted}">${E(lang, { nl: 'Oprichters van Paywatch', en: 'Founders of Paywatch', pl: 'Założyciele Paywatch', tr: "Paywatch'in kurucuları" })}</span></td>
   </tr></table>
 `);
 
-const footerHtml = (isNl: boolean) => `
+const footerHtml = (lang: string) => `
   <tr><td style="padding:0 32px"><hr style="border:none;border-top:1px solid ${C.border};margin:0"></td></tr>
   <tr><td style="padding:24px 32px;text-align:center">
     <p style="margin:0;font-size:12px;font-weight:800;color:${C.navy}">PayWatch</p>
-    <p style="margin:8px 0 0;font-size:10px;color:${C.muted};line-height:1.5">${isNl ? 'Gebouwd in Nederland | GDPR/AVG compliant | SOC 2 Type II' : 'Built in the Netherlands | GDPR compliant | SOC 2 Type II'}<br>${isNl ? 'Je gegevens blijven van jou.' : 'Your data stays yours.'}</p>
+    <p style="margin:8px 0 0;font-size:10px;color:${C.muted};line-height:1.5">${E(lang, { nl: 'Gebouwd in Nederland | GDPR/AVG compliant | SOC 2 Type II', en: 'Built in the Netherlands | GDPR compliant | SOC 2 Type II', pl: 'Zbudowane w Holandii | Zgodne z RODO | SOC 2 Type II', tr: "Hollanda'da geliştirildi | GDPR uyumlu | SOC 2 Type II" })}<br>${E(lang, { nl: 'Je gegevens blijven van jou.', en: 'Your data stays yours.', pl: 'Twoje dane pozostają twoje.', tr: 'Verilerin sana ait kalır.' })}</p>
   </td></tr>`;
 
 function wrap(content: string, preheader: string = ''): string {
@@ -74,61 +90,70 @@ function wrap(content: string, preheader: string = ''): string {
 }
 
 /* ===== EMAIL 1: WELCOME ===== */
-export function buildWelcomeEmail(name: string, isNl: boolean): { subject: string; html: string } {
+export function buildWelcomeEmail(name: string, lang: string): { subject: string; html: string } {
   const firstName = name?.split(' ')[0] || '';
   return {
-    subject: isNl ? 'Je bent niet alleen (en wij snappen het)' : "You're not alone (and we totally get it)",
+    subject: E(lang, { nl: 'Je bent niet alleen (en wij snappen het)', en: "You're not alone (and we totally get it)", pl: 'Nie jesteś sam (i my to rozumiemy)', tr: 'Yalnız değilsin (ve bunu çok iyi anlıyoruz)' }),
     html: wrap(`
       <tr><td style="padding:32px 32px 0;text-align:center"><p style="margin:0;font-size:12px;font-weight:800;color:${C.navy}">PayWatch</p></td></tr>
-      <tr><td style="padding:24px 32px 0"><p style="margin:0;font-size:16px;color:${C.blue};font-weight:600">${isNl ? `Hoi ${firstName},` : `Hi ${firstName},`}</p></td></tr>
+      <tr><td style="padding:24px 32px 0"><p style="margin:0;font-size:16px;color:${C.blue};font-weight:600">${E(lang, { nl: `Hoi ${firstName},`, en: `Hi ${firstName},`, pl: `Cześć ${firstName},`, tr: `Merhaba ${firstName},` })}</p></td></tr>
       <tr><td style="padding:16px 32px;font-size:14px;color:${C.navy};line-height:1.7">
-        <p>${isNl
-          ? 'Welkom bij Paywatch. Het eerste wat we je willen zeggen is dit: <strong>adem in, adem uit. Je staat er niet meer alleen voor.</strong>'
-          : "Welcome to Paywatch. The first thing we want to tell you is this: <strong>breathe in, breathe out. You're not doing this alone anymore.</strong>"}</p>
-        ${founderCard(isNl)}
-        <p>${isNl
-          ? 'We merkten dat het systeem niet gemaakt is voor mensen die soms wat vergeten — voor mensen die gewoon <em>mens</em> zijn. Daarom zijn we Paywatch gestart.'
-          : "We realized the system isn't built for people who just happen to be human. That's why we started Paywatch."}</p>
-        <p>${isNl
-          ? 'We willen dat niemand zich meer onrustig hoeft te voelen bij het openen van de brievenbus of de inbox. Samen gaan we ervoor zorgen dat die rekeningen je niet meer overvallen.'
-          : "We want to make sure no one ever has to feel that pit in their stomach when opening the mailbox or their inbox again. Together, we'll make sure those bills don't sneak up on you anymore."}</p>
-        ${zenBox(isNl ? '<strong>Jij houdt de regie, wij houden de wacht.</strong>' : "<strong>You stay in control; we'll keep watch.</strong>")}
+        <p>${E(lang, {
+          nl: 'Welkom bij Paywatch. Het eerste wat we je willen zeggen is dit: <strong>adem in, adem uit. Je staat er niet meer alleen voor.</strong>',
+          en: "Welcome to Paywatch. The first thing we want to tell you is this: <strong>breathe in, breathe out. You're not doing this alone anymore.</strong>",
+          pl: 'Witaj w Paywatch. Pierwsza rzecz, którą chcemy ci powiedzieć, to: <strong>weź wdech, weź wydech. Nie jesteś już w tym sam.</strong>',
+          tr: "Paywatch'e hoş geldin. Sana söylemek istediğimiz ilk şey şu: <strong>nefes al, nefes ver. Artık bunda yalnız değilsin.</strong>",
+        })}</p>
+        ${founderCard(lang)}
+        <p>${E(lang, {
+          nl: 'We merkten dat het systeem niet gemaakt is voor mensen die soms wat vergeten — voor mensen die gewoon <em>mens</em> zijn. Daarom zijn we Paywatch gestart.',
+          en: "We realized the system isn't built for people who just happen to be human. That's why we started Paywatch.",
+          pl: 'Zauważyliśmy, że system nie jest stworzony dla ludzi, którzy czasem o czymś zapominają — dla ludzi, którzy są po prostu <em>ludźmi</em>. Dlatego stworzyliśmy Paywatch.',
+          tr: "Sistemin, bazen bir şeyleri unutan insanlar için — sadece <em>insan</em> olan insanlar için yapılmadığını fark ettik. Bu yüzden Paywatch'i kurduk.",
+        })}</p>
+        <p>${E(lang, {
+          nl: 'We willen dat niemand zich meer onrustig hoeft te voelen bij het openen van de brievenbus of de inbox. Samen gaan we ervoor zorgen dat die rekeningen je niet meer overvallen.',
+          en: "We want to make sure no one ever has to feel that pit in their stomach when opening the mailbox or their inbox again. Together, we'll make sure those bills don't sneak up on you anymore.",
+          pl: 'Chcemy, żeby nikt już nie musiał czuć niepokoju przy otwieraniu skrzynki pocztowej czy poczty e-mail. Razem zadbamy o to, żeby te rachunki już cię nie zaskakiwały.',
+          tr: 'Hiç kimsenin posta kutusunu ya da gelen kutusunu açarken o huzursuzluğu yaşamasını istemiyoruz. Birlikte, o faturaların seni bir daha gafil avlamamasını sağlayacağız.',
+        })}</p>
+        ${zenBox(E(lang, { nl: '<strong>Jij houdt de regie, wij houden de wacht.</strong>', en: "<strong>You stay in control; we'll keep watch.</strong>", pl: '<strong>Ty masz kontrolę, my czuwamy.</strong>', tr: '<strong>Kontrol sende, nöbeti biz tutarız.</strong>' }))}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Start je eerste scan' : 'Start your first scan', 'https://app.paywatch.app/overzicht')}</td></tr>
-      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Welkom bij de familie,' : 'Welcome to the family,'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
-      ${footerHtml(isNl)}
-    `, isNl ? 'Adem in, adem uit. Je staat er niet meer alleen voor.' : "Breathe in, breathe out. You're not doing this alone anymore.")
+      <tr><td style="padding:0 32px 8px">${btn(E(lang, { nl: 'Start je eerste scan', en: 'Start your first scan', pl: 'Rozpocznij pierwsze skanowanie', tr: 'İlk taramanı başlat' }), 'https://app.paywatch.app/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${E(lang, { nl: 'Welkom bij de familie,', en: 'Welcome to the family,', pl: 'Witaj w rodzinie,', tr: 'Aileye hoş geldin,' })}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
+      ${footerHtml(lang)}
+    `, E(lang, { nl: 'Adem in, adem uit. Je staat er niet meer alleen voor.', en: "Breathe in, breathe out. You're not doing this alone anymore.", pl: 'Weź wdech, weź wydech. Nie jesteś już w tym sam.', tr: 'Nefes al, nefes ver. Artık bunda yalnız değilsin.' }))
   };
 }
 
 /* ===== EMAIL 2: FEATURES (Day 2) ===== */
-export function buildFeaturesEmail(name: string, isNl: boolean): { subject: string; html: string } {
+export function buildFeaturesEmail(name: string, lang: string): { subject: string; html: string } {
   const firstName = name?.split(' ')[0] || '';
   return {
-    subject: isNl ? 'Rust in je hoofd: zo werkt Paywatch' : 'Peace of mind: how Paywatch works for you',
+    subject: E(lang, { nl: 'Rust in je hoofd: zo werkt Paywatch', en: 'Peace of mind: how Paywatch works for you', pl: 'Spokój w głowie: tak działa Paywatch', tr: 'Kafan rahat olsun: Paywatch nasıl çalışır' }),
     html: wrap(`
       <tr><td style="padding:0"><div style="background:linear-gradient(135deg,#EFF6FF,#F0FDF4);padding:40px 32px;text-align:center">
         <p style="margin:0;font-size:12px;font-weight:800;color:${C.navy}">PayWatch</p>
-        <p style="margin:16px 0 0;font-size:24px;font-weight:800;color:${C.navy};font-style:italic">${isNl ? 'Rust in je hoofd' : 'Peace of mind'}</p>
+        <p style="margin:16px 0 0;font-size:24px;font-weight:800;color:${C.navy};font-style:italic">${E(lang, { nl: 'Rust in je hoofd', en: 'Peace of mind', pl: 'Spokój w głowie', tr: 'Kafan rahat' })}</p>
       </div></td></tr>
-      <tr><td style="padding:24px 32px 0"><p style="margin:0;font-size:16px;color:${C.blue};font-weight:600">${isNl ? `Hoi ${firstName},` : `Hi ${firstName},`}</p></td></tr>
+      <tr><td style="padding:24px 32px 0"><p style="margin:0;font-size:16px;color:${C.blue};font-weight:600">${E(lang, { nl: `Hoi ${firstName},`, en: `Hi ${firstName},`, pl: `Cześć ${firstName},`, tr: `Merhaba ${firstName},` })}</p></td></tr>
       <tr><td style="padding:16px 32px;font-size:14px;color:${C.navy};line-height:1.7">
-        <p>${isNl ? 'Twee dagen geleden zeiden we het al: we gaan dit samen doen. Vandaag laten we je zien hoe Paywatch jouw digitale bodyguard wordt.' : "Two days ago, we promised we'd do this together. Today, we want to show you exactly how Paywatch becomes your digital bodyguard."}</p>
-        <p style="font-size:18px;font-weight:800;color:${C.navy};margin:20px 0 8px">${isNl ? 'Wat kun je verwachten?' : "What's in it for you?"}</p>
-        ${featureCard('#EFF6FF', isNl ? 'Geen verrassingen meer' : 'No more surprises', isNl ? 'Upload je rekening en wij vertellen je precies in welke fase je zit — van factuur tot deurwaarder. Altijd het volledige overzicht.' : "Upload your bill, and we'll tell you exactly what stage it's in — from a simple invoice to a bailiff notice.")}
-        ${featureCard('#F0FDF4', isNl ? 'Lokale hulp binnen handbereik' : 'Local help at your fingertips', isNl ? 'Woon je bijvoorbeeld in Rotterdam? Wij koppelen je direct aan organisaties zoals Nieuw Vaarwater of je lokale kredietbank als het even te veel wordt.' : "Living in Rotterdam? We'll link you directly to organizations like Nieuw Vaarwater or your local credit bank if things get overwhelming.")}
-        ${featureCard('#FDF4FF', isNl ? 'Slimme matching' : 'Smart matching', isNl ? 'Wij herkennen of die nieuwe aanmaning bij die oude factuur hoort, zodat jij altijd het overzicht houdt. Geen gedoe meer met losse papieren.' : 'We recognize if that new reminder belongs to an old invoice, so you always have the full picture.')}
-        ${zenBox(isNl ? 'Het doel? Dat jij je weer kunt focussen op wat echt belangrijk is, zonder die constante "cloud" van onbetaalde rekeningen boven je hoofd.' : 'The goal? To let you focus on what truly matters, without that constant "cloud" of unpaid bills hanging over your head.')}
+        <p>${E(lang, { nl: 'Twee dagen geleden zeiden we het al: we gaan dit samen doen. Vandaag laten we je zien hoe Paywatch jouw digitale bodyguard wordt.', en: "Two days ago, we promised we'd do this together. Today, we want to show you exactly how Paywatch becomes your digital bodyguard.", pl: 'Dwa dni temu obiecaliśmy: zrobimy to razem. Dziś pokażemy ci, jak Paywatch staje się twoim cyfrowym ochroniarzem.', tr: 'İki gün önce söz vermiştik: bunu birlikte yapacağız. Bugün, Paywatch\'in dijital korumana nasıl dönüştüğünü göstereceğiz.' })}</p>
+        <p style="font-size:18px;font-weight:800;color:${C.navy};margin:20px 0 8px">${E(lang, { nl: 'Wat kun je verwachten?', en: "What's in it for you?", pl: 'Czego możesz się spodziewać?', tr: 'Seni neler bekliyor?' })}</p>
+        ${featureCard('#EFF6FF', E(lang, { nl: 'Geen verrassingen meer', en: 'No more surprises', pl: 'Koniec z niespodziankami', tr: 'Artık sürpriz yok' }), E(lang, { nl: 'Upload je rekening en wij vertellen je precies in welke fase je zit — van factuur tot deurwaarder. Altijd het volledige overzicht.', en: "Upload your bill, and we'll tell you exactly what stage it's in — from a simple invoice to a bailiff notice.", pl: 'Prześlij rachunek, a powiemy ci dokładnie, na jakim etapie jesteś — od faktury po komornika. Zawsze pełny obraz.', tr: 'Faturanı yükle, sana tam olarak hangi aşamada olduğunu söyleyelim — faturadan icra memuruna kadar. Her zaman tam görünüm.' }))}
+        ${featureCard('#F0FDF4', E(lang, { nl: 'Lokale hulp binnen handbereik', en: 'Local help at your fingertips', pl: 'Lokalna pomoc w zasięgu ręki', tr: 'Yerel yardım parmaklarının ucunda' }), E(lang, { nl: 'Woon je bijvoorbeeld in Rotterdam? Wij koppelen je direct aan organisaties zoals Nieuw Vaarwater of je lokale kredietbank als het even te veel wordt.', en: "Living in Rotterdam? We'll link you directly to organizations like Nieuw Vaarwater or your local credit bank if things get overwhelming.", pl: 'Mieszkasz na przykład w Rotterdamie? Jeśli zrobi się zbyt ciężko, połączymy cię bezpośrednio z organizacjami jak Nieuw Vaarwater lub twoim lokalnym bankiem kredytowym.', tr: 'Örneğin Rotterdam\'da mı yaşıyorsun? İşler zorlaşırsa seni doğrudan Nieuw Vaarwater gibi kuruluşlara ya da yerel kredi bankana bağlarız.' }))}
+        ${featureCard('#FDF4FF', E(lang, { nl: 'Slimme matching', en: 'Smart matching', pl: 'Inteligentne dopasowanie', tr: 'Akıllı eşleştirme' }), E(lang, { nl: 'Wij herkennen of die nieuwe aanmaning bij die oude factuur hoort, zodat jij altijd het overzicht houdt. Geen gedoe meer met losse papieren.', en: 'We recognize if that new reminder belongs to an old invoice, so you always have the full picture.', pl: 'Rozpoznajemy, czy nowe ponaglenie należy do starej faktury, żebyś zawsze miał pełny obraz. Koniec z bałaganem luźnych papierów.', tr: 'Yeni gelen hatırlatmanın eski bir faturaya ait olup olmadığını tanırız, böylece her zaman tam görünüme sahip olursun. Dağınık kâğıtlarla uğraşmak yok.' }))}
+        ${zenBox(E(lang, { nl: 'Het doel? Dat jij je weer kunt focussen op wat echt belangrijk is, zonder die constante "cloud" van onbetaalde rekeningen boven je hoofd.', en: 'The goal? To let you focus on what truly matters, without that constant "cloud" of unpaid bills hanging over your head.', pl: 'Cel? Żebyś znów mógł skupić się na tym, co naprawdę ważne, bez tej ciągłej "chmury" nieopłaconych rachunków nad głową.', tr: 'Amaç? Başının üstünde sürekli duran o ödenmemiş faturalar "bulutu" olmadan, gerçekten önemli olana yeniden odaklanabilmen.' }))}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Open de App' : 'Open the App', 'https://app.paywatch.app/overzicht')}</td></tr>
-      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Geniet van je dag,' : 'Have a great day,'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
-      ${footerHtml(isNl)}
-    `, isNl ? 'Rust in je hoofd begint hier.' : 'Peace of mind starts here.')
+      <tr><td style="padding:0 32px 8px">${btn(E(lang, { nl: 'Open de App', en: 'Open the App', pl: 'Otwórz aplikację', tr: 'Uygulamayı aç' }), 'https://app.paywatch.app/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${E(lang, { nl: 'Geniet van je dag,', en: 'Have a great day,', pl: 'Miłego dnia,', tr: 'İyi günler,' })}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
+      ${footerHtml(lang)}
+    `, E(lang, { nl: 'Rust in je hoofd begint hier.', en: 'Peace of mind starts here.', pl: 'Spokój w głowie zaczyna się tutaj.', tr: 'Kafa rahatlığı burada başlar.' }))
   };
 }
 
 /* ===== EMAIL 3: WEEKLY DIGEST ===== */
-export function buildDigestEmail(name: string, isNl: boolean, stats: {
+export function buildDigestEmail(name: string, lang: string, stats: {
   outstanding: number; overdue: number; paid_this_week: number; streak: number;
   total_outstanding_cents: number; next_due_vendor: string | null; next_due_date: string | null;
 }, userId?: string): { subject: string; html: string } {
@@ -139,34 +164,39 @@ export function buildDigestEmail(name: string, isNl: boolean, stats: {
   let unsubscribeHtml = '';
   if (userId) {
     try {
-      const url = generateUnsubscribeUrl(userId, isNl ? 'nl' : 'en');
-      unsubscribeHtml = `<tr><td style="padding:0 32px 24px;text-align:center"><p style="margin:0;font-size:11px;color:#94A3B8">${isNl ? 'Je ontvangt deze e-mail omdat je een PayWatch account hebt.' : "You're receiving this email because you have a PayWatch account."}<br><a href="${url}" style="color:#94A3B8;text-decoration:underline">${isNl ? 'Uitschrijven voor wekelijkse e-mails' : 'Unsubscribe from weekly emails'}</a></p></td></tr>`;
+      const url = generateUnsubscribeUrl(userId, lang);
+      unsubscribeHtml = `<tr><td style="padding:0 32px 24px;text-align:center"><p style="margin:0;font-size:11px;color:#94A3B8">${E(lang, { nl: 'Je ontvangt deze e-mail omdat je een PayWatch account hebt.', en: "You're receiving this email because you have a PayWatch account.", pl: 'Otrzymujesz tę wiadomość, ponieważ masz konto PayWatch.', tr: "Bu e-postayı bir PayWatch hesabın olduğu için alıyorsun." })}<br><a href="${url}" style="color:#94A3B8;text-decoration:underline">${E(lang, { nl: 'Uitschrijven voor wekelijkse e-mails', en: 'Unsubscribe from weekly emails', pl: 'Wypisz się z cotygodniowych e-maili', tr: 'Haftalık e-postalardan çık' })}</a></p></td></tr>`;
     } catch {
       // If token generation fails, skip unsubscribe link silently
     }
   }
 
   return {
-    subject: isNl ? 'Jouw Paywatch Check-in: Lekker bezig!' : "Your Paywatch Check-in: You've got this!",
+    subject: E(lang, { nl: 'Jouw Paywatch Check-in: Lekker bezig!', en: "Your Paywatch Check-in: You've got this!", pl: 'Twoje podsumowanie Paywatch: Dobra robota!', tr: 'Paywatch özetin: Harika gidiyorsun!' }),
     html: wrap(`
       <tr><td style="padding:32px 32px 0;text-align:center"><p style="margin:0;font-size:12px;font-weight:800;color:${C.navy}">PayWatch</p></td></tr>
-      <tr><td style="padding:20px 32px 0"><p style="margin:0;font-size:20px;font-weight:800;color:${C.navy}">${isNl ? `Hoi ${firstName}` : `Hey ${firstName}`}</p><p style="margin:6px 0 0;font-size:14px;color:${C.muted}">${isNl ? 'Tijd voor je wekelijkse momentje van rust. Even een korte blik op hoe je ervoor staat.' : "Time for your weekly moment of calm. Just a quick look at where things stand."}</p></td></tr>
+      <tr><td style="padding:20px 32px 0"><p style="margin:0;font-size:20px;font-weight:800;color:${C.navy}">${E(lang, { nl: `Hoi ${firstName}`, en: `Hey ${firstName}`, pl: `Cześć ${firstName}`, tr: `Merhaba ${firstName}` })}</p><p style="margin:6px 0 0;font-size:14px;color:${C.muted}">${E(lang, { nl: 'Tijd voor je wekelijkse momentje van rust. Even een korte blik op hoe je ervoor staat.', en: "Time for your weekly moment of calm. Just a quick look at where things stand.", pl: 'Czas na twoją cotygodniową chwilę spokoju. Krótkie spojrzenie na to, jak stoisz.', tr: 'Haftalık sakinlik anının zamanı. Durumuna kısaca bir göz atalım.' })}</p></td></tr>
       <tr><td style="padding:16px 32px;font-size:14px;color:${C.navy};line-height:1.7">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-          <tr>${statCard(isNl ? 'Openstaand' : 'Outstanding', String(stats?.outstanding || 0), C.navy)}${statCard(isNl ? 'Achterstallig' : 'Overdue', String(stats?.overdue || 0), (stats?.overdue || 0) > 0 ? C.red : C.green)}</tr>
-          <tr>${statCard(isNl ? 'Betaald deze week' : 'Paid this week', String(stats?.paid_this_week || 0), C.green)}${statCard('Streak', String(stats?.streak || 0), C.blue)}</tr>
-          <tr>${statCard(isNl ? 'Totaal openstaand' : 'Total outstanding', total, C.navy)}${statCard(isNl ? 'Volgende' : 'Next due', stats?.next_due_vendor || '—', C.purple)}</tr>
+          <tr>${statCard(E(lang, { nl: 'Openstaand', en: 'Outstanding', pl: 'Otwarte', tr: 'Açık' }), String(stats?.outstanding || 0), C.navy)}${statCard(E(lang, { nl: 'Achterstallig', en: 'Overdue', pl: 'Zaległe', tr: 'Gecikmiş' }), String(stats?.overdue || 0), (stats?.overdue || 0) > 0 ? C.red : C.green)}</tr>
+          <tr>${statCard(E(lang, { nl: 'Betaald deze week', en: 'Paid this week', pl: 'Zapłacone w tym tygodniu', tr: 'Bu hafta ödenen' }), String(stats?.paid_this_week || 0), C.green)}${statCard('Streak', String(stats?.streak || 0), C.blue)}</tr>
+          <tr>${statCard(E(lang, { nl: 'Totaal openstaand', en: 'Total outstanding', pl: 'Łącznie otwarte', tr: 'Toplam açık' }), total, C.navy)}${statCard(E(lang, { nl: 'Volgende', en: 'Next due', pl: 'Następne', tr: 'Sıradaki' }), stats?.next_due_vendor || '—', C.purple)}</tr>
         </table>
         ${(stats?.overdue || 0) > 0
-          ? card(`<p style="margin:0;font-size:13px;color:${C.red};font-weight:600">${isNl ? `Je hebt ${stats.overdue} achterstallige rekening${stats.overdue > 1 ? 'en' : ''}. Open de app om actie te nemen.` : `You have ${stats.overdue} overdue bill${stats.overdue > 1 ? 's' : ''}. Open the app to take action.`}</p>`, C.red + '30')
-          : card(`<p style="margin:0;font-size:13px;color:${C.green};font-weight:600">${isNl ? 'Geen achterstallige rekeningen. Goed bezig!' : 'No overdue bills. Great job!'}</p>`, C.green + '30')}
-        ${card(`<p style="margin:0 0 6px;font-size:11px;font-weight:600;color:${C.blue};text-transform:uppercase;letter-spacing:1px">${isNl ? 'WIST JE DAT?' : 'DID YOU KNOW?'}</p><p style="margin:0;font-size:13px;color:${C.navy};line-height:1.6">${isNl ? "In Nederland heb je vaak recht op een '14-dagen brief' voordat er incassokosten in rekening mogen worden gebracht. Heb je er een ontvangen? Upload hem direct, dan checken wij of de kosten wel kloppen!" : 'In the Netherlands, you are usually entitled to a "14-day letter" before any collection fees can be charged. Did you receive one? Upload it immediately, and we\'ll check if the fees are legally correct!'}</p>`)}
-        ${zenBox(`<em>"${isNl ? 'Geld is een hulpmiddel, geen meester.' : 'Money is a tool, not a master.'}"</em><br><span style="font-size:12px;color:${C.muted}">${isNl ? 'Neem vandaag 5 minuten voor jezelf. Je hebt je zaken onder controle.' : 'Take 5 minutes for yourself today. You are in control.'}</span>`)}
+          ? card(`<p style="margin:0;font-size:13px;color:${C.red};font-weight:600">${E(lang, {
+              nl: `Je hebt ${stats.overdue} achterstallige rekening${stats.overdue > 1 ? 'en' : ''}. Open de app om actie te nemen.`,
+              en: `You have ${stats.overdue} overdue bill${stats.overdue > 1 ? 's' : ''}. Open the app to take action.`,
+              pl: `Liczba zaległych rachunków: ${stats.overdue}. Otwórz aplikację, aby podjąć działanie.`,
+              tr: `${stats.overdue} gecikmiş faturan var. İşlem yapmak için uygulamayı aç.`,
+            })}</p>`, C.red + '30')
+          : card(`<p style="margin:0;font-size:13px;color:${C.green};font-weight:600">${E(lang, { nl: 'Geen achterstallige rekeningen. Goed bezig!', en: 'No overdue bills. Great job!', pl: 'Brak zaległych rachunków. Świetna robota!', tr: 'Gecikmiş fatura yok. Aferin!' })}</p>`, C.green + '30')}
+        ${card(`<p style="margin:0 0 6px;font-size:11px;font-weight:600;color:${C.blue};text-transform:uppercase;letter-spacing:1px">${E(lang, { nl: 'WIST JE DAT?', en: 'DID YOU KNOW?', pl: 'CZY WIESZ, ŻE?', tr: 'BİLİYOR MUYDUN?' })}</p><p style="margin:0;font-size:13px;color:${C.navy};line-height:1.6">${E(lang, { nl: "In Nederland heb je vaak recht op een '14-dagen brief' voordat er incassokosten in rekening mogen worden gebracht. Heb je er een ontvangen? Upload hem direct, dan checken wij of de kosten wel kloppen!", en: 'In the Netherlands, you are usually entitled to a "14-day letter" before any collection fees can be charged. Did you receive one? Upload it immediately, and we\'ll check if the fees are legally correct!', pl: 'W Holandii zwykle przysługuje ci "list 14-dniowy" (14-dagen brief), zanim mogą zostać naliczone koszty windykacji. Dostałeś taki? Prześlij go od razu, a sprawdzimy, czy koszty się zgadzają!', tr: "Hollanda'da, herhangi bir tahsilat masrafı eklenebilmeden önce genellikle bir '14 günlük mektup' (14-dagen brief) hakkın vardır. Böyle bir mektup aldın mı? Hemen yükle, masrafların doğru olup olmadığını kontrol edelim!" })}</p>`)}
+        ${zenBox(`<em>"${E(lang, { nl: 'Geld is een hulpmiddel, geen meester.', en: 'Money is a tool, not a master.', pl: 'Pieniądze są narzędziem, nie panem.', tr: 'Para bir araçtır, efendi değil.' })}"</em><br><span style="font-size:12px;color:${C.muted}">${E(lang, { nl: 'Neem vandaag 5 minuten voor jezelf. Je hebt je zaken onder controle.', en: 'Take 5 minutes for yourself today. You are in control.', pl: 'Poświęć dziś 5 minut dla siebie. Masz swoje sprawy pod kontrolą.', tr: 'Bugün kendine 5 dakika ayır. İşlerin kontrolü sende.' })}</span>`)}
       </td></tr>
-      <tr><td style="padding:0 32px 8px">${btn(isNl ? 'Bekijk je overzicht' : 'View your overview', 'https://app.paywatch.app/overzicht')}</td></tr>
-      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${isNl ? 'Tot volgende week!' : 'See you next week!'}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
-      ${footerHtml(isNl)}
+      <tr><td style="padding:0 32px 8px">${btn(E(lang, { nl: 'Bekijk je overzicht', en: 'View your overview', pl: 'Zobacz swoje podsumowanie', tr: 'Genel görünümünü gör' }), 'https://app.paywatch.app/overzicht')}</td></tr>
+      <tr><td style="padding:0 32px 32px;text-align:center"><p style="margin:0;font-size:13px;color:${C.muted}">${E(lang, { nl: 'Tot volgende week!', en: 'See you next week!', pl: 'Do zobaczenia w przyszłym tygodniu!', tr: 'Gelecek hafta görüşürüz!' })}<br><strong style="color:${C.navy}">Samba & Mariama</strong></p></td></tr>
+      ${footerHtml(lang)}
       ${unsubscribeHtml}
-    `, isNl ? 'Je wekelijkse overzicht staat klaar.' : 'Your weekly overview is ready.')
+    `, E(lang, { nl: 'Je wekelijkse overzicht staat klaar.', en: 'Your weekly overview is ready.', pl: 'Twoje cotygodniowe podsumowanie jest gotowe.', tr: 'Haftalık genel görünümün hazır.' }))
   };
 }

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     const { email, name, language, stats, userId: uid } = await req.json();
     if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
-    const { subject, html } = buildDigestEmail(name || '', language !== 'en', stats || {}, uid);
+    const { subject, html } = buildDigestEmail(name || '', language || 'nl', stats || {}, uid);
     return NextResponse.json(await sendEmail({ to: email, subject, html }));
   } catch (err) {
     console.error('Digest email error:', err);

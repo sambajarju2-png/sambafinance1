@@ -10,7 +10,7 @@ import { createHmac } from "crypto";
 
 export function generateUnsubscribeUrl(
   userId: string,
-  lang: "nl" | "en" = "nl"
+  lang: string = "nl"
 ): string {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");

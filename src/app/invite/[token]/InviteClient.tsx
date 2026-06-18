@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -18,12 +18,153 @@ interface Props {
   introText: string | null;
   prefillEmail: string;
   isAlreadyActivated: boolean;
+  inviteLang: string;
 }
 
+// The user was invited in this language: the page renders in it and we set the
+// paywatch-locale cookie so signup + onboarding continue in the same language.
+const SUPPORTED = ["nl", "en", "pl", "tr"];
+
+const T: Record<string, {
+  title: string;
+  activatedTitle: string;
+  activatedBody: string;
+  login: string;
+  intro: (org: string) => string;
+  newAccount: string;
+  haveAccount: string;
+  emailLabel: string;
+  pwLabelSignup: string;
+  pwLabelLogin: string;
+  pwPhSignup: string;
+  pwPhLogin: string;
+  submitSignup: string;
+  submitLogin: string;
+  loading: string;
+  terms: string;
+  errExists: string;
+  errLogin: string;
+  errGeneric: string;
+  confirmTitle: string;
+  confirmL: string;
+  confirmR: string;
+  confirmSpam: string;
+}> = {
+  nl: {
+    title: "Je bent uitgenodigd",
+    activatedTitle: "Al geactiveerd",
+    activatedBody: "Deze uitnodiging is al gebruikt.",
+    login: "Inloggen",
+    intro: (org) => `${org} heeft je uitgenodigd om PayWatch te gebruiken. Met PayWatch houd je overzicht over je rekeningen en betalingen.`,
+    newAccount: "Nieuw account",
+    haveAccount: "Al een account",
+    emailLabel: "E-mailadres",
+    pwLabelSignup: "Kies een wachtwoord",
+    pwLabelLogin: "Wachtwoord",
+    pwPhSignup: "Minimaal 6 tekens",
+    pwPhLogin: "Je wachtwoord",
+    submitSignup: "Account aanmaken",
+    submitLogin: "Inloggen en koppelen",
+    loading: "Even geduld...",
+    terms: "Door je aan te melden ga je akkoord met de voorwaarden van PayWatch.",
+    errExists: "Dit e-mailadres heeft al een account. Log hieronder in.",
+    errLogin: "Onjuist e-mailadres of wachtwoord.",
+    errGeneric: "Er ging iets mis",
+    confirmTitle: "Bevestig je e-mail",
+    confirmL: "We hebben een bevestigingsmail gestuurd naar ",
+    confirmR: ". Klik op de link in de mail om je account te activeren en verder te gaan.",
+    confirmSpam: "Geen mail ontvangen? Controleer ook je spammap.",
+  },
+  en: {
+    title: "You've been invited",
+    activatedTitle: "Already activated",
+    activatedBody: "This invitation has already been used.",
+    login: "Log in",
+    intro: (org) => `${org} has invited you to use PayWatch. With PayWatch you keep track of your bills and payments.`,
+    newAccount: "New account",
+    haveAccount: "I have an account",
+    emailLabel: "Email address",
+    pwLabelSignup: "Choose a password",
+    pwLabelLogin: "Password",
+    pwPhSignup: "At least 6 characters",
+    pwPhLogin: "Your password",
+    submitSignup: "Create account",
+    submitLogin: "Log in and connect",
+    loading: "Please wait...",
+    terms: "By signing up you agree to the PayWatch terms.",
+    errExists: "This email already has an account. Log in below.",
+    errLogin: "Incorrect email or password.",
+    errGeneric: "Something went wrong",
+    confirmTitle: "Confirm your email",
+    confirmL: "We've sent a confirmation email to ",
+    confirmR: ". Click the link in the email to activate your account and continue.",
+    confirmSpam: "Didn't get the email? Check your spam folder too.",
+  },
+  pl: {
+    title: "Masz zaproszenie",
+    activatedTitle: "Już aktywowane",
+    activatedBody: "To zaproszenie zostało już wykorzystane.",
+    login: "Zaloguj się",
+    intro: (org) => `${org} zaprasza Cię do korzystania z PayWatch. Dzięki PayWatch masz pełen przegląd swoich rachunków i płatności.`,
+    newAccount: "Nowe konto",
+    haveAccount: "Mam już konto",
+    emailLabel: "Adres e-mail",
+    pwLabelSignup: "Wybierz hasło",
+    pwLabelLogin: "Hasło",
+    pwPhSignup: "Minimum 6 znaków",
+    pwPhLogin: "Twoje hasło",
+    submitSignup: "Załóż konto",
+    submitLogin: "Zaloguj i połącz",
+    loading: "Chwila cierpliwości...",
+    terms: "Rejestrując się, akceptujesz warunki PayWatch.",
+    errExists: "Ten adres e-mail ma już konto. Zaloguj się poniżej.",
+    errLogin: "Nieprawidłowy e-mail lub hasło.",
+    errGeneric: "Coś poszło nie tak",
+    confirmTitle: "Potwierdź swój e-mail",
+    confirmL: "Wysłaliśmy e-mail z potwierdzeniem na adres ",
+    confirmR: ". Kliknij link w e-mailu, aby aktywować konto i kontynuować.",
+    confirmSpam: "Nie dotarł e-mail? Sprawdź też folder ze spamem.",
+  },
+  tr: {
+    title: "Davet edildin",
+    activatedTitle: "Zaten etkinleştirildi",
+    activatedBody: "Bu davet zaten kullanıldı.",
+    login: "Giriş yap",
+    intro: (org) => `${org} seni PayWatch'i kullanmaya davet etti. PayWatch ile faturalarını ve ödemelerini kolayca takip edersin.`,
+    newAccount: "Yeni hesap",
+    haveAccount: "Zaten hesabım var",
+    emailLabel: "E-posta adresi",
+    pwLabelSignup: "Bir şifre seç",
+    pwLabelLogin: "Şifre",
+    pwPhSignup: "En az 6 karakter",
+    pwPhLogin: "Şifren",
+    submitSignup: "Hesap oluştur",
+    submitLogin: "Giriş yap ve bağlan",
+    loading: "Lütfen bekle...",
+    terms: "Kaydolarak PayWatch koşullarını kabul edersin.",
+    errExists: "Bu e-posta adresinin zaten bir hesabı var. Aşağıdan giriş yap.",
+    errLogin: "E-posta veya şifre hatalı.",
+    errGeneric: "Bir şeyler ters gitti",
+    confirmTitle: "E-postanı onayla",
+    confirmL: "Onay e-postasını şu adrese gönderdik: ",
+    confirmR: ". Hesabını etkinleştirip devam etmek için e-postadaki bağlantıya tıkla.",
+    confirmSpam: "E-posta gelmedi mi? Spam klasörünü de kontrol et.",
+  },
+};
+
 export default function InviteClient({
-  token, inviteId, orgName, orgColor, orgLogo, introText, prefillEmail, isAlreadyActivated,
+  token, inviteId, orgName, orgColor, orgLogo, introText, prefillEmail, isAlreadyActivated, inviteLang,
 }: Props) {
   const router = useRouter();
+  const lang = SUPPORTED.includes(inviteLang) ? inviteLang : "nl";
+  const t = T[lang];
+
+  // Carry the invite language forward: set the locale cookie so the app + the
+  // onboarding wizard start in the same language the user was invited in.
+  useEffect(() => {
+    document.cookie = `paywatch-locale=${lang};path=/;max-age=31536000;samesite=lax`;
+  }, [lang]);
+
   // Default to login — most invitees will either have an account or should confirm email
   const [mode, setMode] = useState<"signup" | "login">("login");
   const [email, setEmail] = useState(prefillEmail);
@@ -34,15 +175,15 @@ export default function InviteClient({
 
   if (isAlreadyActivated) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
         <div style={{ textAlign: "center", padding: "20px 0" }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Al geactiveerd</h2>
-          <p style={{ fontSize: 14, color: "#64748B", margin: "0 0 16px" }}>Deze uitnodiging is al gebruikt.</p>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>{t.activatedTitle}</h2>
+          <p style={{ fontSize: 14, color: "#64748B", margin: "0 0 16px" }}>{t.activatedBody}</p>
           <a href="/auth/login" style={{ display: "inline-block", padding: "10px 20px", background: orgColor, color: "#FFFFFF", borderRadius: 4, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
-            Inloggen
+            {t.login}
           </a>
         </div>
       </Shell>
@@ -73,7 +214,7 @@ export default function InviteClient({
           ) {
             // Switch to login silently
             setMode("login");
-            setError("Dit e-mailadres heeft al een account. Log hieronder in.");
+            setError(t.errExists);
             setLoading(false);
             return;
           }
@@ -91,7 +232,7 @@ export default function InviteClient({
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
         if (loginError) {
-          setError("Onjuist e-mailadres of wachtwoord.");
+          setError(t.errLogin);
           setLoading(false);
           return;
         }
@@ -112,7 +253,7 @@ export default function InviteClient({
       // Redirect to onboarding or dashboard
       router.push("/onboarding");
     } catch (err: any) {
-      setError(err.message || "Er ging iets mis");
+      setError(err.message || t.errGeneric);
     }
     setLoading(false);
   }
@@ -120,20 +261,19 @@ export default function InviteClient({
   // Show email confirmation screen after successful signup
   if (emailConfirmationSent) {
     return (
-      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo}>
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
         <div style={{ textAlign: "center", padding: "8px 0" }}>
           <div style={{ width: 52, height: 52, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
             </svg>
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Bevestig je e-mail</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>{t.confirmTitle}</h2>
           <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>
-            We hebben een bevestigingsmail gestuurd naar <strong>{email}</strong>.
-            Klik op de link in de mail om je account te activeren en verder te gaan.
+            {t.confirmL}<strong>{email}</strong>{t.confirmR}
           </p>
           <p style={{ fontSize: 12, color: "#94A3B8" }}>
-            Geen mail ontvangen? Controleer ook je spammap.
+            {t.confirmSpam}
           </p>
         </div>
       </Shell>
@@ -141,14 +281,14 @@ export default function InviteClient({
   }
 
   return (
-    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo}>
+    <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={t.title}>
       {introText && (
         <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>{introText}</p>
       )}
 
       {!introText && (
         <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 20px" }}>
-          {orgName} heeft je uitgenodigd om PayWatch te gebruiken. Met PayWatch houd je overzicht over je rekeningen en betalingen.
+          {t.intro(orgName)}
         </p>
       )}
 
@@ -163,7 +303,7 @@ export default function InviteClient({
             color: mode === "signup" ? "#FFFFFF" : "#64748B",
           }}
         >
-          Nieuw account
+          {t.newAccount}
         </button>
         <button
           type="button"
@@ -174,13 +314,13 @@ export default function InviteClient({
             color: mode === "login" ? "#FFFFFF" : "#64748B",
           }}
         >
-          Al een account
+          {t.haveAccount}
         </button>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#64748B", marginBottom: 4 }}>E-mailadres</label>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#64748B", marginBottom: 4 }}>{t.emailLabel}</label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             required autoFocus={!prefillEmail}
@@ -194,12 +334,12 @@ export default function InviteClient({
 
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#64748B", marginBottom: 4 }}>
-            {mode === "signup" ? "Kies een wachtwoord" : "Wachtwoord"}
+            {mode === "signup" ? t.pwLabelSignup : t.pwLabelLogin}
           </label>
           <input
             type="password" value={password} onChange={e => setPassword(e.target.value)}
             required autoFocus={!!prefillEmail}
-            placeholder={mode === "signup" ? "Minimaal 6 tekens" : "Je wachtwoord"}
+            placeholder={mode === "signup" ? t.pwPhSignup : t.pwPhLogin}
             minLength={6}
             style={{
               width: "100%", padding: "10px 12px", border: "1px solid #E2E8F0", borderRadius: 8,
@@ -222,19 +362,19 @@ export default function InviteClient({
             borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? "Even geduld..." : mode === "signup" ? "Account aanmaken" : "Inloggen en koppelen"}
+          {loading ? t.loading : mode === "signup" ? t.submitSignup : t.submitLogin}
         </button>
       </form>
 
       <p style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", marginTop: 16 }}>
-        Door je aan te melden ga je akkoord met de voorwaarden van PayWatch.
+        {t.terms}
       </p>
     </Shell>
   );
 }
 
-function Shell({ orgName, orgColor, orgLogo, children }: {
-  orgName: string; orgColor: string; orgLogo: string | null; children: React.ReactNode;
+function Shell({ orgName, orgColor, orgLogo, title, children }: {
+  orgName: string; orgColor: string; orgLogo: string | null; title: string; children: React.ReactNode;
 }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F7FB", padding: 20 }}>
@@ -248,7 +388,7 @@ function Shell({ orgName, orgColor, orgLogo, children }: {
 
         {/* Content */}
         <div style={{ background: "#FFFFFF", borderRadius: "0 0 12px 12px", padding: 24, border: "1px solid #E2E8F0", borderTop: "none" }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Je bent uitgenodigd</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>{title}</h1>
           {children}
         </div>
       </div>

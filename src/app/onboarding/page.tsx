@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import OnboardingWizard from './wizard';
 import TrustBadges from '@/components/trust-badges';
@@ -26,13 +27,24 @@ export default async function OnboardingPage() {
 
   if (settings?.onboarding_complete) redirect('/overzicht');
 
+  // Language priority: the paywatch-locale cookie (set when a user opens an invite
+  // in a given language) wins, so invited users continue onboarding in that language;
+  // otherwise fall back to the saved user_settings.language, then Dutch.
+  const ONB_LOCALES = ['nl', 'en', 'pl', 'tr'];
+  const cookieLang = (await cookies()).get('paywatch-locale')?.value;
+  const dbLang = settings?.language as string | undefined;
+  const initialLanguage =
+    cookieLang && ONB_LOCALES.includes(cookieLang) ? cookieLang
+    : dbLang && ONB_LOCALES.includes(dbLang) ? dbLang
+    : 'nl';
+
   return (
     <div className="flex flex-col bg-pw-bg" style={{ height: '100dvh' }}>
       <TrustBadges />
       <div className="flex-1 min-h-0">
         <OnboardingWizard
           initialName={settings?.display_name || user.email?.split('@')[0] || ''}
-          initialLanguage={(settings?.language as 'nl' | 'en') || 'nl'}
+          initialLanguage={initialLanguage}
         />
       </div>
     </div>
