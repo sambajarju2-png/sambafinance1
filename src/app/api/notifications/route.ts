@@ -72,7 +72,7 @@ export async function GET() {
       items.push({ type: 'achievement', data: ach });
     }
     for (const notif of (communityNotifs || [])) {
-      items.push({ type: 'mention', data: notif });
+      items.push({ type: notif.type === 'announcement' ? 'announcement' : 'mention', data: notif });
     }
     for (const ch of (assistedChanges || [])) {
       items.push({ type: 'assisted', data: ch });

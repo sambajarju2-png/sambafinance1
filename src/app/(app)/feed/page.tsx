@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   MessageCircle, Send, Loader2, X, ChevronDown, ChevronUp, Trophy,
-  MoreHorizontal, Pencil, Trash2, Flag,
+  MoreHorizontal, Pencil, Trash2, Flag, Megaphone,
 } from 'lucide-react';
 import CommunityNamePicker from '@/components/community-name-picker';
 import CommunityBanOverlay from '@/components/community-ban-overlay';
@@ -25,6 +25,8 @@ interface Post {
   user_reactions: string[];
   total_reactions: number;
   comment_count: number;
+  is_announcement?: boolean;
+  author_type?: string;
 }
 
 interface FlatComment {
@@ -88,6 +90,8 @@ function FeedContent() {
   const [profile, setProfile] = useState<{ display_name: string; is_banned?: boolean; banned_until?: string | null; ban_reason?: string | null } | null>(null);
   const [showNamePicker, setShowNamePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [groups, setGroups] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null); // null = global community
   const [composeOpen, setComposeOpen] = useState(false);
   const [weekLabel, setWeekLabel] = useState('');
   const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: string; authorName: string; content: string } | null>(null);
@@ -110,19 +114,23 @@ function FeedContent() {
       } catch {}
     }
     load();
+    fetch('/api/community/groups')
+      .then((r) => (r.ok ? r.json() : { groups: [] }))
+      .then((d) => setGroups(d.groups || []))
+      .catch(() => {});
   }, []);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/community/posts?filter=${activeFilter}`);
+      const res = await fetch(`/api/community/posts?filter=${activeFilter}&group=${activeGroup || 'global'}`);
       if (res.ok) {
         const data = await res.json();
         setPosts(data.posts || []);
         if (data.week_label) setWeekLabel(data.week_label);
       }
     } catch {} finally { setLoading(false); }
-  }, [activeFilter]);
+  }, [activeFilter, activeGroup]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
@@ -197,6 +205,25 @@ function FeedContent() {
         </button>
       )}
 
+      {groups.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none">
+          <button onClick={() => setActiveGroup(null)}
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+              activeGroup === null ? 'bg-pw-blue text-white' : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'
+            }`}>
+            Algemeen
+          </button>
+          {groups.map((g) => (
+            <button key={g.id} onClick={() => setActiveGroup(g.id)}
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                activeGroup === g.id ? 'bg-pw-blue text-white' : 'bg-pw-border/30 text-pw-muted hover:bg-pw-border/50'
+              }`}>
+              {g.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-2 overflow-x-auto scrollbar-none">
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setActiveFilter(f.key)}
@@ -245,7 +272,7 @@ function FeedContent() {
 
       {showNamePicker && <CommunityNamePicker onComplete={handleProfileComplete} onClose={() => setShowNamePicker(false)} />}
       {composeOpen && profile && !profile.is_banned && (
-        <ComposeDrawer displayName={profile.display_name} onClose={() => setComposeOpen(false)} onPosted={() => { setComposeOpen(false); fetchPosts(); }} />
+        <ComposeDrawer displayName={profile.display_name} groupId={activeGroup} onClose={() => setComposeOpen(false)} onPosted={() => { setComposeOpen(false); fetchPosts(); }} />
       )}
 
       {/* Ban/timeout overlay */}
@@ -390,6 +417,12 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
+      {post.is_announcement && (
+        <div className="mb-2.5 flex items-center gap-1.5 rounded-lg bg-pw-blue/10 px-2.5 py-1.5">
+          <Megaphone className="h-3.5 w-3.5 text-pw-blue" strokeWidth={1.5} />
+          <span className="text-[11px] font-semibold text-pw-blue">Mededeling van je organisatie</span>
+        </div>
+      )}
       {rank && (
         <div className="mb-2 flex items-center gap-1.5">
           <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white ${
@@ -597,7 +630,7 @@ function MentionText({ text }: { text: string }) {
 }
 
 /* ============ Compose Drawer ============ */
-function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string; onClose: () => void; onPosted: () => void }) {
+function ComposeDrawer({ displayName, groupId, onClose, onPosted }: { displayName: string; groupId: string | null; onClose: () => void; onPosted: () => void }) {
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
@@ -611,7 +644,7 @@ function ComposeDrawer({ displayName, onClose, onPosted }: { displayName: string
     try {
       const res = await fetch('/api/community/posts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: trimmed, is_anonymous: isAnonymous, badge_type: selectedLabel }),
+        body: JSON.stringify({ content: trimmed, is_anonymous: isAnonymous, badge_type: selectedLabel, group_id: groupId }),
       });
       if (!res.ok) {
         const data = await res.json();

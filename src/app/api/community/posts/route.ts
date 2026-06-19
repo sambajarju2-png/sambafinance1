@@ -73,6 +73,7 @@ async function getPopularPosts(supabase: Awaited<ReturnType<typeof createServerS
     .select('*')
     .eq('is_approved', true)
     .eq('is_flagged', false)
+    .is('group_id', null)
     .gte('created_at', weekStart.toISOString())
     .order('created_at', { ascending: false })
     .limit(50);
@@ -121,6 +122,16 @@ async function enrichPosts(
   const profileMap: Record<string, string> = {};
   for (const p of profilesRes.data || []) profileMap[p.user_id] = p.display_name;
 
+  // Org-authored announcements show the organisation's name, not a person.
+  const orgIds = Array.from(new Set(
+    posts.filter((p) => p.author_type === 'org' && p.author_org_id).map((p) => p.author_org_id as string)
+  ));
+  const orgNameMap: Record<string, string> = {};
+  if (orgIds.length > 0) {
+    const { data: orgRows } = await supabase.from('organizations').select('id, name').in('id', orgIds);
+    for (const o of (orgRows || []) as Array<{ id: string; name: string }>) orgNameMap[o.id] = o.name;
+  }
+
   const reactionsByPost: Record<string, Array<{ reaction_type: string; user_id: string }>> = {};
   for (const r of reactionsRes.data || []) {
     if (!reactionsByPost[r.post_id]) reactionsByPost[r.post_id] = [];
@@ -138,6 +149,7 @@ async function enrichPosts(
       reactionCounts[r.reaction_type] = (reactionCounts[r.reaction_type] || 0) + 1;
       if (r.user_id === userId) userReactions.push(r.reaction_type);
     }
+    const isOrg = post.author_type === 'org';
     return {
       id: post.id,
       content: post.content,
@@ -145,13 +157,17 @@ async function enrichPosts(
       badge_type: post.badge_type,
       badge_data: post.badge_data,
       created_at: post.created_at,
-      display_name: post.is_anonymous ? 'Anoniem' : (profileMap[post.user_id as string] || 'Gebruiker'),
+      display_name: isOrg
+        ? (orgNameMap[post.author_org_id as string] || 'Organisatie')
+        : (post.is_anonymous ? 'Anoniem' : (profileMap[post.user_id as string] || 'Gebruiker')),
       user_id: post.user_id,
       is_own: post.user_id === userId,
       reaction_counts: reactionCounts,
       user_reactions: userReactions,
       total_reactions: postReactions.length,
       comment_count: commentCountByPost[post.id as string] || 0,
+      is_announcement: (post.is_announcement as boolean) || false,
+      author_type: (post.author_type as string) || 'user',
     };
   });
 }

@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useMessages, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check, Users, UserCheck } from 'lucide-react';
+import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check, Users, UserCheck, Megaphone } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { pick } from '@/lib/i18n-pick';
 
 interface NotifItem {
-  type: 'overdue' | 'upcoming' | 'achievement' | 'mention' | 'assisted';
+  type: 'overdue' | 'upcoming' | 'achievement' | 'mention' | 'assisted' | 'announcement';
   data: Record<string, unknown>;
 }
 
@@ -82,7 +82,20 @@ export default function NotificationsPage() {
     router.push(`/feed?post=${notif.post_id}`);
   }
 
+  async function handleAnnouncementClick(notif: Record<string, unknown>) {
+    if (notif.id) {
+      fetch('/api/community/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: notif.id }),
+      }).catch(() => {});
+    }
+    setItems((prev) => prev.filter((i) => i.type !== 'announcement' || (i.data as Record<string, unknown>).id !== notif.id));
+    router.push('/feed');
+  }
+
   const overdue = items.filter((i) => i.type === 'overdue');
+  const announcements = items.filter((i) => i.type === 'announcement');
   const upcoming = items.filter((i) => i.type === 'upcoming');
   const achievements = items.filter((i) => i.type === 'achievement');
   const mentions = items.filter((i) => i.type === 'mention');
@@ -113,6 +126,27 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <>
+          {/* Announcements from your organisation */}
+          {announcements.length > 0 && (
+            <Section title={pick(locale, { nl: 'Mededelingen', en: 'Announcements', pl: 'Ogłoszenia', tr: 'Duyurular', fr: 'Annonces', ar: 'إعلانات' })} count={announcements.length} color="text-pw-blue">
+              {announcements.map((item, i) => {
+                const d = item.data as { id: string; from_display_name: string; content_preview: string; post_id: string; created_at: string };
+                return (
+                  <NotifCard
+                    key={i}
+                    icon={Megaphone}
+                    iconColor="text-pw-blue"
+                    bgColor="bg-blue-50/50"
+                    borderColor="border-pw-blue/20"
+                    title={d.from_display_name || 'Je organisatie'}
+                    subtitle={d.content_preview || ''}
+                    onClick={() => handleAnnouncementClick(d)}
+                  />
+                );
+              })}
+            </Section>
+          )}
+
           {/* Assisted changes — data an organisation updated on the user's behalf */}
           {assisted.length > 0 && (
             <Section title={pick(locale, { nl: 'Door je organisatie', en: 'By your organisation', pl: 'Przez Twoją organizację', tr: 'Kuruluşun tarafından', fr: 'Par ton organisation', ar: 'بواسطة مؤسستك' })} count={assisted.length} color="text-pw-blue">
