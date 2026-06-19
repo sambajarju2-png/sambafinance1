@@ -45,7 +45,7 @@ export async function GET() {
     // Community notifications (unread mentions)
     const { data: communityNotifs } = await supabase
       .from('community_notifications')
-      .select('id, type, from_display_name, post_id, comment_id, content_preview, created_at')
+      .select('id, type, from_display_name, post_id, comment_id, content_preview, created_at, group_id')
       .eq('user_id', userId)
       .eq('is_read', false)
       .order('created_at', { ascending: false })

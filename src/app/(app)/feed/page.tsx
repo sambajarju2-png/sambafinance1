@@ -91,7 +91,7 @@ function FeedContent() {
   const [showNamePicker, setShowNamePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [groups, setGroups] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
-  const [activeGroup, setActiveGroup] = useState<string | null>(null); // null = global community
+  const [activeGroup, setActiveGroup] = useState<string | null>(() => searchParams.get('group')); // null = global; pre-selected from a deep link
   const [composeOpen, setComposeOpen] = useState(false);
   const [weekLabel, setWeekLabel] = useState('');
   const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: string; authorName: string; content: string } | null>(null);

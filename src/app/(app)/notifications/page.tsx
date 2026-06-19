@@ -91,7 +91,11 @@ export default function NotificationsPage() {
       }).catch(() => {});
     }
     setItems((prev) => prev.filter((i) => i.type !== 'announcement' || (i.data as Record<string, unknown>).id !== notif.id));
-    router.push('/feed');
+    const params = new URLSearchParams();
+    if (notif.group_id) params.set('group', notif.group_id as string);
+    if (notif.post_id) params.set('post', notif.post_id as string);
+    const qs = params.toString();
+    router.push(qs ? `/feed?${qs}` : '/feed');
   }
 
   const overdue = items.filter((i) => i.type === 'overdue');
