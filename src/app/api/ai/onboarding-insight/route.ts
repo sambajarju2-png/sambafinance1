@@ -20,9 +20,14 @@ export async function POST(req: NextRequest) {
   const expFmt = `€${(expenses / 100).toFixed(0)}`;
   const dispFmt = `€${(disposable / 100).toFixed(0)}`;
 
-  const prompt = `Je bent PayWatch, een Nederlandse app die huishoudens helpt rekeningen te volgen en schulden te voorkomen.
+  const langName = languageName(lang);
+  const langDirective = lang === 'nl'
+    ? ''
+    : `CRITICAL LANGUAGE INSTRUCTION: Write your ENTIRE reply in ${langName}. The instructions below are in Dutch but they describe the task, not the output language. Reply only in ${langName}. Keep Dutch debt terms (factuur, incasso, deurwaarder, WIK) in Dutch.\n\n`;
 
-Een nieuwe gebruiker heeft net de onboarding afgerond. Schrijf een persoonlijk, warm welkomstbericht van MAXIMAAL 3 zinnen in ${languageName(lang)}.
+  const prompt = `${langDirective}Je bent PayWatch, een Nederlandse app die huishoudens helpt rekeningen te volgen en schulden te voorkomen.
+
+Een nieuwe gebruiker heeft net de onboarding afgerond. Schrijf een persoonlijk, warm welkomstbericht van MAXIMAAL 3 zinnen in ${langName}.
 
 Hun gegevens:
 - Maandinkomen: ${incFmt}
@@ -60,10 +65,16 @@ Regels:
 
     return NextResponse.json({ insight: text.trim() });
   } catch {
-    // Fallback: return a generic message
-    const fallback = lang === 'nl'
-      ? `Met een vrij besteedbaar bedrag van ${dispFmt} per maand is het goed dat je nu overzicht krijgt. PayWatch scant je inbox op facturen en waarschuwt je voordat een rekening escaleert naar incasso.`
-      : `With ${dispFmt} disposable income per month, it's great that you're getting an overview now. PayWatch scans your inbox for invoices and alerts you before a bill escalates to collections.`;
+    // Fallback: return a generic message in the user's language
+    const fallbacks: Record<string, string> = {
+      nl: `Met een vrij besteedbaar bedrag van ${dispFmt} per maand is het goed dat je nu overzicht krijgt. PayWatch scant je inbox op facturen en waarschuwt je voordat een rekening escaleert naar incasso.`,
+      en: `With ${dispFmt} disposable income per month, it's great that you're getting an overview now. PayWatch scans your inbox for invoices and warns you before a bill escalates to incasso (collections).`,
+      pl: `Przy ${dispFmt} wolnych środków miesięcznie dobrze, że zyskujesz teraz przegląd. PayWatch skanuje Twoją skrzynkę w poszukiwaniu faktur i ostrzega, zanim rachunek trafi do windykacji (incasso).`,
+      tr: `Ayda ${dispFmt} serbest bütçeyle artık genel bir görünüm elde etmen güzel. PayWatch gelen kutunu faturalar için tarar ve bir fatura tahsilata (incasso) gitmeden önce seni uyarır.`,
+      fr: `Avec ${dispFmt} de budget disponible par mois, c'est bien que tu aies maintenant une vue d'ensemble. PayWatch analyse ta boîte mail à la recherche de factures et t'alerte avant qu'une facture ne parte en recouvrement (incasso).`,
+      ar: `مع مبلغ متاح قدره ${dispFmt} شهريًا، من الجيد أنك تحصل الآن على نظرة عامة. يفحص PayWatch بريدك بحثًا عن الفواتير وينبهك قبل أن تتصاعد فاتورة إلى التحصيل (incasso).`,
+    };
+    const fallback = fallbacks[lang] || fallbacks.nl;
 
     return NextResponse.json({ insight: fallback });
   }

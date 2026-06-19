@@ -86,9 +86,14 @@ export async function POST(req: NextRequest) {
     if (!bills || bills.length === 0) {
       return NextResponse.json({
         insights: [],
-        summary: language === 'nl'
-          ? 'Je hebt nog geen rekeningen. Voeg rekeningen toe om inzichten te krijgen.'
-          : 'You have no bills yet. Add bills to get insights.',
+        summary: ({
+          nl: 'Je hebt nog geen rekeningen. Voeg rekeningen toe om inzichten te krijgen.',
+          en: 'You have no bills yet. Add bills to get insights.',
+          pl: 'Nie masz jeszcze rachunków. Dodaj rachunki, aby uzyskać wskazówki.',
+          tr: 'Henüz faturan yok. İçgörü almak için fatura ekle.',
+          fr: "Tu n'as pas encore de factures. Ajoute des factures pour obtenir des analyses.",
+          ar: 'ليس لديك فواتير بعد. أضف فواتير للحصول على رؤى.',
+        } as Record<string, string>)[language] || 'Je hebt nog geen rekeningen. Voeg rekeningen toe om inzichten te krijgen.',
       }, { headers: NO_CACHE });
     }
 
