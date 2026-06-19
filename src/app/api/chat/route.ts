@@ -344,10 +344,16 @@ ${(() => {
   return parts.join('\n');
 })()}`;
 
-    // System prompt
+    // System prompt — for non-Dutch users, force the reply language up front.
+    // The behavioural instructions below are all in Dutch and otherwise pull the
+    // model toward replying in Dutch regardless of the user's language.
+    const langName = languageName(lang);
+    const taalBlock = lang === 'nl'
+      ? 'TAAL: Antwoord in het Nederlands. Gebruik informeel "je/jij", nooit "u".'
+      : `CRITICAL LANGUAGE INSTRUCTION: The user's app language is ${langName}. Write your ENTIRE reply in ${langName} — the greeting, every sentence, and the quick suggestions. The behavioural instructions below are written in Dutch, but they only describe HOW to behave, not which language to use. Do NOT reply in Dutch; reply only in ${langName}, in an informal and friendly register. Exception: keep Dutch debt-process terms (factuur, herinnering, aanmaning, incasso, deurwaarder, WIK, beslagvrije voet, Nibud, Juridisch Loket) in Dutch — everything around them must be in ${langName}.`;
     const systemPrompt = `Je bent PayBuddy, de persoonlijke financiële maat in PayWatch. Je voelt als een rustige, slimme vriend die Nederlands schuldrecht snapt en écht om de gebruiker geeft.
 
-TAAL: Antwoord in ${languageName(lang)}. Gebruik informeel "je/jij", nooit "u".
+${taalBlock}
 
 PERSOONLIJKHEID:
 - Warm, kalm, direct. Als een WhatsApp-gesprek met je slimste vriend.
@@ -531,41 +537,41 @@ function generateChips(
   allBills: unknown[],
   lang: string
 ): string[] {
-  const nl = lang === 'nl';
+  const t = (m: Record<string, string>) => m[lang] || m.nl;
   const chips: string[] = [];
 
   // Priority 1: Most relevant action based on situation
   const severe = outstanding.filter(b => ['incasso', 'deurwaarder'].includes(b.escalation_stage || ''));
 
   if (severe.length > 0) {
-    chips.push(nl ? 'Bereken extra kosten' : 'Calculate extra costs');
-    chips.push(nl ? 'Schrijf een brief' : 'Draft a letter');
+    chips.push(t({ nl: 'Bereken extra kosten', en: 'Calculate extra costs', pl: 'Oblicz dodatkowe koszty', tr: 'Ek maliyetleri hesapla', fr: 'Calculer les frais', ar: 'احسب التكاليف الإضافية' }));
+    chips.push(t({ nl: 'Schrijf een brief', en: 'Draft a letter', pl: 'Napisz pismo', tr: 'Bir mektup yaz', fr: 'Rédiger une lettre', ar: 'اكتب رسالة' }));
   } else if (escalated.length > 0) {
-    chips.push(nl ? 'Wat moet ik eerst doen?' : 'What should I do first?');
+    chips.push(t({ nl: 'Wat moet ik eerst doen?', en: 'What should I do first?', pl: 'Co powinienem zrobić najpierw?', tr: 'Önce ne yapmalıyım?', fr: 'Que dois-je faire en premier ?', ar: 'ماذا أفعل أولاً؟' }));
   }
 
   if (urgent.length > 0 && chips.length < 2) {
-    chips.push(nl ? 'Plan mijn week' : 'Plan my week');
+    chips.push(t({ nl: 'Plan mijn week', en: 'Plan my week', pl: 'Zaplanuj mój tydzień', tr: 'Haftamı planla', fr: 'Planifier ma semaine', ar: 'خطط لأسبوعي' }));
   }
 
   if (allBills.length === 0) {
-    chips.push(nl ? 'Rekening toevoegen' : 'Add a bill');
-    chips.push(nl ? 'Hoe werkt PayWatch?' : 'How does PayWatch work?');
+    chips.push(t({ nl: 'Rekening toevoegen', en: 'Add a bill', pl: 'Dodaj rachunek', tr: 'Fatura ekle', fr: 'Ajouter une facture', ar: 'أضف فاتورة' }));
+    chips.push(t({ nl: 'Hoe werkt PayWatch?', en: 'How does PayWatch work?', pl: 'Jak działa PayWatch?', tr: 'PayWatch nasıl çalışır?', fr: 'Comment fonctionne PayWatch ?', ar: 'كيف يعمل PayWatch؟' }));
   } else {
-    chips.push(nl ? 'Rekening toevoegen' : 'Add a bill');
+    chips.push(t({ nl: 'Rekening toevoegen', en: 'Add a bill', pl: 'Dodaj rachunek', tr: 'Fatura ekle', fr: 'Ajouter une facture', ar: 'أضف فاتورة' }));
   }
 
   if (plans.length > 0 && chips.length < 4) {
-    chips.push(nl ? 'Hoe gaat mijn regeling?' : "How's my payment plan?");
+    chips.push(t({ nl: 'Hoe gaat mijn regeling?', en: "How's my payment plan?", pl: 'Jak idzie mój plan spłat?', tr: 'Ödeme planım nasıl gidiyor?', fr: 'Où en est mon plan de paiement ?', ar: 'كيف تسير خطة السداد الخاصة بي؟' }));
   }
 
   const settled = allBills.filter((b: unknown) => (b as { status: string }).status === 'settled');
   if (settled.length > 0 && chips.length < 4) {
-    chips.push(nl ? 'Hoeveel bespaar ik?' : 'How much am I saving?');
+    chips.push(t({ nl: 'Hoeveel bespaar ik?', en: 'How much am I saving?', pl: 'Ile oszczędzam?', tr: 'Ne kadar tasarruf ediyorum?', fr: "Combien j'économise ?", ar: 'كم أوفر؟' }));
   }
 
   if (chips.length < 4) {
-    chips.push(nl ? 'Hulp bij schulden' : 'Help with debt');
+    chips.push(t({ nl: 'Hulp bij schulden', en: 'Help with debt', pl: 'Pomoc w zadłużeniu', tr: 'Borç konusunda yardım', fr: 'Aide pour les dettes', ar: 'مساعدة في الديون' }));
   }
 
   return chips.slice(0, 4);
