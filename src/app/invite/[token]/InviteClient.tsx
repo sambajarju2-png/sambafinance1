@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { pick } from "@/lib/i18n-pick";
+import {
+  CONSENT_SCOPE_KEYS,
+  DEFAULT_CONSENT_SCOPES,
+  REQUIRED_CONSENT_SCOPES,
+  consentScopeLabels,
+  type ConsentScopeKey,
+} from "@/lib/consent-scopes";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +27,7 @@ interface Props {
   prefillEmail: string;
   isAlreadyActivated: boolean;
   inviteLang: string;
+  initialAuthed: boolean;
 }
 
 // The user was invited in this language: the page renders in it and we set the
@@ -203,7 +212,7 @@ const T: Record<string, {
 };
 
 export default function InviteClient({
-  token, inviteId, orgName, orgColor, orgLogo, introText, prefillEmail, isAlreadyActivated, inviteLang,
+  token, inviteId, orgName, orgColor, orgLogo, introText, prefillEmail, isAlreadyActivated, inviteLang, initialAuthed,
 }: Props) {
   const router = useRouter();
   const lang = SUPPORTED.includes(inviteLang) ? inviteLang : "nl";
@@ -222,6 +231,36 @@ export default function InviteClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
+
+  // Consent step: shown after auth (or immediately if already authenticated) so the
+  // user explicitly chooses what the org may see before the connection is activated.
+  const [step, setStep] = useState<"auth" | "consent">(initialAuthed ? "consent" : "auth");
+  const [consentScopes, setConsentScopes] = useState<Record<ConsentScopeKey, boolean>>({ ...DEFAULT_CONSENT_SCOPES });
+  const [activating, setActivating] = useState(false);
+
+  function toggleScope(key: ConsentScopeKey) {
+    if (REQUIRED_CONSENT_SCOPES.includes(key)) return;
+    setConsentScopes((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function confirmConsent() {
+    setActivating(true);
+    setError("");
+    try {
+      const selected = (Object.keys(consentScopes) as ConsentScopeKey[]).filter((k) => consentScopes[k]);
+      const res = await fetch("/api/invite/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, scopes: selected }),
+      });
+      const result = await res.json();
+      if (result.error) console.error("Activate error:", result.error);
+      router.push("/onboarding");
+    } catch (err: any) {
+      setError(err.message || t.errGeneric);
+      setActivating(false);
+    }
+  }
 
   if (isAlreadyActivated) {
     return (
@@ -279,6 +318,10 @@ export default function InviteClient({
           setLoading(false);
           return;
         }
+        // Signed up with an immediate session — go to the consent step.
+        setStep("consent");
+        setLoading(false);
+        return;
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
         if (loginError) {
@@ -286,22 +329,11 @@ export default function InviteClient({
           setLoading(false);
           return;
         }
+        // Logged in — go to the consent step before activating.
+        setStep("consent");
+        setLoading(false);
+        return;
       }
-
-      // Activate invite via API
-      const res = await fetch("/api/invite/activate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-
-      const result = await res.json();
-      if (result.error) {
-        console.error("Activate error:", result.error);
-      }
-
-      // Redirect to onboarding or dashboard
-      router.push("/onboarding");
     } catch (err: any) {
       setError(err.message || t.errGeneric);
     }
@@ -326,6 +358,54 @@ export default function InviteClient({
             {t.confirmSpam}
           </p>
         </div>
+      </Shell>
+    );
+  }
+
+  // Consent step — choose what the organisation may see before activating.
+  if (step === "consent") {
+    const labels = consentScopeLabels(lang);
+    return (
+      <Shell orgName={orgName} orgColor={orgColor} orgLogo={orgLogo} title={pick(lang, { nl: "Wat wil je delen?", en: "What do you want to share?", pl: "Co chcesz udostępnić?", tr: "Neyi paylaşmak istiyorsun?", fr: "Que veux-tu partager ?", ar: "ما الذي تريد مشاركته؟" })}>
+        <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 16px" }}>
+          {pick(lang, {
+            nl: `Kies welke gegevens ${orgName} mag zien. Je kunt dit later aanpassen via Instellingen → Privacyrechten.`,
+            en: `Choose which data ${orgName} may see. You can change this later via Settings → Privacy rights.`,
+            pl: `Wybierz, które dane może widzieć ${orgName}. Możesz to później zmienić w Ustawienia → Prawa do prywatności.`,
+            tr: `${orgName} hangi verileri görebilir, sen seç. Bunu daha sonra Ayarlar → Gizlilik hakları üzerinden değiştirebilirsin.`,
+            fr: `Choisis les données que ${orgName} peut voir. Tu pourras modifier cela plus tard via Paramètres → Droits de confidentialité.`,
+            ar: `اختر البيانات التي يمكن لـ ${orgName} رؤيتها. يمكنك تغيير ذلك لاحقًا عبر الإعدادات ← حقوق الخصوصية.`,
+          })}
+        </p>
+        <div style={{ background: "#F8FAFC", borderRadius: 12, padding: 8, marginBottom: 12, border: "1px solid #E2E8F0" }}>
+          {CONSENT_SCOPE_KEYS.map((key) => {
+            const { label, desc, required } = labels[key];
+            return (
+              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px", cursor: required ? "default" : "pointer", opacity: required ? 0.85 : 1 }}>
+                <input type="checkbox" checked={consentScopes[key]} onChange={() => toggleScope(key)} disabled={required} style={{ marginTop: 2, width: 16, height: 16, accentColor: orgColor }} />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "#0F172A", margin: 0 }}>
+                    {label}{required ? ` (${pick(lang, { nl: "verplicht", en: "required", pl: "wymagane", tr: "zorunlu", fr: "obligatoire", ar: "إلزامي" })})` : ""}
+                  </p>
+                  <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{desc}</p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        <div style={{ background: "#F8FAFC", borderRadius: 12, padding: 12, marginBottom: 16, fontSize: 12, color: "#94A3B8", border: "1px solid #E2E8F0" }}>
+          <p style={{ margin: "0 0 4px" }}>{pick(lang, { nl: "✗ Nooit gedeeld: banktransacties, e-mails, community posts", en: "✗ Never shared: bank transactions, emails, community posts", pl: "✗ Nigdy nieudostępniane: transakcje bankowe, e-maile, posty społeczności", tr: "✗ Asla paylaşılmaz: banka işlemleri, e-postalar, topluluk gönderileri", fr: "✗ Jamais partagé : transactions bancaires, e-mails, publications de la communauté", ar: "✗ لا تتم مشاركتها أبدًا: المعاملات البنكية، رسائل البريد، منشورات المجتمع" })}</p>
+          <p style={{ margin: 0 }}>{pick(lang, { nl: "✗ Organisatie kan geen betalingen doen namens jou", en: "✗ The organisation cannot make payments on your behalf", pl: "✗ Organizacja nie może dokonywać płatności w twoim imieniu", tr: "✗ Kuruluş senin adına ödeme yapamaz", fr: "✗ L'organisation ne peut pas effectuer de paiements en ton nom", ar: "✗ لا يمكن للمؤسسة إجراء مدفوعات نيابة عنك" })}</p>
+        </div>
+        {error && (
+          <div style={{ padding: "8px 12px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 13, color: "#DC2626", marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+        <button onClick={confirmConsent} disabled={activating} style={{ width: "100%", padding: 12, background: orgColor, color: "#FFFFFF", border: "none", borderRadius: 4, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: activating ? 0.6 : 1 }}>
+          {activating ? t.loading : pick(lang, { nl: "Verbinden", en: "Connect", pl: "Połącz", tr: "Bağlan", fr: "Se connecter", ar: "ربط" })}
+        </button>
+        <p style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", marginTop: 16 }}>{t.terms}</p>
       </Shell>
     );
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, Building2, Users, CircleDot, UserCheck, Phone, Loader2 } from 'lucide-react';
 import { pick } from '@/lib/i18n-pick';
+import { DEFAULT_CONSENT_SCOPES, consentScopeLabels } from '@/lib/consent-scopes';
 import dynamic from 'next/dynamic';
 
 const CoachCallRoom = dynamic(() => import('@/components/chat/coach-call-room'), { ssr: false });
@@ -347,13 +348,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     load();
   }, [activeThread]);
 
-  const [consentScopes, setConsentScopes] = useState({
-    contact_info: true,
-    view_bills: true,
-    financial_overview: true,
-    payment_plans: true,
-    messaging: true,
-  });
+  const [consentScopes, setConsentScopes] = useState({ ...DEFAULT_CONSENT_SCOPES });
 
   function toggleScope(key: keyof typeof consentScopes) {
     if (key === 'contact_info') return; // always required
@@ -390,13 +385,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
     setCodeLoading(false);
   }
 
-  const SCOPE_LABELS: Record<string, { label: string; desc: string; required?: boolean }> = {
-    contact_info: { label: pick(lang, { nl: 'Naam en contactgegevens', en: 'Name and contact details', pl: 'Imię i dane kontaktowe', tr: 'Ad ve iletişim bilgileri', fr: 'Nom et coordonnées', ar: 'الاسم وبيانات التواصل' }), desc: pick(lang, { nl: 'Zodat je coach je kan bereiken', en: 'So your coach can reach you', pl: 'Aby twój opiekun mógł się z tobą skontaktować', tr: 'Koçunun sana ulaşabilmesi için', fr: 'Pour que ton coach puisse te joindre', ar: 'حتى يتمكن مدربك من الوصول إليك' }), required: true },
-    view_bills: { label: pick(lang, { nl: 'Rekeningen en betalingsstatus', en: 'Bills and payment status', pl: 'Rachunki i status płatności', tr: 'Faturalar ve ödeme durumu', fr: 'Factures et statut de paiement', ar: 'الفواتير وحالة الدفع' }), desc: pick(lang, { nl: 'Openstaande facturen, escalatiefase', en: 'Outstanding invoices, escalation stage', pl: 'Nieopłacone faktury, etap eskalacji', tr: 'Ödenmemiş faturalar, yükseltme aşaması', fr: "Factures impayées, phase d'escalade", ar: 'الفواتير غير المدفوعة، مرحلة التصعيد' }) },
-    financial_overview: { label: pick(lang, { nl: 'Financieel profiel', en: 'Financial profile', pl: 'Profil finansowy', tr: 'Finansal profil', fr: 'Profil financier', ar: 'الملف المالي' }), desc: pick(lang, { nl: 'Inkomen, vaste lasten, toeslagen', en: 'Income, fixed costs, allowances', pl: 'Dochód, stałe wydatki, dodatki', tr: 'Gelir, sabit giderler, yardımlar', fr: 'Revenus, charges fixes, aides', ar: 'الدخل، المصاريف الثابتة، المساعدات' }) },
-    payment_plans: { label: pick(lang, { nl: 'Betalingsregelingen', en: 'Payment plans', pl: 'Plany płatności', tr: 'Ödeme planları', fr: 'Plans de paiement', ar: 'خطط الدفع' }), desc: pick(lang, { nl: 'Actieve regelingen en voortgang', en: 'Active plans and progress', pl: 'Aktywne plany i postępy', tr: 'Aktif planlar ve ilerleme', fr: 'Plans actifs et progression', ar: 'الخطط النشطة والتقدّم' }) },
-    messaging: { label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet', fr: 'Messages et chat', ar: 'الرسائل والدردشة' }), desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim', fr: 'Communication avec ton coach', ar: 'التواصل مع مدربك' }) },
-  };
+  const SCOPE_LABELS = consentScopeLabels(lang);
 
   // Org consent modal
   const orgConsentModal = showOrgConsent ? (

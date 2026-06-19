@@ -2,9 +2,10 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
+import { CONSENT_SCOPE_KEYS, type ConsentScopeKey } from "@/lib/consent-scopes";
 
 export async function POST(request: NextRequest) {
-  const { token } = await request.json();
+  const { token, scopes } = await request.json();
   if (!token) return NextResponse.json({ error: "No token" }, { status: 400 });
 
   // Get current user
@@ -66,29 +67,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: linkError.message }, { status: 500 });
   }
 
-  // Accepting the invite grants ONLY the minimum required scope (contact_info), so
-  // the org can reach the user. Any access to bills, finances, payment plans or
-  // messaging must be granted explicitly by the user via the granular consent UI.
-  // Privacy-first: no blanket full_access auto-grant.
+  // Granular consent: write exactly the scopes the user selected on the invite
+  // consent screen, always including the required contact_info. If the client sent
+  // nothing (older client), fall back to the minimum contact_info only — never a
+  // blanket full_access auto-grant.
+  const selected = Array.isArray(scopes)
+    ? (scopes.filter(
+        (s: unknown): s is ConsentScopeKey =>
+          typeof s === "string" && (CONSENT_SCOPE_KEYS as readonly string[]).includes(s)
+      ) as ConsentScopeKey[])
+    : [];
+  const grantedScopes = Array.from(new Set<ConsentScopeKey>(["contact_info", ...selected]));
   const consentIp = request.headers.get("x-forwarded-for")?.split(",")[0] || null;
   const consentUa = request.headers.get("user-agent") || null;
   const consentNow = new Date().toISOString();
   await supabase.from("b2b_consents").upsert(
-    [{
+    grantedScopes.map((scope) => ({
       user_id: user.id,
       organization_id: invite.organization_id,
-      scope: "contact_info",
+      scope,
       granted: true,
       granted_at: consentNow,
       consent_version: "2026-06-v2",
-      consent_text_snapshot: "Toestemming voor contact_info: verleend via uitnodiging (minimale toegang). Verdere toegang wordt apart en expliciet gegeven.",
+      consent_text_snapshot: `Toestemming voor ${scope}: verleend via uitnodiging`,
       consent_displayed_at: consentNow,
       consent_submitted_at: consentNow,
       consent_ip: consentIp,
       consent_user_agent: consentUa,
-    }],
+    })),
     { onConflict: "user_id,organization_id,scope" }
   );
+
+  // GDPR consent log (non-fatal)
+  await supabase.from("consent_log").insert({
+    user_id: user.id,
+    consent_type: "b2b_org_connection",
+    granted: true,
+    ip_address: consentIp,
+    user_agent: consentUa,
+  }).then(() => {}, () => {});
 
   // Mark invite as activated
   await supabase.from("b2b_invites").update({

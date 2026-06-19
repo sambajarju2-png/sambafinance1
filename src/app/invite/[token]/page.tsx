@@ -1,6 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getAuthUserId } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import InviteClient from "./InviteClient";
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
@@ -47,31 +46,18 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  // If user is already logged in, activate directly
-  const userId = await getAuthUserId();
-  if (userId && !isUsed) {
-    // Link user to org and redirect
-    await supabase.from("user_organizations").upsert({
-      user_id: userId,
-      organization_id: invite.organization_id,
-      status: "active",
-      external_id: invite.external_id,
-      onboarded_at: new Date().toISOString(),
-    }, { onConflict: "user_id,organization_id" });
-
-    await supabase.from("b2b_invites")
-      .update({ status: "activated", activated_at: new Date().toISOString() })
-      .eq("id", invite.id);
-
-    redirect("/overzicht");
-  }
-
-  // Mark as opened
+  // Mark as opened on first view.
   if (invite.status === "pending") {
     await supabase.from("b2b_invites")
       .update({ status: "opened" })
       .eq("id", invite.id);
   }
+
+  // We deliberately do NOT auto-activate logged-in users here anymore. Activation
+  // (linking the org + writing consent) now happens only after the user picks what
+  // to share on the consent screen in InviteClient. We pass whether they are already
+  // authenticated so the client can skip the login form and go straight to consent.
+  const userId = await getAuthUserId();
 
   return (
     <InviteClient
@@ -84,6 +70,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       prefillEmail={invite.email || ""}
       isAlreadyActivated={isUsed}
       inviteLang={(invite as any).language || "nl"}
+      initialAuthed={!!userId && !isUsed}
     />
   );
 }
