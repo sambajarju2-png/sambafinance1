@@ -14,6 +14,7 @@ export const CONSENT_SCOPE_KEYS = [
   'financial_overview',
   'payment_plans',
   'messaging',
+  'assisted_entry',
 ] as const;
 
 export type ConsentScopeKey = (typeof CONSENT_SCOPE_KEYS)[number];
@@ -32,6 +33,7 @@ export const DEFAULT_CONSENT_SCOPES: Record<ConsentScopeKey, boolean> = {
   financial_overview: true,
   payment_plans: true,
   messaging: false,
+  assisted_entry: false,
 };
 
 export interface ConsentScopeLabel {
@@ -63,6 +65,10 @@ export function consentScopeLabels(lang: string): Record<ConsentScopeKey, Consen
     messaging: {
       label: pick(lang, { nl: 'Berichten en chat', en: 'Messages and chat', pl: 'Wiadomości i czat', tr: 'Mesajlar ve sohbet', fr: 'Messages et chat', ar: 'الرسائل والدردشة' }),
       desc: pick(lang, { nl: 'Communicatie met je coach', en: 'Communication with your coach', pl: 'Komunikacja z twoim opiekunem', tr: 'Koçunla iletişim', fr: 'Communication avec ton coach', ar: 'التواصل مع مدربك' }),
+    },
+    assisted_entry: {
+      label: pick(lang, { nl: 'Mijn coach mag gegevens voor mij bijwerken', en: 'My coach may update info for me', pl: 'Mój opiekun może aktualizować dane za mnie', tr: 'Koçum benim için bilgileri güncelleyebilir', fr: 'Mon coach peut mettre à jour mes infos pour moi', ar: 'يمكن لمدربي تحديث معلوماتي نيابة عني' }),
+      desc: pick(lang, { nl: 'Bijvoorbeeld je taal of inkomensgegevens invullen', en: 'For example filling in your language or income details', pl: 'Na przykład uzupełnić język lub dane o dochodach', tr: 'Örneğin dilini veya gelir bilgilerini girebilir', fr: 'Par exemple remplir ta langue ou tes revenus', ar: 'مثل إدخال لغتك أو بيانات دخلك' }),
     },
   };
 }

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations, useMessages } from 'next-intl';
+import { useTranslations, useMessages, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check, Users } from 'lucide-react';
+import { Bell, AlertTriangle, Clock, Trophy, ChevronRight, Trash2, Check, Users, UserCheck } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
+import { pick } from '@/lib/i18n-pick';
 
 interface NotifItem {
-  type: 'overdue' | 'upcoming' | 'achievement' | 'mention';
+  type: 'overdue' | 'upcoming' | 'achievement' | 'mention' | 'assisted';
   data: Record<string, unknown>;
 }
 
@@ -15,6 +16,7 @@ export default function NotificationsPage() {
   const t = useTranslations('notifications');
   const router = useRouter();
   const messages = useMessages();
+  const locale = useLocale();
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cleared, setCleared] = useState(false);
@@ -32,7 +34,14 @@ export default function NotificationsPage() {
     async function load() {
       try {
         const res = await fetch('/api/notifications');
-        if (res.ok) { const data = await res.json(); setItems(data.items || []); }
+        if (res.ok) {
+          const data = await res.json();
+          setItems(data.items || []);
+          // Mark assisted-change records as seen now that the user is viewing them.
+          if ((data.assisted || 0) > 0) {
+            fetch('/api/assisted-changes', { method: 'POST' }).catch(() => {});
+          }
+        }
       } catch {}
       finally { setLoading(false); }
     }
@@ -77,6 +86,7 @@ export default function NotificationsPage() {
   const upcoming = items.filter((i) => i.type === 'upcoming');
   const achievements = items.filter((i) => i.type === 'achievement');
   const mentions = items.filter((i) => i.type === 'mention');
+  const assisted = items.filter((i) => i.type === 'assisted');
 
   return (
     <div className="space-y-4">
@@ -103,6 +113,21 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <>
+          {/* Assisted changes — data an organisation updated on the user's behalf */}
+          {assisted.length > 0 && (
+            <Section title={pick(locale, { nl: 'Door je organisatie', en: 'By your organisation', pl: 'Przez Twoją organizację', tr: 'Kuruluşun tarafından', fr: 'Par ton organisation', ar: 'بواسطة مؤسستك' })} count={assisted.length} color="text-pw-blue">
+              {assisted.map((item, i) => {
+                const d = item.data as { change_type: string; details: Record<string, unknown>; org_name: string | null };
+                const c = assistedContent(locale, d);
+                return (
+                  <NotifCard key={i} icon={UserCheck} iconColor="text-pw-blue" bgColor="bg-blue-50/50" borderColor="border-pw-blue/20"
+                    title={c.title} subtitle={c.subtitle}
+                    onClick={() => router.push('/instellingen')} />
+                );
+              })}
+            </Section>
+          )}
+
           {/* Community mentions */}
           {mentions.length > 0 && (
             <Section title={t('mentionSection')} count={mentions.length} color="text-pw-blue">
@@ -158,6 +183,37 @@ export default function NotificationsPage() {
       )}
     </div>
   );
+}
+
+function assistedContent(locale: string, d: { change_type: string; details: Record<string, unknown>; org_name: string | null }): { title: string; subtitle: string } {
+  const org = d.org_name || pick(locale, { nl: 'Je organisatie', en: 'Your organisation', pl: 'Twoja organizacja', tr: 'Kuruluşun', fr: 'Ton organisation', ar: 'مؤسستك' });
+  if (d.change_type === 'language') {
+    const native: Record<string, string> = { nl: 'Nederlands', en: 'English', pl: 'Polski', tr: 'Türkçe', fr: 'Français', ar: 'العربية' };
+    const code = typeof d.details?.language === 'string' ? (d.details.language as string) : '';
+    const langName = native[code] || code.toUpperCase();
+    return {
+      title: pick(locale, { nl: 'Taal gewijzigd', en: 'Language changed', pl: 'Zmieniono język', tr: 'Dil değiştirildi', fr: 'Langue modifiée', ar: 'تم تغيير اللغة' }),
+      subtitle: pick(locale, {
+        nl: `${org} heeft je taal gewijzigd naar ${langName}`,
+        en: `${org} changed your language to ${langName}`,
+        pl: `${org} zmienił Twój język na ${langName}`,
+        tr: `${org} dilini ${langName} olarak değiştirdi`,
+        fr: `${org} a changé ta langue en ${langName}`,
+        ar: `قام ${org} بتغيير لغتك إلى ${langName}`,
+      }),
+    };
+  }
+  return {
+    title: pick(locale, { nl: 'Gegevens bijgewerkt', en: 'Details updated', pl: 'Zaktualizowano dane', tr: 'Bilgiler güncellendi', fr: 'Données mises à jour', ar: 'تم تحديث البيانات' }),
+    subtitle: pick(locale, {
+      nl: `${org} heeft je financiële gegevens bijgewerkt`,
+      en: `${org} updated your financial details`,
+      pl: `${org} zaktualizował Twoje dane finansowe`,
+      tr: `${org} finansal bilgilerini güncelledi`,
+      fr: `${org} a mis à jour tes données financières`,
+      ar: `قام ${org} بتحديث بياناتك المالية`,
+    }),
+  };
 }
 
 function Section({ title, count, color, children }: { title: string; count: number; color: string; children: React.ReactNode }) {

@@ -51,6 +51,15 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(10);
 
+    // Assisted changes — data an organisation updated on the user's behalf (unseen)
+    const { data: assistedChanges } = await supabase
+      .from('assisted_changes')
+      .select('id, change_type, details, org_name, created_at')
+      .eq('user_id', userId)
+      .is('seen_at', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
     const items: Array<{ type: string; data: unknown }> = [];
 
     for (const bill of (overdueBills || [])) {
@@ -65,8 +74,11 @@ export async function GET() {
     for (const notif of (communityNotifs || [])) {
       items.push({ type: 'mention', data: notif });
     }
+    for (const ch of (assistedChanges || [])) {
+      items.push({ type: 'assisted', data: ch });
+    }
 
-    const count = (overdueBills?.length || 0) + (recentAchievements?.length || 0) + (communityNotifs?.length || 0);
+    const count = (overdueBills?.length || 0) + (recentAchievements?.length || 0) + (communityNotifs?.length || 0) + (assistedChanges?.length || 0);
 
     return NextResponse.json({
       count,
@@ -74,6 +86,7 @@ export async function GET() {
       overdue: overdueBills?.length || 0,
       achievements: recentAchievements?.length || 0,
       mentions: communityNotifs?.length || 0,
+      assisted: assistedChanges?.length || 0,
     }, { headers: NO_CACHE });
   } catch {
     return NextResponse.json({ count: 0, items: [] }, { headers: NO_CACHE });

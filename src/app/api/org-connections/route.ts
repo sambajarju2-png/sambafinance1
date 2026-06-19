@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   }, { onConflict: 'user_id,organization_id' });
 
   // Grant consent — only for scopes the user explicitly selected
-  const validScopes = ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging', 'full_access', 'aggregated'];
+  const validScopes = ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging', 'assisted_entry', 'full_access', 'aggregated'];
   const scopes = (requestedScopes && Array.isArray(requestedScopes) && requestedScopes.length > 0)
     ? requestedScopes.filter((s: string) => validScopes.includes(s))
     : ['contact_info', 'view_bills', 'financial_overview', 'payment_plans', 'messaging']; // fallback for old clients
