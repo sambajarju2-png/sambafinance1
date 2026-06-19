@@ -310,11 +310,18 @@ export default function PrivacyRightsPanel() {
     if (selectedDisconnects.size === 0) return;
     setLoading('disconnect');
 
+    // Map the selected checkbox keys back to the actual connections so the
+    // backend disconnects exactly what the user picked (not everything).
+    const selected = connections
+      .map((c, i) => ({ c, key: `${c.type}-${c.id || i}` }))
+      .filter(({ key }) => selectedDisconnects.has(key))
+      .map(({ c }) => ({ type: c.type, id: c.id || null }));
+
     try {
       const res = await fetch('/api/gdpr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'toestemming_intrekken', details: Array.from(selectedDisconnects).join(', ') }),
+        body: JSON.stringify({ type: 'toestemming_intrekken', connections: selected, details: selected.map(s => `${s.type}:${s.id || ''}`).join(', ') }),
       });
       const data = await res.json();
       setResult({ type: 'toestemming_intrekken', message: data.message || 'Koppelingen verwijderd.' });

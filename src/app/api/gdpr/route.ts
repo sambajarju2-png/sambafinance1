@@ -13,6 +13,26 @@ const VALID_TYPES = [
   'toestemming_intrekken' // Withdraw consent
 ] as const;
 
+async function exitOrgRelationship(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  userId: string,
+  orgId: string,
+  now: string
+) {
+  await supabase.from('user_organizations')
+    .update({ status: 'exited', exited_at: now, exit_reason: 'gdpr_withdraw', updated_at: now })
+    .eq('user_id', userId).eq('organization_id', orgId)
+    .in('status', ['active', 'onboarded', 'invited', 'paused']);
+  await supabase.from('b2b_consents')
+    .update({ granted: false, revoked_at: now })
+    .eq('user_id', userId).eq('organization_id', orgId);
+  await supabase.from('b2b_audit_log').insert({
+    organization_id: orgId, actor_id: userId, actor_type: 'user',
+    action: 'relationship.user_exited', target_type: 'user', target_id: userId,
+    metadata: { reason: 'gdpr_withdraw' },
+  });
+}
+
 /**
  * GET /api/gdpr — list user's GDPR requests
  */
@@ -55,7 +75,7 @@ export async function POST(req: NextRequest) {
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
-  const { type, details } = await req.json();
+  const { type, details, connections: selectedConnections } = await req.json();
   if (!type || !VALID_TYPES.includes(type)) {
     return NextResponse.json({ error: 'Invalid type. Valid: ' + VALID_TYPES.join(', ') }, { status: 400, headers: NO_CACHE });
   }
@@ -142,45 +162,57 @@ export async function POST(req: NextRequest) {
       }
 
       case 'toestemming_intrekken': {
-        // Disconnect all integrations
         const results: string[] = [];
-
-        // Gmail
-        const { data: gmailAccounts } = await supabase
-          .from('gmail_accounts').select('id').eq('user_id', userId);
-        if (gmailAccounts && gmailAccounts.length > 0) {
-          await supabase.from('gmail_accounts').delete().eq('user_id', userId);
-          results.push('Gmail ontkoppeld');
-        }
-
-        // Outlook
-        const { data: outlookAccounts } = await supabase
-          .from('outlook_accounts').select('id').eq('user_id', userId);
-        if (outlookAccounts && outlookAccounts.length > 0) {
-          await supabase.from('outlook_accounts').delete().eq('user_id', userId);
-          results.push('Outlook ontkoppeld');
-        }
-
-        // Bank connections
-        const { data: bankConns } = await supabase
-          .from('bank_connections').select('id').eq('user_id', userId);
-        if (bankConns && bankConns.length > 0) {
-          await supabase.from('bank_transactions').delete().eq('user_id', userId);
-          await supabase.from('bank_connections').delete().eq('user_id', userId);
-          results.push('Bankverbinding(en) verwijderd + transacties gewist');
-        }
-
-        // B2B: end all active org relationships (status=exited) + revoke consent.
-        // Account + subscription are untouched here (separate flows).
         const gdprNow = new Date().toISOString();
-        await supabase.from('user_organizations')
-          .update({ status: 'exited', exited_at: gdprNow, exit_reason: 'gdpr_withdraw', updated_at: gdprNow })
-          .eq('user_id', userId)
-          .in('status', ['active', 'onboarded', 'invited', 'paused']);
-        await supabase.from('b2b_consents').delete().eq('user_id', userId);
-        results.push('B2B toestemmingen ingetrokken');
+        const selectedList: Array<{ type?: string; id?: string }> = Array.isArray(selectedConnections) ? selectedConnections : [];
 
-        autoResponse = { fulfilled: true, disconnected: results, message: 'Alle koppelingen en toestemmingen zijn ingetrokken.' };
+        if (selectedList.length > 0) {
+          // Per-connection: disconnect exactly what the user selected.
+          for (const c of selectedList) {
+            const cid: string | undefined = c?.id || undefined;
+            if (c?.type === 'gmail' && cid) {
+              await supabase.from('gmail_accounts').delete().eq('user_id', userId).eq('id', cid);
+              results.push('Gmail ontkoppeld');
+            } else if (c?.type === 'outlook' && cid) {
+              await supabase.from('outlook_accounts').delete().eq('user_id', userId).eq('id', cid);
+              results.push('Outlook ontkoppeld');
+            } else if (c?.type === 'bank' && cid) {
+              await supabase.from('bank_transactions').delete().eq('user_id', userId).eq('connection_id', cid);
+              await supabase.from('bank_connections').delete().eq('user_id', userId).eq('id', cid);
+              results.push('Bankverbinding verwijderd + transacties gewist');
+            } else if (c?.type === 'b2b' && cid) {
+              await exitOrgRelationship(supabase, userId, cid, gdprNow); // cid = organization_id
+              results.push('Organisatie losgekoppeld');
+            }
+          }
+        } else {
+          // No selection provided — disconnect everything (legacy "withdraw all").
+          const { data: gmailAccounts } = await supabase.from('gmail_accounts').select('id').eq('user_id', userId);
+          if (gmailAccounts && gmailAccounts.length > 0) {
+            await supabase.from('gmail_accounts').delete().eq('user_id', userId);
+            results.push('Gmail ontkoppeld');
+          }
+          const { data: outlookAccounts } = await supabase.from('outlook_accounts').select('id').eq('user_id', userId);
+          if (outlookAccounts && outlookAccounts.length > 0) {
+            await supabase.from('outlook_accounts').delete().eq('user_id', userId);
+            results.push('Outlook ontkoppeld');
+          }
+          const { data: bankConns } = await supabase.from('bank_connections').select('id').eq('user_id', userId);
+          if (bankConns && bankConns.length > 0) {
+            await supabase.from('bank_transactions').delete().eq('user_id', userId);
+            await supabase.from('bank_connections').delete().eq('user_id', userId);
+            results.push('Bankverbinding(en) verwijderd + transacties gewist');
+          }
+          const { data: activeOrgs } = await supabase.from('user_organizations')
+            .select('organization_id').eq('user_id', userId)
+            .in('status', ['active', 'onboarded', 'invited', 'paused']);
+          for (const o of (activeOrgs || [])) {
+            await exitOrgRelationship(supabase, userId, (o as { organization_id: string }).organization_id, gdprNow);
+          }
+          if ((activeOrgs || []).length > 0) results.push('B2B toestemmingen ingetrokken');
+        }
+
+        autoResponse = { fulfilled: true, disconnected: results, message: results.length > 0 ? 'De geselecteerde koppelingen zijn losgekoppeld.' : 'Geen koppelingen om los te koppelen.' };
         await supabase.from('gdpr_requests').update({
           status: 'completed',
           completed_at: new Date().toISOString(),
