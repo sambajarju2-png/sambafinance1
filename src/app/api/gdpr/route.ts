@@ -170,7 +170,13 @@ export async function POST(req: NextRequest) {
           results.push('Bankverbinding(en) verwijderd + transacties gewist');
         }
 
-        // B2B consents
+        // B2B: end all active org relationships (status=exited) + revoke consent.
+        // Account + subscription are untouched here (separate flows).
+        const gdprNow = new Date().toISOString();
+        await supabase.from('user_organizations')
+          .update({ status: 'exited', exited_at: gdprNow, exit_reason: 'gdpr_withdraw', updated_at: gdprNow })
+          .eq('user_id', userId)
+          .in('status', ['active', 'onboarded', 'invited', 'paused']);
         await supabase.from('b2b_consents').delete().eq('user_id', userId);
         results.push('B2B toestemmingen ingetrokken');
 

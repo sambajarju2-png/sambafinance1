@@ -325,6 +325,9 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   const [codeError, setCodeError] = useState<string | null>(null);
   const [codeSuccess, setCodeSuccess] = useState<string | null>(null);
   const [showCodeInput, setShowCodeInput] = useState(false);
+  const [leaveTarget, setLeaveTarget] = useState<{ organization_id: string; org: { name: string } | null } | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -388,6 +391,55 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   const SCOPE_LABELS = consentScopeLabels(lang);
 
   // Org consent modal
+  async function leaveOrg() {
+    if (!leaveTarget) return;
+    setLeaving(true);
+    setLeaveError(null);
+    try {
+      const res = await fetch('/api/org-connections', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organization_id: leaveTarget.organization_id }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        setLeaveTarget(null);
+        const orgsRes = await fetch('/api/org-connections');
+        if (orgsRes.ok) setOrgs((await orgsRes.json()).orgs || []);
+      } else {
+        setLeaveError(d.error || pick(lang, { nl: 'Verlaten mislukt', en: 'Could not leave', pl: 'Nie udało się opuścić', tr: 'Ayrılma başarısız', fr: 'Échec', ar: 'فشل' }));
+      }
+    } catch {
+      setLeaveError(pick(lang, { nl: 'Verbinding mislukt', en: 'Connection failed', pl: 'Połączenie nie powiodło się', tr: 'Bağlantı başarısız', fr: 'Échec de la connexion', ar: 'فشل الاتصال' }));
+    }
+    setLeaving(false);
+  }
+
+  const leaveModal = leaveTarget ? (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-5" onClick={() => { if (!leaving) setLeaveTarget(null); }}>
+      <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <h3 className="text-[16px] font-bold text-pw-navy">
+          {pick(lang, { nl: `${leaveTarget.org?.name || 'Organisatie'} verlaten?`, en: `Leave ${leaveTarget.org?.name || 'organisation'}?`, pl: `Opuścić ${leaveTarget.org?.name || 'organizację'}?`, tr: `${leaveTarget.org?.name || 'Kuruluş'} ayrıl?`, fr: `Quitter ${leaveTarget.org?.name || "l'organisation"} ?`, ar: `مغادرة ${leaveTarget.org?.name || 'المؤسسة'}؟` })}
+        </h3>
+        <p className="text-[13px] text-pw-muted leading-relaxed">
+          {pick(lang, { nl: 'De organisatie heeft daarna geen toegang meer tot je gegevens. Je PayWatch-account en een eventueel abonnement blijven gewoon bestaan.', en: 'The organisation will no longer have access to your data. Your PayWatch account and any subscription stay exactly as they are.', pl: 'Organizacja straci dostęp do Twoich danych. Twoje konto PayWatch i ewentualna subskrypcja pozostają bez zmian.', tr: 'Kuruluşun verilerine artık erişimi olmaz. PayWatch hesabın ve varsa aboneliğin aynen kalır.', fr: "L'organisation n'aura plus accès à tes données. Ton compte PayWatch et ton éventuel abonnement restent inchangés.", ar: 'لن يكون لدى المؤسسة وصول إلى بياناتك بعد الآن. يبقى حساب PayWatch واشتراكك (إن وُجد) كما هو.' })}
+        </p>
+        {leaveError && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-[12px] text-pw-red">{leaveError}</div>
+        )}
+        <div className="flex gap-3 pt-1">
+          <button onClick={leaveOrg} disabled={leaving} className="flex-1 flex items-center justify-center gap-2 py-3 bg-pw-red text-white text-[14px] font-semibold rounded-xl active:scale-95 disabled:opacity-50">
+            {leaving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+            {pick(lang, { nl: 'Ja, verlaten', en: 'Yes, leave', pl: 'Tak, opuść', tr: 'Evet, ayrıl', fr: 'Oui, quitter', ar: 'نعم، غادر' })}
+          </button>
+          <button onClick={() => setLeaveTarget(null)} disabled={leaving} className="flex-1 py-3 border border-pw-border text-pw-muted text-[14px] font-semibold rounded-xl disabled:opacity-50">
+            {pick(lang, { nl: 'Annuleren', en: 'Cancel', pl: 'Anuluj', tr: 'İptal', fr: 'Annuler', ar: 'إلغاء' })}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   const orgConsentModal = showOrgConsent ? (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-5" onClick={() => setShowOrgConsent(false)}>
       <div className="w-full max-w-sm bg-pw-surface rounded-2xl shadow-xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
@@ -451,6 +503,7 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-pw-bg dark:bg-pw-navy">
       {orgConsentModal}
+      {leaveModal}
       {/* Header */}
       <div className="flex items-center justify-between border-b border-pw-border/40 px-4 py-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-3">
@@ -500,18 +553,24 @@ export default function HulpInbox({ lang, onClose }: { lang: string; onClose: ()
 
         {/* Connected orgs */}
         {orgs.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="space-y-1.5 mb-2">
             {orgs.map(uo => (
-              <div key={uo.organization_id} className="flex items-center gap-1.5 bg-pw-bg dark:bg-white/5 rounded-lg px-2.5 py-1.5 border border-pw-border/50">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+              <div key={uo.organization_id} className="flex items-center gap-2 bg-pw-bg dark:bg-white/5 rounded-lg px-2.5 py-2 border border-pw-border/50">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                   style={{ background: uo.org?.primary_color || '#2563EB' }}>
                   {(uo.org?.name || '?').charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-pw-text dark:text-white leading-none">{uo.org?.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-pw-text dark:text-white leading-none truncate">{uo.org?.name}</p>
                   {uo.org?.city && <p className="text-[10px] text-pw-muted leading-none mt-0.5">{uo.org.city}</p>}
                 </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-pw-green ml-1 flex-shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-pw-green flex-shrink-0" />
+                <button
+                  onClick={() => { setLeaveError(null); setLeaveTarget(uo); }}
+                  className="text-[10px] font-semibold text-pw-muted hover:text-pw-red px-2 py-1 rounded-md flex-shrink-0"
+                >
+                  {pick(lang, { nl: 'Verlaten', en: 'Leave', pl: 'Opuść', tr: 'Ayrıl', fr: 'Quitter', ar: 'مغادرة' })}
+                </button>
               </div>
             ))}
           </div>

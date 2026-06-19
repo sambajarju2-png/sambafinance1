@@ -107,3 +107,61 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, org }, { headers: NO_CACHE });
 }
+
+/**
+ * DELETE /api/org-connections — user leaves a single organisation (Phase 6 exit).
+ * Body: { organization_id: string, reason?: string }
+ * Ends the relationship (status=exited + exited_at) and revokes that org's
+ * consent, leaving the user's account and subscription untouched (the "two
+ * clocks": relationship lifecycle is separate from subscription lifecycle).
+ * Audit-logged so the organisation sees the user left.
+ */
+export async function DELETE(req: NextRequest) {
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const { organization_id, reason } = await req.json().catch(() => ({}));
+  if (!organization_id || typeof organization_id !== 'string') {
+    return NextResponse.json({ error: 'organization_id required' }, { status: 400, headers: NO_CACHE });
+  }
+
+  const supabase = createServiceRoleClient();
+
+  // Confirm an active relationship exists.
+  const { data: uo } = await supabase
+    .from('user_organizations')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('organization_id', organization_id)
+    .in('status', ['active', 'onboarded', 'invited', 'paused'])
+    .single();
+  if (!uo) return NextResponse.json({ error: 'Geen actieve koppeling met deze organisatie' }, { status: 404, headers: NO_CACHE });
+
+  const now = new Date().toISOString();
+
+  // 1) End the relationship clock (subscription clock untouched).
+  await supabase
+    .from('user_organizations')
+    .update({ status: 'exited', exited_at: now, exit_reason: reason || null, updated_at: now })
+    .eq('id', uo.id);
+
+  // 2) Revoke this org's consent, preserving history.
+  await supabase
+    .from('b2b_consents')
+    .update({ granted: false, revoked_at: now })
+    .eq('user_id', userId)
+    .eq('organization_id', organization_id);
+
+  // 3) Audit so the organisation can see the user left.
+  await supabase.from('b2b_audit_log').insert({
+    organization_id,
+    actor_id: userId,
+    actor_type: 'user',
+    action: 'relationship.user_exited',
+    target_type: 'user',
+    target_id: userId,
+    metadata: { reason: reason || null },
+  });
+
+  return NextResponse.json({ ok: true }, { headers: NO_CACHE });
+}
