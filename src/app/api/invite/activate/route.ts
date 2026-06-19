@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { CONSENT_SCOPE_KEYS, type ConsentScopeKey } from "@/lib/consent-scopes";
+import { ensureDefaultGroupMembership } from "@/lib/community-groups";
 
 export async function POST(request: NextRequest) {
   const { token, scopes } = await request.json();
@@ -128,6 +129,9 @@ export async function POST(request: NextRequest) {
     target_id: invite.id,
     metadata: { user_id: user.id, user_email: user.email },
   }).then(() => {});
+
+  // Auto-join the org's default community group (Phase 7).
+  await ensureDefaultGroupMembership(supabase, invite.organization_id, user.id);
 
   return NextResponse.json({ success: true, organization_id: invite.organization_id });
 }

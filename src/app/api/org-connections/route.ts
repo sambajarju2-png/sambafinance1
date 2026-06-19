@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { ensureDefaultGroupMembership } from '@/lib/community-groups';
 
 /**
  * GET — list orgs this user is connected to
@@ -104,6 +105,9 @@ export async function POST(req: NextRequest) {
 
   // Get org info to return
   const { data: org } = await supabase.from('organizations').select('id, name, type, city').eq('id', invite.organization_id).single();
+
+  // Auto-join the org's default community group (Phase 7).
+  await ensureDefaultGroupMembership(supabase, invite.organization_id, userId);
 
   return NextResponse.json({ ok: true, org }, { headers: NO_CACHE });
 }

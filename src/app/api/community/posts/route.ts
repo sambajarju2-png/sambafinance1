@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
   const filter = req.nextUrl.searchParams.get('filter') || 'all';
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20'), 50);
+  const group = req.nextUrl.searchParams.get('group'); // absent/'global' = public PayWatch feed
 
   if (filter === 'populair') {
     return getPopularPosts(supabase, user.id);
@@ -28,8 +29,20 @@ export async function GET(req: NextRequest) {
     .select('*')
     .eq('is_approved', true)
     .eq('is_flagged', false)
-    .order('created_at', { ascending: false })
     .limit(limit);
+
+  if (group && group !== 'global') {
+    // Private sub-community feed (RLS limits this to members). Announcements pinned first.
+    postsQuery = postsQuery
+      .eq('group_id', group)
+      .order('is_announcement', { ascending: false })
+      .order('created_at', { ascending: false });
+  } else {
+    // Global PayWatch community — unchanged: only posts with no group.
+    postsQuery = postsQuery
+      .is('group_id', null)
+      .order('created_at', { ascending: false });
+  }
 
   if (filter === 'succesverhalen') {
     postsQuery = postsQuery.in('badge_type', ['milestone', 'debt_free', 'streak']);
@@ -178,9 +191,22 @@ export async function POST(req: NextRequest) {
   if (content.length > 500) return NextResponse.json({ error: 'Content too long' }, { status: 400, headers: NO_CACHE });
   if (containsBlockedWords(content)) return NextResponse.json({ error: 'Ongepaste taal gedetecteerd' }, { status: 400, headers: NO_CACHE });
 
+  // Optional group post — the user must be a member of that sub-community.
+  let groupId: string | null = null;
+  if (body.group_id) {
+    const { data: mem } = await supabase
+      .from('community_group_members')
+      .select('group_id')
+      .eq('group_id', body.group_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!mem) return NextResponse.json({ error: 'Geen lid van deze groep' }, { status: 403, headers: NO_CACHE });
+    groupId = body.group_id;
+  }
+
   const { data, error } = await supabase
     .from('community_posts')
-    .insert({ user_id: user.id, content, is_anonymous: body.is_anonymous || false, badge_type: body.badge_type || null, badge_data: body.badge_data || null })
+    .insert({ user_id: user.id, content, is_anonymous: body.is_anonymous || false, badge_type: body.badge_type || null, badge_data: body.badge_data || null, group_id: groupId })
     .select()
     .single();
 
