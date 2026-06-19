@@ -234,7 +234,7 @@ export default function ChatView({ continueFrom }: { continueFrom?: string }) {
       // Read chips from header
       const chipsHeader = response.headers.get('X-Chat-Chips');
       if (chipsHeader) {
-        try { setChips(JSON.parse(chipsHeader)); } catch {}
+        try { setChips(JSON.parse(decodeURIComponent(chipsHeader))); } catch {}
       }
 
       if (!response.ok) {

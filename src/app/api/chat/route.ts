@@ -520,7 +520,7 @@ ${userContext}${extractionContext}`;
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'X-Chat-Chips': JSON.stringify(chips),
+        'X-Chat-Chips': encodeURIComponent(JSON.stringify(chips)),
       },
     });
   } catch (error) {

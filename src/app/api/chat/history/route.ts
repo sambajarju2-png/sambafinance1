@@ -60,19 +60,19 @@ export async function GET(req: NextRequest) {
     ['herinnering', 'aanmaning', 'incasso', 'deurwaarder'].includes(b.escalation_stage || '')
   );
 
-  const nl = lang === 'nl';
+  const t = (m: Record<string, string>) => m[lang] || m.nl;
   const chips: string[] = [];
-  chips.push(nl ? 'Foto scannen' : 'Scan photo');
-  if (escalated.length > 0) chips.push(nl ? 'Wat moet ik eerst doen?' : 'What should I do first?');
-  if (urgent.length > 0) chips.push(nl ? 'Plan mijn week' : 'Plan my week');
+  chips.push(t({ nl: 'Foto scannen', en: 'Scan photo', pl: 'Zeskanuj zdjęcie', tr: 'Fotoğraf tara', fr: 'Scanner une photo', ar: 'مسح صورة' }));
+  if (escalated.length > 0) chips.push(t({ nl: 'Wat moet ik eerst doen?', en: 'What should I do first?', pl: 'Co powinienem zrobić najpierw?', tr: 'Önce ne yapmalıyım?', fr: 'Que dois-je faire en premier ?', ar: 'ماذا أفعل أولاً؟' }));
+  if (urgent.length > 0) chips.push(t({ nl: 'Plan mijn week', en: 'Plan my week', pl: 'Zaplanuj mój tydzień', tr: 'Haftamı planla', fr: 'Planifier ma semaine', ar: 'خطط لأسبوعي' }));
   if (allBills.length === 0) {
-    chips.push(nl ? 'Rekening toevoegen' : 'Add a bill');
-    chips.push(nl ? 'Hoe werkt PayWatch?' : 'How does PayWatch work?');
+    chips.push(t({ nl: 'Rekening toevoegen', en: 'Add a bill', pl: 'Dodaj rachunek', tr: 'Fatura ekle', fr: 'Ajouter une facture', ar: 'أضف فاتورة' }));
+    chips.push(t({ nl: 'Hoe werkt PayWatch?', en: 'How does PayWatch work?', pl: 'Jak działa PayWatch?', tr: 'PayWatch nasıl çalışır?', fr: 'Comment fonctionne PayWatch ?', ar: 'كيف يعمل PayWatch؟' }));
   }
-  if ((plans || []).length > 0) chips.push(nl ? 'Hoe gaat mijn regeling?' : "How's my payment plan?");
+  if ((plans || []).length > 0) chips.push(t({ nl: 'Hoe gaat mijn regeling?', en: "How's my payment plan?", pl: 'Jak idzie mój plan spłat?', tr: 'Ödeme planım nasıl gidiyor?', fr: 'Où en est mon plan de paiement ?', ar: 'كيف تسير خطة السداد الخاصة بي؟' }));
   const settled = allBills.filter((b: { status: string }) => b.status === 'settled');
-  if (settled.length > 0) chips.push(nl ? 'Hoeveel bespaar ik?' : 'How much am I saving?');
-  chips.push(nl ? 'Hulp bij schulden' : 'Help with debt');
+  if (settled.length > 0) chips.push(t({ nl: 'Hoeveel bespaar ik?', en: 'How much am I saving?', pl: 'Ile oszczędzam?', tr: 'Ne kadar tasarruf ediyorum?', fr: "Combien j'économise ?", ar: 'كم أوفر؟' }));
+  chips.push(t({ nl: 'Hulp bij schulden', en: 'Help with debt', pl: 'Pomoc w zadłużeniu', tr: 'Borç konusunda yardım', fr: 'Aide pour les dettes', ar: 'مساعدة في الديون' }));
 
   return NextResponse.json({
     messages: messages || [],
