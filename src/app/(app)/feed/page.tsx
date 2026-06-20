@@ -29,6 +29,7 @@ interface Post {
   comment_count: number;
   is_announcement?: boolean;
   author_type?: string;
+  org_logo_url?: string | null;
 }
 
 interface FlatComment {
@@ -39,6 +40,8 @@ interface FlatComment {
   user_id: string;
   is_own: boolean;
   created_at: string;
+  author_type?: string;
+  org_logo_url?: string | null;
 }
 
 type FilterKey = 'all' | 'populair' | 'succesverhalen' | 'tips' | 'steun';
@@ -325,7 +328,9 @@ function PostCard({ post, index, onReaction, rank, onCommentCountChange, onDelet
   const inputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const avatarUrl = post.is_anonymous
+  const avatarUrl = post.author_type === 'org' && post.org_logo_url
+    ? post.org_logo_url
+    : post.is_anonymous
     ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
     : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(post.display_name)}`;
   const badge = post.badge_type ? BADGE_LABELS[post.badge_type] : null;
@@ -563,7 +568,9 @@ function CommentRow({ comment, onReplyTo, onDelete, onEdit, onReport }: {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
 
-  const cAvatar = comment.is_anonymous
+  const cAvatar = comment.author_type === 'org' && comment.org_logo_url
+    ? comment.org_logo_url
+    : comment.is_anonymous
     ? 'https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=anonymous'
     : `https://api.dicebear.com/9.x/adventurer-neutral/svg?seed=${encodeURIComponent(comment.display_name)}`;
 

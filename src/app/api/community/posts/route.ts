@@ -126,10 +126,12 @@ async function enrichPosts(
   const orgIds = Array.from(new Set(
     posts.filter((p) => p.author_type === 'org' && p.author_org_id).map((p) => p.author_org_id as string)
   ));
-  const orgNameMap: Record<string, string> = {};
+  const orgInfoMap: Record<string, { name: string; logo_url: string | null }> = {};
   if (orgIds.length > 0) {
-    const { data: orgRows } = await supabase.from('organizations').select('id, name').in('id', orgIds);
-    for (const o of (orgRows || []) as Array<{ id: string; name: string }>) orgNameMap[o.id] = o.name;
+    const { data: orgRows } = await supabase.from('organizations').select('id, name, logo_url').in('id', orgIds);
+    for (const o of (orgRows || []) as Array<{ id: string; name: string; logo_url: string | null }>) {
+      orgInfoMap[o.id] = { name: o.name, logo_url: o.logo_url };
+    }
   }
 
   const reactionsByPost: Record<string, Array<{ reaction_type: string; user_id: string }>> = {};
@@ -150,6 +152,8 @@ async function enrichPosts(
       if (r.user_id === userId) userReactions.push(r.reaction_type);
     }
     const isOrg = post.author_type === 'org';
+    const orgInfo = isOrg ? orgInfoMap[post.author_org_id as string] : undefined;
+    const staffName = isOrg ? profileMap[post.user_id as string] : undefined;
     return {
       id: post.id,
       content: post.content,
@@ -158,7 +162,7 @@ async function enrichPosts(
       badge_data: post.badge_data,
       created_at: post.created_at,
       display_name: isOrg
-        ? (orgNameMap[post.author_org_id as string] || 'Organisatie')
+        ? (staffName ? `${staffName} van ${orgInfo?.name || 'de organisatie'}` : (orgInfo?.name || 'Organisatie'))
         : (post.is_anonymous ? 'Anoniem' : (profileMap[post.user_id as string] || 'Gebruiker')),
       user_id: post.user_id,
       is_own: post.user_id === userId,
@@ -168,6 +172,7 @@ async function enrichPosts(
       comment_count: commentCountByPost[post.id as string] || 0,
       is_announcement: (post.is_announcement as boolean) || false,
       author_type: (post.author_type as string) || 'user',
+      org_logo_url: isOrg ? (orgInfo?.logo_url || null) : null,
     };
   });
 }

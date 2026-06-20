@@ -51,15 +51,36 @@ export async function GET(req: NextRequest) {
   const profileMap: Record<string, string> = {};
   for (const p of profiles || []) profileMap[p.user_id] = p.display_name;
 
-  const enriched = comments.map((c) => ({
-    id: c.id,
-    content: c.content,
-    is_anonymous: c.is_anonymous,
-    display_name: c.is_anonymous ? 'Anoniem' : (profileMap[c.user_id] || 'Gebruiker'),
-    user_id: c.user_id,
-    is_own: c.user_id === user.id,
-    created_at: c.created_at,
-  }));
+  // Org-authored comments show the org logo + "{person} van {org}".
+  const orgIds = Array.from(new Set(
+    comments.filter((c) => c.author_type === 'org' && c.author_org_id).map((c) => c.author_org_id as string)
+  ));
+  const orgInfoMap: Record<string, { name: string; logo_url: string | null }> = {};
+  if (orgIds.length > 0) {
+    const { data: orgRows } = await supabase.from('organizations').select('id, name, logo_url').in('id', orgIds);
+    for (const o of (orgRows || []) as Array<{ id: string; name: string; logo_url: string | null }>) {
+      orgInfoMap[o.id] = { name: o.name, logo_url: o.logo_url };
+    }
+  }
+
+  const enriched = comments.map((c) => {
+    const isOrg = c.author_type === 'org';
+    const orgInfo = isOrg ? orgInfoMap[c.author_org_id as string] : undefined;
+    const staffName = isOrg ? profileMap[c.user_id] : undefined;
+    return {
+      id: c.id,
+      content: c.content,
+      is_anonymous: c.is_anonymous,
+      display_name: isOrg
+        ? (staffName ? `${staffName} van ${orgInfo?.name || 'de organisatie'}` : (orgInfo?.name || 'Organisatie'))
+        : (c.is_anonymous ? 'Anoniem' : (profileMap[c.user_id] || 'Gebruiker')),
+      user_id: c.user_id,
+      is_own: c.user_id === user.id,
+      created_at: c.created_at,
+      author_type: (c.author_type as string) || 'user',
+      org_logo_url: isOrg ? (orgInfo?.logo_url || null) : null,
+    };
+  });
 
   return NextResponse.json({ comments: enriched }, { headers: NO_CACHE });
 }
