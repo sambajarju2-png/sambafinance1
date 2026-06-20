@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, MessageCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useOrgFeatures } from '@/lib/use-org-features';
+import FeatureUnavailable from '@/components/feature-unavailable';
 
 interface Message {
   id: string;
@@ -87,6 +89,12 @@ function buildConvo(msgs: Message[], nl: boolean): Conversation {
 }
 
 export default function ChatHistoryPage() {
+  const { features } = useOrgFeatures();
+  if (!features.buddy_system) return <FeatureUnavailable />;
+  return <ChatHistoryInner />;
+}
+
+function ChatHistoryInner() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);

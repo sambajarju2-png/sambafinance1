@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { BarChart3, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCents } from '@/lib/bills';
 import { haptic } from '@/lib/capacitor';
+import { useOrgFeatures } from '@/lib/use-org-features';
 
 interface MiniSummary {
   has_bank_connection: boolean;
@@ -22,7 +23,13 @@ interface Props {
   };
 }
 
-export default function AnalyticsEntryCard({ initialData }: Props = {}) {
+export default function AnalyticsEntryCard(props: Props = {}) {
+  const { features } = useOrgFeatures();
+  if (!features.spending_analytics) return null;
+  return <AnalyticsEntryCardInner {...props} />;
+}
+
+function AnalyticsEntryCardInner({ initialData }: Props = {}) {
   const router = useRouter();
   const t = useTranslations('finance');
 

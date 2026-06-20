@@ -11,12 +11,20 @@ import { calculateWIKCosts } from '@/lib/wik';
 import CashflowPanel from '@/components/cashflow-panel';
 import MetricCard from '@/components/metric-card';
 import { useDashboardModules } from '@/lib/dashboard-modules';
+import { useOrgFeatures } from '@/lib/use-org-features';
+import FeatureUnavailable from '@/components/feature-unavailable';
 
 type SubTab = 'performance' | 'cashflow';
 
 const ADMIN_EMAILS = ['sambajarju2@gmail.com', 'ayeitssamba@gmail.com', 'reiskenners@gmail.com'];
 
 export default function StatsPage() {
+  const { features } = useOrgFeatures();
+  if (!features.spending_analytics) return <FeatureUnavailable />;
+  return <StatsInner />;
+}
+
+function StatsInner() {
   const t = useTranslations('stats');
   const [activeTab, setActiveTab] = useState<SubTab>('performance');
   const [bills, setBills] = useState<Bill[]>([]);

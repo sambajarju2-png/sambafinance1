@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Zap, Loader2, AlertTriangle, AlertCircle, Users, Share2, Copy, Check } from 'lucide-react';
 import { type Bill } from '@/lib/bills';
+import { useOrgFeatures } from '@/lib/use-org-features';
 
 interface Insight {
   type: 'priority' | 'warning' | 'pattern' | 'tip';
@@ -26,7 +27,13 @@ const INSIGHTS_CACHE_KEY = 'pw-insights-cache';
 function getCachedInsights(): CachedInsights | null { try { const raw = sessionStorage.getItem(INSIGHTS_CACHE_KEY); if (!raw) return null; const parsed = JSON.parse(raw); if (Date.now() - parsed.timestamp > 30 * 60 * 1000) return null; return parsed; } catch { return null; } }
 function setCachedInsights(data: CachedInsights): void { try { sessionStorage.setItem(INSIGHTS_CACHE_KEY, JSON.stringify(data)); } catch {} }
 
-export default function AiInsightsPanel({ bills }: { bills: Bill[] }) {
+export default function AiInsightsPanel(props: { bills: Bill[] }) {
+  const { features } = useOrgFeatures();
+  if (!features.ai_insights) return null;
+  return <AiInsightsPanelInner {...props} />;
+}
+
+function AiInsightsPanelInner({ bills }: { bills: Bill[] }) {
   const t = useTranslations('stats');
   const [insights, setInsights] = useState<Insight[]>([]);
   const [summary, setSummary] = useState('');

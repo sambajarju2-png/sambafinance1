@@ -19,6 +19,8 @@ import { getCategoryLabel, getCategoryColor, CATEGORIES, DEBT_CATEGORY_IDS, FIXE
 import type { AnalyticsBundle, MonthlyCategoryItem, WeeklyCashflowItem, MonthlyTotalItem, DebtItem, TransactionItem, SubscriptionItem } from '@/lib/analytics/types';
 import { haptic } from '@/lib/capacitor';
 import { LogicInsights } from '@/components/analytics/logic-insights';
+import { useOrgFeatures } from '@/lib/use-org-features';
+import FeatureUnavailable from '@/components/feature-unavailable';
 
 type AnalyticsTab = 'uitgaven' | 'inkomen' | 'geldstroom' | 'trend' | 'schuld' | 'transacties' | 'abonnementen';
 
@@ -61,6 +63,12 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function AnalyticsPage() {
+  const { features } = useOrgFeatures();
+  if (!features.spending_analytics) return <FeatureUnavailable />;
+  return <AnalyticsPageInner />;
+}
+
+function AnalyticsPageInner() {
   const router = useRouter();
   const t = useTranslations('analytics');
   const [tab, setTab] = useState<AnalyticsTab>('uitgaven');

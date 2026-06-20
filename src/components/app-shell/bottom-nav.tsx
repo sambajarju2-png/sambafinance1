@@ -44,7 +44,12 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
       }}
     >
-      {NAV_ITEMS.filter((item) => item.href !== '/feed' || features.community).map((item) => {
+      {NAV_ITEMS.filter((item) => {
+        if (item.href === '/feed') return features.community;
+        if (item.href === '/buddy') return features.buddy_system;
+        if (item.href === '/stats') return features.spending_analytics;
+        return true;
+      }).map((item) => {
         const active = isActive(item.href);
         const Icon = item.icon;
 

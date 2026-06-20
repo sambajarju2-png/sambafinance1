@@ -19,6 +19,7 @@ import LawyerReferral from '@/components/lawyer-referral';
 import PaymentConfirmationDrawer from '@/components/payment-confirmation-drawer';
 import { PaymentPlanSetup } from '@/components/payment-plan-setup';
 import { PaymentPlanTracker, PaymentPlanHeaderInfo } from '@/components/payment-plan-tracker';
+import { useOrgFeatures } from '@/lib/use-org-features';
 
 const DraftLetterDrawer = dynamic(() => import('./draft-letter-drawer'), {
   loading: () => <div className="skeleton h-48 rounded-card" />,
@@ -83,6 +84,7 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
   const [confirmationUrl, setConfirmationUrl] = useState<string | null>(bill?.confirmation_image_url || null);
   // Payment plan state
   const [showPlanSetup, setShowPlanSetup] = useState(false);
+  const { features } = useOrgFeatures();
   const [plan, setPlan] = useState<PaymentPlanData | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
 
@@ -440,8 +442,8 @@ export default function BillDetailDrawer({ bill, onClose, onUpdate, onPaid }: Bi
                   loading={false} onClick={() => setConfirmationOpen(true)} />
               )}
 
-              {/* Betalingsregeling button — only if no plan yet and not settled */}
-              {!isPaid && !hasPaymentPlan && (
+              {/* Betalingsregeling button — only if no plan yet, not settled, and the feature is granted */}
+              {!isPaid && !hasPaymentPlan && features.payment_plans && (
                 <ActionButton icon={TrendingDown} label="Betalingsregeling getroffen" desc="Betaal in termijnen en houd je voortgang bij" color="text-pw-blue"
                   loading={false} onClick={() => setShowPlanSetup(true)} />
               )}

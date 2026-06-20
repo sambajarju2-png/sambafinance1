@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 import { generateInsight } from '@/lib/ai';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -12,6 +13,11 @@ export async function POST(req: NextRequest) {
 
   const userId = await getAuthUserId();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const granted = await getGrantedFeatures(createServiceRoleClient(), userId);
+  if (!granted.ai_insights) {
+    return NextResponse.json({ error: 'AI-inzichten zijn niet beschikbaar via je organisatie' }, { status: 403, headers: NO_CACHE });
+  }
 
   const allowed = await checkRateLimit(userId, 'insights', 20, 60);
   if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: NO_CACHE });

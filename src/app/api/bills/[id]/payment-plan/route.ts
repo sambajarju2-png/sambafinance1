@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUserId } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 
 const NO_CACHE = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -15,6 +16,11 @@ export async function POST(
   const userId = await getAuthUserId(req);
   if (!userId)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
+
+  const granted = await getGrantedFeatures(createServiceRoleClient(), userId);
+  if (!granted.payment_plans) {
+    return NextResponse.json({ error: 'Betaalregelingen zijn niet beschikbaar via je organisatie' }, { status: 403, headers: NO_CACHE });
+  }
 
   const DEADLINE = Date.now() + 55000;
   const guard = () => {

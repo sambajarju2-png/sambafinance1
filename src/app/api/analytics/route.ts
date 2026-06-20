@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,6 +27,11 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 });
+    }
+
+    const granted = await getGrantedFeatures(createServiceRoleClient(), user.id);
+    if (!granted.spending_analytics) {
+      return NextResponse.json({ error: 'Uitgaven-analyse is niet beschikbaar via je organisatie' }, { status: 403 });
     }
 
     const supabase = createClient(
