@@ -2,47 +2,79 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
+async function createRequestScopedClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Called from a Server Component (can't set cookies) — safe to ignore.
+            // Token refresh still works inside Route Handlers, where setAll succeeds.
+          }
+        },
+      },
+    }
+  );
+}
+
 /**
  * Get the authenticated user's ID from a server component or API route.
  * Returns null if not authenticated.
  *
- * Usage in server components:
- *   const userId = await getAuthUserId();
+ * PERF: the hot path uses getClaims(), which (with this project's asymmetric
+ * ES256 signing keys) verifies the access-token JWT LOCALLY via the cached
+ * JWKS — sub-millisecond, no round-trip to Supabase Auth. This replaces a
+ * per-route network getUser() call that was adding ~100-300ms (London→Ireland)
+ * to every one of the ~108 authed routes.
  *
- * Usage in API routes:
- *   const userId = await getAuthUserId(req);
+ * Only when the local check fails (e.g. the access token has expired) do we
+ * fall back to getUser(), which refreshes the session via the refresh token
+ * and persists the rotated cookies. That network cost is now paid at most once
+ * per user per token lifetime instead of on every request.
+ *
+ * Usage in server components:  const userId = await getAuthUserId();
+ * Usage in API routes:         const userId = await getAuthUserId(req);
  */
-export async function getAuthUserId(req?: NextRequest): Promise<string | null> {
+export async function getAuthUserId(_req?: NextRequest): Promise<string | null> {
   try {
-    const cookieStore = await cookies();
+    const supabase = await createRequestScopedClient();
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options);
-              });
-            } catch {
-              // Called from Server Component — safe to ignore
-            }
-          },
-        },
-      }
-    );
+    // Fast path: local JWT verification (no network with asymmetric keys).
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const sub = claimsData?.claims?.sub;
+    if (sub) return sub as string;
 
+    // Slow path: token expired/invalid locally → refresh + validate via Auth.
     const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return user.id;
+  } catch {
+    return null;
+  }
+}
 
-    if (error || !user) {
-      return null;
-    }
-
+/**
+ * Like getAuthUserId, but ALWAYS makes a network call to Supabase Auth
+ * (getUser) so server-side session revocation / logout is detected immediately
+ * rather than after the JWT expires. Slower (~1 round-trip). Use ONLY on
+ * destructive / high-sensitivity routes: account deletion, GDPR export/erase,
+ * plan / billing changes, admin actions. Everywhere else use getAuthUserId.
+ */
+export async function getAuthUserIdVerified(_req?: NextRequest): Promise<string | null> {
+  try {
+    const supabase = await createRequestScopedClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
     return user.id;
   } catch {
     return null;
