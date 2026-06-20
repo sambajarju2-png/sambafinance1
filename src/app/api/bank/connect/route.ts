@@ -5,6 +5,7 @@ import { startAuth } from '@/lib/enablebanking'
 import { randomUUID } from 'crypto'
 import { verifyCsrf } from '@/lib/csrf'
 import { log } from '@/lib/logger'
+import { getGrantedFeatures } from '@/lib/org-features-server'
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,6 +44,12 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Org feature gate: block new bank connections when the user's org doesn't grant bank_sync
+    const granted = await getGrantedFeatures(supabase, user.id)
+    if (!granted.bank_sync) {
+      return NextResponse.json({ error: 'Bankkoppeling is niet beschikbaar via je organisatie' }, { status: 403 })
+    }
 
     // Check for existing PENDING connection (user may have started auth but not completed)
     // Allow multiple LINKED accounts from the same bank (personal + business, etc.)

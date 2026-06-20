@@ -10,6 +10,8 @@ import CommunityNamePicker from '@/components/community-name-picker';
 import CommunityBanOverlay from '@/components/community-ban-overlay';
 import ReportDrawer from '@/components/report-drawer';
 import { PullToRefresh } from '@/components/pull-to-refresh';
+import { useOrgFeatures } from '@/lib/use-org-features';
+import FeatureUnavailable from '@/components/feature-unavailable';
 
 interface Post {
   id: string;
@@ -73,6 +75,8 @@ const POST_LABELS = [
 
 /* Wrap in Suspense for useSearchParams */
 export default function FeedPage() {
+  const { features } = useOrgFeatures();
+  if (!features.community) return <FeatureUnavailable />;
   return (
     <Suspense fallback={<div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="skeleton h-[120px] rounded-card" />)}</div>}>
       <FeedContent />

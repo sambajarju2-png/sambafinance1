@@ -23,6 +23,8 @@ import { BILL_CATEGORIES, parseToCents } from '@/lib/bills';
 import { parsePaymentQR, isEPCQR } from '@/lib/epc-qr';
 import { detectGovBrand } from '@/lib/gov-brands';
 import QRScanner from '@/components/qr-scanner';
+import { useOrgFeatures } from '@/lib/use-org-features';
+import FeatureUnavailable from '@/components/feature-unavailable';
 
 type ScanStep = 'choose' | 'capture' | 'extracting' | 'confirm' | 'saving' | 'error' | 'qr' | 'fetching' | 'batch-processing' | 'batch-review' | 'batch-saving';
 
@@ -44,6 +46,12 @@ interface BatchItem {
 }
 
 export default function CameraScanPage() {
+  const { features } = useOrgFeatures();
+  if (!features.camera_scan) return <FeatureUnavailable />;
+  return <CameraScanInner />;
+}
+
+function CameraScanInner() {
   const t = useTranslations('cameraScan');
   const router = useRouter();
 

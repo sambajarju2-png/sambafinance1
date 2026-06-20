@@ -5,6 +5,7 @@ import {
   Building2, RefreshCw, Unlink, ChevronRight, Loader2, Search,
   Check, AlertCircle, Clock, X, Shield
 } from 'lucide-react';
+import { useOrgFeatures } from '@/lib/use-org-features';
 
 interface Institution {
   id: string;
@@ -51,6 +52,7 @@ export default function BankConnectCard() {
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const { features } = useOrgFeatures();
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -251,13 +253,15 @@ export default function BankConnectCard() {
       ))}
 
       {/* Add bank button */}
-      <button
-        onClick={() => setShowBankSelector(true)}
-        className="btn-press flex w-full items-center justify-center gap-2 rounded-button border border-dashed border-pw-blue/30 bg-pw-blue/5 px-4 py-3 text-[13px] font-semibold text-pw-blue transition-colors hover:bg-pw-blue/10"
-      >
-        <Building2 className="h-4 w-4" strokeWidth={1.5} />
-        {hasConnections ? 'Nog een bank toevoegen' : 'Bank koppelen'}
-      </button>
+      {features.bank_sync && (
+        <button
+          onClick={() => setShowBankSelector(true)}
+          className="btn-press flex w-full items-center justify-center gap-2 rounded-button border border-dashed border-pw-blue/30 bg-pw-blue/5 px-4 py-3 text-[13px] font-semibold text-pw-blue transition-colors hover:bg-pw-blue/10"
+        >
+          <Building2 className="h-4 w-4" strokeWidth={1.5} />
+          {hasConnections ? 'Nog een bank toevoegen' : 'Bank koppelen'}
+        </button>
+      )}
 
       {/* Info text */}
       <div className="rounded-card border border-pw-border/50 bg-pw-bg p-3">

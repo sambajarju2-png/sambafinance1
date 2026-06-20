@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { haptic } from '@/lib/capacitor';
+import { useOrgFeatures } from '@/lib/use-org-features';
 import {
   LayoutDashboard,
   CreditCard,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const pathname = usePathname();
   const t = useTranslations('nav');
+  const { features } = useOrgFeatures();
 
   function isActive(href: string): boolean {
     if (href === '/overzicht') {
@@ -42,7 +44,7 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
       }}
     >
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => item.href !== '/feed' || features.community).map((item) => {
         const active = isActive(item.href);
         const Icon = item.icon;
 
