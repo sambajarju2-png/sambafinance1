@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
+import { getAuthUserIdVerified, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email';
 
@@ -37,7 +37,7 @@ async function exitOrgRelationship(
  * GET /api/gdpr — list user's GDPR requests
  */
 export async function GET() {
-  const userId = await getAuthUserId();
+  const userId = await getAuthUserIdVerified();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   const supabase = createServiceRoleClient();
@@ -72,7 +72,7 @@ export async function GET() {
  * - rectificatie, beperking, bezwaar → logged, auto-email sent to privacy@paywatch.nl
  */
 export async function POST(req: NextRequest) {
-  const userId = await getAuthUserId();
+  const userId = await getAuthUserIdVerified();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   const { type, details, connections: selectedConnections } = await req.json();

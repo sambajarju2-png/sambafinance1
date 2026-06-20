@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
+import { getAuthUserIdVerified, NO_CACHE } from '@/lib/auth';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
-  const userId = await getAuthUserId(req);
+  const userId = await getAuthUserIdVerified(req);
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;

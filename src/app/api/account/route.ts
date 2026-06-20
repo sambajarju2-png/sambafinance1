@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthUserId, NO_CACHE } from '@/lib/auth';
+import { getAuthUserIdVerified, NO_CACHE } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { verifyCsrf } from '@/lib/csrf';
 
@@ -11,7 +11,7 @@ import { verifyCsrf } from '@/lib/csrf';
  */
 export async function DELETE() {
   try { await verifyCsrf(); } catch { return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); }
-  const userId = await getAuthUserId();
+  const userId = await getAuthUserIdVerified();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: NO_CACHE });
 
   try {

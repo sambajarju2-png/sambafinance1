@@ -14,6 +14,7 @@ import MatchCards from '@/components/bank/match-cards';
 import { useDashboardModules } from '@/lib/dashboard-modules';
 import { PullToRefresh } from '@/components/pull-to-refresh';
 import AnalyticsEntryCard from '@/components/analytics/analytics-entry-card';
+import LazyOnView from '@/components/lazy-on-view';
 import { AnimatedCounter } from '@/components/animated-counter';
 import { presets } from '@/lib/motion';
 import { haptic } from '@/lib/capacitor';
@@ -259,13 +260,23 @@ export default function OverzichtPage() {
             )}
 
             {/* Recurring predictions */}
-            {!loading && bills.length >= 2 && <RecurringPredictions />}
+            {!loading && bills.length >= 2 && (
+              <LazyOnView minHeight={120}>
+                <RecurringPredictions />
+              </LazyOnView>
+            )}
 
             {/* Achievements */}
-            {modules.home_rewards && <AchievementsDisplay />}
+            {modules.home_rewards && (
+              <LazyOnView minHeight={120}>
+                <AchievementsDisplay />
+              </LazyOnView>
+            )}
 
             {/* Mood tracker */}
-            <MoodTracker />
+            <LazyOnView minHeight={100}>
+              <MoodTracker />
+            </LazyOnView>
 
             {/* Empty state */}
             {!loading && bills.length === 0 && (
