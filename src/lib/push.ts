@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 
 interface PushPayload {
   title: string;
@@ -24,6 +25,10 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     webpush.setVapidDetails('mailto:info@paywatch.app', vapidPublic, vapidPrivate);
 
     const supabase = createServiceRoleClient();
+
+    // Org feature gate: respect the connected user's org push_notifications entitlement
+    const granted = await getGrantedFeatures(supabase, userId);
+    if (!granted.push_notifications) return 0;
 
     // Check if user has push enabled
     const { data: settings } = await supabase

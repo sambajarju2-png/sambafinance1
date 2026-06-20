@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 import { sendApnsPush, isApnsConfigured } from '@/lib/apns';
 
 const NO_CACHE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
     for (const [userId, bills] of Object.entries(userBills)) {
       const { data: settings } = await supabase.from('user_settings').select('notify_push_enabled').eq('user_id', userId).single();
       if (!settings?.notify_push_enabled) continue;
+
+      // Org feature gate: urgent-bill pushes are escalation alerts delivered via push
+      const granted = await getGrantedFeatures(supabase, userId);
+      if (!granted.push_notifications || !granted.escalation_alerts) continue;
 
       const overdue = bills.filter((b: UrgentBill) => b.due_date < today);
       const dueTmrw = bills.filter((b: UrgentBill) => b.due_date === tomorrow);

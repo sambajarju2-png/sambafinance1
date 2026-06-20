@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUserId, NO_CACHE } from '@/lib/auth';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { getGrantedFeatures } from '@/lib/org-features-server';
 
 export async function GET() {
   const userId = await getAuthUserId();
@@ -8,6 +9,7 @@ export async function GET() {
 
   try {
     const supabase = await createServerSupabaseClient();
+    const granted = await getGrantedFeatures(createServiceRoleClient(), userId);
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
@@ -62,11 +64,13 @@ export async function GET() {
 
     const items: Array<{ type: string; data: unknown }> = [];
 
-    for (const bill of (overdueBills || [])) {
-      items.push({ type: 'overdue', data: bill });
-    }
-    for (const bill of (upcomingBills || [])) {
-      items.push({ type: 'upcoming', data: bill });
+    if (granted.escalation_alerts) {
+      for (const bill of (overdueBills || [])) {
+        items.push({ type: 'overdue', data: bill });
+      }
+      for (const bill of (upcomingBills || [])) {
+        items.push({ type: 'upcoming', data: bill });
+      }
     }
     for (const ach of (recentAchievements || [])) {
       items.push({ type: 'achievement', data: ach });
@@ -78,12 +82,13 @@ export async function GET() {
       items.push({ type: 'assisted', data: ch });
     }
 
-    const count = (overdueBills?.length || 0) + (recentAchievements?.length || 0) + (communityNotifs?.length || 0) + (assistedChanges?.length || 0);
+    const overdueCount = granted.escalation_alerts ? (overdueBills?.length || 0) : 0;
+    const count = overdueCount + (recentAchievements?.length || 0) + (communityNotifs?.length || 0) + (assistedChanges?.length || 0);
 
     return NextResponse.json({
       count,
       items,
-      overdue: overdueBills?.length || 0,
+      overdue: overdueCount,
       achievements: recentAchievements?.length || 0,
       mentions: communityNotifs?.length || 0,
       assisted: assistedChanges?.length || 0,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getGrantedFeatures } from '@/lib/org-features-server'
 
 /**
  * GET /api/cron/payday
@@ -64,8 +65,9 @@ export async function GET(req: NextRequest) {
           data: { open_bills: openBills || 0 },
         })
 
-      // Send web push notification
-      for (const sub of subs) {
+      // Send web push notification (gated by the org push_notifications entitlement)
+      const granted = await getGrantedFeatures(supabase, user.user_id)
+      for (const sub of (granted.push_notifications ? subs : [])) {
         try {
           const webpush = await import('web-push')
           webpush.setVapidDetails(
