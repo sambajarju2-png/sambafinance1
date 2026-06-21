@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
     await supabase.from('calendar_synced_events').delete().eq('connection_id', conn.id);
     await supabase.from('calendar_connections').delete().eq('id', conn.id);
-    await supabase
+    const { error: consentError } = await supabase
       .from('consent_log')
       .insert({
         user_id: userId,
@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
         granted: false,
         ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
         user_agent: req.headers.get('user-agent') || null,
-      })
-      .catch(() => {});
+      });
+    if (consentError) console.error('[calendar/disconnect] consent log failed:', consentError);
   }
 
   return NextResponse.json({ ok: true }, { headers: NO_CACHE });

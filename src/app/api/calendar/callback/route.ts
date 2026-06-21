@@ -125,8 +125,10 @@ export async function GET(req: NextRequest) {
     // New calendar means any prior mapping is stale — start clean.
     await supabase.from('calendar_synced_events').delete().eq('connection_id', conn.id);
 
-    // GDPR consent record.
-    await supabase
+    // GDPR consent record. Non-fatal, but surface failures: the Supabase client
+    // resolves (rather than throws) on DB errors, so a swallowed insert here means
+    // consent silently goes unlogged.
+    const { error: consentError } = await supabase
       .from('consent_log')
       .insert({
         user_id: userId,
@@ -134,8 +136,8 @@ export async function GET(req: NextRequest) {
         granted: true,
         ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
         user_agent: req.headers.get('user-agent') || null,
-      })
-      .catch(() => {});
+      });
+    if (consentError) console.error('[calendar/callback] consent log failed:', consentError);
 
     // Backfill current bills (best-effort; the cron is the safety net).
     try {

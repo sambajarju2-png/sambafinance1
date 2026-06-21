@@ -181,7 +181,7 @@ function SettingsContent() {
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-heading text-pw-navy">Agenda</h2>
+        <h2 className="text-heading text-pw-navy">{t('agenda')}</h2>
         <CalendarSettings />
       </div>
     );
@@ -259,7 +259,7 @@ function SettingsContent() {
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
         <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
-        <SettingsLink icon={Calendar} label="Agenda" description="Zet je betalingen in je Google Agenda" onClick={() => setActiveTab('calendar')} />
+        <SettingsLink icon={Calendar} label={t('agenda')} description={t('agendaDesc')} onClick={() => setActiveTab('calendar')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
         <SettingsLink icon={Phone} label="Check-in gesprek" description="Laat PayBuddy je bellen voor een korte check-in" onClick={() => setActiveTab('checkin')} />

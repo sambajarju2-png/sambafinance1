@@ -22,16 +22,38 @@ export function billDeepLink(appUrl: string, billId: string): string {
   return `${appUrl.replace(/\/$/, '')}/betalingen?bill=${encodeURIComponent(billId)}`;
 }
 
+// Localized, privacy-safe event copy. Keys match the app's supported locales;
+// anything else falls back to Dutch (the app default). The quoted titles here are
+// mirrored in the settings privacy note (settings.agendaPrivacy) per locale.
+const EVENT_TITLE: Record<string, string> = {
+  nl: 'Betaling via PayWatch',
+  en: 'Payment via PayWatch',
+  fr: 'Paiement via PayWatch',
+  pl: 'Płatność przez PayWatch',
+  tr: 'PayWatch ile ödeme',
+  ar: 'دفعة عبر PayWatch',
+};
+const EVENT_DESC_PREFIX: Record<string, string> = {
+  nl: 'Bekijk en betaal in PayWatch:',
+  en: 'View and pay in PayWatch:',
+  fr: 'Consulte et paie dans PayWatch :',
+  pl: 'Zobacz i zapłać w PayWatch:',
+  tr: "PayWatch'ta görüntüle ve öde:",
+  ar: 'اعرض وادفع في PayWatch:',
+};
+
 /**
  * Discreet all-day event for a bill. No vendor, no amount — just a neutral title
  * and a deep link, so it is safe on a shared or lock-screen calendar. Details live
- * only behind the link, inside the app.
+ * only behind the link, inside the app. `lang` localizes the visible copy.
  */
-export function buildBillEvent(billId: string, dueDate: string, appUrl: string): GoogleEvent {
+export function buildBillEvent(billId: string, dueDate: string, appUrl: string, lang = 'nl'): GoogleEvent {
   const link = billDeepLink(appUrl, billId);
+  const title = EVENT_TITLE[lang] || EVENT_TITLE.nl;
+  const descPrefix = EVENT_DESC_PREFIX[lang] || EVENT_DESC_PREFIX.nl;
   return {
-    summary: 'Betaling via PayWatch',
-    description: `Bekijk en betaal in PayWatch:\n${link}`,
+    summary: title,
+    description: `${descPrefix}\n${link}`,
     start: { date: dueDate },
     end: { date: nextDay(dueDate) },
     transparency: 'transparent',
@@ -87,6 +109,14 @@ export async function reconcileConnection(
     await supabase.from('calendar_synced_events').delete().eq('connection_id', conn.id);
   }
 
+  // User's preferred language for the (privacy-safe) event copy. Defaults to Dutch.
+  const { data: settingsRow } = await supabase
+    .from('user_settings')
+    .select('language')
+    .eq('user_id', conn.user_id)
+    .maybeSingle();
+  const lang = (settingsRow?.language as string | null) || 'nl';
+
   // Active bills (unpaid + not settled) with a due date.
   const { data: billsData } = await supabase
     .from('bills')
@@ -120,7 +150,7 @@ export async function reconcileConnection(
     const existing = synced.get(billId);
     try {
       if (!existing) {
-        const eventId = await insertEvent(accessToken, calendarId, buildBillEvent(billId, dueDate, appUrl));
+        const eventId = await insertEvent(accessToken, calendarId, buildBillEvent(billId, dueDate, appUrl, lang));
         await supabase.from('calendar_synced_events').insert({
           user_id: conn.user_id,
           connection_id: conn.id,
