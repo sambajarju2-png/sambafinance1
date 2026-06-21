@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid, CreditCard } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid, CreditCard, Calendar } from 'lucide-react';
 import SubscriptionPage from '@/components/subscription-page';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
@@ -25,11 +25,12 @@ import IncomeForm from '@/components/finances/income-form';
 import ExpensesList from '@/components/finances/expenses-list';
 import ToeslagenCard from '@/components/finances/toeslagen-card';
 import BankConnectCard from '@/components/bank/bank-connect-card';
+import CalendarSettings from './calendar-settings';
 import DashboardModulesSettings from '@/components/dashboard-modules-settings';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 import PrivacyRightsPanel from '@/components/privacy-rights-panel';
 
-type SettingsTab = 'menu' | 'gmail' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement' | 'privacy';
+type SettingsTab = 'menu' | 'gmail' | 'calendar' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement' | 'privacy';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -48,6 +49,9 @@ function SettingsContent() {
     if (tab === 'sync' || tab === 'gmail') {
       setActiveTab('gmail');
       // Don't clean URL yet — gmail-settings reads ?outlook= params
+    } else if (tab === 'calendar') {
+      setActiveTab('calendar');
+      // Don't clean URL yet — calendar-settings reads ?status= params
     } else if (tab && ['profile', 'notifications', 'achievements', 'budget', 'help', 'referral', 'buddy', 'finances', 'bank', 'dashboard', 'security', 'abonnement', 'privacy'].includes(tab)) {
       setActiveTab(tab as SettingsTab);
       window.history.replaceState(null, '', '/instellingen');
@@ -172,6 +176,16 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'calendar') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <h2 className="text-heading text-pw-navy">Agenda</h2>
+        <CalendarSettings />
+      </div>
+    );
+  }
+
   if (activeTab === 'dashboard') {
     return (
       <div className="space-y-4">
@@ -231,6 +245,7 @@ function SettingsContent() {
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
         <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
         <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
+        <SettingsLink icon={Calendar} label="Agenda" description="Zet je betalingen in je Google Agenda" onClick={() => setActiveTab('calendar')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
         <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />

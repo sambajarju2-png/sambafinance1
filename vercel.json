@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/inactive-cleanup",
       "schedule": "0 3 1 * *"
+    },
+    {
+      "path": "/api/cron/calendar-sync",
+      "schedule": "0 * * * *"
     }
   ]
 }
