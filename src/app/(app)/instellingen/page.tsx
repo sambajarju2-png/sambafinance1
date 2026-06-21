@@ -159,7 +159,7 @@ function SettingsContent() {
     return (
       <div className="space-y-6">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-heading text-pw-navy">Mijn Financiën</h2>
+        <h2 className="text-heading text-pw-navy">{t('finances')}</h2>
         <IncomeForm onSaved={() => setFinancesRefreshKey(k => k + 1)} />
         <ExpensesList onChanged={() => setFinancesRefreshKey(k => k + 1)} />
         <ToeslagenCard key={financesRefreshKey} />
@@ -171,7 +171,7 @@ function SettingsContent() {
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-heading text-pw-navy">Bankrekening</h2>
+        <h2 className="text-heading text-pw-navy">{t('bank')}</h2>
         <BankConnectCard />
       </div>
     );
@@ -191,8 +191,8 @@ function SettingsContent() {
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-heading text-pw-navy">Mijn Dashboard</h2>
-        <p className="text-[13px] text-pw-muted">Kies welke onderdelen je wilt zien op je dashboard, statistieken en cashflow pagina.</p>
+        <h2 className="text-heading text-pw-navy">{t('dashboard')}</h2>
+        <p className="text-[13px] text-pw-muted">{t('dashboardIntro')}</p>
         <DashboardModulesSettings />
       </div>
     );
@@ -212,8 +212,8 @@ function SettingsContent() {
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
         <div className="space-y-2">
-          <h2 className="text-heading text-pw-navy">Check-in met PayBuddy</h2>
-          <p className="text-[14px] text-pw-navy/60">PayBuddy belt je voor een korte check-in van maximaal drie minuten. Geen verkooppraatje, gewoon even kijken hoe het gaat en hoe PayWatch kan helpen.</p>
+          <h2 className="text-heading text-pw-navy">{t('checkinTitle')}</h2>
+          <p className="text-[14px] text-pw-navy/60">{t('checkinIntro')}</p>
         </div>
         <CheckinCallButton />
       </div>
@@ -224,7 +224,7 @@ function SettingsContent() {
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
-        <h2 className="text-heading text-pw-navy">Beveiliging</h2>
+        <h2 className="text-heading text-pw-navy">{t('security')}</h2>
         <BiometricSettings />
       </div>
     );
@@ -257,20 +257,20 @@ function SettingsContent() {
       <h1 className="text-heading text-pw-navy">{t('title')}</h1>
       <div className="space-y-2">
         <SettingsLink icon={User} label={t('profile')} description={t('profileDesc')} onClick={() => setActiveTab('profile')} />
-        <SettingsLink icon={Banknote} label="Mijn Financiën" description="Inkomen, vaste lasten en toeslagen" onClick={() => setActiveTab('finances')} />
-        <SettingsLink icon={Building2} label="Bankrekening" description="Koppel je bank voor automatische controle" onClick={() => setActiveTab('bank')} />
+        <SettingsLink icon={Banknote} label={t('finances')} description={t('financesDesc')} onClick={() => setActiveTab('finances')} />
+        <SettingsLink icon={Building2} label={t('bank')} description={t('bankDesc')} onClick={() => setActiveTab('bank')} />
         <SettingsLink icon={Calendar} label={t('agenda')} description={t('agendaDesc')} onClick={() => setActiveTab('calendar')} />
-        <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
-        <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
-        <SettingsLink icon={Phone} label="Check-in gesprek" description="Laat PayBuddy je bellen voor een korte check-in" onClick={() => setActiveTab('checkin')} />
-        <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
+        <SettingsLink icon={Mail} label={t('gmailAccounts')} description={t('gmailAccountsConnect')} onClick={() => setActiveTab('gmail')} />
+        <SettingsLink icon={Shield} label={t('buddy')} description={t('buddyDesc')} onClick={() => setActiveTab('buddy')} />
+        <SettingsLink icon={Phone} label={t('checkin')} description={t('checkinDesc')} onClick={() => setActiveTab('checkin')} />
+        <SettingsLink icon={Shield} label={t('beslagvrijeVoet')} description={t('beslagvrijeVoetDesc')} onClick={() => router.push('/beslagvrije-voet')} />
         <BiometricMenuLink onClick={() => setActiveTab('security')} />
-        <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
-        <SettingsLink icon={CreditCard} label="Mijn abonnement" description="Plan, upgrade of annuleer je abonnement" onClick={() => setActiveTab('abonnement')} />
+        <SettingsLink icon={LayoutGrid} label={t('dashboard')} description={t('dashboardDesc')} onClick={() => setActiveTab('dashboard')} />
+        <SettingsLink icon={CreditCard} label={t('subscription')} description={t('subscriptionDesc')} onClick={() => setActiveTab('abonnement')} />
         <SettingsLink icon={Wallet} label={t('budget')} description={t('budgetDesc')} onClick={() => setActiveTab('budget')} />
         <SettingsLink icon={Trophy} label={t('achievements')} description={t('achievementsDesc')} onClick={() => setActiveTab('achievements')} />
         <SettingsLink icon={BellRing} label={t('notifications')} description={t('notificationsDesc')} onClick={() => setActiveTab('notifications')} />
-        <SettingsLink icon={Users} label="Vrienden uitnodigen" description="Deel PayWatch en ontgrendel functies" onClick={() => setActiveTab('referral')} />
+        <SettingsLink icon={Users} label={t('referral')} description={t('referralDesc')} onClick={() => setActiveTab('referral')} />
         <SettingsLink icon={HelpCircle} label={t('debtHelp')} description={t('debtHelpDesc')} onClick={() => setActiveTab('help')} />
       </div>
 
@@ -495,6 +495,7 @@ function SettingsLink({ icon: Icon, label, description, onClick }: { icon: React
    BIOMETRIC SECURITY — Face ID / Touch ID toggle
    ============================================================ */
 function BiometricMenuLink({ onClick }: { onClick: () => void }) {
+  const t = useTranslations('settings');
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -516,14 +517,15 @@ function BiometricMenuLink({ onClick }: { onClick: () => void }) {
   return (
     <SettingsLink
       icon={Shield}
-      label="Beveiliging"
-      description="Face ID, app vergrendeling"
+      label={t('security')}
+      description={t('securityDesc')}
       onClick={onClick}
     />
   );
 }
 
 function BiometricSettings() {
+  const t = useTranslations('settings');
   const [available, setAvailable] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [biometryLabel, setBiometryLabel] = useState('Face ID');
@@ -555,7 +557,7 @@ function BiometricSettings() {
         await haptic('select');
       } else {
         // Enabling — verify first to confirm hardware works
-        const success = await verifyBiometric(`Schakel ${biometryLabel} in voor PayWatch`);
+        const success = await verifyBiometric(t('biometricPrompt', { biometry: biometryLabel }));
         if (success) {
           enableBiometric();
           setEnabled(true);
@@ -573,7 +575,7 @@ function BiometricSettings() {
     return (
       <div className="rounded-card border border-pw-border bg-pw-surface p-4">
         <p className="text-[13px] text-pw-muted">
-          Biometrische authenticatie is niet beschikbaar op dit apparaat.
+          {t('biometricUnavailable')}
         </p>
       </div>
     );
@@ -588,8 +590,8 @@ function BiometricSettings() {
               <Shield className="h-4 w-4 text-pw-blue" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-[14px] font-semibold text-pw-text">App vergrendeling</p>
-              <p className="text-[11px] text-pw-muted">Gebruik {biometryLabel} om PayWatch te openen</p>
+              <p className="text-[14px] font-semibold text-pw-text">{t('appLock')}</p>
+              <p className="text-[11px] text-pw-muted">{t('appLockHint', { biometry: biometryLabel })}</p>
             </div>
           </div>
           <IOSSwitch
@@ -601,7 +603,7 @@ function BiometricSettings() {
       </div>
 
       <p className="text-[11px] text-pw-muted px-1">
-        Wanneer ingeschakeld, wordt {biometryLabel} gevraagd telkens als je PayWatch opent. Je kunt altijd terugvallen op je toegangscode.
+        {t('appLockFooter', { biometry: biometryLabel })}
       </p>
     </div>
   );
