@@ -11,6 +11,7 @@ import { pick } from '@/lib/i18n-pick';
 interface VoiceCallProps {
   onClose: (showSummary?: PostCallData | null) => void;
   lang: string;
+  mode?: 'reactive' | 'checkin';
 }
 
 interface TranscriptEntry {
@@ -252,7 +253,7 @@ export function PostCallSummary({ data, lang, onDismiss, onViewBills }: {
 /* ─────────────────────────────────────────────
    MAIN VOICE CALL INNER
    ───────────────────────────────────────────── */
-function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
+function VoiceCallInner({ onClose, lang, mode = 'reactive' }: VoiceCallProps) {
   const [status, setStatus] = useState<'connecting' | 'active' | 'error'>('connecting');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>('');
@@ -341,6 +342,20 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       }
     },
     clientTools: {
+      // ── Flag for support (check-in escalation) ──
+      flag_for_support: async ({ severity, reason }: { severity: string; reason?: string }) => {
+        try {
+          const res = await fetch('/api/checkin/flag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ severity, reason, source: 'checkin_call' }),
+          });
+          const data = await res.json();
+          return data.flagged ? 'Doorgegeven aan de hulpverlener.' : 'Genoteerd.';
+        } catch {
+          return 'Kon het seintje nu niet versturen.';
+        }
+      },
       // ── Add bill ──
       add_bill: async (params: { vendor: string; amount: string; due_date?: string; escalation_stage?: string; iban?: string }) => {
         try {
@@ -567,13 +582,14 @@ function VoiceCallInner({ onClose, lang }: VoiceCallProps) {
       }
 
       // Use pre-warmed token if available (avoids 600ms–1.5s ElevenLabs API call)
-      const cached = getCachedVoiceToken();
+      const cached = mode === 'checkin' ? null : getCachedVoiceToken();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let data: any;
       if (cached) {
         data = cached;
       } else {
-        const res = await fetch('/api/voice/token');
+        const tokenUrl = mode === 'checkin' ? '/api/checkin/token' : '/api/voice/token';
+        const res = await fetch(tokenUrl);
         data = await res.json();
         if (!res.ok) {
           if (data.error === 'voice_limit_reached') {

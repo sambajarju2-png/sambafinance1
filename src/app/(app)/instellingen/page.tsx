@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useTranslations, useMessages } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid, CreditCard, Calendar } from 'lucide-react';
+import { User, Mail, BellRing, Wallet, HelpCircle, LogOut, ChevronRight, Loader2, Trophy, Trash2, AlertTriangle, Check, Users, Shield, Banknote, Building2, LayoutGrid, CreditCard, Calendar, Phone } from 'lucide-react';
 import SubscriptionPage from '@/components/subscription-page';
 import GmailSettings from './gmail-settings';
 import GemeenteSelector from '@/components/gemeente-selector';
@@ -21,6 +21,7 @@ import TrustBadges from '@/components/trust-badges';
 import AdminTestPanel from '@/components/admin-test-panel';
 import ReferralSettings from '@/components/referral-settings';
 import BuddySettings from '@/components/buddy-settings';
+import CheckinCallButton from '@/components/checkin-call-button';
 import IncomeForm from '@/components/finances/income-form';
 import ExpensesList from '@/components/finances/expenses-list';
 import ToeslagenCard from '@/components/finances/toeslagen-card';
@@ -30,7 +31,7 @@ import DashboardModulesSettings from '@/components/dashboard-modules-settings';
 import { IOSSwitch } from '@/components/ui/ios-switch';
 import PrivacyRightsPanel from '@/components/privacy-rights-panel';
 
-type SettingsTab = 'menu' | 'gmail' | 'calendar' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement' | 'privacy';
+type SettingsTab = 'menu' | 'gmail' | 'calendar' | 'profile' | 'notifications' | 'achievements' | 'budget' | 'help' | 'referral' | 'buddy' | 'checkin' | 'finances' | 'bank' | 'dashboard' | 'security' | 'abonnement' | 'privacy';
 
 function SettingsContent() {
   const t = useTranslations('settings');
@@ -206,6 +207,19 @@ function SettingsContent() {
     );
   }
 
+  if (activeTab === 'checkin') {
+    return (
+      <div className="space-y-4">
+        <BackButton onClick={() => setActiveTab('menu')} label={t('back')} />
+        <div className="space-y-2">
+          <h2 className="text-heading text-pw-navy">Check-in met PayBuddy</h2>
+          <p className="text-[14px] text-pw-navy/60">PayBuddy belt je voor een korte check-in van maximaal drie minuten. Geen verkooppraatje, gewoon even kijken hoe het gaat en hoe PayWatch kan helpen.</p>
+        </div>
+        <CheckinCallButton />
+      </div>
+    );
+  }
+
   if (activeTab === 'security') {
     return (
       <div className="space-y-4">
@@ -248,6 +262,7 @@ function SettingsContent() {
         <SettingsLink icon={Calendar} label="Agenda" description="Zet je betalingen in je Google Agenda" onClick={() => setActiveTab('calendar')} />
         <SettingsLink icon={Mail} label="E-mail accounts" description="Gmail & Outlook verbinden" onClick={() => setActiveTab('gmail')} />
         <SettingsLink icon={Shield} label="Buddy / Vangnet" description="Nodig iemand uit als veiligheidsnetwerk" onClick={() => setActiveTab('buddy')} />
+        <SettingsLink icon={Phone} label="Check-in gesprek" description="Laat PayBuddy je bellen voor een korte check-in" onClick={() => setActiveTab('checkin')} />
         <SettingsLink icon={Shield} label="Beslagvrije voet" description="Bereken hoeveel je mag houden bij beslag" onClick={() => router.push('/beslagvrije-voet')} />
         <BiometricMenuLink onClick={() => setActiveTab('security')} />
         <SettingsLink icon={LayoutGrid} label="Mijn Dashboard" description="Kies welke onderdelen je ziet" onClick={() => setActiveTab('dashboard')} />
