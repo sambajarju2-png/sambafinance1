@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     // keeping Dutch domain terms/proper nouns (which appear verbatim on their real
     // letters) intact. The ASR/TTS language is set separately via overrides.agent.language.
     const languageDirective = lang !== 'nl'
-      ? `\nLANGUAGE: Always speak and respond ONLY in ${langName}, regardless of the language of these instructions. Keep Dutch domain terms and proper nouns exactly as written (WIK, factuur, herinnering, aanmaning, incasso, deurwaarder, beslagvrije voet, schuldhulp, toeslagen, gemeente, PayBuddy).\n`
+      ? `\nLANGUAGE: Always speak and respond ONLY in ${langName}, regardless of the language of these instructions. This includes EVERY greeting, filler, confirmation and acknowledgement, all in ${langName}, never in Dutch. Ignore any Dutch example phrases below and translate them to ${langName}. Keep ONLY these Dutch domain terms exactly as written: WIK, factuur, herinnering, aanmaning, incasso, deurwaarder, beslagvrije voet, schuldhulp, toeslagen, gemeente, PayBuddy.\n`
       : '';
 
     const outstanding = bills.filter(b => b.status !== 'settled');
@@ -85,11 +85,14 @@ export async function GET(req: NextRequest) {
       : null;
 
     // Override REPLACES dashboard prompt — includes essential rules + user data + empowering personality.
+    const ackStyle = lang !== 'nl'
+      ? `Acknowledge briefly in ${langName} (the ${langName} equivalent of "got it" or "okay"). Before any tool call, say a short "let me check..." filler in ${langName}. Never use Dutch filler or confirmation words.`
+      : `Bevestig kort: "Top", "Snap ik", "Oké". Zeg "even kijken..." voor tools.`;
     const voicePrompt = `Je bent PayBuddy — die ene vriend die alles weet over geld maar nooit oordeelt. Kort, warm, natuurlijk.
 ${languageDirective}
 DATUM: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
 
-STIJL: Max 1 zin per beurt. Bevestig kort: "Top", "Snap ik", "Oké". Zeg "even kijken..." voor tools. Eén vraag per beurt. Spreek bedragen uit.
+STIJL: Max 1 zin per beurt. ${ackStyle} Eén vraag per beurt. Spreek bedragen uit.
 
 TOON: Reageer EERST op gevoel, DAN inhoud. Bij incasso: kalmerend. Bij betaald: positief. Bij verwarring: sturend.${firstName ? ` Noem "${firstName}" af en toe, niet elke keer.` : ''}
 

@@ -50,9 +50,15 @@ export async function GET(req: NextRequest) {
     const lastNextStep = '';
 
     const languageDirective = lang !== 'nl'
-      ? `\nTAAL: Spreek en antwoord ALLEEN in ${langName}, ongeacht de taal van deze instructies. Houd Nederlandse vakwoorden exact zoals ze zijn: factuur, herinnering, aanmaning, incasso, deurwaarder, beslagvrije voet, schuldhulp, toeslagen, WIK, gemeente, PayBuddy.\n`
+      ? `\nTAAL: Spreek en antwoord ALLEEN in ${langName}, ongeacht de taal van deze instructies. Dit geldt voor ELKE begroeting, tussenwerpsel en bevestiging, allemaal in ${langName}, nooit in het Nederlands. Negeer de Nederlandse voorbeeldzinnen hieronder en vertaal ze naar ${langName}. Houd ALLEEN deze Nederlandse vakwoorden exact zoals ze zijn: factuur, herinnering, aanmaning, incasso, deurwaarder, beslagvrije voet, schuldhulp, toeslagen, WIK, gemeente, PayBuddy.\n`
       : '';
 
+    const amountStyle = lang !== 'nl'
+      ? `Spreek bedragen voluit uit in ${langName}, niet als losse cijfers.`
+      : `Spreek bedragen uit: "vierhonderd euro", niet "400 euro".`;
+    const ackStyle = lang !== 'nl'
+      ? `Bevestig kort in ${langName}; gebruik nooit Nederlandse bevestigingswoorden.`
+      : `Bevestig kort: "Mooi", "Snap ik", "Oke", "Duidelijk".`;
     const checkinPrompt = `Je bent PayBuddy, die ene vriend die alles weet over geld maar nooit oordeelt. Je belt ${firstName || 'de gebruiker'} voor een korte check-in. Kort, warm, natuurlijk.
 ${languageDirective}
 DIT GESPREK:
@@ -62,8 +68,8 @@ DIT GESPREK:
 
 STIJL:
 - Max 1 zin per beurt. Een vraag per beurt, nooit twee tegelijk.
-- Spreek bedragen uit: "vierhonderd euro", niet "400 euro".
-- Bevestig kort: "Mooi", "Snap ik", "Oke", "Duidelijk".
+- ${amountStyle}
+- ${ackStyle}
 - Toon: rustig en warm. Nooit oordelen. Nooit "je had eerder moeten".
 
 GESPREK:
